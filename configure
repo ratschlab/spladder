@@ -275,30 +275,30 @@ then
 	SPLADDER_OCTAVE_BIN_PATH=
 fi
 
-cp -p bin/rdiff_config.sh bin/rdiff_config.sh.bak
+cp -p bin/spladder_config.sh bin/spladder_config.sh.bak
 
 grep -v -e SPLADDER_OCTAVE_BIN_PATH -e SPLADDER_OCTAVE_MKOCT -e SPLADDER_MATLAB_BIN_PATH -e SPLADDER_MATLAB_MEX_PATH -e SPLADDER_MATLAB_INCLUDE_DIR \
     -e SPLADDER_PATH -e SPLADDER_SRC_PATH -e SPLADDER_BIN_PATH \
-    -e SPLADDER_INTERPRETER bin/rdiff_config.sh.bak \
-    -e SPLADDER_SAMTOOLS_BIN_DIR -e SPLADDER_SAMTOOLS_LIB_DIR -e SPLADDER_SAMTOOLS_INCLUDE_DIR -e SPLADDER_PYTHON_PATH -e SCIPY_PATH -e SPLADDER_VERSION > bin/rdiff_config.sh
+    -e SPLADDER_INTERPRETER bin/spladder_config.sh.bak \
+    -e SPLADDER_SAMTOOLS_BIN_DIR -e SPLADDER_SAMTOOLS_LIB_DIR -e SPLADDER_SAMTOOLS_INCLUDE_DIR -e SPLADDER_PYTHON_PATH -e SCIPY_PATH -e SPLADDER_VERSION > bin/spladder_config.sh
 
 echo Generating config file ... 
 
-# appending the relevant lines to rdiff_config.sh
-echo export SPLADDER_VERSION=$SPLADDER_VERSION >> bin/rdiff_config.sh
-echo export SPLADDER_PATH=$SPLADDER_PATH >> bin/rdiff_config.sh
-echo export SPLADDER_SRC_PATH=${SPLADDER_PATH}/src >> bin/rdiff_config.sh
-echo export SPLADDER_BIN_PATH=${SPLADDER_PATH}/bin >> bin/rdiff_config.sh
-echo export SPLADDER_INTERPRETER=$SPLADDER_INTERPRETER >> bin/rdiff_config.sh
-echo export SPLADDER_MATLAB_BIN_PATH=$SPLADDER_MATLAB_BIN_PATH >> bin/rdiff_config.sh
-echo export SPLADDER_MATLAB_MEX_PATH=$SPLADDER_MATLAB_MEX_PATH >> bin/rdiff_config.sh
-echo export SPLADDER_MATLAB_INCLUDE_DIR=$SPLADDER_MATLAB_INCLUDE_DIR >> bin/rdiff_config.sh
-echo export SPLADDER_OCTAVE_BIN_PATH=$SPLADDER_OCTAVE_BIN_PATH >> bin/rdiff_config.sh
-echo export SPLADDER_OCTAVE_MKOCT=$SPLADDER_OCTAVE_MKOCT >> bin/rdiff_config.sh
-echo export SPLADDER_SAMTOOLS_BIN_DIR=$SPLADDER_SAMTOOLS_BIN_DIR >> bin/rdiff_config.sh  
-echo export SPLADDER_SAMTOOLS_LIB_DIR=$SPLADDER_SAMTOOLS_LIB_DIR >> bin/rdiff_config.sh  
-echo export SPLADDER_SAMTOOLS_INCLUDE_DIR=$SPLADDER_SAMTOOLS_INCLUDE_DIR >> bin/rdiff_config.sh  
-echo export SPLADDER_PYTHON_PATH=$SPLADDER_PYTHON_PATH >> bin/rdiff_config.sh
+# appending the relevant lines to spladder_config.sh
+echo export SPLADDER_VERSION=$SPLADDER_VERSION >> bin/spladder_config.sh
+echo export SPLADDER_PATH=$SPLADDER_PATH >> bin/spladder_config.sh
+echo export SPLADDER_SRC_PATH=${SPLADDER_PATH}/src >> bin/spladder_config.sh
+echo export SPLADDER_BIN_PATH=${SPLADDER_PATH}/bin >> bin/spladder_config.sh
+echo export SPLADDER_INTERPRETER=$SPLADDER_INTERPRETER >> bin/spladder_config.sh
+echo export SPLADDER_MATLAB_BIN_PATH=$SPLADDER_MATLAB_BIN_PATH >> bin/spladder_config.sh
+echo export SPLADDER_MATLAB_MEX_PATH=$SPLADDER_MATLAB_MEX_PATH >> bin/spladder_config.sh
+echo export SPLADDER_MATLAB_INCLUDE_DIR=$SPLADDER_MATLAB_INCLUDE_DIR >> bin/spladder_config.sh
+echo export SPLADDER_OCTAVE_BIN_PATH=$SPLADDER_OCTAVE_BIN_PATH >> bin/spladder_config.sh
+echo export SPLADDER_OCTAVE_MKOCT=$SPLADDER_OCTAVE_MKOCT >> bin/spladder_config.sh
+echo export SPLADDER_SAMTOOLS_BIN_DIR=$SPLADDER_SAMTOOLS_BIN_DIR >> bin/spladder_config.sh  
+echo export SPLADDER_SAMTOOLS_LIB_DIR=$SPLADDER_SAMTOOLS_LIB_DIR >> bin/spladder_config.sh  
+echo export SPLADDER_SAMTOOLS_INCLUDE_DIR=$SPLADDER_SAMTOOLS_INCLUDE_DIR >> bin/spladder_config.sh  
+echo export SPLADDER_PYTHON_PATH=$SPLADDER_PYTHON_PATH >> bin/spladder_config.sh
 
 echo Done.
 echo 
