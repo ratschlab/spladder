@@ -1,55 +1,21 @@
-function genes = spladder(genes_fname, gen_config_fname, bam_fnames, out_fname, log_fname, conf_level, do_prune, do_gen_isoforms) ;
-% function genes = spladder(genes_fname, gen_config_fname, bam_fnames, out_fname, log_fname, conf_level, do_prune, do_gen_isoforms) ;
+function genes = spladder(ARGS)
+% function genes = spladder(bam_fnames, anno_fname, out_dir, log_fname, user_settings, confidence)
 
 % switches do_prune, min_orflen, find_orfs
-
-if nargin < 6,
-    conf_level = 3;
-end;
-
-if nargin < 7,
-    do_prune = 0;
-end;
-
-if nargin < 8,
-    do_gen_isoforms = 0;
-end;
-
-%%% spladder is called with a parameter struct (e.g., by rproc)
-if nargin == 1,
-    PAR = genes_fname ;
-    genes_fname      = PAR.fn_genes ;
-    gen_config_fname = PAR.gen_config_fname ;
-    out_fname        = PAR.out_fname ; 
-    bam_fnames       = PAR.bam_fnames ;
-    log_fname        = PAR.log_fname ;
-    if isfield(PAR, 'conf_level'),
-        conf_level   = PAR.conf_level;
-    else
-        conf_level   = 3;
-    end;
-    if isfield(PAR, 'do_prune'),
-        do_prune     = PAR.do_prune;
-    else
-        do_prune     = 0;
-    end;
-    if isfield(PAR, 'do_gen_isoforms'),
-        do_gen_isoforms = PAR.do_gen_isoforms;
-    else
-        do_gen_isoforms = 0;
-    end;
-    
-    %find_orfs = genes.find_orfs ;
-    %min_orflen = genes.min_orflen ; 
-end
+CFG = parse_args(ARGS, CFG);
+%find_orfs = genes.find_orfs ;
+%min_orflen = genes.min_orflen ; 
 
 %%% add dependencies provided in config section
 for i = 1:length(CFG.paths),
     addpath(CFG.paths{i});
 end;
 
+%%% compile configuration struct
+CFG = configure_spladder(
+
 %%% load confidence level settings
-conf = set_confidence_level(confidence);
+CFG = set_confidence_level(CFG);
 
 %%% check if result file exists and start gen graph step if necessary
 if ~fexist(out_fname)
