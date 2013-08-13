@@ -1,43 +1,44 @@
-function configure_spladder()
+function CFG = configure_spladder(bam_files, anno_file, out_dir, log_file, user_settings, confidence)
 
-    %%% settings for adding new intron edges
-    CFG.intron_edges = [] ;
-    CFG.intron_edges.min_exon_len = 50;
-    CFG.intron_edges.min_exon_len_remove = 1;
-    CFG.intron_edges.vicinity_region = 40 ;
-    CFG.intron_edges.insert_intron_retention = 1 ;
-    CFG.intron_edges.gene_merges = 0 ;
-    CFG.intron_edges.append_new_terminal_exons = 1;
-    CFG.intron_edges.append_new_terminal_exons_len = 200;
+    %%% set custom confidence level
+    if nargin <= 5,
+        confidence = 3;
+    end;
+    if confidence < 0 || confidence > 3,
+        error('ERROR: Pre-defined confidence levels must be within the range of 0 to 3\n');
+    end;
 
-    CFG.intron_window = 5000 ;
+    %%% load default settings
+    default_settings
 
-    CFG = set_confidene_level(CFG, 3);
+    %%% add user settings
+    if nargin > 4,
+        if exist(user_settings, 'file'),
+            if length(user_settings) > 2 && ~strcmp(user_settings(end-1:end), '.m'),
+                eval(user_settings(end-1:end));
+            else
+                eval(user_settings);
+            end;
+        else
+            error(sprintf('ERROR: Can not find file %s to load user settings!\n', user_settings));
+        end;
+    end;
 
-    %%% settings for cassette exons
-    CFG.cassette_exons = [];
-    CFG.cassette_exons.min_cassette_cov = 5;
-    CFG.cassette_exons.min_cassette_region = 0.9;
-    CFG.cassette_exons.min_cassette_rel_diff = 0.5;
+    if nargin > 3,
+        CFG.fd_log = fopen(log_file, 'w');
+    else
+        CFG.fd_log = 1;
+    end;
 
-    %%% settings for short exon removal
-    CFG.remove_exons = [];
-	CFG.remove_exons.terminal_short_extend = 40 ;
-	CFG.remove_exons.terminal_short_len = 10 ;
-	CFG.remove_exons.min_exon_len = 50 ;
-	CFG.remove_exons.min_exon_len_remove = 10 ;
+    if nargin > 2,
+        CFG.out_dir = out_dir;
+    else
+        CFG.out_dir = pwd();
+    end;
 
-    %%% settings for splice graph augmentations
-    CFG.do_insert_intron_retentions = 1 ;
-    CFG.do_insert_cassette_exons = 1;
-    CFG.do_insert_intron_edges = 1;
-    CFG.do_remove_short_exons = 0 ;
-    CFG.do_infer_splice_graph = 0;
-
-    CFG.insert_intron_iterations = 5;
-
-    %%% set I/O and verbosity
-    CFG.verbose = 1;
-    CFG.debug = 0;
-    CFG.fd_log = 1;
-
+    if nargin > 1,
+        CFG.anno = CFG.anno_file;
+        CFG.bam_files = separate(bam_files, ',');
+    else
+        error('ERROR: BAM file(s) and annotation need to be provided!\n');
+    end;
