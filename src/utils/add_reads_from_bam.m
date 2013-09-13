@@ -23,6 +23,7 @@ if isempty(types{1})
 	return
 end
 
+verbose = 0;
 pair = 0;
 if any(strcmp(types, 'pair_coverage'))
     pair = 1;
@@ -34,13 +35,13 @@ clipped = 0;
 if ~iscell(base_dir),
     filenames = separate(base_dir, ',');
 else
-    filenamse = base_dir;
+    filenames = base_dir;
 end;
 
 for b = 1:length(blocks),
     clear introns;
 
-	if CFG.verbose && mod(b, 10) == 0,
+	if verbose == 1 && mod(b, 10) == 0,
 		fprintf('\radd_exon_track_from_bam: %i(%i)', b, length(blocks));
 	end;
 	block_len = blocks(b).stop - blocks(b).start + 1;
