@@ -1,7 +1,7 @@
-function [genes, inserted] = insert_intron_edges(genes, fn_bam, CFG)
-% genes = insert_intron_edges(genes, fn_bam, CFG);
+function [genes, inserted] = insert_intron_edges(genes, CFG)
+% genes = insert_intron_edges(genes, CFG);
 
-if ~isfield(CFG. 'intron_edges'),
+if ~isfield(CFG, 'intron_edges'),
     CFG.intron_edges = struct();
 end;
 if ~isfield(CFG.intron_edges, 'min_exon_len') ;
@@ -25,6 +25,9 @@ end ;
 if ~isfield(CFG.intron_edges, 'append_new_terminal_exons_len') ;
 	CFG.intron_edges.append_new_terminal_exons_len = 200 ;
 end ;
+if ~isfield(CFG, 'debug'),
+    CFG.debug = 0;
+end;
 
 print_intermediates = 0;
 
@@ -45,7 +48,7 @@ num_unused_introns = zeros(1,length(genes)) ;
 
 for i = 1:length(genes)
 	if CFG.verbose && mod(i,1000)==0, 
-        fprintf(log_fd, '%i\n', i); 
+        fprintf(CFG.fd_log, '%i (%i)\n', i, length(genes)); 
     end ;
 
 	s = find(genes(i).strand == '+-');
@@ -112,6 +115,7 @@ for i = 1:length(genes)
 
                     if CFG.debug,
                         fprintf(CFG.fd_log, '%s\tintron_retention_exon\t%c\t%i\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(1,end-1), genes(i).splicegraph{1}(2,end-1), genes(i).splicegraph{1}(1,end), genes(i).splicegraph{1}(2,end)) ;
+                    end;
 					intron_used = 1 ;
 				end ;
 			end ;
@@ -171,7 +175,7 @@ for i = 1:length(genes)
                     gg.start = genes(i).introns{s}(2, j) + 1; %%% start of presumable exon
                     gg.stop = genes(i).splicegraph{1}(2, idx1__); %%% stop of next exon
                     maxval = inf; 
-                    gg = add_reads_from_bam(gg, fn_bam, 'exon_track', '', maxval, CFG.intron_filter);
+                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
                     if gg.strand == '-',
                         gg.tracks = gg.tracks(:, end:-1:1) ;
                     end ;
@@ -273,7 +277,7 @@ for i = 1:length(genes)
                     gg.start = genes(i).introns{s}(2, j) + 1; %%% start of presumable exon
                     gg.stop = genes(i).splicegraph{1}(2, idx2__); %%% stop of next exon
                     maxval = inf; 
-                    gg = add_reads_from_bam(gg, fn_bam, 'exon_track', '', maxval, CFG.intron_filter);
+                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
                     if gg.strand == '-',
                         gg.tracks = gg.tracks(:, end:-1:1) ;
                     end ;
@@ -384,7 +388,7 @@ for i = 1:length(genes)
 					%adj_mat = triu(genes(i).splicegraph{2}) ;
 					%id1 = find(adj_mat(idx1_,:)) ;
 					%if length(id1)==1 && adj_mat(id1, idx2_),
-					%		fprintf(log_fd, '%s\texon_skip\t%c\t%i\t%i\t%i\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(1,idx1_), genes(i).splicegraph{1}(2,idx1_), genes(i).splicegraph{1}(1,id1),	...
+					%		fprintf(CFG.fd_log, '%s\texon_skip\t%c\t%i\t%i\t%i\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(1,idx1_), genes(i).splicegraph{1}(2,idx1_), genes(i).splicegraph{1}(1,id1),	...
 					%						genes(i).splicegraph{1}(2,id1), genes(i).splicegraph{1}(1,idx2_), genes(i).splicegraph{1}(2,idx2_)) ;
 					%end ;
 				end ;
@@ -406,12 +410,13 @@ for i = 1:length(genes)
 	idx_unused = find(genes(i).introns{s}(2, unused_introns)>=genes(i).start & genes(i).introns{s}(1,unused_introns)<=genes(i).stop) ;
 	unused_introns = unused_introns(idx_unused) ;
 	if ~isempty(unused_introns),
-	    i
-		unused_introns
-		keyboard
+        % TODO: check this maybe
+	    %i
+		%unused_introns
+		%keyboard
 	end ;
 	num_unused_introns(i) = num_unused_introns(i)+length(unused_introns) ;
-end
+end ;
 
 if print_intermediates,
     one_missing
@@ -475,6 +480,6 @@ for ix = 1:length(genes)
 	genes(ix).splicegraph{1} = genes(ix).splicegraph{1}(:, exon_order);
 	genes(ix).splicegraph{2} = genes(ix).splicegraph{2}(exon_order, exon_order);
 	genes(ix).splicegraph{3} = genes(ix).splicegraph{3}(:, exon_order);
-end
+end ;
 genes = label_alt_genes(genes, CFG) ;
 
