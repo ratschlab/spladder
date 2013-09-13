@@ -1,11 +1,11 @@
 % (author) Georg Zeller & Gunnar Raetsch, Mpi Tuebingen, Germany, 2009
 % (author) Andre Kahles, MSKCC NYC, USA, 2013 
 
-function genes = append_intron_list(genes, fn_bam, CFG)
-% genes = append_intron_list(genes, fn_bam, CFG)
+function introns = get_intron_list(genes, CFG)
+% introns = get_intron_list(genes, CFG)
 
 if ~isfield(CFG.intron_filter, 'intron'),
-    CFG.intron_filetr.intron = 20000;
+    CFG.intron_filter.intron = 20000;
 end 
 if ~isfield(CFG.intron_filter, 'exon_len'),
     CFG.intron_filter.exon_len = 20; % relatively specific
@@ -18,19 +18,16 @@ if ~isfield(CFG.intron_filter, 'mincount'),
 end ;
 
 %%% form chunks for quick sorting
-chunks = [[genes.chr_num]', [genes.strand]', [genes.start]', [genes.stop]'];
+chunks = [[genes.chr_num]', cast([genes.strand]', 'int32'), [genes.start]', [genes.stop]'];
 [chunks, chunk_idx] = sortrows(chunks) ;
 assert(issorted(chunks, 'rows'));
 
 strands = '+-';
 
-for i = 1:length(genes),
-	genes(i).introns{1} = [] ;
-	genes(i).introns{2} = [] ;
-end ;
+introns = cell(length(genes), 2);;
 
 %%% collect all possible combinations of contigs and strands
-regions = init_regions(fn_bam);
+regions = init_regions(CFG.bam_fnames);
 keepidx = find(ismember([regions.chr_num], unique([genes.chr_num])));
 regions = regions(keepidx);
 
@@ -50,23 +47,23 @@ for j = 1:length(regions)
 			error('c logic seems wrong\n') ;
 		end ;
 
-		if CFG.verbose && mod(c, 50) == 0,
+		if CFG.verbose == 1 && mod(c, 50) == 0,
 			fprintf('%i(%i) genes done (%i introns taken)\n', c, size(chunks,1), num_introns_filtered);
 		end ;			
 
 		gg = genes(chunk_idx(c));
 		gg.strand = strands(s);
-        gg.start = gg.start - 5000 ;
+        gg.start = max(gg.start - 5000, 1) ;
         gg.stop = gg.stop + 5000 ;
 
 		maxval = inf; 
-        if ~iscell(fn_bam),
-            gg = add_reads_from_bam(gg, fn_bam, 'intron_list', '', maxval, CFG.intron_filter);
+        if ~iscell(CFG.bam_fnames),
+            gg = add_reads_from_bam(gg, CFG.bam_fnames, 'intron_list', '', maxval, CFG.intron_filter);
         else
             % merge intron lists of several bam files
             segments = [] ;
-            for f = 1:length(fn_bam),
-                gg = add_reads_from_bam(gg, fn_bam{f}, 'intron_list', '', maxval, CFG.intron_filter);
+            for f = 1:length(CFG.bam_fnames),
+                gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'intron_list', '', maxval, CFG.intron_filter);
                 segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
             end ;
             segments = sortrows(segments) ;
@@ -87,9 +84,9 @@ for j = 1:length(regions)
 
         %% gg.segment_lists{1} => intron list, ONE based, half open
 		if strands(s)=='+',
-			genes(chunk_idx(c)).introns{s} = double([gg.segment_lists{1}(:, 1)'; gg.segment_lists{1}(:, 2)'-1]+gg.start-1) ; % intron list is one based, closed, plus strand relative counting 
+            introns{chunk_idx(c), s} = double([gg.segment_lists{1}(:, 1)'; gg.segment_lists{1}(:, 2)'-1]+gg.start-1) ; % intron list is one based, closed, plus strand relative counting 
 		else
-			genes(chunk_idx(c)).introns{s} = double(gg.stop-[gg.segment_lists{1}(:, 2)'-1; gg.segment_lists{1}(:, 1)']+1) ; 
+			introns{chunk_idx(c), s} = double(gg.stop-[gg.segment_lists{1}(:, 2)'-1; gg.segment_lists{1}(:, 1)']+1) ; 
 		end;
 		c = c + 1;
 	end;
