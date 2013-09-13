@@ -1,6 +1,6 @@
 % written by Georg Zeller & Gunnar Raetsch, Mpi Tuebingen, Germany, 2009
-function [genes, inserted] = insert_intron_retentions(genes, fn_bam, CFG)
-% [genes, inserted] = insert_intron_retentions(genes, fn_bam, CFG)
+function [genes, inserted] = insert_intron_retentions(genes, CFG)
+% [genes, inserted] = insert_intron_retentions(genes, CFG)
 
 if ~isfield(CFG.intron_retention, 'min_retention_cov'),
 	CFG.intron_retention.min_retention_cov = 1 ;
@@ -18,23 +18,23 @@ if ~isfield(CFG.intron_retention, 'min_retention_max_exon_fold_diff'),
 	CFG.intron_retention.min_retention_max_exon_fold_diff = 4 ; 
 end ;
 
-if ~isfield(CFG.filter, 'intron'),
-	CFG.filter.intron = 20000;
+if ~isfield(CFG.intron_filter, 'intron'),
+	CFG.intron_filter.intron = 20000;
 end 
-if ~isfield(CFG.filter, 'exon_len'),
-	CFG.filter.exon_len = 12; % relatively specific
+if ~isfield(CFG.intron_filter, 'exon_len'),
+	CFG.intron_filter.exon_len = 12; % relatively specific
 end
-if ~isfield(CFG.filter, 'mismatch'),
-	CFG.filter.mismatch = 1;
+if ~isfield(CFG.intron_filter, 'mismatch'),
+	CFG.intron_filter.mismatch = 1;
 end ;
-if ~isfield(CFG.filter, 'mincount'),
-	CFG.filter.mincount = 1 ;
+if ~isfield(CFG.intron_filter, 'mincount'),
+	CFG.intron_filter.mincount = 1 ;
 end ;
 
 inserted.intron_retention = 0 ;
 
 %%% form chunks for quick sorting
-chunks = [[genes.chr_num]', [genes.strand]', [genes.start]', [genes.stop]'];
+chunks = [[genes.chr_num]', cast([genes.strand]', 'int32'), [genes.start]', [genes.stop]'];
 [chunks, chunk_idx] = sortrows(chunks) ;
 assert(issorted(chunks, 'rows'));
 
@@ -46,7 +46,7 @@ for i = 1:length(genes),
 end ;
 
 %%% form all possible combinations of contigs and strands --> regions
-regions = init_regions(fn_bam);
+regions = init_regions(CFG.bam_fnames);
 %%% keep only chromosomes found in genes
 keepidx = find(ismember([regions.chr_num], unique([genes.chr_num])));
 regions = regions(keepidx);
@@ -78,14 +78,14 @@ for j = 1:length(regions)
 		rm_strands = ~isfield(gg, 'strands');
 		gg.strands = strands(s);
 		maxval = inf; 
-		if ~iscell(fn_bam)
-			gg = add_reads_from_bam(gg, fn_bam, 'mapped_exon_track,spliced_exon_track', '', maxval, CFG.intron_filter);
+		if ~iscell(CFG.bam_fnames)
+			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
 		else
-			for f = 1:length(fn_bam),
-				gg = add_reads_from_bam(gg, fn_bam{f}, 'mapped_exon_track,spliced_exon_track', '', maxval, CFG.intron_filter);
+			for f = 1:length(CFG.bam_fnames),
+				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.intron_filter);
 			end ;
-			%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
-			gg.tracks = [sum(gg.tracks(1:2:end, :), 1); sum(gg.tracks(2:2:end, :), 1)] ;
+			%%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
+			%gg.tracks = [sum(gg.tracks(1:2:end, :), 1); sum(gg.tracks(2:2:end, :), 1)] ;
 		end ;
 		if gg.strand == '-',
 			gg.tracks = gg.tracks(:, end:-1:1) ;
@@ -103,12 +103,17 @@ for j = 1:length(regions)
 				if gg.splicegraph{2}(k,l) > 0,
 					num_introns = num_introns + 1 ;
 					idx = [gg.splicegraph{1}(2, k) + 1:gg.splicegraph{1}(1, l) - 1] - gg.start + 1 ;
-					icov = gg.tracks(:, idx) ; %%% intron coverage icov(1,:) --> mapped, icov(2,:) --> spliced
-					if median(icov(1, :) + icov(2, :)) > CFG.intron_retention.min_retention_cov && ...
-						mean(icov(1, :) + icov(2, :) > 0.5 * mean(icov(1, :) + icov(2, :))) > CFF.intron_retention.min_retention_region && ... % fraction of covered positions
+					icov = gg.tracks(:, idx) ; %%% old: intron coverage icov(1,:) --> mapped, icov(2,:) --> spliced; now: sum of both
+				%	if median(icov(1, :) + icov(2, :)) > CFG.intron_retention.min_retention_cov && ...
+				%		mean(icov(1, :) + icov(2, :) > 0.5 * mean(icov(1, :) + icov(2, :))) > CFG.intron_retention.min_retention_region && ... % fraction of covered positions
+				%		max(gg.exon_coverage(k),gg.exon_coverage(l)) / (1e-6 + min(gg.exon_coverage(k), gg.exon_coverage(l))) <= CFG.intron_retention.min_retention_max_exon_fold_diff && ...
+				%		mean(icov(1, :) + icov(2, :)) >= CFG.intron_retention.min_retention_rel_cov * (gg.exon_coverage(k) + gg.exon_coverage(l)) / 2 && ...
+				%		mean(icov(1, :) + icov(2, :)) <= CFG.intron_retention.max_retention_rel_cov * (gg.exon_coverage(k) + gg.exon_coverage(l)) / 2
+					if median(icov) > CFG.intron_retention.min_retention_cov && ...
+						mean(icov > (0.5 * mean(icov))) > CFG.intron_retention.min_retention_region && ... % fraction of covered positions
 						max(gg.exon_coverage(k),gg.exon_coverage(l)) / (1e-6 + min(gg.exon_coverage(k), gg.exon_coverage(l))) <= CFG.intron_retention.min_retention_max_exon_fold_diff && ...
-						mean(icov(1, :) + icov(2, :)) >= CFG.intron_retention.min_retention_rel_cov * (gg.exon_coverage(k) + gg.exon_coverage(l)) / 2 && ...
-						mean(icov(1, :) + icov(2, :)) <= CFG.intron_retention.max_retention_rel_cov * (gg.exon_coverage(k) + gg.exon_coverage(l)) / 2
+						mean(icov) >= CFG.intron_retention.min_retention_rel_cov * (gg.exon_coverage(k) + gg.exon_coverage(l)) / 2 && ...
+						mean(icov) <= CFG.intron_retention.max_retention_rel_cov * (gg.exon_coverage(k) + gg.exon_coverage(l)) / 2
 
 						new_retention(k,l) = 1 ;
 					%	fprintf(log_fd, '%s\tintron_retention\t%c\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%2.1f\n', gg.chr, gg.strand, gg.splicegraph{1}(1,k), gg.splicegraph{1}(2,k), gg.splicegraph{1}(1,l), gg.splicegraph{1}(2,l), ...

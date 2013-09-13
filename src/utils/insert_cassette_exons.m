@@ -1,6 +1,7 @@
 % written by Andre Kahles, Mpi Tuebingen, Germany, 2012
-function [genes, inserted] = insert_cassette_exons(genes, fn_bam, CFG)
-% [genes, inserted] = insert_cassette_exons(genes, fn_bam, CFG)
+
+function [genes, inserted] = insert_cassette_exons(genes, CFG)
+% [genes, inserted] = insert_cassette_exons(genes, CFG)
 
 if ~isfield(CFG.cassette_exon, 'min_cassette_cov'),
 	CFG.cassette_exon.min_cassette_cov = 5 ;
@@ -28,14 +29,14 @@ end ;
 inserted.cassette_exon = 0 ;
 
 %%% form chunks for quick sorting
-chunks = [[genes.chr_num]', [genes.strand]', [genes.start]', [genes.stop]'];
+chunks = [[genes.chr_num]', cast([genes.strand]', 'int32'), [genes.start]', [genes.stop]'];
 [chunks, chunk_idx] = sortrows(chunks) ;
 assert(issorted(chunks, 'rows'));
 
 strands = '+-';
 
 %%% form all possible combinations of contigs and strands --> regions
-regions = init_regions(fn_bam);
+regions = init_regions(CFG.bam_fnames);
 %%% keep only chromosomes found in genes
 keepidx = find(ismember([regions.chr_num], unique([genes.chr_num])));
 regions = regions(keepidx);
@@ -58,7 +59,7 @@ for j = 1:length(regions),
 		end ;
 
 		if CFG.verbose && mod(c, 100) == 0,
-			fprintf('\r %i(%i) genes done (found %i/%i cassette exons, %2.1f%%)', c, ...
+			fprintf('\r %i(%i) genes done (found %i/%i cassette exons / tested intron pairs, %2.1f%%)', c, ...
 			size(chunks,1), num_exons_added, num_exons, 100*num_exons_added/num_exons);
 		end	;
 
@@ -67,14 +68,14 @@ for j = 1:length(regions),
 		rm_strands = ~isfield(gg, 'strands');
 		gg.strands = strands(s);
 		maxval = inf; 
-		if ~iscell(fn_bam)
-			gg = add_reads_from_bam(gg, fn_bam, 'mapped_exon_track,spliced_exon_track', '', maxval, CFG.intron_filter);
+		if ~iscell(CFG.bam_fnames)
+			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
 		else
-			for f = 1:length(fn_bam),
-				gg = add_reads_from_bam(gg, fn_bam{f}, 'mapped_exon_track,spliced_exon_track', '', maxval, CFG.intron_filter);
+			for f = 1:length(CFG.bam_fnames),
+				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.intron_filter);
 			end ;
-			%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
-			gg.tracks = [sum(gg.tracks(1:2:end,:),1);sum(gg.tracks(2:2:end,:),1)] ;
+			%%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
+			%gg.tracks = [sum(gg.tracks(1:2:end,:),1);sum(gg.tracks(2:2:end,:),1)] ;
 		end ;
 		if gg.strand == '-',
 			gg.tracks = gg.tracks(:, end:-1:1) ;
@@ -114,6 +115,8 @@ for j = 1:length(regions),
                 if ~isempty(find(gg.splicegraph{1}(1, :) < curr_exon(2) & gg.splicegraph{1}(2, :) > curr_exon(1)))
                     continue;
                 end;
+
+                num_exons = num_exons + 1;
 
                 if ~ismember(curr_exon, gg.splicegraph{1}', 'rows'),
                     idx = [curr_exon(1):curr_exon(2)] - gg.start + 1;
