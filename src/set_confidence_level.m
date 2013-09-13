@@ -1,5 +1,5 @@
-function CFG = set_CFG.confidence_level_level(CFG),
-%function CFG = set_CFG.confidence_level_level(CFG),
+function CFG = set_confidence_level_level(CFG),
+%function CFG = set_confidence_level_level(CFG),
 
     %%% settings for accepted introns
     CFG.intron_filter=[] ;
@@ -25,7 +25,13 @@ function CFG = set_CFG.confidence_level_level(CFG),
         CFG.intron_filter.mincount = 10 ;
     end ;
 
-    %%% settings for acceoted intron retentions
+    %%% settings for accepted cassette exons
+    CFG.cassette_exon = [];
+    CFG.cassette_exon.min_cassette_cov = 5 ; 
+    CFG.cassette_exon.min_cassette_region = 0.9; 
+    CFG.cassette_exon.min_cassette_rel_diff = 0.5; 
+
+    %%% settings for accepted intron retentions
     CFG.intron_retention=[] ;
     if CFG.confidence_level == 0,
       CFG.intron_retention.min_retention_cov = 1;
