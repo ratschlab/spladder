@@ -1,38 +1,47 @@
 function genes = spladder(ARGS)
-% function genes = spladder(bam_fnames, anno_fname, out_dir, log_fname, user_settings, confidence)
+% function genes = spladder(ARGS)
 
-% switches do_prune, min_orflen, find_orfs
-CFG = parse_args(ARGS, CFG);
-%find_orfs = genes.find_orfs ;
-%min_orflen = genes.min_orflen ; 
+% TODO: switches do_prune, min_orflen, find_orfs
+
+%%% parse parameters from ARGS string
+if isstruct(ARGS),
+    CFG = ARGS;
+else
+    CFG = parse_args(ARGS, CFG);
+end;
 
 %%% add dependencies provided in config section
-for i = 1:length(CFG.paths),
-    addpath(CFG.paths{i});
+if isfield(CFG, 'paths'),
+    for i = 1:length(CFG.paths),
+        addpath(CFG.paths{i});
+    end;
 end;
-
-%%% compile configuration struct
-CFG = configure_spladder(
 
 %%% load confidence level settings
-CFG = set_confidence_level(CFG);
+if CFG.no_reset_conf == 0,
+    CFG = set_confidence_level(CFG);
+end;
 
 %%% check if result file exists and start gen graph step if necessary
-if ~fexist(out_fname)
-    load(genes_fname, 'genes');
-	genes = gen_graphs(genes, bam_fnames, gen_config_fname, conf, log_fname) ;
+if ~fexist(CFG.out_fname),
+    if ~isfield(CFG, 'genes'),
+        load(CFG.anno_fname, 'genes');
+    else
+        genes = CFG.genes ;
+    end;
+	genes = gen_graphs(genes, CFG) ;
 
-	fprintf('saving genes to %s\n', out_fname) ;
+	fprintf('saving genes to %s\n', CFG.out_fname) ;
 	save(out_fname, 'genes') ;
 else
-	fprintf('gen_graphs already done\n%s exists\nloading genes from %s\n', out_fname, out_fname);
+	fprintf('gen_graphs already done\n%s exists\nloading genes from %s\n', CFG.out_fname, CFG.out_fname);
 	load(out_fname, 'genes') ;
-end
+end ;
 
 if do_prune,
-    out_fname = strrep(out_fname, '.mat', '_pruned.mat');
+    CFG.out_fname = strrep(CFG.out_fname, '.mat', '_pruned.mat');
 end;
-if do_prune && ~fexist(out_fname),
+if do_prune && ~fexist(CFG.out_fname),
     genes = uniquify_splicegraph(genes);
 
     %%% prune graphs
@@ -53,12 +62,12 @@ if do_prune && ~fexist(out_fname),
     %print('-depsc', fn_fig);
 
     %%% save pruned genes
-    fprintf('saving genes to %s\n', out_fname) ;
-    save(out_fname, 'genes') ;
+    fprintf('saving genes to %s\n', CFG.out_fname) ;
+    save(CFG.out_fname, 'genes') ;
 else
     if do_prune,
         fprintf('pruning already done; loading genes\n');
-        load(out_fname, 'genes') ;
+        load(CFG.out_fname, 'genes') ;
     else
         fprintf('No pruning requested!\n');
     end;
