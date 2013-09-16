@@ -3,9 +3,10 @@ function genes = splice_graph(genes, CFG)
 
     if CFG.verbose,
         fprintf(CFG.fd_log, 'creating splice graphs\n') ;
+    end;
 
 	%%% use annotated exons in genes to build up a new splice graph
-	build_splice_graph;
+	genes = build_splice_graph(genes);
 
 	%%% merge exons if possible / reduce graph
     %%% originially implemented for ESTs, reduces complexity, 
