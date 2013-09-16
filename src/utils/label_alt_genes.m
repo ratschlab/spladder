@@ -94,7 +94,7 @@ for ix = 1:length(genes),
   start = min(vertices(1, :)) ;
   stop = max(vertices(2, :)) ;
   
-  exon_loc = zeros(1, stop - start);
+  exon_loc = zeros(1, stop - start + 1);
   
   %%% map all edges (introns) to genomic coordinates
   for i = 1 : size(edges, 1),
@@ -108,7 +108,7 @@ for ix = 1:length(genes),
 
   %%% map all vertices (exons) to genomic coordinates 
   for i = 1:size(vertices, 2),
-    cur_vertex = vertices(:, i) - [start; start];
+    cur_vertex = vertices(:, i) - [start; start] + 1;
     exon_loc(cur_vertex(1):cur_vertex(2)) = exon_loc(cur_vertex(1):cur_vertex(2)) + 1;
   end ;
 
