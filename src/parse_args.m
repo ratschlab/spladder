@@ -70,13 +70,18 @@ CFG.confidence_level = I_CONFIDENCE;
 
 %%% open log file, if specified
 if isempty(S_LOG_FNAME),
-    CFG.fd_log = 1;
+    CFG.log_fname = '';
+%    CFG.fd_log = 1;
 else
-    CFG.fd_log = fopen(S_LOG_FNAME, 'w');
+    CFG.log_fname = S_LOG_FNAME;
+%    CFG.fd_log = fopen(S_LOG_FNAME, 'w');
 end;
+
 CFG.anno_fname = S_ANNO_FNAME;
-CFG.out_dir = S_OUT_DIR;
+CFG.out_fname = S_OUT_FNAME;
 CFG.user_settings = S_USER_FNAME;
+
+CFG.no_reset_conf = 0;
 
 if IS_OCT,
     CFG.bam_fnames = strsplit(S_BAM_FNAME, ',');
