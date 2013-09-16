@@ -1,30 +1,31 @@
-function [genes, inserted] = gen_graphs(genes, fn_bam, fn_genome_config, conf)
-% genes = gen_graphs(genes, fn_bam, fn_genome_config, conf, log_fname)
+function [genes, inserted] = gen_graphs(genes, CFG)
+% genes = gen_graphs(genes, CFG)
 
+no_cfg = 0;
 if nargin == 1,
     PAR = genes ;
     genes  = PAR.genes ;
-    fn_bam = PAR.fn_bam ;
-    fn_genome_config = PAR.fn_genome_config ;
-    conf = PAR.conf ;
-    if isfield(PAR, 'log_fname'),
-        log_fname = PAR.log_fname ;
+    if ~isfield(PAR, 'CFG'),
+        no_cfg = 1;
     else
-        log_fname = '';
+        CFG = PAR.CFG ;
     end;
 end ;
 
-if (nargin < 4 && nargin > 1) || ~isfield(CFG, 'intron_filter')
+if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'intron_filter'),
 	CFG.intron_filter = [] ;
 end ;
-if (nargin < 4 && nargin > 1) || ~isfield(CFG, 'intron_retention')
+if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'intron_retention'),
 	CFG.intron_retention = [] ;
 end ;
-if (nargin < 4 && nargin > 1) || ~isfield(CFG, 'intron_edges')
+if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'intron_edges'),
 	CFG.intron_edges = [] ;
 end ;
-if (nargin < 4 && nargin > 1) || ~isfield(CFG, 'remove_exons')
+if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'remove_exons'),
 	CFG.remove_exons = [] ;
+end ;
+if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'cassette_exons'),
+	CFG.cassette_exon = [] ;
 end ;
 
 %%% init the stats for inserted elements
@@ -36,6 +37,13 @@ inserted.exon_skip = 0 ;
 inserted.gene_merge = 0 ;
 inserted.new_terminal_exon = 0 ;
 
+%%% init log stream
+if isempty(CFG.log_fname),
+    CFG.fd_log = 1;
+else
+    CFG.fd_log = fopen(CFG.log_fname, 'w');
+end;
+
 % build splice graph for all genes 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fprintf(CFG.fd_log, 'generate splice graph\n');
@@ -45,9 +53,13 @@ genes = splice_graph(genes, CFG);
 % the genes structure
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fprintf(CFG.fd_log, 'load introns from file\n');
-genes = append_intron_list(genes, fn_bam, CFG);
+introns = get_intron_list(genes, CFG);
 %%% check feasibility
-genes = make_introns_feasible(genes, fn_bam, CFG);
+introns = make_introns_feasible(introns, genes, CFG);
+
+for i = 1:length(genes),
+    genes(i).introns = introns(i, :);
+end;
 
 if CFG.do_insert_cassette_exons,
 	fprintf(CFG.fd_log, 'inserting cassette exons\n') ;
@@ -56,20 +68,19 @@ if CFG.do_insert_cassette_exons,
         disp('using CFG.cassette_exon.read_filter') ;
         CFG.intron_filter = CFG.cassette_exon.read_filter;
     end ;
-	[genes, inserted] = insert_cassette_exons(genes, fn_bam, CFG);
+	[genes, inserted] = insert_cassette_exons(genes, CFG);
     CFG = CFG_;
 	fprintf(CFG.fd_log, 'inserted %i casette exons\n', inserted.cassette_exon) ;
 end; 
 
-if conf.do_insert_intron_retentions,
+if CFG.do_insert_intron_retentions,
 	fprintf(CFG.fd_log, 'inserting intron retentions\n') ;
-    read_filter = conf.intron_filter ;
     CFG_ = CFG;
     if isfield(CFG.intron_retention, 'read_filter')
         disp('using CFG.intron_retention.read_filter') ;
         CFG.intron_filter = CFG.intron_retention.read_filter ;
     end ;
-	[genes, inserted] = insert_intron_retentions(genes, fn_bam, CFG);
+	[genes, inserted] = insert_intron_retentions(genes, CFG);
     CFG = CFG_;
 	fprintf(CFG.fd_log, 'inserted %i intron retentions\n', inserted.intron_retention) ;
 end ;
@@ -102,22 +113,23 @@ for i = 1:length(genes),
 end ;
 
 if CFG.do_insert_intron_edges,
-    % append list of introns supported by RNA-seq data to 
+    % re-set list of introns supported by RNA-seq data to 
     % the genes structure
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    fprintf(CFG.fd_log, 'load introns from file\n');
-    %%% re-append intron list
-    genes = append_intron_list(genes, fn_bam, CFG);
-    %%% check feasibility
-    genes = make_introns_feasible(genes, fn_bam, CFG);
+    for i = 1:length(genes),
+        genes(i).introns = introns(i, :);
+    end;
 
     for chr_idx = unique([genes.chr_num]),
         tmp_genes = genes([genes.chr_num] == chr_idx);
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        if ~isfield(CFG, 'insert_intron_iterations'),
+            CFG.insert_intron_iterations = 5;
+        end;
         for iter = 1:CFG.insert_intron_iterations,
-            fprintf(fd_log, 'insert intron edges - chr %i - iteration %i/5\n', chr_idx, iter) ;
-            [genes_mod, inserted_] = insert_intron_edges(tmp_genes, fn_bam, conf, fd_log);
+            fprintf(CFG.fd_log, 'insert intron edges - chr %i - iteration %i/5\n', chr_idx, iter) ;
+            [genes_mod, inserted_] = insert_intron_edges(tmp_genes, CFG);
 
             inserted.intron_in_exon = inserted.intron_in_exon + inserted_.intron_in_exon ;
             inserted.alt_53_prime = inserted.alt_53_prime + inserted_.alt_53_prime ;
@@ -137,6 +149,19 @@ if CFG.do_insert_intron_edges,
         genes([genes.chr_num] == chr_idx) = genes_mod;
     end ;
 end ;
+
+%%% print summary to log file
+fn = fieldnames(inserted);
+fprintf(CFG.fd_log, 'Inserted:\n');
+for i = 1:length(fn),
+    fprintf(CFG.fd_log, '\t%s:\t%i\n', fn{i}, inserted.(fn{i}));
+end;
+
+if CFG.fd_log > 1,
+    fclose(CFG.fd_log);
+end;
+
+
 
 return
 
