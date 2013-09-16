@@ -1,11 +1,11 @@
-function genes = make_introns_feasible(genes, fn_bam, CFG)
-% genes = make_introns_feasible(genes, fn_bam, CFG)
+function introns = make_introns_feasible(introns, genes, CFG)
+% introns = make_introns_feasible(introns, genes, CFG)
 
     tmp1 = [];
     tmp2 = [];
-    for i = 1:length(genes),
-        tmp1 = [tmp1 length(genes(i).introns{1})];
-        tmp2 = [tmp2 length(genes(i).introns{2})];
+    for i = 1:length(introns),
+        tmp1 = [tmp1 length(introns{i, 1})];
+        tmp2 = [tmp2 length(introns{i, 2})];
     end;
     
     unfeas = find(tmp1 > 200 | tmp2 > 200);
@@ -18,15 +18,15 @@ function genes = make_introns_feasible(genes, fn_bam, CFG)
         CFG.intron_filter.mismatch = max(CFG.intron_filter.mismatch - 1, 0);
 
         %%% get new intron counts
-        tmp_genes = append_intron_list(genes(unfeas), fn_bam, CFG);
-        genes(unfeas) = tmp_genes;
+        tmp_introns = get_intron_list(genes(unfeas), CFG);
+        introns(unfeas, :) = tmp_introns;
 
         %%% stil unfeasible?
         tmp1 = [];
         tmp2 = [];
-        for i = 1:length(genes),
-            tmp1 = [tmp1 length(genes(i).introns{1})];
-            tmp2 = [tmp2 length(genes(i).introns{2})];
+        for i = 1:length(introns),
+            tmp1 = [tmp1 length(introns{i, 1})];
+            tmp2 = [tmp2 length(introns{i, 2})];
         end;
         still_unfeas = find(tmp1 > 200 | tmp2 > 200);
         for i = setdiff(unfeas, still_unfeas),
