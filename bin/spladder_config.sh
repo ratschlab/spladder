@@ -10,16 +10,16 @@
 
 
 export SPLADDER_VERSION=1.0
-export SPLADDER_PATH=
-export SPLADDER_SRC_PATH=
-export SPLADDER_BIN_PATH=
-export SPLADDER_INTERPRETER=
+export SPLADDER_PATH=/cbio/grlab/home/akahles/git/software/spladder
+export SPLADDER_SRC_PATH=/cbio/grlab/home/akahles/git/software/spladder/src
+export SPLADDER_BIN_PATH=/cbio/grlab/home/akahles/git/software/spladder/bin
+export SPLADDER_INTERPRETER=octave
 export SPLADDER_MATLAB_BIN_PATH=
 export SPLADDER_MATLAB_MEX_PATH=
 export SPLADDER_MATLAB_INCLUDE_DIR=
-export SPLADDER_OCTAVE_BIN_PATH=
-export SPLADDER_OCTAVE_MKOCT=
-export SPLADDER_SAMTOOLS_BIN_DIR=
-export SPLADDER_SAMTOOLS_LIB_DIR=
-export SPLADDER_SAMTOOLS_INCLUDE_DIR=
-export SPLADDER_PYTHON_PATH=
+export SPLADDER_OCTAVE_BIN_PATH=/usr/bin/octave
+export SPLADDER_OCTAVE_MKOCT=/usr/bin/mkoctfile
+export SPLADDER_SAMTOOLS_BIN_DIR=/cbio/grlab/share/software/bin/samtools
+export SPLADDER_SAMTOOLS_LIB_DIR=/cbio/grlab/share/software/bin/../lib/
+export SPLADDER_SAMTOOLS_INCLUDE_DIR=/cbio/grlab/share/software/bin/../include/bam/
+export SPLADDER_PYTHON_PATH=/usr/bin/python
