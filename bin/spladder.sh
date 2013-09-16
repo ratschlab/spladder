@@ -29,7 +29,7 @@ function usage () {
 
 ### init default parameters
 S_BAM_FNAME=""
-S_OUT_DIR="."
+S_OUT_FNAME="spladder_out.mat"
 S_LOG_FNAME=""
 S_ANNO_FNAME=""
 S_USER_FNAME=""
@@ -49,7 +49,7 @@ while getopts "b:o:l:a:u:c:I:dvieErsh" opt
 do
     case $opt in
     b ) S_BAM_FNAME="$OPTARG" ;;
-    o ) S_OUT_DIR="$OPTARG" ;;
+    o ) S_OUT_FNAME="$OPTARG" ;;
     l ) S_LOG_FNAME="$OPTARG" ;;
     a ) S_ANNO_FNAME="$OPTARG" ;;
     u ) S_USER_FNAME="$OPTARG" ;;
@@ -69,7 +69,7 @@ done
 
 ### assemble parameter string
 PARAMS=""
-for opt in S_BAM_FNAME S_OUT_DIR S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER I_DEBUG I_VERBOSE I_INSERT_IR I_INSERT_CE I_INSERT_IE I_REMOVE_SE I_INFER_SG
+for opt in S_BAM_FNAME S_OUT_FNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER I_DEBUG I_VERBOSE I_INSERT_IR I_INSERT_CE I_INSERT_IE I_REMOVE_SE I_INFER_SG
 do
     eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
 done
