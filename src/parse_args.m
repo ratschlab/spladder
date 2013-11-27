@@ -6,6 +6,7 @@ if size(ver('Octave'), 1)
 else
     IS_OCT = 0;
 end;
+CFG.IS_OCT = IS_OCT;
 
 %%% turn off warnings
 if IS_OCT,
@@ -68,6 +69,17 @@ CFG.debug = I_DEBUG;
 CFG.insert_intron_iterations = I_INSERT_INTRON_ITER;
 CFG.confidence_level = I_CONFIDENCE;
 
+%%% settings for the alt splice part
+CFG.merge_strategy = S_MERGE_STRATEGY;
+CFG.validate_splicegraphs = I_VALIDATE_SG;
+CFG.same_genestruct_for_all_samples = I_SHARE_GENESTRUCT;
+if IS_OCT,
+    CFG.replicate_idxs = strsplit(S_REPLICATE_IDX, ',');
+else
+    CFG.replicate_idxs = regexp(S_REPLICATE_IDX, ',', 'split');
+end;
+CFG.curate_alt_prime_events = I_CURATE_ALTPRIME;
+
 %%% open log file, if specified
 if isempty(S_LOG_FNAME),
     CFG.log_fname = '';
@@ -78,7 +90,7 @@ else
 end;
 
 CFG.anno_fname = S_ANNO_FNAME;
-CFG.out_fname = S_OUT_FNAME;
+CFG.out_dirname = S_OUT_DIRNAME;
 CFG.user_settings = S_USER_FNAME;
 
 CFG.no_reset_conf = 0;
@@ -88,4 +100,36 @@ if IS_OCT,
 else
     CFG.bam_fnames = regexp(S_BAM_FNAME, ',', 'split');
 end;
+
+CFG.reference_strain = S_REFERENCE_STRAIN;
+if strcmp(S_REFERENCE_STRAIN, '-'),
+    ref_tag = '';
+else
+    ref_tag = sprintf('%s:', S_REFERENCE_STRAIN);
+end;
+
+CFG.list_config = {};
+CFG.samples = {};
+
+for i = 1:length(CFG.bam_fnames),
+    if ~strcmp(S_EXPERIMENT_LABEL, '-'),
+        CFG.samples{end + 1} = [S_EXPERIMENT_LABEL '_' regexprep(regexprep(CFG.bam_fnames{i}, '.*/', ''), '.bam', '')]; 
+    else
+        CFG.samples{end + 1} = [regexprep(regexprep(CFG.bam_fnames{i}, '.*/', ''), '.bam', '')]; 
+    end;
+    CFG.strains{end + 1} = [ref_tag CFG.samples{end}] ; 
+end;
+
+%%% rproc options
+CFG.rproc = I_RPROC;
+CFG.options_rproc = struct()
+CFG.options_rproc.mem_req_resubmit  = [30000 60000 80000];
+CFG.options_rproc.time_req_resubmit = [60*60 80*60 90*60];
+CFG.options_rproc.resubmit = 3;
+CFG.options_rproc.priority = 100;
+
+%%% set defaults for now
+CFG.do_prune = 0;
+CFG.do_gen_isoforms = 0;
+CFG.do_merge_all = 0;
 

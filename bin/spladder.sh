@@ -5,7 +5,7 @@
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 #
-# Written (W) 2009-2013 Jonas Behr, Andre Kahles, Gunnar Raetsch
+# Written (W) 2009-2013 Andre Kahles, Jonas Behr, Gunnar Raetsch
 # Copyright (C) 2009-2011 Max Planck Society
 # Copyright (C) 2012-2013 Memorial Sloan-Kettering Cancer Center
 #
@@ -29,10 +29,13 @@ function usage () {
 
 ### init default parameters
 S_BAM_FNAME=""
-S_OUT_FNAME="spladder_out.mat"
+S_OUT_DIRNAME="."
 S_LOG_FNAME=""
 S_ANNO_FNAME=""
 S_USER_FNAME=""
+S_MERGE_STRATEGY="merge_bams" ## alternatives are: merge_graphs, single
+S_EXPERIMENT_LABEL="-"
+S_REFERENCE_STRAIN="-"
 I_CONFIDENCE="3"
 I_INSERT_IR="1"
 I_INSERT_CE="1"
@@ -42,21 +45,33 @@ I_INFER_SG="0"
 I_INSERT_INTRON_ITER="5"
 I_VERBOSE="0"
 I_DEBUG="0"
+I_RPROC="0"
+I_VALIDATE_SG="0"
+I_SHARE_GENESTRUCT="0"
+I_CURATE_ALTPRIME="0"
 
 
 ### parse parameters from command lines
-while getopts "b:o:l:a:u:c:I:dvieErsh" opt
+while getopts "b:o:l:a:u:c:I:M:R:L:S:dpVvAxieErsh" opt
 do
     case $opt in
     b ) S_BAM_FNAME="$OPTARG" ;;
-    o ) S_OUT_FNAME="$OPTARG" ;;
+    o ) S_OUT_DIRNAME="$OPTARG" ;;
     l ) S_LOG_FNAME="$OPTARG" ;;
     a ) S_ANNO_FNAME="$OPTARG" ;;
     u ) S_USER_FNAME="$OPTARG" ;;
     c ) I_CONFIDENCE="$OPTARG" ;;
     I ) I_INSERT_INTRON_ITER="$OPTARG" ;;
+    M ) S_MERGE_STRATEGY="$OPTARG" ;;
+    R ) S_REPLICATE_IDX="$OPTARG" ;;
+    L ) S_EXPERIMENT_LABEL="$OPTARG" ;;
+    S ) S_REFERENCE_STRAIN="$OPTARG" ;;
     d ) I_DEBUG="1" ;;
+    p ) I_RPROC="1" ;;
+    V ) I_VALIDATE_SG="1" ;;
     v ) I_VERBOSE="1" ;;
+    A ) I_CURATE_ALTPRIME="1" ;;
+    x ) I_SHARE_GENESTRUCT="1" ;;
     i ) I_INSERT_IR="0" ;;
     e ) I_INSERT_CE="0" ;;
     E ) I_INSERT_IE="0" ;;
@@ -69,7 +84,7 @@ done
 
 ### assemble parameter string
 PARAMS=""
-for opt in S_BAM_FNAME S_OUT_FNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER I_DEBUG I_VERBOSE I_INSERT_IR I_INSERT_CE I_INSERT_IE I_REMOVE_SE I_INFER_SG
+for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER I_DEBUG I_VERBOSE I_INSERT_IR I_INSERT_CE I_INSERT_IE I_REMOVE_SE I_INFER_SG I_VALIDATE_SG S_MERGE_STRATEGY I_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN I_CURATE_ALTPRIME I_RPROC 
 do
     eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
 done
