@@ -68,7 +68,8 @@ if CFG.do_insert_cassette_exons,
         disp('using CFG.cassette_exon.read_filter') ;
         CFG.intron_filter = CFG.cassette_exon.read_filter;
     end ;
-	[genes, inserted] = insert_cassette_exons(genes, CFG);
+	[genes, inserted_] = insert_cassette_exons(genes, CFG);
+    inserted.cassette_exon = inserted_.cassette_exon;
     CFG = CFG_;
 	fprintf(CFG.fd_log, 'inserted %i casette exons\n', inserted.cassette_exon) ;
 end; 
@@ -80,12 +81,14 @@ if CFG.do_insert_intron_retentions,
         disp('using CFG.intron_retention.read_filter') ;
         CFG.intron_filter = CFG.intron_retention.read_filter ;
     end ;
-	[genes, inserted] = insert_intron_retentions(genes, CFG);
+	[genes, inserted_] = insert_intron_retentions(genes, CFG);
+    inserted.intron_retention = inserted_.intron_retention;
+
     CFG = CFG_;
 	fprintf(CFG.fd_log, 'inserted %i intron retentions\n', inserted.intron_retention) ;
 end ;
 
-if conf.do_remove_short_exons,
+if CFG.do_remove_short_exons,
 	fprintf(CFG.fd_log, 'removing short exons\n') ;
 
 	genes = remove_short_exons(genes, CFG);
