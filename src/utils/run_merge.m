@@ -19,9 +19,10 @@ function run_merge(CFG)
     fn_out = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, merge_all_tag);
     if ~exist(fn_out, 'file'),
         if ~CFG.rproc,
-            merge_genes_by_splicegraph(PAR);
+            merge_genes_by_splicegraph(CFG);
         else
             jobinfo = rproc_empty(0) ;
+            PAR = struct();
             PAR.CFG = CFG;
             if chunksize > 0,
                 merge_list_len = length(CFG.samples);
@@ -56,7 +57,7 @@ function run_merge(CFG)
     end;
     fn_merged = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, merge_all_tag);
     fn_val = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs%s.validated.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, merge_all_tag);
-    if validate_splicegraphs && ~exist(fn_val, 'file'),
+    if CFG.validate_splicegraphs && ~exist(fn_val, 'file'),
         filter_by_edgecount(fn_merged, fn_val);
     end;
     if CFG.do_gen_isoforms,
