@@ -65,6 +65,6 @@ function spladder_core(CFG)
         if CFG.do_gen_isoforms,
             fprintf('Generating all isoforms already done; loading genes\n');
         else
-            fprintf(' Generating all isoforms not requested\n');
+            fprintf('Generating all isoforms not requested\n');
         end;
     end;

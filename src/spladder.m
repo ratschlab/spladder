@@ -20,7 +20,7 @@ end;
 
 %%% iterate over files, if merge strategy is single
 if strcmp(CFG.merge_strategy, 'single') || strcmp(CFG.merge_strategy, 'merge_graphs'),
-    idxs = 1:len(CFG.samples);
+    idxs = 1:length(CFG.samples);
 else
     idxs = 1;
 end;
@@ -31,11 +31,13 @@ if CFG.rproc,
     job_nr = 1;
 end;
 
+%%% create spladder sub-directory
+mkdir(CFG.out_dirname,'spladder');
+
 for idx = idxs,
     CFG_ = CFG;
     if strcmp(CFG.merge_strategy, 'single') || strcmp(CFG.merge_strategy, 'merge_graphs'),
         CFG.bam_fnames = CFG.bam_fnames(idx);
-        CFG.list_config = CFG.list_config(idx);
         CFG.samples = CFG.samples(idx);
         CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{1});
     else
