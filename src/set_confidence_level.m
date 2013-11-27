@@ -59,7 +59,7 @@ function CFG = set_confidence_level_level(CFG),
       CFG.intron_retention.min_retention_max_exon_fold_diff = 4 ; 
     end;
 
-    CFG.intron_retention.read_filter = conf.intron_filter ;
+    CFG.intron_retention.read_filter = CFG.intron_filter ;
 
 return
 
