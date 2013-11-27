@@ -34,7 +34,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
         merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{i}, prune_tag);
     end;
     %%% add also graph of all bam files combined
-    if merge_all && exist(sprintf('%s/spladder/genes_graph_conf%i.merged_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag), 'file')
+    if CFG.do_merge_all && exist(sprintf('%s/spladder/genes_graph_conf%i.merged_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag), 'file')
         merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.merged_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
     end
 
