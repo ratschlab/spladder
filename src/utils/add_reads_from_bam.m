@@ -17,7 +17,8 @@ if isstruct(which_data)
 	which_data = tmp;
 end
 
-types = separate(which_data, ',');
+types = strsplit(which_data, ',');
+
 if isempty(types{1})
 	fprintf('add_reads_from_bam: nothing to do\n');
 	return
@@ -33,7 +34,7 @@ clipped = 0;
 
 %reads from both strands are in one sam file
 if ~iscell(base_dir),
-    filenames = separate(base_dir, ',');
+    filenames = strsplit(base_dir, ',');
 else
     filenames = base_dir;
 end;
