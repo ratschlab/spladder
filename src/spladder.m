@@ -32,7 +32,7 @@ if CFG.rproc,
 end;
 
 %%% create spladder sub-directory
-mkdir(CFG.out_dirname,'spladder');
+[tmp, tmp] = mkdir(CFG.out_dirname,'spladder');
 
 for idx = idxs,
     CFG_ = CFG;
