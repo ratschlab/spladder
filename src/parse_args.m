@@ -133,3 +133,5 @@ CFG.do_prune = 0;
 CFG.do_gen_isoforms = 0;
 CFG.do_merge_all = 0;
 
+CFG.sg_min_edge_count = 1;
+

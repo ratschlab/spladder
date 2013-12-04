@@ -1,4 +1,4 @@
-function filter_by_edgecount(fn_genes, fn_out)
+function filter_by_edgecount(CFG, fn_genes, fn_out)
 
     %%% load gene structure
     fprintf(1, 'Loading merged genes from %s ...\n', fn_genes);
@@ -7,7 +7,7 @@ function filter_by_edgecount(fn_genes, fn_out)
 
     %%% filter splicegraphs by support count over samples
     for i = 1:length(genes),
-        genes(i).splicegraph{2} = genes(i).edge_count >= 5;
+        genes(i).splicegraph{2} = genes(i).edge_count >= CFG.sg_min_edge_count;
         %%% remove all exons that have no incoming or outgoing edges
         rm_idx = find(sum(genes(i).splicegraph{2}, 2) == 0);
         if ~isempty(rm_idx),
