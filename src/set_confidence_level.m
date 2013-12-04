@@ -4,25 +4,25 @@ function CFG = set_confidence_level_level(CFG),
     %%% settings for accepted introns
     CFG.intron_filter=[] ;
     if CFG.confidence_level == 0,
-        CFG.intron_filter.intron = 20000 ; 
-        CFG.intron_filter.exon_len = 8;
-        CFG.intron_filter.mismatch = 2 ;
-        CFG.intron_filter.mincount = 1 ;
+        CFG.read_filter.intron = 20000 ; 
+        CFG.read_filter.exon_len = 8;
+        CFG.read_filter.mismatch = 2 ;
+        CFG.read_filter.mincount = 1 ;
     elseif CFG.confidence_level == 1,
-        CFG.intron_filter.intron = 20000 ; 
-        CFG.intron_filter.exon_len = 12;
-        CFG.intron_filter.mismatch = 1 ;
-        CFG.intron_filter.mincount = 2 ;
+        CFG.read_filter.intron = 20000 ; 
+        CFG.read_filter.exon_len = 12;
+        CFG.read_filter.mismatch = 1 ;
+        CFG.read_filter.mincount = 2 ;
     elseif CFG.confidence_level == 2
-        CFG.intron_filter.intron = 20000 ; 
-        CFG.intron_filter.exon_len = 20;
-        CFG.intron_filter.mismatch = 1 ;
-        CFG.intron_filter.mincount = 5 ;
+        CFG.read_filter.intron = 20000 ; 
+        CFG.read_filter.exon_len = 20;
+        CFG.read_filter.mismatch = 1 ;
+        CFG.read_filter.mincount = 5 ;
     elseif CFG.confidence_level == 3
-        CFG.intron_filter.intron = 20000 ; 
-        CFG.intron_filter.exon_len = 25;
-        CFG.intron_filter.mismatch = 0 ;
-        CFG.intron_filter.mincount = 10 ;
+        CFG.read_filter.intron = 20000 ; 
+        CFG.read_filter.exon_len = 25;
+        CFG.read_filter.mismatch = 0 ;
+        CFG.read_filter.mincount = 10 ;
     end ;
 
     %%% settings for accepted cassette exons
@@ -59,7 +59,7 @@ function CFG = set_confidence_level_level(CFG),
       CFG.intron_retention.min_retention_max_exon_fold_diff = 4 ; 
     end;
 
-    CFG.intron_retention.read_filter = CFG.intron_filter ;
+    CFG.intron_retention.read_filter = CFG.read_filter ;
 
 return
 
