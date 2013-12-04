@@ -1,6 +1,6 @@
 function event_list = sort_events_full(event_list),
 
-    if len(event_list) == 0m
+    if length(event_list) == 0,
         return;
     end;
 
