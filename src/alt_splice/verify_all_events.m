@@ -5,15 +5,6 @@ if nargin < 7,
     is_half_open = 0;
 end;
 
-%%% set paths
-addpath ~/git/projects/2012/mGene_core/data_processing_signals/
-addpath ~/git/projects/2012/mGene_core/auxiliary_data/
-addpath ~/git/projects/2012/mGene_core/experiments/thaliana/
-addpath ~/git/projects/2012/mGene_core/experiments/thaliana/tools/
-addpath ~/git/tools/ngs/
-addpath ~/git/tools/genomes/splicegraphs
-addpath ~/git/tools/genomes/splicegraphs/detect_altsplice/
-
 out_fn = '' ;
 
 fieldnames = {'intron', 'exon1', 'exon2', 'exon_alt1', 'exon_alt2', 'exon_const', 'intron1', 'intron2', 'exon', 'exon_pre', 'exon_aft', 'exons'};
