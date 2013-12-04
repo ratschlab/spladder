@@ -164,7 +164,5 @@ if CFG.fd_log > 1,
     fclose(CFG.fd_log);
 end;
 
-
-
 return
 
