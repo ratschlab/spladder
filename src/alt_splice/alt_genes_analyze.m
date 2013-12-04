@@ -32,7 +32,7 @@ function alt_genes_analyze(CFG, event_type)
             end;
             
             if ~CFG.rproc,
-                events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), 1, event_type, set_confidence_level(CFG)) ;
+                events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), 1, event_type, CFG) ;
             else
                 jobinfo = rproc_empty() ;
                 chunk_size_events = 25 ;
@@ -48,7 +48,7 @@ function alt_genes_analyze(CFG, event_type)
                         PAR.verify = 1 ;
                         PAR.out_fn = sprintf('%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat', CFG.out_dirname, event_type, i, j, replicate, CFG.confidence_level);
                         PAR.event_type = event_type;
-                        PAR.conf_filter = set_confidence_level(CFG);
+                        PAR.CFG = CFG;
                         if exist(PAR.out_fn, 'file')
                             fprintf('Chunk event %i, strain %i already completed\n', i, j);
                         else
@@ -176,7 +176,7 @@ function alt_genes_analyze(CFG, event_type)
         fn_out_conf_genes_alt = strrep(fn_out_conf, '.mat', '.genes.mat') ;
 
         if isempty(events_all),
-            fprintf('No %s event could be found. - Nothing  to report.\n', event_type);
+            fprintf('No %s event could be found. - Nothing to report.\n', event_type);
             continue;
         else
             fprintf('Reporting complete %s events.\n', event_type);
@@ -189,7 +189,7 @@ function alt_genes_analyze(CFG, event_type)
 
 
         if isempty(events_confirmed),
-            fprintf('No %s event could be confirmed. - Nothing  to report.\n', event_type);
+            fprintf('No %s event could be confirmed. - Nothing to report.\n', event_type);
             continue;
         else
             fprintf('Reporting confirmed %s events.\n', event_type);
