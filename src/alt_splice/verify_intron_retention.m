@@ -1,47 +1,12 @@
-function [verified,info] = verify_intron_retention(event, fn_bam, is_half_open, conf_filter)
-% function [verified,info] = verify_intron_retention(event, fn_bam, is_half_open, conf_filter)
+function [verified, info] = verify_intron_retention(event, fn_bam, CFG)
+% function [verified, info] = verify_intron_retention(event, fn_bam, CFG)
 %
 
-if nargin < 4,
-    conf_filter=[] ;
-end ;
-
-if nargin < 3,
+if ~isfield(CFG, 'is_half_open'),
     is_half_open = 0;
+else
+    is_half_open = CFG.is_half_open;
 end;
-
-if ~isfield(conf_filter, 'intron'),
-    conf_filter.intron = 300000;
-end 
-if ~isfield(conf_filter, 'exon_len'),
-    conf_filter.exon_len = 2; 
-end
-if ~isfield(conf_filter, 'mismatch'),
-    conf_filter.mismatch = 1;
-end ;
-if ~isfield(conf_filter, 'mincount'),
-    conf_filter.mincount = 1 ;
-end ;
-
-conf_intron_retention=[] ;
-if ~isfield(conf_intron_retention, 'min_retention_cov'),
-    conf_intron_retention.min_retention_cov = 3 ;
-end 
-if ~isfield(conf_intron_retention, 'min_retention_region'),
-    conf_intron_retention.min_retention_region = 0.75; 
-end
-if ~isfield(conf_intron_retention, 'min_retention_rel_cov'),
-    conf_intron_retention.min_retention_rel_cov = 0.05 ; 
-end
-%if ~isfield(conf_intron_retention, 'max_retention_rel_cov'),
-%    conf_intron_retention.max_retention_rel_cov = 1.5 ; 
-%end
-%if ~isfield(conf_intron_retention, 'min_retention_max_exon_fold_diff'),
-%    conf_intron_retention.min_retention_max_exon_fold_diff = 4 ; 
-%end
-if ~isfield(conf_intron_retention, 'min_non_retention_count'),
-    conf_intron_retention.min_non_retention_count = 3 ; 
-end
 
 verified = [0 0] ;
 
@@ -79,7 +44,7 @@ gg.segment_lists = {} ;
 gg.segment_scores = {} ;
 
 %%% add RNA-seq evidence to the gene structure
-gg = add_count_tracks(gg, fn_bam, conf_filter);
+gg = add_count_tracks(gg, fn_bam, CFG.read_filter);
 
 %%% compute exon coverages as mean of position wise coverage
 idx = [event.exon1(1):event.exon1(2)] - gg.start + 1 ;
@@ -98,9 +63,9 @@ info.exon1_cov = exon_coverage1 ;
 info.exon2_cov = exon_coverage2 ;
 
 %%% check if counts match verification criteria
-if mean(icov) > conf_intron_retention.min_retention_cov && ...
-        mean(icov > 0) > conf_intron_retention.min_retention_region && ...
-        mean(icov) >= conf_intron_retention.min_retention_rel_cov*(exon_coverage1+exon_coverage2)/2 
+if mean(icov) > CFG.intron_retention.min_retention_cov && ...
+        mean(icov > 0) > CFG.intron_retention.min_retention_region && ...
+        mean(icov) >= CFG.intron_retention.min_retention_rel_cov*(exon_coverage1+exon_coverage2)/2 
     verified(1) = 1 ;
 end ;
 
@@ -111,7 +76,7 @@ idx = find(abs(gg.introns(1,:) - event.intron(1)) <= intron_tol & abs(gg.introns
 if ~isempty(idx),
     assert(length(idx) >= 1) ;
     info.intron_conf = sum(gg.introns(3,idx)) ;
-    if info.intron_conf >= conf_intron_retention.min_non_retention_count,
+    if info.intron_conf >= CFG.intron_retention.min_non_retention_count,
         verified(2) = 1 ;
     end;
 end ;

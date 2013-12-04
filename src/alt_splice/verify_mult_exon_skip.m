@@ -1,44 +1,12 @@
-function [verified,info]=verify_mult_exon_skip(event, fn_bam, is_half_open, conf_filter)
-% [verified,info]=verify_mult_exon_skip(event, fn_bam, is_half_open, conf_filter)
+function [verified, info] = verify_mult_exon_skip(event, fn_bam, CFG)
+% [verified, info] = verify_mult_exon_skip(event, fn_bam, CFG) 
 %
 
-if nargin < 4,
-    conf_filter=[] ;
-end ;
-
-if nargin < 3,
+if ~isfield(CFG, 'is_half_open'),
     is_half_open = 0;
+else
+    is_half_open = CFG.is_half_open;
 end;
-
-if ~isfield(conf_filter, 'intron'),
-    conf_filter.intron = 300000;
-end 
-if ~isfield(conf_filter, 'exon_len'),
-    conf_filter.exon_len = 2; 
-end
-if ~isfield(conf_filter, 'mismatch'),
-    conf_filter.mismatch = 1;
-end ;
-if ~isfield(conf_filter, 'mincount'),
-    conf_filter.mincount = 1 ;
-end ;
-
-conf_mult_exon_skip=[] ;
-%if ~isfield(conf_exon_skip, 'max_exon_fold_diff'),
-%    conf_exon_skip.max_exon_fold_diff = 4 ; 
-%end
-if ~isfield(conf_mult_exon_skip, 'min_non_skip_count'),
-    conf_mult_exon_skip.min_non_skip_count = 3 ; 
-end
-if ~isfield(conf_mult_exon_skip, 'min_skip_count'),
-    conf_mult_exon_skip.min_skip_count = 3 ; 
-end
-if ~isfield(conf_mult_exon_skip, 'min_skip_rel_cov'),
-    conf_mult_exon_skip.min_skip_rel_cov=0.05 ;
-end ;
-%if ~isfield(conf_exon_skip, 'max_skip_rel_cov'),
-%    conf_exon_skip.max_skip_rel_cov=1.5 ;
-%end ;
 
 verified = [0 0 0 0 0] ;
 
@@ -79,7 +47,7 @@ gg.tracks = [] ;
 assert(event.exon_pre(2)<event.exon_aft(1)) ;
 
 %%% add RNA-seq evidence to the gene structure
-gg = add_count_tracks(gg, fn_bam, conf_filter);
+gg = add_count_tracks(gg, fn_bam, CFG.read_filter);
 
 %%% compute exon coverages as mean of position wise coverage
 idx = [event.exon_pre(1):event.exon_pre(2)] - gg.start + 1 ;
@@ -100,7 +68,7 @@ info.exon_aft_cov = exon_coverage_aft ;
 info.exons_cov = exons_coverage ;
 
 %%% check if coverage of skipped exon is >= than FACTOR times average of pre and after
-if exons_coverage >= conf_mult_exon_skip.min_skip_rel_cov * (exon_coverage_pre + exon_coverage_aft)/2 
+if exons_coverage >= CFG.mult_exon_skip.min_skip_rel_cov * (exon_coverage_pre + exon_coverage_aft)/2 
     verified(1) = 1 ;
 end ;
 
@@ -120,7 +88,7 @@ end ;
 idx = find(abs(gg.introns(1,:) - (event.exon_pre(2)+1)) <= intron_tol & abs(gg.introns(2,:) - (event.exon_aft(1) - 1)) <= intron_tol) ;
 if ~isempty(idx),
     assert(length(idx)>=1) ;
-    info.exon_pre_exon_aft_conf=sum(gg.introns(3,idx)) ;
+    info.exon_pre_exon_aft_conf = sum(gg.introns(3,idx)) ;
 end ;
 for i = 2:2:(size(event.exons, 2)-2),
     idx = find(abs(gg.introns(1,:) - (event.exons(i)+1)) <= intron_tol & abs(gg.introns(2,:) - (event.exons(i+1) - 1)) <= intron_tol) ;
@@ -129,16 +97,16 @@ for i = 2:2:(size(event.exons, 2)-2),
     end;
     info.num_inner_exon = info.num_inner_exon + 1;
 end;
-if info.exon_pre_exon_conf >= conf_mult_exon_skip.min_non_skip_count,
+if info.exon_pre_exon_conf >= CFG.mult_exon_skip.min_non_skip_count,
     verified(2) = 1 ;
 end ;
-if info.exon_exon_aft_conf >= conf_mult_exon_skip.min_non_skip_count,
+if info.exon_exon_aft_conf >= CFG.mult_exon_skip.min_non_skip_count,
     verified(3) = 1 ;
 end ;
-if (info.sum_inner_exon_conf / info.num_inner_exon) >= conf_mult_exon_skip.min_non_skip_count,
+if (info.sum_inner_exon_conf / info.num_inner_exon) >= CFG.mult_exon_skip.min_non_skip_count,
     verified(4) = 1 ;
 end ;
-if info.exon_pre_exon_aft_conf >= conf_mult_exon_skip.min_skip_count,
+if info.exon_pre_exon_aft_conf >= CFG.mult_exon_skip.min_skip_count,
     verified(5) = 1 ;
 end ;
 

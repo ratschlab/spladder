@@ -1,9 +1,5 @@
-function ev = verify_all_events(ev, strain_idx, list_bam, verify, event_type, conf_filter, is_half_open) ;
-% ev = verify_all_events(ev, strain_idx, list_bam, verify, event_type, conf_filter, is_half_open) ;
-
-if nargin < 7,
-    is_half_open = 0;
-end;
+function ev = verify_all_events(ev, strain_idx, list_bam, verify, event_type, CFG) ;
+% ev = verify_all_events(ev, strain_idx, list_bam, verify, event_type, CFG) ;
 
 out_fn = '' ;
 
@@ -19,12 +15,7 @@ if nargin==1,
     if isfield(PAR, 'out_fn'),
         out_fn = PAR.out_fn ;
     end ;
-    if_half_open = 0;
-    if isfield(PAR, 'is_half_open')
-        is_half_open = PAR.is_half_open;
-    end ;
-    event_type = PAR.event_type;
-    conf_filter = PAR.conf_filter;
+    CFG = PAR.CFG;
 end ;
 
 %%% verify the events if demanded
@@ -41,13 +32,13 @@ if verify,
                 end;
             end;
             if strcmp(event_type, 'exon_skip'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_exon_skip(ev_tmp, list_bam(:,s_idx), is_half_open, conf_filter) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_exon_skip(ev_tmp, list_bam(:,s_idx), CFG) ;
             elseif strcmp(event_type, 'alt_3prime') || strcmp(event_type, 'alt_5prime') || strcmp(event_type, 'alt_prime'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_alt_prime(ev_tmp, list_bam(:,s_idx), is_half_open, conf_filter) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_alt_prime(ev_tmp, list_bam(:,s_idx), CFG) ;
             elseif strcmp(event_type, 'intron_retention'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_intron_retention(ev_tmp, list_bam(:,s_idx), is_half_open, conf_filter) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_intron_retention(ev_tmp, list_bam(:,s_idx), CFG) ;
             elseif strcmp(event_type, 'mult_exon_skip'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_mult_exon_skip(ev_tmp, list_bam(:,s_idx), is_half_open, conf_filter) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_mult_exon_skip(ev_tmp, list_bam(:,s_idx), CFG) ;
             end;
         end ;
     end ;

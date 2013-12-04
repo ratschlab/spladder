@@ -1,36 +1,12 @@
-function [verified,info] = verify_alt_prime(event, fn_bam, is_half_open, conf_filter)
-% [verified,info]=verify_exon_skip(event, fn_bam, is_half_open, conf_filter)
+function [verified, info] = verify_alt_prime(event, fn_bam, CFG)
+% [verified, info] = verify_exon_skip(event, fn_bam, CFG)
 %
 
-if nargin < 4,
-    conf_filter=[] ;
-end ;
-
-if nargin < 3,
+if ~isfield(CFG, 'is_half_open'),
     is_half_open = 0;
+else
+    is_half_open = CFG.is_half_open;
 end;
-
-%%% confidence filters for alignments 
-if ~isfield(conf_filter, 'intron'),
-    conf_filter.intron = 300000;
-end 
-if ~isfield(conf_filter, 'exon_len'),
-    conf_filter.exon_len = 2; 
-end
-if ~isfield(conf_filter, 'mismatch'),
-    conf_filter.mismatch = 1;
-end ;
-if ~isfield(conf_filter, 'mincount'),
-    conf_filter.mincount = 1 ;
-end ;
-
-conf_alt_prime = [] ;
-if ~isfield(conf_alt_prime, 'min_diff_rel_cov'),
-    conf_alt_prime.min_diff_rel_cov = 0.05; 
-end;
-if ~isfield(conf_alt_prime, 'min_intron_count'),
-    conf_alt_prime.min_intron_count = 3 ; 
-end
 
 info.exon_diff_cov = 0;
 info.exon_const_cov = 0;
@@ -66,7 +42,7 @@ gg.stop = max([event.exon_alt1(2), event.exon_alt2(2), event.exon_const(2)]) ;
 gg.tracks=[] ;
 
 %%% add RNA-seq evidence to the gene structure
-gg = add_count_tracks(gg, fn_bam, conf_filter);
+gg = add_count_tracks(gg, fn_bam, CFG.read_filter);
 
 %%% compute exon coverages as mean of position wise coverage
 if (event.exon_alt1(1) == event.exon_alt2(1)),
@@ -92,15 +68,13 @@ end;
 %    idx_const = [idx_const, [event.exon_const(1) : event.exon_const(2)] - gg.start + 1];
 %end;
 
-%keyboard;
-
 exon_diff_coverage = mean(sum(gg.tracks(:, idx_diff),1), 2) ;
 exon_const_coverage = mean(sum(gg.tracks(:, idx_const),1), 2) ;
 
 info.exon_diff_cov = exon_diff_coverage ;
 info.exon_const_cov = exon_const_coverage ;
 
-if exon_diff_coverage >= conf_alt_prime.min_diff_rel_cov * exon_const_coverage
+if exon_diff_coverage >= CFG.alt_prime.min_diff_rel_cov * exon_const_coverage
     verified(1) = 1;
 end;
 
@@ -118,7 +92,7 @@ if ~isempty(idx),
     info.intron2_conf = sum(gg.introns(3,idx)) ;
 end ;
 
-if min(info.intron1_conf, info.intron2_conf) >= conf_alt_prime.min_intron_count,
+if min(info.intron1_conf, info.intron2_conf) >= CFG.alt_prime.min_intron_count,
     verified(2) = 1 ;
 end ;
 
