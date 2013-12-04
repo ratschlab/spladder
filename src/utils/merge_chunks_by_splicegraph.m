@@ -27,11 +27,7 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
 
     %%% add all single bam file graphs
     for c_idx = 1:chunksize:merge_list_len,
-        if CFG.do_merge_all,
-            merge_list{end + 1} = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs_merged_bams_chunk%i_%i.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, c_idx, min(c_idx + chunksize - 1, merge_list_len));
-        else
-            merge_list{end + 1} = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs_chunk%i_%i.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, c_idx, min(c_idx + chunksize - 1, merge_list_len));
-        end;
+        merge_list{end + 1} = sprintf('%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag, c_idx, min(c_idx + chunksize - 1, merge_list_len));
     end;
     %%% iterate over merge list
     for i = 1:length(merge_list),
@@ -150,17 +146,12 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
     genes = genes2;
     clear genes2;
 
-    if merge_all,
-        fn = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs_merged_bams.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
-    else
-        fn = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
-    end
-    fprintf(1, 'Store genes at: %s\n', fn);
+    fn_out = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
+    fprintf(1, 'Store genes at: %s\n', fn_out);
     s = warning('error', 'MATLAB:save:sizeTooBigForMATFile');
     try
-        save(fn, 'genes') ;
+        save(fn_out, 'genes') ;
     catch
-        save(fn, 'genes', '-v7.3') ;
+        save(fn_out, 'genes', '-v7.3') ;
     end;
     warning(s);
-

@@ -34,8 +34,8 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
         merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{i}, prune_tag);
     end;
     %%% add also graph of all bam files combined
-    if CFG.do_merge_all && exist(sprintf('%s/spladder/genes_graph_conf%i.merged_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag), 'file')
-        merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.merged_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
+    if CFG.do_merge_all && exist(sprintf('%s/spladder/genes_graph_conf%i.merge_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag), 'file')
+        merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.merge_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
     end
 
     %%% iterate over merge list 
@@ -159,20 +159,17 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
     genes = genes2;
     clear genes2;
 
-    if CFG.do_merge_all,
-        fn = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs_merged_bams.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
-    else
-        fn = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
-    end
+    fn_out = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
     if ~isempty(chunk_idx),
         chunk_tag = sprintf('_chunk%i_%i', chunk_idx(1), chunk_idx(end));
-        fn = strrep(fn, '.mat', sprintf('%s.mat', chunk_tag));
+        fn_out = strrep(fn_out, '.mat', sprintf('%s.mat', chunk_tag));
     end;
-    fprintf(1, 'Store genes at: %s\n', fn);
+    
+    fprintf(1, 'Store genes at: %s\n', fn_out);
     s = warning('error', 'MATLAB:save:sizeTooBigForMATFile');
     try
-        save(fn, 'genes') ;
+        save(fn_out, 'genes') ;
     catch
-        save(fn, 'genes', '-v7.3');
+        save(fn_out, 'genes', '-v7.3');
     end;
     warning(s);

@@ -6,8 +6,6 @@ function run_merge(CFG)
         merge_all_tag = '_merged_bams';
     end;
 
-    %options.addpaths = {'/cbio/grlab/home/akahles/git/projects/2013/THCA/alternative_splicing', '/cbio/grlab/home/akahles/git/projects/2013/THCA/alternative_splicing/settings', '/cbio/grlab/home/akahles/git/projects/2013/THCA/alternative_splicing/writer', '/cbio/grlab/home/akahles/git/projects/2013/THCA/alternative_splicing/tools'}; 
-
     chunksize = 50;
 
     if CFG.do_prune,
@@ -16,7 +14,9 @@ function run_merge(CFG)
         prune_tag = '';
     end;
 
-    fn_out = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, merge_all_tag);
+    fn_out = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
+    fn_out_val = sprintf('%s/spladder/genes_graph_conf%i.%s%s.validated.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
+
     if ~exist(fn_out, 'file'),
         if ~CFG.rproc,
             merge_genes_by_splicegraph(CFG);
@@ -26,15 +26,11 @@ function run_merge(CFG)
             PAR.CFG = CFG;
             if chunksize > 0,
                 merge_list_len = length(CFG.samples);
-                if merge_all,
+                if strcmp(CFG.merge_strategy, 'merge_all'),
                     merge_list_len = merge_list_len + 1;
                 end;
                 for c_idx = 1:chunksize:merge_list_len,
-                    if merge_all,
-                        fn = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs_merged_bams_chunk%i_%i.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, c_idx, min(merge_list_len, c_idx + chunksize - 1));
-                    else
-                        fn = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs_chunk%i_%i.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, c_idx, min(merge_list_len, c_idx + chunksize - 1));
-                    end
+                    fn = sprintf('%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag, c_idx, min(merge_list_len, c_idx + chunksize - 1));
                     if exist(fn, 'file'),
                         continue;
                     else
@@ -47,6 +43,7 @@ function run_merge(CFG)
                 jobinfo(end + 1) = rproc('merge_genes_by_splicegraph', PAR, 10000, CFG.options_rproc, 40*60);
             end;
             jobinfo = rproc_wait(jobinfo, 30, 1, 1) ;
+            %%% merge chunks
             if chunksize > 0,
                 PAR.chunksize = chunksize;
                 merge_chunks_by_splicegraph(PAR);
@@ -55,13 +52,14 @@ function run_merge(CFG)
     else
         fprintf(1, 'File %s already exists!\n', fn_out);
     end;
-    fn_merged = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, merge_all_tag);
-    fn_val = sprintf('%s/spladder/genes_graph_conf%i.merged%s_graphs%s.validated.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, merge_all_tag);
-    if CFG.validate_splicegraphs && ~exist(fn_val, 'file'),
-        filter_by_edgecount(fn_merged, fn_val);
+
+    %%% generate validated version of splice graph
+    if CFG.validate_splicegraphs && ~exist(fn_out_val, 'file'),
+        filter_by_edgecount(CFG, fn_out, fn_out_val);
     end;
+
     if CFG.do_gen_isoforms,
-        fn_out = sprintf('%s/spladder/genes_graph_conf%i.merged%s_isoforms%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag, merge_all_tag);
+        fn_out = sprintf('%s/spladder/genes_graph_conf%i.%s%s_isoforms.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
         if ~exist(fn_out, 'file');
             if ~CFG.rproc,
                 merge_genes_by_isoform(CFG.out_dirname, CFG.confidence_level, merge_all, experiment);
