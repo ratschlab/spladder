@@ -36,12 +36,12 @@ mkdir(CFG.out_dirname,'spladder');
 
 for idx = idxs,
     CFG_ = CFG;
-    if strcmp(CFG.merge_strategy, 'single') || strcmp(CFG.merge_strategy, 'merge_graphs'),
+    if ~strcmp(CFG.merge_strategy, 'merge_bams'),
         CFG.bam_fnames = CFG.bam_fnames(idx);
         CFG.samples = CFG.samples(idx);
         CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{1});
     else
-        CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.merged.mat', CFG.out_dirname, CFG.confidence_level);
+        CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
     end;
 
     if CFG.rproc,
@@ -64,4 +64,8 @@ if strcmp(CFG.merge_strategy, 'merge_graphs'),
     run_merge(CFG);
 end;
 
+%%% handle alternative splicing part
+alt_genes_collect(CFG);
 
+alt_genes_analyze(CFG, 'exon_skip');
+alt_genes_analyze(CFG, 'intron_retention');
