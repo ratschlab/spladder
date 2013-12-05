@@ -9,6 +9,7 @@ function spladder_core(CFG)
     %%% check if result file exists and start gen graph step if necessary
     if ~exist(CFG.out_fname, 'file'),
         fprintf('Augmenting splice graphs.\n');
+        fprintf('=========================\n\n');
         if ~isfield(CFG, 'genes'),
             load(CFG.anno_fname, 'genes');
         else
@@ -16,7 +17,7 @@ function spladder_core(CFG)
         end;
         genes = gen_graphs(genes, CFG) ;
 
-        fprintf('\tSaving genes to %s\n', CFG.out_fname) ;
+        fprintf('Saving genes to %s\n', CFG.out_fname) ;
         save(CFG.out_fname, 'genes') ;
     else
         fprintf('Augmenting splice graphs already completed.\n\t%s exists\n\tloading genes from %s\n', CFG.out_fname, CFG.out_fname);

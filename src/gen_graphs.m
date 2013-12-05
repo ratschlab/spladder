@@ -1,31 +1,10 @@
 function [genes, inserted] = gen_graphs(genes, CFG)
 % genes = gen_graphs(genes, CFG)
 
-no_cfg = 0;
 if nargin == 1,
     PAR = genes ;
     genes  = PAR.genes ;
-    if ~isfield(PAR, 'CFG'),
-        no_cfg = 1;
-    else
-        CFG = PAR.CFG ;
-    end;
-end ;
-
-if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'intron_filter'),
-	CFG.intron_filter = [] ;
-end ;
-if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'intron_retention'),
-	CFG.intron_retention = [] ;
-end ;
-if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'intron_edges'),
-	CFG.intron_edges = [] ;
-end ;
-if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'remove_exons'),
-	CFG.remove_exons = [] ;
-end ;
-if ((nargin < 2) && (no_cfg == 1)) || ~isfield(CFG, 'cassette_exons'),
-	CFG.cassette_exon = [] ;
+    CFG = PAR.CFG ;
 end ;
 
 %%% init the stats for inserted elements
@@ -46,14 +25,17 @@ end;
 
 % build splice graph for all genes 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-fprintf(CFG.fd_log, 'generate splice graph\n');
+fprintf(CFG.fd_log, 'Generate splice graph ...\n');
 genes = splice_graph(genes, CFG);
+fprintf(CFG.fd_log, '...done.\n\n');
 
 % append list of introns supported by RNA-seq data to 
 % the genes structure
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-fprintf(CFG.fd_log, 'load introns from file\n');
+fprintf(CFG.fd_log, 'Load introns from file ...\n');
 introns = get_intron_list(genes, CFG);
+fprintf(CFG.fd_log, '...done.\n\n');
+
 %%% check feasibility
 introns = make_introns_feasible(introns, genes, CFG);
 
@@ -62,41 +44,39 @@ for i = 1:length(genes),
 end;
 
 if CFG.do_insert_cassette_exons,
-	fprintf(CFG.fd_log, 'inserting cassette exons\n') ;
+	fprintf(CFG.fd_log, '\t ...inserting cassette exons\n') ;
     CFG_ = CFG;
     if isfield(CFG, 'cassette_exon') && isfield(CFG.cassette_exon, 'read_filter')
-        disp('using CFG.cassette_exon.read_filter') ;
-        CFG.intron_filter = CFG.cassette_exon.read_filter;
+        CFG.read_filter = CFG.cassette_exon.read_filter;
     end ;
 	[genes, inserted_] = insert_cassette_exons(genes, CFG);
     inserted.cassette_exon = inserted_.cassette_exon;
     CFG = CFG_;
-	fprintf(CFG.fd_log, 'inserted %i casette exons\n', inserted.cassette_exon) ;
+	fprintf(CFG.fd_log, '\tinserted %i casette exons\n', inserted.cassette_exon) ;
 end; 
 
 if CFG.do_insert_intron_retentions,
-	fprintf(CFG.fd_log, 'inserting intron retentions\n') ;
+	fprintf(CFG.fd_log, '\t ... inserting intron retentions\n') ;
     CFG_ = CFG;
     if isfield(CFG.intron_retention, 'read_filter')
-        disp('using CFG.intron_retention.read_filter') ;
-        CFG.intron_filter = CFG.intron_retention.read_filter ;
+        CFG.read_filter = CFG.intron_retention.read_filter ;
     end ;
 	[genes, inserted_] = insert_intron_retentions(genes, CFG);
     inserted.intron_retention = inserted_.intron_retention;
 
     CFG = CFG_;
-	fprintf(CFG.fd_log, 'inserted %i intron retentions\n', inserted.intron_retention) ;
+	fprintf(CFG.fd_log, '\tinserted %i intron retentions\n', inserted.intron_retention) ;
 end ;
 
 if CFG.do_remove_short_exons,
-	fprintf(CFG.fd_log, 'removing short exons\n') ;
+	fprintf(CFG.fd_log, '... removing short exons\n') ;
 
 	genes = remove_short_exons(genes, CFG);
 
 	for i = 1:length(genes)
 		for j = 1:size(genes(i).splicegraph{1},2)
 			if ~(genes(i).splicegraph{1}(2, j) - genes(i).splicegraph{1}(1, j) >= CFG.remove_exons.min_exon_len_remove),
-				warning('could not remove all short exons') ;
+				warning('WARNING: could not remove all short exons') ;
 			end ;
 		end ; 
 	end ; 
