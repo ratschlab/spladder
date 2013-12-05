@@ -20,8 +20,9 @@ function spladder_core(CFG)
         fprintf('Saving genes to %s\n', CFG.out_fname) ;
         save(CFG.out_fname, 'genes') ;
     else
-        fprintf('Augmenting splice graphs already completed.\n\t%s exists\n\tloading genes from %s\n', CFG.out_fname, CFG.out_fname);
+        fprintf('Augmenting splice graphs already completed.\n%s exists\n ... loading genes from %s ...\n', CFG.out_fname, CFG.out_fname);
         load(CFG.out_fname, 'genes') ;
+        fprintf('...done.\n\n');
     end ;
 
     if CFG.do_prune,
