@@ -1,30 +1,6 @@
 function [genes, inserted] = insert_intron_edges(genes, CFG)
 % genes = insert_intron_edges(genes, CFG);
 
-if ~isfield(CFG, 'intron_edges'),
-    CFG.intron_edges = struct();
-end;
-if ~isfield(CFG.intron_edges, 'min_exon_len') ;
-	CFG.intron_edges.min_exon_len = 40;
-end ;
-if ~isfield(CFG.intron_edges, 'min_exon_len_remove') ;
-	CFG.intron_edges.min_exon_len_remove = 9;
-end ;
-if ~isfield(CFG.intron_edges, 'vicinity_region') ;
-	CFG.intron_edges.vicinity_region = 20;
-end ;
-if ~isfield(CFG.intron_edges, 'insert_intron_retention') ;
-	CFG.intron_edges.insert_intron_retention = 1 ;
-end ;
-if ~isfield(CFG.intron_edges, 'gene_merges') ;
-	CFG.intron_edges.gene_merges = 1 ;
-end ;
-if ~isfield(CFG.intron_edges, 'append_new_terminal_exons') ;
-	CFG.intron_edges.append_new_terminal_exons = 1 ;
-end ; 
-if ~isfield(CFG.intron_edges, 'append_new_terminal_exons_len') ;
-	CFG.intron_edges.append_new_terminal_exons_len = 200 ;
-end ;
 if ~isfield(CFG, 'debug'),
     CFG.debug = 0;
 end;
@@ -48,7 +24,7 @@ num_unused_introns = zeros(1,length(genes)) ;
 
 for i = 1:length(genes)
 	if CFG.verbose && mod(i,1000)==0, 
-        fprintf(CFG.fd_log, '%i (%i)\n', i, length(genes)); 
+        fprintf(CFG.fd_log, '%i of %i genes\n', i, length(genes)); 
     end ;
 
 	s = find(genes(i).strand == '+-');
@@ -175,7 +151,7 @@ for i = 1:length(genes)
                     gg.start = genes(i).introns{s}(2, j) + 1; %%% start of presumable exon
                     gg.stop = genes(i).splicegraph{1}(2, idx1__); %%% stop of next exon
                     maxval = inf; 
-                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
+                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter);
                     if gg.strand == '-',
                         gg.tracks = gg.tracks(:, end:-1:1) ;
                     end ;
@@ -277,7 +253,7 @@ for i = 1:length(genes)
                     gg.start = genes(i).introns{s}(2, j) + 1; %%% start of presumable exon
                     gg.stop = genes(i).splicegraph{1}(2, idx2__); %%% stop of next exon
                     maxval = inf; 
-                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
+                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter);
                     if gg.strand == '-',
                         gg.tracks = gg.tracks(:, end:-1:1) ;
                     end ;
@@ -481,5 +457,4 @@ for ix = 1:length(genes)
 	genes(ix).splicegraph{2} = genes(ix).splicegraph{2}(exon_order, exon_order);
 	genes(ix).splicegraph{3} = genes(ix).splicegraph{3}(:, exon_order);
 end ;
-genes = label_alt_genes(genes, CFG) ;
 

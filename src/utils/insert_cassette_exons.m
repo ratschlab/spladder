@@ -3,29 +3,6 @@
 function [genes, inserted] = insert_cassette_exons(genes, CFG)
 % [genes, inserted] = insert_cassette_exons(genes, CFG)
 
-if ~isfield(CFG.cassette_exon, 'min_cassette_cov'),
-	CFG.cassette_exon.min_cassette_cov = 5 ;
-end;
-if ~isfield(CFG.cassette_exon, 'min_cassette_region'),
-	CFG.cassette_exon.min_cassette_region = 0.9; 
-end;
-if ~isfield(CFG.cassette_exon, 'min_cassette_rel_diff'),
-	CFG.cassette_exon.min_cassette_rel_diff = 0.5; 
-end;
-
-if ~isfield(CFG.intron_filter, 'intron'),
-	CFG.intron_filter.intron = 20000;
-end;
-if ~isfield(CFG.intron_filter, 'exon_len'),
-	CFG.intron_filter.exon_len = 12; % relatively specific
-end;
-if ~isfield(CFG.intron_filter, 'mismatch'),
-	CFG.intron_filter.mismatch = 1;
-end ;
-if ~isfield(CFG.intron_filter, 'mincount'),
-	CFG.intron_filter.mincount = 1 ;
-end ;
-
 inserted.cassette_exon = 0 ;
 
 %%% form chunks for quick sorting
@@ -59,7 +36,7 @@ for j = 1:length(regions),
 		end ;
 
 		if CFG.verbose && mod(c, 100) == 0,
-			fprintf('\r %i(%i) genes done (found %i/%i cassette exons / tested intron pairs, %2.1f%%)', c, ...
+			fprintf('\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)', c, ...
 			size(chunks,1), num_exons_added, num_exons, 100*num_exons_added/num_exons);
 		end	;
 
@@ -69,10 +46,10 @@ for j = 1:length(regions),
 		gg.strands = strands(s);
 		maxval = inf; 
 		if ~iscell(CFG.bam_fnames)
-			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
+			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter);
 		else
 			for f = 1:length(CFG.bam_fnames),
-				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.intron_filter);
+				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.read_filter);
 			end ;
 			%%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
 			%gg.tracks = [sum(gg.tracks(1:2:end,:),1);sum(gg.tracks(2:2:end,:),1)] ;

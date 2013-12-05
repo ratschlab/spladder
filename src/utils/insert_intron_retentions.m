@@ -2,35 +2,6 @@
 function [genes, inserted] = insert_intron_retentions(genes, CFG)
 % [genes, inserted] = insert_intron_retentions(genes, CFG)
 
-if ~isfield(CFG.intron_retention, 'min_retention_cov'),
-	CFG.intron_retention.min_retention_cov = 1 ;
-end ;
-if ~isfield(CFG.intron_retention, 'min_retention_region'),
-	CFG.intron_retention.min_retention_region = 0.75; 
-end ;
-if ~isfield(CFG.intron_retention, 'min_retention_rel_cov'),
-	CFG.intron_retention.min_retention_rel_cov = 0.1 ; 
-end ;
-if ~isfield(CFG.intron_retention, 'max_retention_rel_cov'),
-	CFG.intron_retention.max_retention_rel_cov = 1.5 ; 
-end ;
-if ~isfield(CFG.intron_retention, 'min_retention_max_exon_fold_diff'),
-	CFG.intron_retention.min_retention_max_exon_fold_diff = 4 ; 
-end ;
-
-if ~isfield(CFG.intron_filter, 'intron'),
-	CFG.intron_filter.intron = 20000;
-end 
-if ~isfield(CFG.intron_filter, 'exon_len'),
-	CFG.intron_filter.exon_len = 12; % relatively specific
-end
-if ~isfield(CFG.intron_filter, 'mismatch'),
-	CFG.intron_filter.mismatch = 1;
-end ;
-if ~isfield(CFG.intron_filter, 'mincount'),
-	CFG.intron_filter.mincount = 1 ;
-end ;
-
 inserted.intron_retention = 0 ;
 
 %%% form chunks for quick sorting
@@ -69,7 +40,7 @@ for j = 1:length(regions)
 		end ;
 
 		if mod(c, 100)==0
-			fprintf('\r %i(%i) genes done (found %i/%i intron retentions, %2.1f%%)', c, ...
+			fprintf('\r %i(%i) genes done (found %i new retentions in %i tested introns, %2.1f%%)', c, ...
 			size(chunks,1), num_introns_added, num_introns, 100*num_introns_added/num_introns);
 		end	;		
 
@@ -79,10 +50,10 @@ for j = 1:length(regions)
 		gg.strands = strands(s);
 		maxval = inf; 
 		if ~iscell(CFG.bam_fnames)
-			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.intron_filter);
+			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter);
 		else
 			for f = 1:length(CFG.bam_fnames),
-				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.intron_filter);
+				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.read_filter);
 			end ;
 			%%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
 			%gg.tracks = [sum(gg.tracks(1:2:end, :), 1); sum(gg.tracks(2:2:end, :), 1)] ;
