@@ -12,8 +12,11 @@ function genes = label_alt_genes(genes, CFG) ;
 
 tot_exons = 0;
 for ix = 1:length(genes),
-  if CFG.verbose && (mod(ix,1000) == 0),
+  if CFG.verbose && (mod(ix, 100) == 0),
     fprintf(CFG.fd_log, '.');
+    if (mod(ix, 1000) == 0),
+      fprintf(CFG.fd_log, '%i\n', ix);
+    end;
   end;
 
   num_exons = size(genes(ix).splicegraph{1}, 2) ;
@@ -100,7 +103,7 @@ for ix = 1:length(genes),
   for i = 1 : size(edges, 1),
     for j = i + 1 : size(edges, 1),
       if edges(i, j) == 1,
-        cur_edge = [vertices(2, i) + 1, vertices(1, j) - 1] - start;
+        cur_edge = [vertices(2, i) + 1, vertices(1, j) - 1] - start + 1;
         exon_loc(cur_edge(1):cur_edge(2)) = exon_loc(cur_edge(1):cur_edge(2)) + 1;
       end ;
     end ;
