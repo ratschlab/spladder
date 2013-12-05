@@ -4,19 +4,6 @@
 function introns = get_intron_list(genes, CFG)
 % introns = get_intron_list(genes, CFG)
 
-if ~isfield(CFG.intron_filter, 'intron'),
-    CFG.intron_filter.intron = 20000;
-end 
-if ~isfield(CFG.intron_filter, 'exon_len'),
-    CFG.intron_filter.exon_len = 20; % relatively specific
-end
-if ~isfield(CFG.intron_filter, 'mismatch'),
-    CFG.intron_filter.mismatch = 2;
-end ;
-if ~isfield(CFG.intron_filter, 'mincount'),
-    CFG.intron_filter.mincount = 5 ;
-end ;
-
 %%% form chunks for quick sorting
 chunks = [[genes.chr_num]', cast([genes.strand]', 'int32'), [genes.start]', [genes.stop]'];
 [chunks, chunk_idx] = sortrows(chunks) ;
@@ -47,8 +34,8 @@ for j = 1:length(regions)
 			error('c logic seems wrong\n') ;
 		end ;
 
-		if CFG.verbose == 1 && mod(c, 50) == 0,
-			fprintf('%i(%i) genes done (%i introns taken)\n', c, size(chunks,1), num_introns_filtered);
+		if CFG.verbose == 1 && mod(c, 100) == 0,
+			fprintf('%i (%i) genes done (%i introns taken)\n', c, size(chunks,1), num_introns_filtered);
 		end ;			
 
 		gg = genes(chunk_idx(c));
@@ -58,12 +45,12 @@ for j = 1:length(regions)
 
 		maxval = inf; 
         if ~iscell(CFG.bam_fnames),
-            gg = add_reads_from_bam(gg, CFG.bam_fnames, 'intron_list', '', maxval, CFG.intron_filter);
+            gg = add_reads_from_bam(gg, CFG.bam_fnames, 'intron_list', '', maxval, CFG.read_filter);
         else
             % merge intron lists of several bam files
             segments = [] ;
             for f = 1:length(CFG.bam_fnames),
-                gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'intron_list', '', maxval, CFG.intron_filter);
+                gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'intron_list', '', maxval, CFG.read_filter);
                 segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
             end ;
             segments = sortrows(segments) ;
@@ -76,7 +63,7 @@ for j = 1:length(regions)
                 end ;
             end ;
             segments(rm_idx,: ) = [] ;
-            idx = find(segments(:, 3) > CFG.intron_filter.mincount) ;
+            idx = find(segments(:, 3) > CFG.read_filter.mincount) ;
             gg.segment_lists = {segments(idx, 1:2)} ;
             gg.segment_scores = {segments(idx, 3)} ;
         end ;
