@@ -60,7 +60,7 @@ function write_ES_txt(fn_out_txt, strains, events, anno_fn)
             for j = 1:length(strains),
                 if ev.info(j).valid,
                     fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i', ev.info(j).exon_pre_cov, ev.info(j).exon_cov, ev.info(j).exon_aft_cov, ...
-                            ev.info(j).exon_pre_exon_conf, ev.info(j).exon_exon_aft_conf, ev(i).info(j).exon_pre_exon_aft_conf) ;
+                            ev.info(j).exon_pre_exon_conf, ev.info(j).exon_exon_aft_conf, ev.info(j).exon_pre_exon_aft_conf) ;
                 else
                     fprintf(fd, '\t-1\t-1\t-1\t-1') ;
                 end ;
