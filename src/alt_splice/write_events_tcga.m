@@ -1,10 +1,12 @@
-function write_events_txt(fn_out, strains, events, event_type)
-% function write_events_txt(fn_out, strains, events, event_type)
+function write_events_txt(fn_out, strains, events)
+% function write_events_txt(fn_out, strains, events)
 
     if isempty(events),
         fprintf('No events present.\n');
         return
     end;
+
+    event_type = events(1).event_type;
 
     fprintf('writing %s events in tcga format to %s\n', events(1).event_type, fn_out) ;
 
