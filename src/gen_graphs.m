@@ -126,7 +126,7 @@ if CFG.do_insert_intron_edges,
 
             % in case any exon was inserted that already existed, we merge them into one exon 
             fprintf(CFG.fd_log, '... removing duplicate exons ...\n');
-            genes_mod = merge_duplicate_exons(genes_mod, 1) ;
+            genes_mod = merge_duplicate_exons(genes_mod, CFG) ;
 
             % inserted
             if isequal(genes_mod, tmp_genes)
