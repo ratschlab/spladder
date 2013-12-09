@@ -66,20 +66,26 @@ if exon_coverage >= CFG.exon_skip.min_skip_rel_cov * (exon_coverage_pre + exon_c
     verified(1) = 1 ;
 end ;
 
+%%% set offset for half open intervals
+if is_half_open,
+    ho_offset = 1;
+else
+    ho_offset = 0;
+end;
+
 %%% check intron confirmation as sum of valid intron scores
 %%% intron score is the number of reads confirming this intron
-intron_tol = 0 ;
-idx = find(abs(gg.introns(1,:) - (event.exon_pre(2) + 1)) <= intron_tol & abs(gg.introns(2,:) - (event.exon(1) - 1)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - (event.exon_pre(2) + 1 - ho_offset)) <= CFG.exon_skip.intron_tolerance & abs(gg.introns(2,:) - (event.exon(1) - 1)) <= CFG.exon_skip.intron_tolerance) ;
 if ~isempty(idx),
     assert(length(idx)>=1) ;
     info.exon_pre_exon_conf = sum(gg.introns(3,idx)) ;
 end ;
-idx = find(abs(gg.introns(1,:) - (event.exon(2) + 1)) <= intron_tol & abs(gg.introns(2,:) - (event.exon_aft(1) - 1)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - (event.exon(2) + 1 - ho_offset)) <= CFG.exon_skip.intron_tolerance & abs(gg.introns(2,:) - (event.exon_aft(1) - 1)) <= CFG.exon_skip.intron_tolerance) ;
 if ~isempty(idx),
     assert(length(idx)>=1) ;
     info.exon_exon_aft_conf=sum(gg.introns(3,idx)) ;
 end ;
-idx = find(abs(gg.introns(1,:) - (event.exon_pre(2)+1)) <= intron_tol & abs(gg.introns(2,:) - (event.exon_aft(1) - 1)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - (event.exon_pre(2) + 1 - ho_offset)) <= CFG.exon_skip.intron_tolerance & abs(gg.introns(2,:) - (event.exon_aft(1) - 1)) <= CFG.exon_skip.intron_tolerance) ;
 if ~isempty(idx),
     assert(length(idx)>=1) ;
     info.exon_pre_exon_aft_conf = sum(gg.introns(3,idx)) ;
@@ -93,6 +99,8 @@ end ;
 if info.exon_pre_exon_aft_conf >= CFG.exon_skip.min_skip_count,
     verified(4) = 1 ;
 end ;
+
+keyboard;
 
 if is_half_open == 1 && event.strand == '-'
     event.exon_pre = event.exon_pre - 1;

@@ -69,10 +69,17 @@ if mean(icov) > CFG.intron_retention.min_retention_cov && ...
     verified(1) = 1 ;
 end ;
 
+%%% set offset for half open intervals
+if is_half_open,
+    ho_offset = 1;
+else
+    ho_offset = 0;
+end;
+
 %%% check intron confirmation as sum of valid intron scores
 %%% intron score is the number of reads confirming this intron
 intron_tol = 0;
-idx = find(abs(gg.introns(1,:) - event.intron(1)) <= intron_tol & abs(gg.introns(2,:) - event.intron(2)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - event.intron(1)) <= intron_tol & abs(gg.introns(2,:) - (event.intron(2) - ho_offset)) <= intron_tol) ;
 if ~isempty(idx),
     assert(length(idx) >= 1) ;
     info.intron_conf = sum(gg.introns(3,idx)) ;
