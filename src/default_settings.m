@@ -1,7 +1,8 @@
+
     %%% settings for adding new intron edges
     CFG.intron_edges = [] ;
     CFG.intron_edges.min_exon_len = 50;
-    CFG.intron_edges.min_exon_len_remove = 1;
+    CFG.intron_edges.min_exon_len_remove = 8;
     CFG.intron_edges.vicinity_region = 40 ;
     CFG.intron_edges.insert_intron_retention = 1 ;
     CFG.intron_edges.gene_merges = 0 ;
@@ -39,6 +40,7 @@
     CFG.exon_skip.min_skip_rel_cov = 0.05;
     %CFG.exon_skip.max_exon_fold_diff = 4;
     %CFG.exon_skip.max_skip_rel_cov = 1.5;
+    CFG.exon_skip.intron_tolerance = 0;
 
     %%% settings for verifying multiple exon skips
     CFG.mult_exon_skip = struct();
@@ -54,7 +56,7 @@
     CFG.alt_prime.min_intron_count = 3;
 
     %%% settings for verifying intron retention events
-    CFG.intron_retention = struct()
+    CFG.intron_retention = struct();
     CFG.intron_retention.min_retention_cov = 3;
     CFG.intron_retention.min_retention_region = 0.75;
     CFG.intron_retention.min_retention_rel_cov = 0.05;
@@ -68,4 +70,3 @@
     CFG.fd_log = 1;
 
     CFG.sg_min_edge_count = 1;
-

@@ -2,7 +2,7 @@ function CFG = set_confidence_level_level(CFG),
 %function CFG = set_confidence_level_level(CFG),
 
     %%% settings for accepted introns
-    CFG.intron_filter=[] ;
+    CFG.read_filter = [] ;
     if CFG.confidence_level == 0,
         CFG.read_filter.intron = 20000 ; 
         CFG.read_filter.exon_len = 8;
@@ -32,7 +32,9 @@ function CFG = set_confidence_level_level(CFG),
     CFG.cassette_exon.min_cassette_rel_diff = 0.5; 
 
     %%% settings for accepted intron retentions
-    CFG.intron_retention=[] ;
+    if ~isfield(CFG, 'intron_retention'),
+        CFG.intron_retention = [] ;
+    end;
     if CFG.confidence_level == 0,
       CFG.intron_retention.min_retention_cov = 1;
       CFG.intron_retention.min_retention_region = 0.75; 
