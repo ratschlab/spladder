@@ -7,6 +7,8 @@ function events = post_process_event_struct(events)
             idx_valid_col(i) = all(events(i).intron_col_pos > 0);
         elseif strcmp(events(i).event_type, 'alt_3prime') || strcmp(events(i).event_type, 'alt_5prime'),
             idx_valid_col(i) = all([events(i).exon_const_col events(i).exon_alt1_col events(i).exon_alt2_col] > 0);
+        elseif strcmp(events(i).event_type, 'mult_exon_skip'),
+            idx_valid_col(i) = all(events(i).exons_col_pos > 0) ;
         else
             idx_valid_col(i) = all(events(i).exon_col_pos > 0) ;
         end;
