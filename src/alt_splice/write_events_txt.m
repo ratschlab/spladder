@@ -47,7 +47,7 @@ function write_ES_txt(fn_out_txt, strains, events, anno_fn)
     end;
 
     for i = 1:length(events),
-        fprintf(fd, '%s\t%c\t%s_%i\t%s', events(i).chr, events(i).strand, events(i).event_type, i, events(i).gene_name{1});
+        fprintf(fd, '%s\t%c\t%s_%i\t%s', events(i).chr, events(i).strand, events(i).event_type, events(i).id, events(i).gene_name{1});
         if nargin > 3,
             a_idx = strmatch(events(i).gene_name{1}, anno_names, 'exact');
             assert(~isempty(a_idx));

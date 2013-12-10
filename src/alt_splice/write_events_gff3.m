@@ -19,8 +19,8 @@ function write_events_gff3(fn_out_gff3, events)
 
         gene_name = events(i).gene_name{1};
         if strcmp(ev.event_type, 'exon_skip'),
-            exons{1} = [ev.exon_pre; ev.exon; exon.exon_aft];
-            exons{2} = [ev.exon_pre; exon.exon_aft];
+            exons{1} = [ev.exon_pre; ev.exon; ev.exon_aft];
+            exons{2} = [ev.exon_pre; ev.exon_aft];
         elseif strcmp(ev.event_type, 'intron_retention'),
             exons{1} = [ev.exon1(1) ev.exon2(2)];
             exons{2} = [ev.exon1; ev.exon2];
@@ -39,7 +39,7 @@ function write_events_gff3(fn_out_gff3, events)
            (exons{1}(2, 1) - exons{1}(1, 2) > exons{2}(2, 1) - exons{2}(1, 2)),
             o_idx = [2 1];
         end;
-        name = sprintf('%s.%i', ev.event_type, i);
+        name = sprintf('%s.%i', ev.event_type, ev.id);
 
         fprintf(fd_out, '%s\t%s\tgene\t%i\t%i\t.\t%c\t.\tID=%s;GeneName="%s"\n', ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, ev.gene_name{1}) ;
         fprintf(fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso1;Parent=%s;GeneName="%s"\n', ev.chr, ev.event_type, ...
