@@ -40,7 +40,35 @@ function write_events_txt(fn_out, strains, events)
         %%% TODO compute Splice Index !!!!
         for j = 1:length(strains),
             if events(i).info(j).valid,
-                fprintf(fd, '\t%.1f', events(i).info(j).intron_conf) ;
+                if (strcmp(events(i).event_type, 'alt_3prime') || strcmp(events(i).event_type, 'alt_5prime')),
+                    if (events(i).intron1_col(2) - events(i).intron1_col(1)) < (events(i).intron2_col(2) - events(i).intron2_col(1)),
+                        num = events(i).info(j).intron1_conf;
+                    else
+                        num = events(i).info(j).intron1_conf;
+                    end;
+                    denom = events(i).info(j).intron1_conf + events(i).info(j).intron2_conf;
+                    confirmation = denom;
+                elseif strcmp(events(i).event_type, 'exon_skip'),
+                    num = events(i).info(j).exon_pre_exon_conf + events(i).info(j).exon_exon_aft_conf;
+                    denom = events(i).info(j).exon_pre_exon_conf + events(i).info(j).exon_exon_aft_conf + (2 * events(i).info(j).exon_pre_exon_aft_conf);
+                    confirmation = events(i).info(j).exon_pre_exon_conf + events(i).info(j).exon_exon_aft_conf + events(i).info(j).exon_pre_exon_aft_conf;
+                elseif strcmp(events(i).event_type,  'mult_exon_skip'),
+                    num = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + events(i).info(j).exon_exon_aft_conf;
+                    denom = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + mes(i).info(j).exon_exon_aft_conf + ((2 + events(i).info(j).num_inner_exon) * events(i).info(j).exon_pre_exon_aft_conf);
+                    confirmation = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + mes(i).info(j).exon_exon_aft_conf + events(i).info(j).exon_pre_exon_aft_conf;
+                elseif strcmp(events(i).event_type,  'intron_retention'),
+                    num = intron_reten_pos_confirmed(i).info(j).intron_conf;
+                    denom = 1;
+                    confirmation = num;
+                else
+                    error(sprintf('Unknown event type: %s\n', events(i).event_type));
+                end;
+
+                if confirmation < 10,
+                    fprintf(fd, '\tNA') ;
+                else
+                    fprintf(fd, '\t%1.1f', num / denom);
+                end;
             else
                 fprintf(fd, '\tNA') ;
             end ;
