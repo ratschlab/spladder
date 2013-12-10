@@ -32,6 +32,8 @@ function events = post_process_event_struct(events)
     %%% count detected strains
     for i = 1:length(events),
         events(i).num_detected = length(events(i).strain) ;
+        events(i).id = i;
     end ;
+
  
     return
