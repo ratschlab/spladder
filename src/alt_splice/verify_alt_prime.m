@@ -101,5 +101,5 @@ end ;
 if is_half_open == 1 && event.strand == '-'
     event.exon_alt1 = event.exon_alt1 - 1;
     event.exon_alt2 = event.exon_alt2 - 1;
-    event.exon_const = event.exon_const - a1;
+    event.exon_const = event.exon_const - 1;
 end;
