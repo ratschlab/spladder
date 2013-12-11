@@ -36,8 +36,9 @@ function event_list = make_unique_by_strain(event_list)
             if isfield(event_list, 'intron_col_pos'),
                 assert(isequal(event_list(i-1).intron_col_pos, event_list(i).intron_col_pos)) ;
             end;
-
-            idx = strmatch(event_list(i).strain, event_list(i-1).strain, 'exact') ;
+            
+            assert(length(event_list(i).strain) == 1);
+            idx = strmatch(event_list(i).strain{1}, event_list(i-1).strain, 'exact') ;
             if ~isempty(idx),
                 assert(length(idx) == 1) ;
                 if isfield(event_list(i), 'exon'), assert(isequal(event_list(i).exon, event_list(i-1).exon(idx,:))); end;
