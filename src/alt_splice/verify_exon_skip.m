@@ -100,10 +100,9 @@ if info.exon_pre_exon_aft_conf >= CFG.exon_skip.min_skip_count,
     verified(4) = 1 ;
 end ;
 
-keyboard;
-
 if is_half_open == 1 && event.strand == '-'
     event.exon_pre = event.exon_pre - 1;
     event.exon_aft = event.exon_aft - 1;
     event.exon = event.exon - 1;
 end;
+
