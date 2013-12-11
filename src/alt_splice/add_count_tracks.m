@@ -21,7 +21,9 @@ else
         conf_filter_.mincount = 1;
         if ~isempty(fn),
             gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, conf_filter_);
-            segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
+            if ~isempty(gg.segment_lists{end}),
+                segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
+            end;
         else
             if isempty(gg.tracks),
                 gg.tracks = zeros(1, gg.stop-gg.start+1) ;
