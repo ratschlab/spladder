@@ -1,5 +1,5 @@
-function write_events_txt(fn_out, strains, events)
-% function write_events_txt(fn_out, strains, events)
+function write_events_tcga(fn_out, strains, events)
+% function write_events_tcga(fn_out, strains, events)
 
     if isempty(events),
         fprintf('No events present.\n');
@@ -57,7 +57,7 @@ function write_events_txt(fn_out, strains, events)
                     denom = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + mes(i).info(j).exon_exon_aft_conf + ((2 + events(i).info(j).num_inner_exon) * events(i).info(j).exon_pre_exon_aft_conf);
                     confirmation = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + mes(i).info(j).exon_exon_aft_conf + events(i).info(j).exon_pre_exon_aft_conf;
                 elseif strcmp(events(i).event_type,  'intron_retention'),
-                    num = intron_reten_pos_confirmed(i).info(j).intron_conf;
+                    num = events(i).info(j).intron_conf;
                     denom = 1;
                     confirmation = num;
                 else
