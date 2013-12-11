@@ -29,7 +29,7 @@ function alt_genes_analyze(CFG, event_type)
 
         %%% check if there is anything to do
         if exist(fn_out_txt, 'file') && exist(fn_out_conf_txt, 'file') && exist(fn_out_conf_tcga, 'file') && exist(fn_out_conf_gff3, 'file'),
-            fprinft('All output files for %s exist.\n\n', event_type);
+            fprintf('All output files for %s exist.\n\n', event_type);
             continue;
         end;
 
