@@ -50,35 +50,43 @@ for i = 1:length(ARGS),
 
     if strcmp(VALS{1}(1:2), 'S_'),
         eval([VALS{1} ' = "VALS{2}";']);
+    elseif strcmp(VALS{1}(1:2), 'F_'),
+        if strcmp(VALS{2}, 'y'),
+            eval([VALS{1} ' = 1;']);
+        elseif strcmp(VALS{2}, 'n'),
+            eval([VALS{1} ' = 0;']);
+        else
+            error(sprintf('Unknown option for booloean input flag: %s\nplease use n for no or y for yes\n', VALS{2}));
+        end;
     elseif strcmp(VALS{1}(1:2), 'I_'),
-        eval([VALS{1} ' = str2num(VALS{2});']);
+        eval([VALS{1} ' = str2num(VAL{2});']);
     else
         error(['ERROR: Unknown variable:' VALS{1} ':' VALS{2} '\n']);
     end;
 end;
 
 %%% get switches
-CFG.do_insert_intron_retentions = I_INSERT_IR;
-CFG.do_insert_cassette_exons = I_INSERT_CE;
-CFG.do_insert_intron_edges = I_INSERT_IE;
-CFG.do_remove_short_exons = I_REMOVE_SE;
-CFG.do_infer_splice_graph = I_INFER_SG;
-CFG.verbose = I_VERBOSE;
-CFG.debug = I_DEBUG;
+CFG.do_insert_intron_retentions = F_INSERT_IR;
+CFG.do_insert_cassette_exons = F_INSERT_CE;
+CFG.do_insert_intron_edges = F_INSERT_IE;
+CFG.do_remove_short_exons = F_REMOVE_SE;
+CFG.do_infer_splice_graph = F_INFER_SG;
+CFG.verbose = F_VERBOSE;
+CFG.debug = F_DEBUG;
 
 CFG.insert_intron_iterations = I_INSERT_INTRON_ITER;
 CFG.confidence_level = I_CONFIDENCE;
 
 %%% settings for the alt splice part
 CFG.merge_strategy = S_MERGE_STRATEGY;
-CFG.validate_splicegraphs = I_VALIDATE_SG;
-CFG.same_genestruct_for_all_samples = I_SHARE_GENESTRUCT;
+CFG.validate_splicegraphs = F_VALIDATE_SG;
+CFG.same_genestruct_for_all_samples = F_SHARE_GENESTRUCT;
 if IS_OCT,
     CFG.replicate_idxs = strsplit(S_REPLICATE_IDX, ',');
 else
     CFG.replicate_idxs = regexp(S_REPLICATE_IDX, ',', 'split');
 end;
-CFG.curate_alt_prime_events = I_CURATE_ALTPRIME;
+CFG.curate_alt_prime_events = F_CURATE_ALTPRIME;
 
 %%% open log file, if specified
 if isempty(S_LOG_FNAME),
@@ -121,7 +129,7 @@ for i = 1:length(CFG.bam_fnames),
 end;
 
 %%% rproc options
-CFG.rproc = I_RPROC;
+CFG.rproc = F_RPROC;
 CFG.options_rproc = struct()
 CFG.options_rproc.mem_req_resubmit  = [30000 60000 80000];
 CFG.options_rproc.time_req_resubmit = [60*60 80*60 90*60];

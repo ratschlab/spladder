@@ -19,7 +19,37 @@ function usage () {
     
     Usage: SplAdder [-OPTION VALUE] 
 
-    Options:
+    Options (default values in [...]):
+
+    MANDATORY:
+
+    -b  FILE1,FILE2,...     alignment files in BAM format (comma separated list)
+    -o  DIR                 output directory
+    -a  FILE                annotation file name (annotation in *.mat format)
+
+    OPTIONAL:
+    -l  FILE                log file name [stdout]
+    -u  FILE                file with user settings [-]
+    -c  INT                 confidence level (0 lowest to 3 highest) [3]
+    -I  INT                 number of iterations to insert new introns
+                            into the graph [5]
+    -M  <STRAT>             merge strategy, where <STRAT> is one on:
+                            merge_bams, merge_graphs, merge_all [merge_graphs]
+    -R  R1,R2,...           replicate structure of files (same number as
+                            alignment files) [all R1 - no replicated]
+    -L  STRING              label for current experiment [-]
+    -S  STRING              reference strain [-]
+    -d  y|n                 use debug mode [n]
+    -p  y|n                 use rproc [n]
+    -V  y|n                 validate splice graph [n]
+    -v  y|n                 use verbose output mode [n]
+    -A  y|n                 curate alt prime events [y]
+    -x  y|n                 input alignments share the same genome [y]
+    -i  y|n                 insert intron retentions [y]
+    -e  y|n                 insert cassette exons [y]
+    -E  y|n                 insert new intron edges [y]
+    -r  y|n                 remove short exons [n]
+    -s  y|n                 re-infer splice graph [n]
     "
 
     exit 0
@@ -37,22 +67,22 @@ S_MERGE_STRATEGY="merge_bams" ## alternatives are: merge_graphs, single
 S_EXPERIMENT_LABEL="-"
 S_REFERENCE_STRAIN="-"
 I_CONFIDENCE="3"
-I_INSERT_IR="1"
-I_INSERT_CE="1"
-I_INSERT_IE="1"
-I_REMOVE_SE="0"
-I_INFER_SG="0"
 I_INSERT_INTRON_ITER="5"
-I_VERBOSE="0"
-I_DEBUG="0"
-I_RPROC="0"
-I_VALIDATE_SG="0"
-I_SHARE_GENESTRUCT="0"
-I_CURATE_ALTPRIME="0"
+F_INSERT_IR="y"
+F_INSERT_CE="y"
+F_INSERT_IE="y"
+F_REMOVE_SE="n"
+F_INFER_SG="n"
+F_VERBOSE="n"
+F_DEBUG="n"
+F_RPROC="n"
+F_VALIDATE_SG="n"
+F_SHARE_GENESTRUCT="y"
+F_CURATE_ALTPRIME="y"
 
 
 ### parse parameters from command lines
-while getopts "b:o:l:a:u:c:I:M:R:L:S:dpVvAxieErsh" opt
+while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:h" opt
 do
     case $opt in
     b ) S_BAM_FNAME="$OPTARG" ;;
@@ -66,17 +96,17 @@ do
     R ) S_REPLICATE_IDX="$OPTARG" ;;
     L ) S_EXPERIMENT_LABEL="$OPTARG" ;;
     S ) S_REFERENCE_STRAIN="$OPTARG" ;;
-    d ) I_DEBUG="1" ;;
-    p ) I_RPROC="1" ;;
-    V ) I_VALIDATE_SG="1" ;;
-    v ) I_VERBOSE="1" ;;
-    A ) I_CURATE_ALTPRIME="1" ;;
-    x ) I_SHARE_GENESTRUCT="1" ;;
-    i ) I_INSERT_IR="0" ;;
-    e ) I_INSERT_CE="0" ;;
-    E ) I_INSERT_IE="0" ;;
-    r ) I_REMOVE_SE="1" ;;
-    s ) I_INFER_SG="1" ;;
+    d ) F_DEBUG="$OPTARG" ;;
+    p ) F_RPROC="$OPTARG" ;;
+    V ) F_VALIDATE_SG="$OPTARG" ;;
+    v ) F_VERBOSE="$OPTARG" ;;
+    A ) F_CURATE_ALTPRIME="$OPTARG" ;;
+    x ) F_SHARE_GENESTRUCT="$OPTARG" ;;
+    i ) F_INSERT_IR="$OPTARG" ;;
+    e ) F_INSERT_CE="$OPTARG" ;;
+    E ) F_INSERT_IE="$OPTARG" ;;
+    r ) F_REMOVE_SE="$OPTARG" ;;
+    s ) F_INFER_SG="$OPTARG" ;;
     h ) usage ;;
     \?) echo -e "UNKNOWN PARAMETER: $opt\n\n"; usage ;;
     esac
@@ -84,7 +114,7 @@ done
 
 ### assemble parameter string
 PARAMS=""
-for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER I_DEBUG I_VERBOSE I_INSERT_IR I_INSERT_CE I_INSERT_IE I_REMOVE_SE I_INFER_SG I_VALIDATE_SG S_MERGE_STRATEGY I_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN I_CURATE_ALTPRIME I_RPROC 
+for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC 
 do
     eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
 done
