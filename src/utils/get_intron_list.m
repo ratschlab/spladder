@@ -62,10 +62,17 @@ for j = 1:length(regions)
                     segments(i + 1, 3) = segments(i, 3) + segments(i + 1, 3) ;
                 end ;
             end ;
-            segments(rm_idx,: ) = [] ;
-            idx = find(segments(:, 3) > CFG.read_filter.mincount) ;
-            gg.segment_lists = {segments(idx, 1:2)} ;
-            gg.segment_scores = {segments(idx, 3)} ;
+            segments(rm_idx, :) = [] ;
+
+            if isempty(segments),
+                introns{chunk_idx(c), s} = [];
+                c = c + 1;
+                continue;
+            else
+                idx = find(segments(:, 3) > CFG.read_filter.mincount) ;
+                gg.segment_lists = {segments(idx, 1:2)} ;
+                gg.segment_scores = {segments(idx, 3)} ;
+            end;
         end ;
         num_introns_filtered = num_introns_filtered + size(gg.segment_lists{1}, 1) ;
 

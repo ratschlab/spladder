@@ -70,9 +70,11 @@ for j = 1:length(regions),
         all_introns = unique(all_introns', 'rows')';
    
         %%% use only relevant introns (inside gene boundaries)
-        rm_idx = all_introns(2, :) <= gg.start | all_introns(1, :) >= gg.stop;
-        all_introns(:, rm_idx) = [];
-        clear rm_idx;
+        if ~isempty(all_introns),
+            rm_idx = all_introns(2, :) <= gg.start | all_introns(1, :) >= gg.stop;
+            all_introns(:, rm_idx) = [];
+            clear rm_idx;
+        end;
 
         segment_bounds = sort(unique(all_introns(:)));
 
