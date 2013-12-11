@@ -20,6 +20,19 @@ function alt_genes_analyze(CFG, event_type)
         fn_out_count = strrep(fn_out, '.mat', '.counts.mat');
         fn_out_info = strrep(fn_out, '.mat', '.info.mat');
 
+        %%% define result files
+        fn_out_txt = strrep(fn_out, '.mat', '.txt') ;
+        fn_out_conf_txt = strrep(fn_out_conf, '.mat', '.txt') ;
+        fn_out_conf_tcga = strrep(fn_out_conf, '.mat', '.tcga.txt') ;
+        fn_out_conf_gff3 = strrep(fn_out_conf, '.mat', '.gff3') ;
+        %fn_out_conf_genes_alt = strrep(fn_out_conf, '.mat', '.genes.mat') ;
+
+        %%% check if there is anything to do
+        if exist(fn_out_txt, 'file') && exist(fn_out_conf_txt, 'file') && exist(fn_out_conf_tcga, 'file') && exist(fn_out_conf_gff3, 'file'),
+            fprinft('All output files for %s exist.\n\n', event_type);
+            continue;
+        end;
+
         %%% check, if confirmed version exists
         if ~exist(fn_out_info, 'file'),
 
@@ -168,12 +181,6 @@ function alt_genes_analyze(CFG, event_type)
             end;
             events_all = events_all_;
         end;
-
-        fn_out_txt = strrep(fn_out, '.mat', '.txt') ;
-        fn_out_conf_txt = strrep(fn_out_conf, '.mat', '.txt') ;
-        fn_out_conf_tcga = strrep(fn_out_conf, '.mat', '.tcga.txt') ;
-        fn_out_conf_gff3 = strrep(fn_out_conf, '.mat', '.gff3') ;
-        fn_out_conf_genes_alt = strrep(fn_out_conf, '.mat', '.genes.mat') ;
 
         if isempty(events_all),
             fprintf('No %s event could be found. - Nothing to report.\n', event_type);
