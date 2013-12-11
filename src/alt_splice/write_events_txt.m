@@ -1,4 +1,5 @@
-function write_ES_txt(fn_out_txt, strains, events, anno_fn)
+function write_events_txt(fn_out_txt, strains, events, anno_fn)
+% function write_events_txt(fn_out_txt, strains, events, anno_fn)
     
     if isempty(events),
         fprintf('No events present.\n');
