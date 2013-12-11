@@ -95,7 +95,7 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
                 starts = sprintf('%s:%i', starts, ev.exons_col(k));
                 ends = sprintf('%s:%i', ends, ev.exons_col(k + 1));
             end;
-            fprintf(fd, '%s\t%s\t%i\t%i', starts, ends, ev.exon_aft_col(1), ev.exon_aft_col(2)) ;
+            fprintf(fd, '\t%s\t%s\t%i\t%i', starts, ends, ev.exon_aft_col(1), ev.exon_aft_col(2)) ;
             for j = 1:length(strains),
                 if ev.info(j).valid,
                     fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i\t%i', ev.info(j).exon_pre_cov, ev.info(j).exons_cov, ev.info(j).exon_aft_cov, ev.info(j).exon_pre_exon_conf, ...
