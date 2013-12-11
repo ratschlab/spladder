@@ -87,7 +87,7 @@ if ~isempty(idx),
     assert(length(idx)>=1) ;
     info.exon_pre_exon_conf = sum(gg.introns(3,idx)) ;
 end ;
-idx = find(abs(gg.introns(1,:) - (event.exons(end) + 1) - ho_offset) <= intron_tol & abs(gg.introns(2,:) - (event.exon_aft(1) - 1)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - (event.exons(end) + 1 - ho_offset)) <= intron_tol & abs(gg.introns(2,:) - (event.exon_aft(1) - 1)) <= intron_tol) ;
 if ~isempty(idx),
     assert(length(idx)>=1) ;
     info.exon_exon_aft_conf = sum(gg.introns(3,idx)) ;

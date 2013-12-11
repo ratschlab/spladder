@@ -33,7 +33,7 @@ function write_events_tcga(fn_out, strains, events)
         elseif strcmp(event_type, 'mult_exon_skip'),
             fprintf(fd, ':%i-%i', events(i).exon_pre_col(1), events(i).exon_pre_col(2));
             for j = 1:2:size(events(i).exons, 2)
-                fprintf(fd, ':%i-%:', events(i).exons_col(j), events(i).exons_col(j+1));
+                fprintf(fd, ':%i-%i:', events(i).exons_col(j), events(i).exons_col(j+1));
             end;
             fprintf(fd, ':%i-%i', events(i).exon_aft_col(1), events(i).exon_aft_col(2)) ;
         end;
@@ -54,8 +54,8 @@ function write_events_tcga(fn_out, strains, events)
                     confirmation = events(i).info(j).exon_pre_exon_conf + events(i).info(j).exon_exon_aft_conf + events(i).info(j).exon_pre_exon_aft_conf;
                 elseif strcmp(events(i).event_type,  'mult_exon_skip'),
                     num = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + events(i).info(j).exon_exon_aft_conf;
-                    denom = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + mes(i).info(j).exon_exon_aft_conf + ((2 + events(i).info(j).num_inner_exon) * events(i).info(j).exon_pre_exon_aft_conf);
-                    confirmation = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + mes(i).info(j).exon_exon_aft_conf + events(i).info(j).exon_pre_exon_aft_conf;
+                    denom = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + events(i).info(j).exon_exon_aft_conf + ((2 + events(i).info(j).num_inner_exon) * events(i).info(j).exon_pre_exon_aft_conf);
+                    confirmation = events(i).info(j).exon_pre_exon_conf + events(i).info(j).sum_inner_exon_conf + events(i).info(j).exon_exon_aft_conf + events(i).info(j).exon_pre_exon_aft_conf;
                 elseif strcmp(events(i).event_type,  'intron_retention'),
                     num = events(i).info(j).intron_conf;
                     denom = 1;

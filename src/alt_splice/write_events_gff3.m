@@ -27,6 +27,9 @@ function write_events_gff3(fn_out_gff3, events)
         elseif strcmp(ev.event_type, 'alt_3prime') || strcmp(ev.event_type, 'alt_5prime'),
             exons{1} = sortrows([ev.exon_const; ev.exon_alt1]);
             exons{2} = sortrows([ev.exon_const; ev.exon_alt2]);
+        elseif strcmp(ev.event_type, 'mult_exon_skip'),
+            exons{1} = [ev.exon_pre; reshape(ev.exons, length(ev.exons) / 2, 2); ev.exon_aft];
+            exons{2} = [ev.exon_pre; ev.exon_aft];
         end;
 
         start_pos = exons{1}(1, 1);
