@@ -67,5 +67,6 @@ end;
 %%% handle alternative splicing part
 alt_genes_collect(CFG);
 
-alt_genes_analyze(CFG, 'exon_skip');
-alt_genes_analyze(CFG, 'intron_retention');
+for idx = 1:length(CFG.event_types),
+    alt_genes_analyze(CFG, CFG.event_types{idx});
+end;
