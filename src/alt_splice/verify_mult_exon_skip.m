@@ -102,8 +102,8 @@ for i = 2:2:(size(event.exons, 2)-2),
     if ~isempty(idx),
         info.sum_inner_exon_conf = info.sum_inner_exon_conf + sum(gg.introns(3,idx));
     end;
-    info.num_inner_exon = info.num_inner_exon + 1;
 end;
+info.num_inner_exon = size(event.exons, 2)/2;
 if info.exon_pre_exon_conf >= CFG.mult_exon_skip.min_non_skip_count,
     verified(2) = 1 ;
 end ;
