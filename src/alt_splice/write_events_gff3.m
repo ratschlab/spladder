@@ -25,8 +25,8 @@ function write_events_gff3(fn_out_gff3, events)
             exons{1} = [ev.exon1(1) ev.exon2(2)];
             exons{2} = [ev.exon1; ev.exon2];
         elseif strcmp(ev.event_type, 'alt_3prime') || strcmp(ev.event_type, 'alt_5prime'),
-            exons{1} = sortrows([ev.exon_const; ev.exons_alt1]);
-            exons{2} = sortrows([ev.exon_const; ev.exons_alt2]);
+            exons{1} = sortrows([ev.exon_const; ev.exon_alt1]);
+            exons{2} = sortrows([ev.exon_const; ev.exon_alt2]);
         end;
 
         start_pos = exons{1}(1, 1);
