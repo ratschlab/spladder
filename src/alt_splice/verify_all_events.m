@@ -1,5 +1,5 @@
-function ev = verify_all_events(ev, strain_idx, list_bam, verify, event_type, CFG) ;
-% ev = verify_all_events(ev, strain_idx, list_bam, verify, event_type, CFG) ;
+function ev = verify_all_events(ev, strain_idx, list_bam, event_type, CFG) ;
+% ev = verify_all_events(ev, strain_idx, list_bam, event_type, CFG) ;
 
 out_fn = '' ;
 
@@ -11,15 +11,15 @@ if nargin==1,
     ev = PAR.ev ;
     strain_idx = PAR.strain_idx ;
     list_bam = PAR.list_bam ;
-    verify = PAR.verify ;
     if isfield(PAR, 'out_fn'),
         out_fn = PAR.out_fn ;
     end ;
+    event_type = PAR.event_type;
     CFG = PAR.CFG;
 end ;
 
 %%% verify the events if demanded
-if verify,
+if CFG.verify_alt_events,
     for j = 1:length(strain_idx),
         s_idx = strain_idx(j);
         fprintf('%i/%i\r', j, length(strain_idx));
