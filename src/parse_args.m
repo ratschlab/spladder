@@ -135,6 +135,7 @@ CFG.options_rproc.mem_req_resubmit  = [30000 60000 80000];
 CFG.options_rproc.time_req_resubmit = [60*60 80*60 90*60];
 CFG.options_rproc.resubmit = 3;
 CFG.options_rproc.priority = 100;
+CFG.options_rproc.addpaths = CFG.paths;
 
 %%% set defaults for now
 CFG.do_prune = 0;
