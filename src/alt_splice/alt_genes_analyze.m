@@ -45,7 +45,7 @@ function alt_genes_analyze(CFG, event_type)
             end;
             
             if ~CFG.rproc,
-                events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), 1, event_type, CFG) ;
+                events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), event_type, CFG) ;
             else
                 jobinfo = rproc_empty() ;
                 chunk_size_events = 25 ;
@@ -53,12 +53,11 @@ function alt_genes_analyze(CFG, event_type)
                 job_nr = 1;
                 for i = 1:chunk_size_events:length(events_all),
                     idx_events = i:min(i+chunk_size_events-1, length(events_all)) ;
-                    for j = 1:chunk_size_strains:length(strains),
+                    for j = 1:chunk_size_strains:length(CFG.strains),
                         idx_strains = j:min(j+chunk_size_strains-1, length(CFG.strains));
                         PAR.ev = events_all(idx_events) ;
                         PAR.strain_idx = idx_strains ;
                         PAR.list_bam = CFG.bam_fnames(replicate, :) ;
-                        PAR.verify = 1 ;
                         PAR.out_fn = sprintf('%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat', CFG.out_dirname, event_type, i, j, replicate, CFG.confidence_level);
                         PAR.event_type = event_type;
                         PAR.CFG = CFG;
