@@ -17,7 +17,7 @@ end ;
 curtime = now;
 if isempty(rproc_nqstat_time) || curtime-rproc_nqstat_time>0.5e-4
   %[ret, text]=unix(sprintf('qstat -u %s 2> /dev/null', whoami)) ;
-  [ret, text]=unix(sprintf('qstat -u %s', whoami)) ;
+  [ret, text]=unix(sprintf('/opt/torque/bin/qstat -u %s', whoami)) ;
   if ret==0 ;
     rproc_nqstat_output=text ;
     rproc_nqstat_time=curtime ;
@@ -41,9 +41,6 @@ else
 end ;
 for i=1:length(idx)-1,
   line = text(idx(i):idx(i+1)-1) ;
-  %elems = separate(line(2:end),' ',1) ;
-  %if length(line)>=9,
-  %  if str2num(elems{1})==jobinfo.jobid,
   if length(line)> 0,
     items=separate(deblank(line),' ') ;
     for j=1:length(items)% assume that first non-empty item is the jobid
@@ -51,21 +48,15 @@ for i=1:length(idx)-1,
         break;
       end ;
     end
-    %p = textscan(line,'%d%s',1);
-    p=str2num(items{j}) ;
-    %if str2num(line(1:id_len))==jobinfo.jobid,
+    %p=str2num(items{j}) ;
+    p = separate(items{j}, '.') ;
+    p = str2num(p{1});
     if p==jobinfo.jobid,
       still_running=1 ;
-      %try
-      %  %[ret, mem]=unix(sprintf('qstat -j %i 2> /dev/null | grep maxvmem | cut -d "," -f 5 | cut -d "=" -f 2', p));
-      %  [ret, mem]=unix(sprintf('qstat -j %i | grep maxvmem | cut -d "," -f 5 | cut -d "=" -f 2', p));
-      %catch
-        mem = '';
-      %end
 	  status = get_status(items);
 	  still_running = check_status(status);
 
-      if isempty(jobinfo.start_time)&&strcmp(status, 'r')
+      if isempty(jobinfo.start_time)&&strcmp(status, 'R')
         start_time = now;
       else
         start_time = jobinfo.start_time;
@@ -84,7 +75,7 @@ function status = get_status(items)
     if ~isempty(items{j}),
       num = num+1;
     end
-	if num == 5
+	if num == 10
 	  status = items{j};
       break;
 	end
@@ -93,13 +84,11 @@ return
 
 function ret = check_status(status)
   ret = 1;
-  if strcmp(status, 't')
+  if strcmp(status, 'E') % Job is exiting after having run.
   	ret = 0;
-  elseif strcmp(status, 'Eqw')
+  elseif strcmp(status, 'C') % Job is completed after having run.
   	ret = 0;
-  elseif strcmp(status, 'dt')
-  	ret = 0;
-  elseif strcmp(status, 'dr')
+  elseif strcmp(status, 'S') % (Unicos only) Job is suspended.
   	ret = 0;
   end
 return

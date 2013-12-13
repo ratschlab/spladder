@@ -4,10 +4,6 @@ function [jobinfo]=rproc(ProcName, P1, Mem, options, time)
 % time in minutes
 % mem in mb
 
-% currently only has adversal effects, change this when a new
-% gridengine version has been installed
-time = 10000 ; 
-
 [engine, environment] = determine_engine() ;
 
 if ~isfield(options, 'force_octave'),
@@ -51,13 +47,14 @@ if isfield(options,'ncpus') && ~isempty(options.ncpus) && ~equal(options.ncpus, 
   myassert(options.ncpus>1) ;
   Mem=Mem/options.ncpus ;
   Matlab_licenses = Matlab_licenses/options.ncpus ;
-  use_reservation = 1 ;
+  %use_reservation = 1 ;
 end ;
-if Mem>20000, use_reservation = 1 ; end ;
+%if Mem>20000, use_reservation = 1 ; end ;
 
 if nargin<4, options=[] ; end ;
 if nargin<5, time=100*24*60 ; end ;
 if Mem<100, Mem=100 ; end ;
+
 if ~isfield(options,'verbosity')
   options.verbosity = 1 ;
 end ;
@@ -140,68 +137,50 @@ if ~exist([dirctry '/.sge'])
   unix(sprintf('ln -s %s %s/.sge', sge_dir, dirctry)) ;
 end ;
 
-%option_str=sprintf(' -l h_vmem=%iM -soft -l h_cpu=%1.0f -hard ', Mem, max(60,time*60)) ;
-
-%if use_reservation,
-  if Matlab_licenses>0,
-    %option_str=sprintf(' -R y -l h_vmem=%iM -l matlab=%1.2f -soft -l h_cpu=%1.0f -hard ', Mem, Matlab_licenses, max(60,time*60)) ;
-    %option_str=sprintf(' -R y -l h_vmem=%iM -l s_vmem=%iM -l matlab', Mem, Mem, max(60,time*60)) ;
-    option_str=sprintf(' --mem=%i -t %i --constraint=matlab ', Mem, time) ;
-  else
-    option_str=sprintf(' --mem=%i -t %i ', Mem, time) ;
-  end ;
-%else
-%  if Matlab_licenses>0,
-%    %option_str=sprintf(' -l h_vmem=%iM -l matlab=%1.2f -soft -l h_cpu=%1.0f -hard ', Mem, Matlab_licenses, max(60,time*60)) ;
-%    option_str=sprintf(' -l h_vmem=%iM -l s_vmem=%iM -l matlab ', Mem, Mem, max(60,time*60)) ;
-%  else
-%    option_str=sprintf(' -l h_vmem=%iM -l s_vmem=%iM ', Mem, Mem, max(60,time*60)) ;
-%  end ;
-%end ;
-
-if isequal(environment, 'galaxy'),
-  option_str=[option_str ' -l parent=0.0 '] ;
+% request several cpus
+if isfield(options,'ncpus') && ~isempty(options.ncpus) && ~equal(options.ncpus, 1)
+  ncpus = options.ncpus;
+else
+  ncpus = 1;
 end ;
-  
-%option_str=sprintf(' -l h_vmem=%iM -soft -l h_cpu=%1.0f -hard ', Mem, max(60,time*60)) ;
 
-%option_str=sprintf(' -l matlab=0 -l vf=%iM', Mem) ;
-%option_str=sprintf(' -l matlab=1 -l h_cpu=%i ', time*60) ;
-%if Mem>1000, option_str = [option_str ' -l BIG '] ; end ;
+if use_reservation,
+    error('Reservation not implemented for torque!\n');
+else
+  if Matlab_licenses>0,
+    option_str=sprintf(' -l nodes=1:ppn=%i:matlab,mem=%imb,walltime=%i ', ncpus, Mem, time*60) ;
+  else
+    option_str=sprintf(' -l nodes=1:ppn=%i,mem=%imb,walltime=%i ', ncpus, Mem, time*60) ;
+  end;
+end ;
+
+%if isequal(environment, 'galaxy'),
+%  option_str=[option_str ' -l parent=0.0 '] ;
+%end ;
+  
 if isfield(options,'hold')
   if options.hold==1,
-    %option_str=[option_str ' -h u '] ;
-    warning('hold option not implemented for slurm');
+	option_str=[option_str ' -h '] ;
   end
 end ;
+
 if isfield(options,'queue') 
-  option_str=[option_str sprintf(' -p "%s" ', options.queue)] ;
-else
-  option_str=[option_str sprintf(' -p batch ')];
+  option_str=[option_str sprintf(' -q "%s" ', options.queue)] ;
 end ;
-%if isfield(options,'nicetohave') && isequal(options.nicetohave,1)
-%  option_str=[option_str sprintf(' -l nicetohave=1 ')] ;
-%end ;  
 
-%if isfield(options,'priority') 
-%  option_str=[option_str sprintf(' -p %i ', options.priority)] ;
-%end ;
-%if isfield(options,'express') && isequal(options.express,1)
-%  option_str=[option_str ' -l express '] ;
-%end ;
+if isfield(options,'express') && isequal(options.express,1)
+  option_str=[option_str ' -l express '] ;
+end ;
 
-if isfield(options, 'hostname'),
-    %option_str = sprintf('%s -l hostname=%s', option_str, options.hostname);
-    option_str = sprintf('%s --nodelist=%s', option_str, options.hostname);
-end;
+%if isfield(options, 'hostname'),
+%    option_str = sprintf('%s -l hostname=%s', option_str, options.hostname);
+%end;
 
 if isequal(use_engine, 'matlab')
   if isequal(environment, 'internal'),
     if isfield(options,'matlab_v7_0') && isequal(options.matlab_v7_0, 1)
       bin_str='/cbio/grlab/share/software/matlab/matlab-7.0/bin/matlab_rproc -nojvm -nodisplay' ;
     else
-      %bin_str = '/cbio/grlab/share/software/matlab/matlab-7.6/bin/matlab_rproc -nojvm -nodisplay' ;
-      %bin_str = '/cbio/grlab/share/software/matlab/matlab_R2012b/bin/matlab_rproc -nojvm -nodisplay' ;
       bin_str = '/opt/matlab/R2013a/bin/matlab -nojvm -nodisplay' ;
     end ;
   else
@@ -209,9 +188,6 @@ if isequal(use_engine, 'matlab')
   end ;
 elseif isequal(use_engine, 'octave'),
   if isequal(environment, 'internal'),
-    %bin_str = '/cbio/grlab/share/software/octave/x86_64/bin/octave' ;
-    %bin_str = '/cbio/grlab/share/software/octave-3.0.3/bin/octave';
-    %bin_str = '/usr/bin/octave-3.0.0';
     bin_str = '/usr/bin/octave';
   elseif isequal(environment, 'galaxy'),
     bin_str = '/home/galaxy/octave/bin/octave' ;
@@ -224,16 +200,7 @@ end ;
 
 % request cplex license
 if isfield(options,'cplex') && isequal(options.cplex,1)
-  warning('cplex license not implemented yet for slurm');
-  % option_str=[option_str ' -l cplex=1 '] ;
-end ;
-
-% request several cpus
-if isfield(options,'ncpus') && ~isempty(options.ncpus) && ~equal(options.ncpus, 1)
-  %option_str=[option_str sprintf(' -pe "*" %i ', options.ncpus)] ;
-  option_str=[option_str sprintf(' -c %i ', options.ncpus)] ;
-  % maybe this should be changed to 
-  %option_str=[option_str sprintf(' -pe parallel %i ', options.ncpus)] ;
+  option_str=[option_str ' -l cplex=1 '] ;
 end ;
 
 if isfield(options, 'identifier'),
@@ -288,7 +255,8 @@ if isequal(use_engine, 'matlab'),
   end ;
 else
   if isequal(environment, 'internal'),
-    evalstring_=['addpath(''/cbio/grlab/share/software/octave_tools/rproc'') ;'] ;
+    %evalstring_=['addpath(''/cbio/grlab/share/software/octave_tools/rproc'') ;'] ;
+    evalstring_=['addpath(''/cbio/grlab/home/akahles/git/tools/rproc'') ;'] ;
     evalstring_=[evalstring_ 'addpath(''/cbio/grlab/share/software/octave_tools/utils'') ;'] ;
   elseif isequal(environment, 'galaxy'),
     evalstring_=['addpath(''/home/galaxy/svn/tools/rproc'') ;'] ;
@@ -321,27 +289,21 @@ elseif options.immediately_bg,
   str=[ envstr 'cd ~/matlab; cat ' m_fname '| ' bin_str  ' >>' log_fname '&' ] ;
 else
   % start matlab
-  %str=['(echo ''#!/bin/bash''; echo "' envstr 'hostname; cd ~/matlab; cat ' m_fname '| ' ...
-  %     bin_str ' >>' log_fname '") | qsub -o "' qsublog_fname '" ' ...
-  %     option_str ' -N ' prefix ' /dev/stdin >> ' log_fname ' 2>&1'] ;
-  %     %option_str ' -N ' prefix ' >>& ' log_fname] ;
-  str=['(echo ''#!/bin/bash''; echo "' envstr 'hostname; cd ~/matlab; cat ' m_fname '| ' ...
-       bin_str ' >>' log_fname '") | sbatch -o "' qsublog_fname '" --comment "' qsublog_fname '" ' ...
-       option_str ' -J ' prefix ' /dev/stdin >> ' log_fname ' 2>&1'] ;
+  str=['echo "' envstr 'hostname; cd ~/matlab; cat ' m_fname '| ' ...
+       bin_str ' >>' log_fname '" | /opt/torque/bin/qsub -o "' qsublog_fname '" -j oe -r y ' ...
+       option_str ' -N ' prefix ' >> ' log_fname ' 2>&1'] ;
 end ;
- 
+
 if options.submit_now,
   if options.verbosity>1
     disp(str)
   end ;
 end ;
 
-%unix('sync') ;
-
 % wait until we are allowed to submit again, i.e. #jobs < maxjobs
 if ~options.immediately && ~options.immediately_bg && isequal(options.waitonfull,1)
   while 1,
-    [s,num_queued]=unix('qstat -u `whoami`  2> /dev/null | grep `whoami` | wc -l | tr -d " "');
+    [s,num_queued]=unix('/opt/torque/bin/qstat -u `whoami`  2> /dev/null | grep `whoami` | grep -w -v C | wc -l | tr -d " "');
     if (s~=0)
       warning('could not determine how many jobs are scheduled');
       break;
@@ -396,9 +358,15 @@ if options.submit_now,
     pause(2)
   end ;
 
-  [ret, out]=unix(str) ;
+  %tic
+  %[ret out] = unix(['echo ''' str '''|tcsh']) ; 
+  [ret out] = unix(['echo ''' str '''|bash']) ; 
   if ret~=0
-	error('submission failed: %s\nreturn code: %i', out, ret);
+  fprintf(1, ['echo ''' str '''|bash\n']);
+	error('submission failed: %s\n return code: %i', out, ret);
+  %else
+  %  fprintf(1, 'Measuring submission time:\n\t');
+  %  toc
   end
   jobinfo.submission_time = now ;
 
@@ -407,19 +375,15 @@ if options.submit_now,
     jobinfo.jobid = -1 ;
     if fd>=0,
       s=fgetl(fd) ;
-      items=separate(s,' ');
-      %p = textscan(s,'Your job %d%s',1);
-      if ~(isequal(items{1}, 'Submitted') && isequal(items{3}, 'job'))
+      items=separate(s,'.');
+      if ~(isequal(items{2}, 'mskcc-fe1') && isequal(items{3}, 'local'))
+        fprintf(1, '%s\n', str);
         error('error: submission failed: %s',s);
       end
-      jobinfo.jobid = str2num(items{4}) ;%p{1};
+      jobinfo.jobid = str2num(items{1}) ;
       fclose(fd) ;
 
       rproc_register('submit', jobinfo) ;
-
-      %elems=separate(s,' ') ;
-      %jobinfo.jobid = str2num(elems{3}) ; % third word is the jobid
-      %assert(isequal(['("' jobinfo.prefix '")'], elems{4})) ;
     end ;
   else
     jobinfo.jobid = 0 ;

@@ -21,7 +21,7 @@ while ~feof(fd),
   end ;
 end ;
 
-[ret,text]=system('qstat') ;
+[ret,text]=system('/opt/torque/bin/qstat') ;
 idx=find(text==sprintf('\n')) ;
 
 running_jobids = [] ; 

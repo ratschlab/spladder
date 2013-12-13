@@ -48,7 +48,9 @@ retval1=[] ;
 retval2=[] ;
 err=[] ;
 
-nout=nargout(ProcName) 
+which(ProcName)
+
+nout = nargout(ProcName) 
 
 try
 
