@@ -5,6 +5,7 @@ status = 0;
 still_running = 0 ;
 global rproc_nqstat_output
 global rproc_nqstat_time
+global environment
 start_time = [];
 %id_len = 5;
 if isequal(jobinfo.jobid, 0),
@@ -42,14 +43,23 @@ end ;
 for i=1:length(idx)-1,
   line = text(idx(i):idx(i+1)-1) ;
   if length(line)> 0,
-    items=separate(deblank(line),' ') ;
+    if isequal(environment, 'octave'),
+        items = strsplit(deblank(line), ' ') ;
+    else
+        items = regexp(deblank(line), ' ', 'split');
+    end;
     for j=1:length(items)% assume that first non-empty item is the jobid
       if ~isempty(items{j}),
         break;
       end ;
     end
     %p=str2num(items{j}) ;
-    p = separate(items{j}, '.') ;
+    if isequal(environment, 'octave'),
+        p = strsplit(items{j}, '.') ;
+    else
+        p = regexp(items{j}, '\.', 'split');
+    end;
+
     p = str2num(p{1});
     if p==jobinfo.jobid,
       still_running=1 ;

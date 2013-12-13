@@ -4,6 +4,8 @@ function [jobinfo]=rproc(ProcName, P1, Mem, options, time)
 % time in minutes
 % mem in mb
 
+global environment
+
 [engine, environment] = determine_engine() ;
 
 if ~isfield(options, 'force_octave'),
@@ -341,7 +343,11 @@ if options.submit_now,
           idx=strfind(str_, 'average:') ;
       end;
       assert(~isempty(idx)) ;
-      b=separate(str_(idx+8:end), ',') ; 
+      if isequal(environment, 'octave'),
+          b = strsplit(str_(idx+8:end), ',') ;
+      else
+          b = regexp(str_(idx+8:end), ',', 'split');
+      end;
       cpu_load = str2num(b{1}) ;
       %[tmp, cpus] = unix('cat /proc/cpuinfo | grep processor | wc -l | tr -d " "');
       %if cpu_load > (0.5 * str2num(cpus)),
@@ -361,13 +367,13 @@ if options.submit_now,
   %tic
   %[ret out] = unix(['echo ''' str '''|tcsh']) ; 
   [ret out] = unix(['echo ''' str '''|bash']) ; 
-  if ret~=0
-  fprintf(1, ['echo ''' str '''|bash\n']);
+  if ret~=0,
+    fprintf(1, ['echo ''' str '''|bash\n']);
 	error('submission failed: %s\n return code: %i', out, ret);
   %else
   %  fprintf(1, 'Measuring submission time:\n\t');
   %  toc
-  end
+  end;
   jobinfo.submission_time = now ;
 
   if ~options.immediately && ~options.immediately_bg,
@@ -375,7 +381,11 @@ if options.submit_now,
     jobinfo.jobid = -1 ;
     if fd>=0,
       s=fgetl(fd) ;
-      items=separate(s,'.');
+      if isequal(environment, 'octave'),
+          items = strsplit(s, '.') ;
+      else
+          items = regexp(s, '\.', 'split');
+      end;
       if ~(isequal(items{2}, 'mskcc-fe1') && isequal(items{3}, 'local'))
         fprintf(1, '%s\n', str);
         error('error: submission failed: %s',s);
