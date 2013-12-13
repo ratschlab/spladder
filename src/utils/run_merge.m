@@ -36,7 +36,7 @@ function run_merge(CFG)
                     else
                         fprintf(1, 'submitting chunk %i to %i\n', c_idx, min(merge_list_len, c_idx + chunksize - 1));
                         PAR.chunk_idx = c_idx:min(merge_list_len, c_idx + chunksize - 1);
-                        jobinfo(end + 1) = rproc('merge_genes_by_splicegraph', PAR, 50000, options, 40*60);
+                        jobinfo(end + 1) = rproc('merge_genes_by_splicegraph', PAR, 50000, CFG.options_rproc, 40*60);
                     end;
                 end;
             else

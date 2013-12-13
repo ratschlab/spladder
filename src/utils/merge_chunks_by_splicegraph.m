@@ -14,7 +14,7 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
 
     %%% generate merge list
     merge_list = {};
-    if CFG.gen_graph_do_prune,
+    if CFG.do_prune,
         prune_tag = '_pruned';
     else
         prune_tag = '';
