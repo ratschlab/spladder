@@ -44,11 +44,24 @@ for idx = idxs,
         CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
     end;
 
-    if CFG.rproc,
-        jobinfo(job_nr) = rproc('spladder_core', CFG, 10000, CFG.options_rproc, 40*60) ;
-        job_nr = job_nr + 1;
+    %%% assemble out filename to check if we are already done
+    fn_out = CFG.out_fname;
+    if CFG.do_prune,
+        fn_out = strrep(fn_out, '.mat', '_pruned.mat');
+    end;
+    if CFG.do_gen_isoforms,
+        fn_out = strrep(fn_out, '.mat', '_with_isoforms.mat');
+    end;
+
+    if exist(fn_out, 'file'),
+        fprintf('All result files already exist.\n');
     else
-        spladder_core(CFG);
+        if CFG.rproc,
+            jobinfo(job_nr) = rproc('spladder_core', CFG, 10000, CFG.options_rproc, 40*60) ;
+            job_nr = job_nr + 1;
+        else
+            spladder_core(CFG);
+        end;
     end;
 
     CFG = CFG_;
