@@ -7,6 +7,14 @@
     end;
     CFG.IS_OCT = IS_OCT;
 
+    %%% import necessary paths 
+    CFG.paths = {};
+    CFG.paths{end + 1} = getenv('SPLADDER_SRC_PATH');
+    CFG.paths{end + 1} = sprintf('%s/rproc', getenv('SPLADDER_SRC_PATH'));
+    CFG.paths{end + 1} = sprintf('%s/utils', getenv('SPLADDER_SRC_PATH'));
+    CFG.paths{end + 1} = sprintf('%s/alt_splice', getenv('SPLADDER_SRC_PATH'));
+    CFG.paths{end + 1} = sprintf('%s/mex', getenv('SPLADDER_PATH'));
+
     %%% settings for adding new intron edges
     CFG.intron_edges = [] ;
     CFG.intron_edges.min_exon_len = 50;

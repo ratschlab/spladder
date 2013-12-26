@@ -57,6 +57,8 @@ function usage () {
 
 [[ -z "$1" ]] && usage
 
+. spladder_config.sh
+
 ### mandatory parameters
 S_BAM_FNAME=""
 S_ANNO_FNAME=""
