@@ -9,11 +9,28 @@
 
     %%% import necessary paths 
     CFG.paths = {};
-    CFG.paths{end + 1} = getenv('SPLADDER_SRC_PATH');
-    CFG.paths{end + 1} = sprintf('%s/rproc', getenv('SPLADDER_SRC_PATH'));
-    CFG.paths{end + 1} = sprintf('%s/utils', getenv('SPLADDER_SRC_PATH'));
-    CFG.paths{end + 1} = sprintf('%s/alt_splice', getenv('SPLADDER_SRC_PATH'));
-    CFG.paths{end + 1} = sprintf('%s/mex', getenv('SPLADDER_PATH'));
+    if ~isempty(getenv('SPLADDER_SRC_PATH')),
+        CFG.paths{end + 1} = getenv('SPLADDER_SRC_PATH');
+        CFG.paths{end + 1} = sprintf('%s/rproc', getenv('SPLADDER_SRC_PATH'));
+        CFG.paths{end + 1} = sprintf('%s/utils', getenv('SPLADDER_SRC_PATH'));
+        CFG.paths{end + 1} = sprintf('%s/alt_splice', getenv('SPLADDER_SRC_PATH'));
+    else
+        SPLADDER_SRC_PATH = fileparts(which('default_settings'));
+        CFG.paths{end + 1} = SPLADDER_SRC_PATH;
+        CFG.paths{end + 1} = sprintf('%s/rproc', SPLADDER_SRC_PATH);
+        CFG.paths{end + 1} = sprintf('%s/utils', SPLADDER_SRC_PATH);
+        CFG.paths{end + 1} = sprintf('%s/alt_splice', SPLADDER_SRC_PATH);
+    end;
+    if ~isempty(getenv('SPLADDER_PATH')),
+        CFG.paths{end + 1} = sprintf('%s/mex', getenv('SPLADDER_PATH'));
+    else
+        SPLADDER_SRC_PATH = fileparts(which('default_settings'));
+        CFG.paths{end + 1} = sprintf('%s/../mex', SPLADDER_SRC_PATH);
+    end;
+    
+    if ~isempty(CFG.paths),
+        addpath(CFG.paths{:});
+    end;
 
     %%% settings for adding new intron edges
     CFG.intron_edges = [] ;
@@ -94,7 +111,6 @@
 
     CFG.sg_min_edge_count = 1;
     CFG.no_reset_conf = 0;
-    CFG.reference_strain = '-';
 
     CFG.do_prune = 0;
     CFG.do_gen_isoforms = 0;
