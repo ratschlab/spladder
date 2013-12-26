@@ -74,7 +74,7 @@ for j = 1:length(regions)
 				if gg.splicegraph{2}(k,l) > 0,
 					num_introns = num_introns + 1 ;
 					idx = [gg.splicegraph{1}(2, k) + 1:gg.splicegraph{1}(1, l) - 1] - gg.start + 1 ;
-					icov = gg.tracks(:, idx) ; %%% old: intron coverage icov(1,:) --> mapped, icov(2,:) --> spliced; now: sum of both
+					icov = sum(gg.tracks(:, idx), 1) ; %%% old: intron coverage icov(1,:) --> mapped, icov(2,:) --> spliced; now: sum of both
 				%	if median(icov(1, :) + icov(2, :)) > CFG.intron_retention.min_retention_cov && ...
 				%		mean(icov(1, :) + icov(2, :) > 0.5 * mean(icov(1, :) + icov(2, :))) > CFG.intron_retention.min_retention_region && ... % fraction of covered positions
 				%		max(gg.exon_coverage(k),gg.exon_coverage(l)) / (1e-6 + min(gg.exon_coverage(k), gg.exon_coverage(l))) <= CFG.intron_retention.min_retention_max_exon_fold_diff && ...
