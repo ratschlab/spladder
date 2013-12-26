@@ -16,13 +16,6 @@ inserted.exon_skip = 0 ;
 inserted.gene_merge = 0 ;
 inserted.new_terminal_exon = 0 ;
 
-%%% init log stream
-if isempty(CFG.log_fname),
-    CFG.fd_log = 1;
-else
-    CFG.fd_log = fopen(CFG.log_fname, 'w');
-end;
-
 % build splice graph for all genes 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fprintf(CFG.fd_log, 'Generating splice graph ...\n');
