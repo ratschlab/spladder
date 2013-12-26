@@ -1,8 +1,8 @@
-function split_string(string, sep)
+function s = split_string(string, sep)
 % function split_string(string, sep)
     
-    if size(ver('Octave'), 1),
-        return strsplit(string, sep);
+    if size(ver('Octave'), 1) == 1,
+        s = strsplit(string, sep);
     else
-        return regexp(string, sep, 'split');
+        s = regexp(string, sep, 'split');
     end;
