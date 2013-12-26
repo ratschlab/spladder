@@ -4,6 +4,7 @@ function genes = spladder(ARGS)
 %%% parse parameters from ARGS string
 if isstruct(ARGS),
     CFG = ARGS;
+    CFG = parse_args('', CFG);
 else
     CFG = parse_args(ARGS, CFG);
 end;
