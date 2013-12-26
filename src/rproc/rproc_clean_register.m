@@ -2,7 +2,7 @@ function rproc_clean_register()
 
 fname = '~/tmp/rproc.log' ;
 
-global environment;
+global engine
 
 jobids = [] ;
 parent_jobids = [] ;
@@ -14,7 +14,7 @@ while ~feof(fd),
   if isempty(line), continue ; end ;
 
 
-  if isequal(environment, 'octave'),
+  if isequal(engine, 'octave'),
       items = strsplit(line, '\t') ;
   else
       items = regexp(line, '\t', 'split');
@@ -34,7 +34,7 @@ idx=find(text==sprintf('\n')) ;
 running_jobids = [] ; 
 for i=1:length(idx)-1,
   line = text(idx(i)+1:idx(i+1)-1) ;
-  if isequal(environment, 'octave'),
+  if isequal(engine, 'octave'),
       items = strsplit(line, ' ') ;
   else
       items = regexp(line, ' ', 'split');

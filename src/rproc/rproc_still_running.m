@@ -5,7 +5,7 @@ status = 0;
 still_running = 0 ;
 global rproc_nqstat_output
 global rproc_nqstat_time
-global environment
+global engine
 start_time = [];
 %id_len = 5;
 if isequal(jobinfo.jobid, 0),
@@ -43,7 +43,7 @@ end ;
 for i=1:length(idx)-1,
   line = text(idx(i):idx(i+1)-1) ;
   if length(line)> 0,
-    if isequal(environment, 'octave'),
+    if isequal(engine, 'octave'),
         items = strsplit(deblank(line), ' ') ;
     else
         items = regexp(deblank(line), ' ', 'split');
@@ -54,7 +54,7 @@ for i=1:length(idx)-1,
       end ;
     end
     %p=str2num(items{j}) ;
-    if isequal(environment, 'octave'),
+    if isequal(engine, 'octave'),
         p = strsplit(items{j}, '.') ;
     else
         p = regexp(items{j}, '\.', 'split');

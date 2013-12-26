@@ -13,11 +13,10 @@ if isempty(g_license_type),
 end ;
 license_type = g_license_type ;
 
-lic=license ;
-if ~isequal(lic, 'GNU General Public License'),
-  engine='matlab' ;
-else
+if size(ver('Octave'), 1)
   engine='octave' ;
+else
+  engine='matlab' ;
 end ;
 
 environment='internal' ;

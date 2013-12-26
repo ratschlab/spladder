@@ -4,7 +4,7 @@ function [jobinfo]=rproc(ProcName, P1, Mem, options, time)
 % time in minutes
 % mem in mb
 
-global environment
+global engine
 
 [engine, environment] = determine_engine() ;
 
@@ -343,7 +343,7 @@ if options.submit_now,
           idx=strfind(str_, 'average:') ;
       end;
       assert(~isempty(idx)) ;
-      if isequal(environment, 'octave'),
+      if isequal(engine, 'octave'),
           b = strsplit(str_(idx+8:end), ',') ;
       else
           b = regexp(str_(idx+8:end), ',', 'split');
@@ -381,7 +381,7 @@ if options.submit_now,
     jobinfo.jobid = -1 ;
     if fd>=0,
       s=fgetl(fd) ;
-      if isequal(environment, 'octave'),
+      if isequal(engine, 'octave'),
           items = strsplit(s, '.') ;
       else
           items = regexp(s, '\.', 'split');
