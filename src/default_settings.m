@@ -1,4 +1,12 @@
 
+    %%% are we running Octave or Matlab?
+    if size(ver('Octave'), 1),
+        IS_OCT = 1;
+    else
+        IS_OCT = 0;
+    end;
+    CFG.IS_OCT = IS_OCT;
+
     %%% settings for adding new intron edges
     CFG.intron_edges = [] ;
     CFG.intron_edges.min_exon_len = 50;
@@ -32,6 +40,13 @@
     CFG.do_infer_splice_graph = 0;
 
     CFG.insert_intron_iterations = 5;
+    CFG.merge_strategy = 'merge_bams'; %% alternatives are: merge_graphs, single, merge_all
+    CFG.confidence_level = 3;
+    CFG.validate_splicegraphs = 0;
+    CFG.same_genestruct_for_all_samples = 1;
+    CFG.curate_alt_prime_events = 1;
+    CFG.replicate_idxs = 1;
+    CFG.verify_alt_events = 1;
 
     %%% settings for verifying exon skips
     CFG.exon_skip = struct();
@@ -62,7 +77,7 @@
     CFG.intron_retention.min_retention_rel_cov = 0.05;
     CFG.intron_retention.min_non_retention_count = 3;
     %CFG.intron_retention.max_retention_rel_cov = 1.5;
-    %CFG.intron_retention.min_retention_max_exon_fold_diff  = 4;
+    CFG.intron_retention.min_retention_max_exon_fold_diff  = 4;
 
     %%% set I/O and verbosity
     CFG.verbose = 1;
@@ -70,3 +85,12 @@
     CFG.fd_log = 1;
 
     CFG.sg_min_edge_count = 1;
+    CFG.no_reset_conf = 0;
+    CFG.reference_strain = '-';
+
+    CFG.do_prune = 0;
+    CFG.do_gen_isoforms = 0;
+    CFG.do_merge_all = 0;
+
+    CFG.is_half_open = 1;
+

@@ -57,29 +57,10 @@ function usage () {
 
 [[ -z "$1" ]] && usage
 
-### init default parameters
+### mandatory parameters
 S_BAM_FNAME=""
-S_OUT_DIRNAME="."
-S_LOG_FNAME=""
 S_ANNO_FNAME=""
-S_USER_FNAME=""
-S_MERGE_STRATEGY="merge_bams" ## alternatives are: merge_graphs, single
-S_EXPERIMENT_LABEL="-"
-S_REFERENCE_STRAIN="-"
-I_CONFIDENCE="3"
-I_INSERT_INTRON_ITER="5"
-F_INSERT_IR="y"
-F_INSERT_CE="y"
-F_INSERT_IE="y"
-F_REMOVE_SE="n"
-F_INFER_SG="n"
-F_VERBOSE="n"
-F_DEBUG="n"
-F_RPROC="n"
-F_VALIDATE_SG="n"
-F_SHARE_GENESTRUCT="y"
-F_CURATE_ALTPRIME="y"
-
+S_OUT_DIRNAME=""
 
 ### parse parameters from command lines
 while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:h" opt
@@ -112,16 +93,25 @@ do
     esac
 done
 
+### check for mandatory parameters
+[[ -z "$S_BAM_FNAME" ]] && echo -e "\nAlignment file name is mandatory!\n" && usage && exit 1
+[[ -z "$S_ANNO_FNAME" ]] && echo -e "\nAnnotation file name is mandatory!\n" && usage && exit 1
+[[ -z "$S_OUT_DIRNAME" ]] && echo -e "\nOutput directory name is mandatory!\n" && usage && exit 1
+
 ### assemble parameter string
 PARAMS=""
 for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC 
 do
-    eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
+    if [ ! -z "$opt" ]
+    then
+        eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
+    fi
 done
 
 ### Index Bam files
 echo "Indexing BAM files"
 SAMPLE_LIST=()
+OLD_IFS=$IFS
 IFS=',' 
 for BAM_FILE in "${S_BAM_FNAME}"
 do
@@ -134,3 +124,4 @@ do
         echo "$CURR_BAMFILE already indexed"
     fi
 done
+IFS=$OLD_IFS

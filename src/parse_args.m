@@ -1,13 +1,5 @@
 function CFG = parse_args(ARGS, CFG)
 
-%%% are we running Octave or Matlab?
-if size(ver('Octave'), 1)
-    IS_OCT = 1;
-else
-    IS_OCT = 0;
-end;
-CFG.IS_OCT = IS_OCT;
-
 %%% turn off warnings
 if IS_OCT,
     warning('off', 'Octave:precedence-change');
@@ -24,12 +16,11 @@ else
     warning('off', 'MATLAB:typeaheadBufferOverflow');
 end;
 
+%%% load all default settings
+default_settings
+
 %%% Split Parameter string
-if IS_OCT,
-    ARGS = strsplit(ARGS, ';');
-else
-    ARGS = regexp(ARGS, ';', 'split');
-end;
+ARGS = split_string(ARGS, ';');
 
 %%% Split values in parameter fields
 for i = 1:length(ARGS),
@@ -38,11 +29,7 @@ for i = 1:length(ARGS),
         continue;
     end;
 
-    if IS_OCT,
-        VALS = strsplit(ARGS{i}, ':');
-    else
-        VALS = regexp(ARGS{i}, ':', 'split');
-    end;
+    VALS = split_string(ARGS{i}, ':');
 
     if length(VALS) > 2
         error(['ERROR: more than one field for variable: ' VALS{1} ':' VALS{:} '\n\tInput arguments MUST NOT contain colons!'])
@@ -66,61 +53,48 @@ for i = 1:length(ARGS),
 end;
 
 %%% get switches
-CFG.do_insert_intron_retentions = F_INSERT_IR;
-CFG.do_insert_cassette_exons = F_INSERT_CE;
-CFG.do_insert_intron_edges = F_INSERT_IE;
-CFG.do_remove_short_exons = F_REMOVE_SE;
-CFG.do_infer_splice_graph = F_INFER_SG;
-CFG.verbose = F_VERBOSE;
-CFG.debug = F_DEBUG;
+if exist(F_INSERT_IR, 'var') == 1, CFG.do_insert_intron_retentions = F_INSERT_IR; end;
+if exist(F_INSERT_CE, 'var') == 1, CFG.do_insert_cassette_exons = F_INSERT_CE; end;
+if exist(F_INSERT_IE, 'var') == 1, CFG.do_insert_intron_edges = F_INSERT_IE; end;
+if exist(F_REMOVE_SE, 'var') == 1, CFG.do_remove_short_exons = F_REMOVE_SE; end;
+if exist(F_INFER_SG, 'var') == 1, CFG.do_infer_splice_graph = F_INFER_SG; end;
+if exist(F_VERBOSE, 'var') == 1, CFG.verbose = F_VERBOSE; end;
+if exist(F_DEBUG, 'var') == 1, CFG.debug = F_DEBUG; end;
 
-CFG.insert_intron_iterations = I_INSERT_INTRON_ITER;
-CFG.confidence_level = I_CONFIDENCE;
+if exist(I_INSERT_INTRON_ITER, 'var') == 1, CFG.insert_intron_iterations = I_INSERT_INTRON_ITER; end;
+if exist(I_CONFIDENCE, 'var') == 1, CFG.confidence_level = I_CONFIDENCE; end;
 
 %%% settings for the alt splice part
-CFG.merge_strategy = S_MERGE_STRATEGY;
-CFG.validate_splicegraphs = F_VALIDATE_SG;
-CFG.same_genestruct_for_all_samples = F_SHARE_GENESTRUCT;
-if IS_OCT,
-    CFG.replicate_idxs = strsplit(S_REPLICATE_IDX, ',');
-else
-    CFG.replicate_idxs = regexp(S_REPLICATE_IDX, ',', 'split');
-end;
-CFG.curate_alt_prime_events = F_CURATE_ALTPRIME;
+if exist(S_MERGE_STRATEGY, 'var') == 1, CFG.merge_strategy = S_MERGE_STRATEGY; end;
+if exist(F_VALIDATE_SG, 'var') == 1, CFG.validate_splicegraphs = F_VALIDATE_SG; end;
+if exist(F_SHARE_GENESTRUCT, 'var') == 1, CFG.same_genestruct_for_all_samples = F_SHARE_GENESTRUCT; end;
+if exist(S_REPLICATE_IDX, 'var') == 1, CFG.replicate_idxs = split_string(S_REPLICATE_IDX, ','); end;
+if exist(F_CURATE_ALTPRIME, 'var') == 1, CFG.curate_alt_prime_events = F_CURATE_ALTPRIME; end;
 
 %%% open log file, if specified
-if isempty(S_LOG_FNAME),
-    CFG.log_fname = '';
-%    CFG.fd_log = 1;
-else
+if exist(S_LOG_FNAME, 'var') == 1,
     CFG.log_fname = S_LOG_FNAME;
-%    CFG.fd_log = fopen(S_LOG_FNAME, 'w');
+    CFG.fd_log = fopen(S_LOG_FNAME, 'w');
 end;
 
+if exist(S_USER_FNAME, 'var') == 1, CFG.user_settings = S_USER_FNAME; end;
+
+%%% mandatory parameters
+CFG.bam_fnames = split_string(S_BAM_FNAME, ',');
 CFG.anno_fname = S_ANNO_FNAME;
 CFG.out_dirname = S_OUT_DIRNAME;
-CFG.user_settings = S_USER_FNAME;
 
-CFG.no_reset_conf = 0;
-
-if IS_OCT,
-    CFG.bam_fnames = strsplit(S_BAM_FNAME, ',');
-else
-    CFG.bam_fnames = regexp(S_BAM_FNAME, ',', 'split');
-end;
-
-CFG.reference_strain = S_REFERENCE_STRAIN;
-if strcmp(S_REFERENCE_STRAIN, '-'),
-    ref_tag = '';
-else
+if exist(S_REFERENCE_STRAIN, 'var') == 1,
+    CFG.reference_strain = S_REFERENCE_STRAIN;
     ref_tag = sprintf('%s:', S_REFERENCE_STRAIN);
+else
+    ref_tag = '';
 end;
 
 CFG.list_config = {};
 CFG.samples = {};
-
 for i = 1:length(CFG.bam_fnames),
-    if ~strcmp(S_EXPERIMENT_LABEL, '-'),
+    if exist(S_EXPERIMENT_LABEL, 'var') == 1,
         CFG.samples{end + 1} = [S_EXPERIMENT_LABEL '_' regexprep(regexprep(CFG.bam_fnames{i}, '.*/', ''), '.bam', '')]; 
     else
         CFG.samples{end + 1} = [regexprep(regexprep(CFG.bam_fnames{i}, '.*/', ''), '.bam', '')]; 
@@ -129,18 +103,12 @@ for i = 1:length(CFG.bam_fnames),
 end;
 
 %%% rproc options
-CFG.rproc = F_RPROC;
-CFG.options_rproc = struct()
-CFG.options_rproc.mem_req_resubmit  = [30000 60000 80000];
-CFG.options_rproc.time_req_resubmit = [60*60 80*60 90*60];
-CFG.options_rproc.resubmit = 3;
-CFG.options_rproc.priority = 100;
-CFG.options_rproc.addpaths = CFG.paths;
-
-%%% set defaults for now
-CFG.do_prune = 0;
-CFG.do_gen_isoforms = 0;
-CFG.do_merge_all = 0;
-
-CFG.sg_min_edge_count = 1;
-
+if exist(F_PROC, 'var') == 1,
+    CFG.rproc = F_RPROC;
+    CFG.options_rproc = struct()
+    CFG.options_rproc.mem_req_resubmit  = [30000 60000 80000];
+    CFG.options_rproc.time_req_resubmit = [60*60 80*60 90*60];
+    CFG.options_rproc.resubmit = 3;
+    CFG.options_rproc.priority = 100;
+    CFG.options_rproc.addpaths = CFG.paths;
+end;
