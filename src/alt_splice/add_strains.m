@@ -20,6 +20,7 @@ for i = 1:length(events),
     end ;
 
     new_strains = setdiff(CFG.strains, events(i).strain) ;
+
     if ~isfield(events, 'detected') || isempty(events(i).detected),
         events(i).detected = ones(1, length(events(i).strain)) ;
     end ;

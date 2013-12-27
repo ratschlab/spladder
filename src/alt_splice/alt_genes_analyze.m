@@ -38,123 +38,134 @@ function alt_genes_analyze(CFG, event_type)
 
             load(fn_out);
 
-            %%% add strain information, so we can do two way chunking!
-            if ~exist('events_all_strains', 'var'),
-                [events_all, events_all_strains] = add_strains(events_all, CFG);
-                save(fn_out, 'events_all', 'events_all_strains');
-            end;
-            
-            if ~CFG.rproc,
-                events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), event_type, CFG) ;
+            %%% handle case where we did not find any event of this type
+            if isempty([events_all.event_type]),
+                save(strrep(fn_out_count, '.mat', '.chunk1.mat'), 'events_all');
+                events_confirmed = events_all;
+                save(strrep(fn_out_conf, '.mat', '.chunk1.mat'), 'events_confirmed');
+                max_len_all = 0;
+                max_len_confirmed = 0;
+                chunksize = 200;
+                save(fn_out_info, 'chunksize', 'max_len_all', 'max_len_confirmed');
             else
-                jobinfo = rproc_empty() ;
-                chunk_size_events = 25 ;
-                chunk_size_strains = 50 ;
-                job_nr = 1;
-                for i = 1:chunk_size_events:length(events_all),
-                    idx_events = i:min(i+chunk_size_events-1, length(events_all)) ;
-                    for j = 1:chunk_size_strains:length(CFG.strains),
-                        idx_strains = j:min(j+chunk_size_strains-1, length(CFG.strains));
-                        PAR.ev = events_all(idx_events) ;
-                        PAR.strain_idx = idx_strains ;
-                        PAR.list_bam = CFG.bam_fnames(replicate, :) ;
-                        PAR.out_fn = sprintf('%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat', CFG.out_dirname, event_type, i, j, replicate, CFG.confidence_level);
-                        PAR.event_type = event_type;
-                        PAR.CFG = CFG;
-                        if exist(PAR.out_fn, 'file')
-                            fprintf('Chunk event %i, strain %i already completed\n', i, j);
-                        else
-                            fprintf('Submitting job %i, event chunk %i, strain chunk %i\n', job_nr, i, j);
-                            jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 60) ;
-                            %verify_all_events(PAR);
-                            job_nr = job_nr + 1;
+                %%% add strain information, so we can do two way chunking!
+                if ~exist('events_all_strains', 'var'),
+                    [events_all, events_all_strains] = add_strains(events_all, CFG);
+                    save(fn_out, 'events_all', 'events_all_strains');
+                end;
+                
+                if ~CFG.rproc,
+                    events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), event_type, CFG) ;
+                else
+                    jobinfo = rproc_empty() ;
+                    chunk_size_events = 25 ;
+                    chunk_size_strains = 50 ;
+                    job_nr = 1;
+                    for i = 1:chunk_size_events:length(events_all),
+                        idx_events = i:min(i+chunk_size_events-1, length(events_all)) ;
+                        for j = 1:chunk_size_strains:length(CFG.strains),
+                            idx_strains = j:min(j+chunk_size_strains-1, length(CFG.strains));
+                            PAR.ev = events_all(idx_events) ;
+                            PAR.strain_idx = idx_strains ;
+                            PAR.list_bam = CFG.bam_fnames(replicate, :) ;
+                            PAR.out_fn = sprintf('%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat', CFG.out_dirname, event_type, i, j, replicate, CFG.confidence_level);
+                            PAR.event_type = event_type;
+                            PAR.CFG = CFG;
+                            if exist(PAR.out_fn, 'file')
+                                fprintf('Chunk event %i, strain %i already completed\n', i, j);
+                            else
+                                fprintf('Submitting job %i, event chunk %i, strain chunk %i\n', job_nr, i, j);
+                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 60) ;
+                                %verify_all_events(PAR);
+                                job_nr = job_nr + 1;
+                            end ;
                         end ;
                     end ;
-                end ;
-                
-                [jobinfo nr_crashed] = rproc_wait(jobinfo, 20, 1, 1) ;
-                
-                events_all_ = [];
-                fprintf('Collecting results from chunks ...\n');
-                for i = 1:chunk_size_events:length(events_all),
-                    idx_events = i:min(i+chunk_size_events-1, length(events_all)) ;
-                    ev_ = [];
-                    for j = 1:chunk_size_strains:length(CFG.strains),
-                        idx_strains = j:min(j+chunk_size_strains-1, length(CFG.strains));
-                        fprintf('\r%i (%i), %i (%i)', i, length(events_all), j, length(CFG.strains));
-                        out_fn = sprintf('%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat', CFG.out_dirname, event_type, i, j, replicate, CFG.confidence_level);
-                        if ~exist(out_fn, 'file'),
-                            error(sprintf('not finished %s\n', out_fn)) ;
-                        end ;
-                        load(out_fn);
-                        if j == 1,
-                            ev_ = ev;
-                        else 
-                            for jj = 1:length(ev_),
-                                ev_(jj).verified(idx_strains, :) = ev(jj).verified;
-                                ev_(jj).info(idx_strains) = ev(jj).info;
+                    
+                    [jobinfo nr_crashed] = rproc_wait(jobinfo, 20, 1, 1) ;
+                    
+                    events_all_ = [];
+                    fprintf('Collecting results from chunks ...\n');
+                    for i = 1:chunk_size_events:length(events_all),
+                        idx_events = i:min(i+chunk_size_events-1, length(events_all)) ;
+                        ev_ = [];
+                        for j = 1:chunk_size_strains:length(CFG.strains),
+                            idx_strains = j:min(j+chunk_size_strains-1, length(CFG.strains));
+                            fprintf('\r%i (%i), %i (%i)', i, length(events_all), j, length(CFG.strains));
+                            out_fn = sprintf('%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat', CFG.out_dirname, event_type, i, j, replicate, CFG.confidence_level);
+                            if ~exist(out_fn, 'file'),
+                                error(sprintf('not finished %s\n', out_fn)) ;
+                            end ;
+                            load(out_fn);
+                            if j == 1,
+                                ev_ = ev;
+                            else 
+                                for jj = 1:length(ev_),
+                                    ev_(jj).verified(idx_strains, :) = ev(jj).verified;
+                                    ev_(jj).info(idx_strains) = ev(jj).info;
+                                end;
                             end;
                         end;
+                        events_all_ = [events_all_ ev_];
+                    end ;
+                    assert(length(events_all) == length(events_all_)) ;
+                    if strcmp(event_type, 'alt_3prime') || strcmp(event_type, 'alt_5prime'),
+                        assert(isequal([events_all.intron1_col], [events_all_.intron1_col])) ;
+                        assert(isequal([events_all.intron2_col], [events_all_.intron2_col])) ;
                     end;
-                    events_all_ = [events_all_ ev_];
+                    
+                    events_all = events_all_ ;
                 end ;
-                assert(length(events_all) == length(events_all_)) ;
-                if strcmp(event_type, 'alt_3prime') || strcmp(event_type, 'alt_5prime'),
-                    assert(isequal([events_all.intron1_col], [events_all_.intron1_col])) ;
-                    assert(isequal([events_all.intron2_col], [events_all_.intron2_col])) ;
-                end;
                 
-                events_all = events_all_ ;
-            end ;
-            
-            for i = 1:length(events_all),
-                events_all(i).num_verified = sum(events_all(i).verified, 1) ;
-                events_all(i).confirmed = min(events_all(i).num_verified) ;
-            end ;
-            
-            verified_count = [] ;
-            for min_verified = 1:length(CFG.strains),
-                verified_count(min_verified) = sum([events_all.confirmed] >= min_verified) ;
-            end ;
-            
-            min_verified = 1 ;
-            events_confirmed = events_all([events_all.confirmed] >= min_verified) ;
-            
-            %%% save events per chromosome 
-            chunksize = 200;
-            events_confirmed_ = events_confirmed;
-            events_all_ = events_all;
-            max_len_all = length(events_all_);
-            max_len_confirmed = length(events_confirmed_);
+                for i = 1:length(events_all),
+                    events_all(i).num_verified = sum(events_all(i).verified, 1) ;
+                    events_all(i).confirmed = min(events_all(i).num_verified) ;
+                end ;
+                
+                verified_count = [] ;
+                for min_verified = 1:length(CFG.strains),
+                    verified_count(min_verified) = sum([events_all.confirmed] >= min_verified) ;
+                end ;
+                
+                min_verified = 1 ;
+                events_confirmed = events_all([events_all.confirmed] >= min_verified) ;
+                
+                %%% save events per chromosome 
+                chunksize = 200;
+                events_confirmed_ = events_confirmed;
+                events_all_ = events_all;
+                max_len_all = length(events_all_);
+                max_len_confirmed = length(events_confirmed_);
 
-            for c1_idx = 1:chunksize:max_len_all,
-                fn_out_count_chunk = strrep(fn_out_count, '.mat', sprintf('.chunk%i.mat', c1_idx));
-                if ~exist(fn_out_count_chunk, 'file'),
-                    tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_all);
-                    events_all = events_all_(tmp_idx);
-                    fprintf('saving counted %s events to %s\n', event_type, fn_out_count_chunk) ;
-                    save(fn_out_count_chunk, 'events_all');
-                else
-                    fprintf('%s exists\n', fn_out_count_chunk);
+                for c1_idx = 1:chunksize:max_len_all,
+                    fn_out_count_chunk = strrep(fn_out_count, '.mat', sprintf('.chunk%i.mat', c1_idx));
+                    if ~exist(fn_out_count_chunk, 'file'),
+                        tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_all);
+                        events_all = events_all_(tmp_idx);
+                        fprintf('saving counted %s events to %s\n', event_type, fn_out_count_chunk) ;
+                        save(fn_out_count_chunk, 'events_all');
+                    else
+                        fprintf('%s exists\n', fn_out_count_chunk);
+                    end;
                 end;
-            end;
 
-            for c1_idx = 1:chunksize:max_len_confirmed,
-                fn_out_conf_chunk = strrep(fn_out_conf, '.mat', sprintf('.chunk%i.mat', c1_idx));
-                if ~exist(fn_out_conf_chunk, 'file'),
-                    tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_confirmed);
-                    events_confirmed = events_confirmed_(tmp_idx);
-                    fprintf('saving confirmed %s events to %s\n', event_type, fn_out_conf_chunk) ;
-                    save(fn_out_conf_chunk, 'events_confirmed');
-                else
-                    fprintf('%s exists\n', fn_out_conf_chunk);
+                for c1_idx = 1:chunksize:max_len_confirmed,
+                    fn_out_conf_chunk = strrep(fn_out_conf, '.mat', sprintf('.chunk%i.mat', c1_idx));
+                    if ~exist(fn_out_conf_chunk, 'file'),
+                        tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_confirmed);
+                        events_confirmed = events_confirmed_(tmp_idx);
+                        fprintf('saving confirmed %s events to %s\n', event_type, fn_out_conf_chunk) ;
+                        save(fn_out_conf_chunk, 'events_confirmed');
+                    else
+                        fprintf('%s exists\n', fn_out_conf_chunk);
+                    end;
                 end;
-            end;
 
-            %%% save summary file
-            save(fn_out_info, 'chunksize', 'max_len_all', 'max_len_confirmed');
-            events_confirmed = events_confirmed_;
-            event_all = events_all_;
+                %%% save summary file
+                save(fn_out_info, 'chunksize', 'max_len_all', 'max_len_confirmed');
+                events_confirmed = events_confirmed_;
+                event_all = events_all_;
+            end;
         else
             fprintf('%s exists - loading chunk-wise!\n\n', fn_out_info);
             load(fn_out_info);
@@ -181,7 +192,7 @@ function alt_genes_analyze(CFG, event_type)
             events_all = events_all_;
         end;
 
-        if isempty(events_all),
+        if isempty(events_all) || isempty([events_all.event_type]),
             fprintf('No %s event could be found. - Nothing to report.\n', event_type);
             continue;
         else
