@@ -32,6 +32,9 @@ if CFG.rproc,
     job_nr = 1;
 end;
 
+%%% create out-directory
+[tmp, tmp] = mkdir(CFG.out_dirname);
+
 %%% create spladder sub-directory
 [tmp, tmp] = mkdir(CFG.out_dirname,'spladder');
 
