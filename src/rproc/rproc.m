@@ -243,32 +243,11 @@ jobinfo.log_fname = log_fname ;
 jobinfo.qsublog_fname = qsublog_fname ;
 
 % save the call information
-save(mat_fname, 'ProcName', 'P1', 'dirctry', 'options', '-v7') ;
+%save(mat_fname, 'ProcName', 'P1', 'dirctry', 'options', '-v7') ;
+save(mat_fname, 'ProcName', 'P1', 'dirctry', 'options') ;
 
-if isequal(use_engine, 'matlab'),
-  if isequal(environment, 'internal'),
-    evalstring_=['addpath(''/cbio/grlab/share/software/matlab_tools/rproc'') ;'] ;
-    evalstring_=[evalstring_ 'addpath(''/cbio/grlab/share/software/matlab_tools/utils'') ;'] ;
-  elseif isequal(environment, 'galaxy'),
-    evalstring_=['addpath(''/home/galaxy/svn/tools/rproc'') ;'] ;
-    evalstring_=[evalstring_ 'addpath(''/home/galaxy/svn/tools/utils'') ;'] ;
-  else
-    error('unknown environment') ;
-  end ;
-else
-  if isequal(environment, 'internal'),
-    %evalstring_=['addpath(''/cbio/grlab/share/software/octave_tools/rproc'') ;'] ;
-    evalstring_=['addpath(''/cbio/grlab/home/akahles/git/tools/rproc'') ;'] ;
-    evalstring_=[evalstring_ 'addpath(''/cbio/grlab/share/software/octave_tools/utils'') ;'] ;
-  elseif isequal(environment, 'galaxy'),
-    evalstring_=['addpath(''/home/galaxy/svn/tools/rproc'') ;'] ;
-    evalstring_=[evalstring_ 'addpath(''/home/galaxy/svn/tools/utils'') ;'] ;
-  else
-    error('unknown environment') ;
-  end ;
-end 
 evalstring=['start_proc(''' mat_fname ''')'] ;
-evalstring=[evalstring_ 'cd ' dirctry '; ' evalstring '; exit'] ;
+evalstring=['addpath ' fileparts(which('rproc')) '; cd ' dirctry '; ' evalstring '; exit'] ;
 fd=fopen(m_fname,'w+') ;
 fprintf(fd,'%s\n',evalstring) ;
 fclose(fd) ;

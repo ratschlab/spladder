@@ -77,10 +77,10 @@ try
 catch
   err=lasterror ;
 
-  if equal(err.identifier,'MATLAB:TooManyOutputs') || ...
-     equal(err.identifier,'MATLAB:LS:TooManyOutputArguments') || ...
-     (isfield(err, 'message') && length(err.message)>=48 && equal(err.message(1:48), 'error: element number 2 undefined in return list')) || ...
-     (isfield(err, 'message') && length(err.message)>=41 && equal(err.message(1:41), 'element number 2 undefined in return list'))
+  if isequal(err.identifier,'MATLAB:TooManyOutputs') || ...
+     isequal(err.identifier,'MATLAB:LS:TooManyOutputArguments') || ...
+     (isfield(err, 'message') && length(err.message)>=48 && isequal(err.message(1:48), 'error: element number 2 undefined in return list')) || ...
+     (isfield(err, 'message') && length(err.message)>=41 && isequal(err.message(1:41), 'element number 2 undefined in return list'))
     err = [] ;
     try
       disp('trying one return arguments') ;
@@ -88,10 +88,10 @@ catch
       retval2=[] ;
     catch
       err=lasterror ;
-      if equal(err.identifier,'MATLAB:TooManyOutputs')  || ... 
-            equal(err.identifier,'MATLAB:LS:TooManyOutputArguments') || ...
-            (isfield(err, 'message') && length(err.message)>=48 && equal(err.message(1:48), 'error: element number 1 undefined in return list')) || ...
-            (isfield(err, 'message') && length(err.message)>=41 && equal(err.message(1:41), 'element number 1 undefined in return list'))
+      if isequal(err.identifier,'MATLAB:TooManyOutputs')  || ... 
+            isequal(err.identifier,'MATLAB:LS:TooManyOutputArguments') || ...
+            (isfield(err, 'message') && length(err.message)>=48 && isequal(err.message(1:48), 'error: element number 1 undefined in return list')) || ...
+            (isfield(err, 'message') && length(err.message)>=41 && isequal(err.message(1:41), 'element number 1 undefined in return list'))
         err=[] ;
         try
           disp('trying without return arguments') ;
@@ -102,9 +102,9 @@ catch
       end ;
     end 
   else
-    isfield(err, 'message')
-      length(err.message)>=41
-      equal(err.message(1:41), 'element number 2 undefined in return list')
+    %isfield(err, 'message')
+    %  length(err.message)>=41
+    %  isequal(err.message(1:41), 'element number 2 undefined in return list')
     disp(err.message);
     disp(err.identifier);
     for i=1:length(err.stack)
@@ -134,7 +134,7 @@ if ~isempty(err) % && ~equal(err.identifier,'RPROC:rerun')
 end ;
 
 % if we rerun, then we should not cleanup
-if ~isempty(err) && equal(err.identifier,'RPROC:rerun')
+if ~isempty(err) && isequal(err.identifier,'RPROC:rerun')
   warning('job is marked for rerunning. exiting without finished computations');
   global MATLAB_RETURN_VALUE
   MATLAB_RETURN_VALUE % should be 99
