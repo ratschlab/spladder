@@ -6,12 +6,12 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
     
     %%% if we are running with rproc we only get one parameter struct
     if isfield(CFG, 'CFG'),
+        if isfield(CFG, 'chunk_idx'),
+            chunk_idx = CFG.chunk_idx;
+        else
+            chunk_idx = [];
+        end;
         CFG = CFG.CFG
-    end;
-    if isfield(CFG, 'chunk_idx'),
-        chunk_idx = CFG.chunk_idx;
-    else
-        chunk_idx = [];
     end;
 
     %%% generate merge list
