@@ -19,71 +19,75 @@ if CFG.no_reset_conf == 0,
     CFG = set_confidence_level(CFG);
 end;
 
-%%% iterate over files, if merge strategy is single
-if strcmp(CFG.merge_strategy, 'single') || strcmp(CFG.merge_strategy, 'merge_graphs'),
-    idxs = 1:length(CFG.samples);
-else
-    idxs = 1;
-end;
-    
-%%% set parallelization
-if CFG.rproc,
-    jobinfo = rproc_empty() ;
-    job_nr = 1;
-end;
-
-%%% create out-directory
-[tmp, tmp] = mkdir(CFG.out_dirname);
-
-%%% create spladder sub-directory
-[tmp, tmp] = mkdir(CFG.out_dirname,'spladder');
-
-for idx = idxs,
-    CFG_ = CFG;
-    if ~strcmp(CFG.merge_strategy, 'merge_bams'),
-        CFG.bam_fnames = CFG.bam_fnames(idx);
-        CFG.samples = CFG.samples(idx);
-        CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{1});
+if ~isfield(CFG, 'spladder_infile'),
+    %%% iterate over files, if merge strategy is single
+    if strcmp(CFG.merge_strategy, 'single') || strcmp(CFG.merge_strategy, 'merge_graphs'),
+        idxs = 1:length(CFG.samples);
     else
-        CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
+        idxs = 1;
+    end;
+        
+    %%% set parallelization
+    if CFG.rproc,
+        jobinfo = rproc_empty() ;
+        job_nr = 1;
     end;
 
-    %%% assemble out filename to check if we are already done
-    fn_out = CFG.out_fname;
-    if CFG.do_prune,
-        fn_out = strrep(fn_out, '.mat', '_pruned.mat');
-    end;
-    if CFG.do_gen_isoforms,
-        fn_out = strrep(fn_out, '.mat', '_with_isoforms.mat');
-    end;
+    %%% create out-directory
+    [tmp, tmp] = mkdir(CFG.out_dirname);
 
-    if exist(fn_out, 'file'),
-        fprintf('All result files already exist.\n');
-    else
-        if CFG.rproc,
-            jobinfo(job_nr) = rproc('spladder_core', CFG, 10000, CFG.options_rproc, 40*60) ;
-            job_nr = job_nr + 1;
+    %%% create spladder sub-directory
+    [tmp, tmp] = mkdir(CFG.out_dirname,'spladder');
+
+    for idx = idxs,
+        CFG_ = CFG;
+        if ~strcmp(CFG.merge_strategy, 'merge_bams'),
+            CFG.bam_fnames = CFG.bam_fnames(idx);
+            CFG.samples = CFG.samples(idx);
+            CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{1});
         else
-            spladder_core(CFG);
+            CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
         end;
+
+        %%% assemble out filename to check if we are already done
+        fn_out = CFG.out_fname;
+        if CFG.do_prune,
+            fn_out = strrep(fn_out, '.mat', '_pruned.mat');
+        end;
+        if CFG.do_gen_isoforms,
+            fn_out = strrep(fn_out, '.mat', '_with_isoforms.mat');
+        end;
+
+        if exist(fn_out, 'file'),
+            fprintf('All result files already exist.\n');
+        else
+            if CFG.rproc,
+                jobinfo(job_nr) = rproc('spladder_core', CFG, 10000, CFG.options_rproc, 40*60) ;
+                job_nr = job_nr + 1;
+            else
+                spladder_core(CFG);
+            end;
+        end;
+
+        CFG = CFG_;
     end;
 
-    CFG = CFG_;
-end;
+    %%% collect results after parallelization
+    if CFG.rproc,
+        jobinfo = rproc_wait(jobinfo, 30, 1, 1) ;
+    end;
 
-%%% collect results after parallelization
-if CFG.rproc,
-    jobinfo = rproc_wait(jobinfo, 30, 1, 1) ;
-end;
-
-%%% merge parts if necessary
-if strcmp(CFG.merge_strategy, 'merge_graphs'),
-    run_merge(CFG);
+    %%% merge parts if necessary
+    if strcmp(CFG.merge_strategy, 'merge_graphs'),
+        run_merge(CFG);
+    end;
 end;
 
 %%% handle alternative splicing part
-alt_genes_collect(CFG);
+if CFG.run_as_analysis,
+    alt_genes_collect(CFG);
 
-for idx = 1:length(CFG.event_types),
-    alt_genes_analyze(CFG, CFG.event_types{idx});
+    for idx = 1:length(CFG.event_types),
+        alt_genes_analyze(CFG, CFG.event_types{idx});
+    end;
 end;

@@ -30,11 +30,13 @@ function usage () {
     OPTIONAL:
     -l  FILE                log file name [stdout]
     -u  FILE                file with user settings [-]
+    -F  FILE                use existing SplAdder output file as input (advanced) [-]
     -c  INT                 confidence level (0 lowest to 3 highest) [3]
     -I  INT                 number of iterations to insert new introns
                             into the graph [5]
     -M  <STRAT>             merge strategy, where <STRAT> is one on:
                             merge_bams, merge_graphs, merge_all [merge_graphs]
+    -n  INT                 read length (used for automatic confidence levele settings) [36]
     -R  R1,R2,...           replicate structure of files (same number as
                             alignment files) [all R1 - no replicated]
     -L  STRING              label for current experiment [-]
@@ -50,6 +52,8 @@ function usage () {
     -E  y|n                 insert new intron edges [y]
     -r  y|n                 remove short exons [n]
     -s  y|n                 re-infer splice graph [n]
+    -T  y|n                 extract alternative splicing events [y]
+    -t  STRING,STRING,...   list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]
     "
 
     exit 0
@@ -65,7 +69,7 @@ S_ANNO_FNAME=""
 S_OUT_DIRNAME=""
 
 ### parse parameters from command lines
-while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:h" opt
+while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:T:t:n:F:h" opt
 do
     case $opt in
     b ) S_BAM_FNAME="$OPTARG" ;;
@@ -90,6 +94,10 @@ do
     E ) F_INSERT_IE="$OPTARG" ;;
     r ) F_REMOVE_SE="$OPTARG" ;;
     s ) F_INFER_SG="$OPTARG" ;;
+    T ) F_RUN_AS="$OPTARG" ;;
+    t ) S_AS_TYPES="$OPTARG" ;;
+    n ) I_READ_LEN="$OPTARG" ;;
+    F ) S_INFILE="$OPTARG" ;;
     h ) usage ;;
     \?) echo -e "UNKNOWN PARAMETER: $opt\n\n"; usage ;;
     esac
@@ -102,7 +110,7 @@ done
 
 ### assemble parameter string
 PARAMS=""
-for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC 
+for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC F_RUN_AS S_AS_TYPES I_READ_LEN S_INFILE
 do
     if [ ! -z "$opt" ]
     then

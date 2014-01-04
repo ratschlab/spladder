@@ -118,3 +118,7 @@
 
     CFG.is_half_open = 1;
 
+    CFG.run_as_analysis = 1;
+    CFG.event_types = {'exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip'};
+
+    CFG.read_length = 36;

@@ -72,6 +72,8 @@ if exist('F_DEBUG', 'var') == 1, CFG.debug = F_DEBUG; end;
 if exist('I_INSERT_INTRON_ITER', 'var') == 1, CFG.insert_intron_iterations = I_INSERT_INTRON_ITER; end;
 if exist('I_CONFIDENCE', 'var') == 1, CFG.confidence_level = I_CONFIDENCE; end;
 
+if exist('S_INFILE', 'var') == 1), CFG.spladder_infile = S_INFILE; end;
+
 %%% settings for the alt splice part
 if exist('S_MERGE_STRATEGY', 'var') == 1, CFG.merge_strategy = S_MERGE_STRATEGY; end;
 if exist('F_VALIDATE_SG', 'var') == 1, CFG.validate_splicegraphs = F_VALIDATE_SG; end;
@@ -86,6 +88,12 @@ if exist('S_LOG_FNAME', 'var') == 1,
 end;
 
 if exist('S_USER_FNAME', 'var') == 1, CFG.user_settings = S_USER_FNAME; end;
+
+if exist('I_READ_LEN', 'var') == 1, CFG.read_length = I_READ_LEN; end;
+
+%%% alt splice analysis
+if exist('F_RUN_AS', 'var') == 1, CFG.run_as_analysis = R_RUN_AS; end;
+if exist('S_AS_TYPES'), CFG.event_types = split_string(S_AS_TYPES, ','); end;
 
 %%% mandatory parameters
 if exist('S_BAM_FNAME', 'var') == 1, CFG.bam_fnames = split_string(S_BAM_FNAME, ','); end;
