@@ -3,7 +3,8 @@ function [result, jobwalltime] = rproc_reached_timelimit(jobinfo)
 
   result = false ;
 
-  [s,w]=system(sprintf('qacct -j %i | grep ru_wallclock|sed ''s/ru_wallclock//g''', jobinfo.jobid));
+  %[s,w]=system(sprintf('qacct -j %i | grep ru_wallclock|sed ''s/ru_wallclock//g''', jobinfo.jobid));
+  [s,w]=system(sprintf('qstat -ta | grep %i | sed -e ''s/  */ /g'' | cut -f 11 -d '' ''', jobinfo.jobid));
   if ~isempty(strfind(w, 'error')),
     jobwalltime = -1 ;
     return ;

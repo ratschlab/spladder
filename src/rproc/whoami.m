@@ -7,7 +7,9 @@ if isempty(whoami_user_name)
   
   [ret, whoami_user_name]=unix('whoami') ; 
   if ret~=0,
-    keyboard ;
+    if keyboard_allowed(),
+      keyboard ;
+    end ;
     whoami_user_name='unknown' ;
   end ;
 end ;
