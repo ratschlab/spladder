@@ -44,17 +44,17 @@ for i = 1:length(ARGS),
     end;
 
     if strcmp(VALS{1}(1:2), 'S_'),
-        eval([VALS{1} ' = "VALS{2}";']);
+        eval([VALS{1} ' = VALS{2};']);
     elseif strcmp(VALS{1}(1:2), 'F_'),
         if strcmp(VALS{2}, 'y'),
             eval([VALS{1} ' = 1;']);
         elseif strcmp(VALS{2}, 'n'),
             eval([VALS{1} ' = 0;']);
         else
-            error(sprintf('Unknown option for booloean input flag: %s\nplease use n for no or y for yes\n', VALS{2}));
+            error(sprintf('Unknown option for booloean input flag %s: %s\nplease use n for no or y for yes\n', VALS{1}, VALS{2}));
         end;
     elseif strcmp(VALS{1}(1:2), 'I_'),
-        eval([VALS{1} ' = str2num(VAL{2});']);
+        eval([VALS{1} ' = str2num(VALS{2});']);
     else
         error(['ERROR: Unknown variable:' VALS{1} ':' VALS{2} '\n']);
     end;
@@ -72,7 +72,7 @@ if exist('F_DEBUG', 'var') == 1, CFG.debug = F_DEBUG; end;
 if exist('I_INSERT_INTRON_ITER', 'var') == 1, CFG.insert_intron_iterations = I_INSERT_INTRON_ITER; end;
 if exist('I_CONFIDENCE', 'var') == 1, CFG.confidence_level = I_CONFIDENCE; end;
 
-if exist('S_INFILE', 'var') == 1), CFG.spladder_infile = S_INFILE; end;
+if exist('S_INFILE', 'var') == 1, CFG.spladder_infile = S_INFILE; end;
 
 %%% settings for the alt splice part
 if exist('S_MERGE_STRATEGY', 'var') == 1, CFG.merge_strategy = S_MERGE_STRATEGY; end;
@@ -92,7 +92,7 @@ if exist('S_USER_FNAME', 'var') == 1, CFG.user_settings = S_USER_FNAME; end;
 if exist('I_READ_LEN', 'var') == 1, CFG.read_length = I_READ_LEN; end;
 
 %%% alt splice analysis
-if exist('F_RUN_AS', 'var') == 1, CFG.run_as_analysis = R_RUN_AS; end;
+if exist('F_RUN_AS', 'var') == 1, CFG.run_as_analysis = F_RUN_AS; end;
 if exist('S_AS_TYPES'), CFG.event_types = split_string(S_AS_TYPES, ','); end;
 
 %%% mandatory parameters
@@ -120,9 +120,9 @@ for i = 1:length(CFG.bam_fnames),
 end;
 
 %%% rproc options
-if exist('F_PROC', 'var') == 1,
+if exist('F_RPROC', 'var') == 1,
     CFG.rproc = F_RPROC;
-    CFG.options_rproc = struct()
+    CFG.options_rproc = struct();
     CFG.options_rproc.mem_req_resubmit  = [30000 60000 80000];
     CFG.options_rproc.time_req_resubmit = [60*60 80*60 90*60];
     CFG.options_rproc.resubmit = 3;
