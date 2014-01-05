@@ -13,7 +13,6 @@
 
 set -e
 
-
 function usage () {
     echo "
     
@@ -61,11 +60,11 @@ function usage () {
 
 [[ -z "$1" ]] && usage
 
-. spladder_config.sh
-
 ### who am I and where am I running?
 PROG=`basename $0`
 DIR=`dirname $0`
+
+. ${DIR}/spladder_config.sh
 
 ### mandatory parameters
 S_BAM_FNAME=""
@@ -116,7 +115,8 @@ done
 PARAMS=""
 for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC F_RUN_AS S_AS_TYPES I_READ_LEN S_INFILE
 do
-    if [ ! -z "$opt" ]
+    val=$(eval "echo \$${opt}")
+    if [ ! -z "$val" ]
     then
         eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
     fi
@@ -126,10 +126,15 @@ done
 if [ "${S_ANNO_FNAME##*.}" != "mat" ]
 then
     S_ANNO_FNAME_N=${S_ANNO_FNAME%.*}.mat
-    echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
-    ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
-    ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
-    S_ANNO_FNAME=$S_ANNO_FNAME_N
+    if [ -f "$S_ANNO_FNAME_N" ]
+    then
+        echo $S_ANNO_FNAME_N already exists
+    else
+        echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
+        ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
+        ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
+        S_ANNO_FNAME=$S_ANNO_FNAME_N
+    fi
 fi
 
 ### Index Bam files
@@ -137,7 +142,7 @@ echo "Indexing BAM files"
 SAMPLE_LIST=()
 OLD_IFS=$IFS
 IFS=',' 
-for BAM_FILE in "${S_BAM_FNAME}"
+for BAM_FILE in ${S_BAM_FNAME}
 do
     CURR_BAMFILE=$BAM_FILE
     if [ ! -f ${CURR_BAMFILE}.bai ]
