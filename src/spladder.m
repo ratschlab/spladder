@@ -6,7 +6,7 @@ if isstruct(ARGS),
     CFG = ARGS;
     CFG = parse_args('', CFG);
 else
-    CFG = parse_args(ARGS, CFG);
+    CFG = parse_args(ARGS);
 end;
 
 %%% add dependencies provided in config section
