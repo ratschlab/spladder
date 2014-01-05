@@ -63,6 +63,10 @@ function usage () {
 
 . spladder_config.sh
 
+### who am I and where am I running?
+PROG=`basename $0`
+DIR=`dirname $0`
+
 ### mandatory parameters
 S_BAM_FNAME=""
 S_ANNO_FNAME=""
@@ -118,6 +122,16 @@ do
     fi
 done
 
+### prepare annotation if not in matlab format yet
+if [ "${S_ANNO_FNAME##*.}" != "mat" ]
+then
+    S_ANNO_FNAME_N=${S_ANNO_FNAME%.*}.mat
+    echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
+    ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
+    ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
+    S_ANNO_FNAME=$S_ANNO_FNAME_N
+fi
+
 ### Index Bam files
 echo "Indexing BAM files"
 SAMPLE_LIST=()
@@ -135,3 +149,6 @@ do
     fi
 done
 IFS=$OLD_IFS
+
+### start the matlab/octave part of spladder
+exec ${DIR}/start_interpreter.sh ${PROG%.sh} "$PARAMS"
