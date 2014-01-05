@@ -122,3 +122,5 @@
     CFG.event_types = {'exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip'};
 
     CFG.read_length = 36;
+
+    CFG.rproc = 0;
