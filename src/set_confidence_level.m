@@ -6,12 +6,12 @@ function CFG = set_confidence_level(CFG),
     if CFG.confidence_level == 0,
         CFG.read_filter.intron = 20000 ; 
         CFG.read_filter.exon_len = ceil(CFG.read_length * 0.10);
-        CFG.read_filter.mismatch = floor(CFG.read_length * 0.02) ;
+        CFG.read_filter.mismatch = floor(CFG.read_length * 0.03) ;
         CFG.read_filter.mincount = 1 ;
     elseif CFG.confidence_level == 1,
         CFG.read_filter.intron = 20000 ; 
         CFG.read_filter.exon_len = ceil(CFG.read_length * 0.15); %12;
-        CFG.read_filter.mismatch = floor(CFG.read_length * 0.01); %1 ;
+        CFG.read_filter.mismatch = floor(CFG.read_length * 0.02); %1 ;
         CFG.read_filter.mincount = 2;
     elseif CFG.confidence_level == 2
         CFG.read_filter.intron = 20000 ; 
