@@ -42,7 +42,7 @@ gg.stop = max([event.exon_alt1(2), event.exon_alt2(2), event.exon_const(2)]) ;
 gg.tracks=[] ;
 
 %%% add RNA-seq evidence to the gene structure
-gg = add_count_tracks(gg, fn_bam, CFG.read_filter);
+gg = add_count_tracks(gg, fn_bam, CFG);
 
 %%% set offset for half open intervals
 if is_half_open,

@@ -1,10 +1,10 @@
-function gg = add_count_tracks(gg, fn_bam, conf_filter)
+function gg = add_count_tracks(gg, fn_bam, CFG)
 
 maxval = inf; 
 if ~iscell(fn_bam)
     fn = fn_bam ;
     if ~isempty(fn),
-        gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, conf_filter);
+        gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, CFG.read_filter, CFG.var_aware);
     else
         gg.tracks = zeros(1, gg.stop-gg.start) ;
         gg.segment_lists={} ;
@@ -17,10 +17,10 @@ else
     for f = 1:length(fn_bam),
         fn = fn_bam{f} ;
         %%% count mincount over all files! (mincount only applied to intron_list)
-        conf_filter_ = conf_filter;
-        conf_filter_.mincount = 1;
+        conf_filter = CFG.read_filter;
+        conf_filter.mincount = 1;
         if ~isempty(fn),
-            gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, conf_filter_);
+            gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, conf_filter, CFG.var_aware);
             if ~isempty(gg.segment_lists{end}),
                 segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
             end;
@@ -47,7 +47,7 @@ else
     segments(rm_idx,:) = [] ;
 
     %%% filter segments by confidence level
-    idx = find(segments(:,3) >= conf_filter.mincount) ;
+    idx = find(segments(:,3) >= CFG.read_filter.mincount) ;
     gg.segment_lists = {segments(idx,1:2)} ;
     gg.segment_scores = {segments(idx,3)} ;
 end ;

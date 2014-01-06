@@ -46,10 +46,10 @@ for j = 1:length(regions),
 		gg.strands = strands(s);
 		maxval = inf; 
 		if ~iscell(CFG.bam_fnames)
-			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter);
+			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware);
 		else
 			for f = 1:length(CFG.bam_fnames),
-				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.read_filter);
+				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware);
 			end ;
 			%%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
 			%gg.tracks = [sum(gg.tracks(1:2:end,:),1);sum(gg.tracks(2:2:end,:),1)] ;

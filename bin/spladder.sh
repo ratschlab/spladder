@@ -52,6 +52,7 @@ function usage () {
     -r  y|n                 remove short exons [n]
     -s  y|n                 re-infer splice graph [n]
     -T  y|n                 extract alternative splicing events [y]
+    -X  y|n                 alignment files are variation aware (presence of XM and XG tags) [n]
     -t  STRING,STRING,...   list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]
     "
 
@@ -72,7 +73,7 @@ S_ANNO_FNAME=""
 S_OUT_DIRNAME=""
 
 ### parse parameters from command lines
-while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:T:t:n:F:h" opt
+while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:T:t:n:F:X:h" opt
 do
     case $opt in
     b ) S_BAM_FNAME="$OPTARG" ;;
@@ -101,6 +102,7 @@ do
     t ) S_AS_TYPES="$OPTARG" ;;
     n ) I_READ_LEN="$OPTARG" ;;
     F ) S_INFILE="$OPTARG" ;;
+    X ) F_VAR_AWARE="$OPTARG" ;;
     h ) usage ;;
     \?) echo -e "UNKNOWN PARAMETER: $opt\n\n"; usage ;;
     esac

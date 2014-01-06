@@ -68,6 +68,7 @@ if exist('F_REMOVE_SE', 'var') == 1, CFG.do_remove_short_exons = F_REMOVE_SE; en
 if exist('F_INFER_SG', 'var') == 1, CFG.do_infer_splice_graph = F_INFER_SG; end;
 if exist('F_VERBOSE', 'var') == 1, CFG.verbose = F_VERBOSE; end;
 if exist('F_DEBUG', 'var') == 1, CFG.debug = F_DEBUG; end;
+if exist('F_VAR_AWARE', 'var') == 1, CFG.var_aware = F_VAR_AWARE; end;
 
 if exist('I_INSERT_INTRON_ITER', 'var') == 1, CFG.insert_intron_iterations = I_INSERT_INTRON_ITER; end;
 if exist('I_CONFIDENCE', 'var') == 1, CFG.confidence_level = I_CONFIDENCE; end;

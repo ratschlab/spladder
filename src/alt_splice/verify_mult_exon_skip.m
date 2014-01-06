@@ -47,7 +47,7 @@ gg.tracks = [] ;
 assert(event.exon_pre(2)<event.exon_aft(1)) ;
 
 %%% add RNA-seq evidence to the gene structure
-gg = add_count_tracks(gg, fn_bam, CFG.read_filter);
+gg = add_count_tracks(gg, fn_bam, CFG);
 
 %%% compute exon coverages as mean of position wise coverage
 idx = [event.exon_pre(1):event.exon_pre(2)] - gg.start + 1 ;

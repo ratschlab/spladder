@@ -45,12 +45,12 @@ for j = 1:length(regions)
 
 		maxval = inf; 
         if ~iscell(CFG.bam_fnames),
-            gg = add_reads_from_bam(gg, CFG.bam_fnames, 'intron_list', '', maxval, CFG.read_filter);
+            gg = add_reads_from_bam(gg, CFG.bam_fnames, 'intron_list', '', maxval, CFG.read_filter, CFG.var_aware);
         else
             % merge intron lists of several bam files
             segments = [] ;
             for f = 1:length(CFG.bam_fnames),
-                gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'intron_list', '', maxval, CFG.read_filter);
+                gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'intron_list', '', maxval, CFG.read_filter, CFG.var_aware);
                 if ~isempty(gg.segment_lists{end}),
                     segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
                 end;

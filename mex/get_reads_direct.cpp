@@ -32,7 +32,7 @@ static inline int is_overlap(uint32_t beg, uint32_t end, const bam1_t *b)
 
 pair64_t * get_chunk_coordinates(const bam_index_t *idx, int tid, int beg, int end, int* cnt_off);
 
-  int bam_fetch_reads(bamFile fp, const bam_index_t *idx, int tid, int beg, int end, void *data, bam_header_t* header, vector<CRead*>* reads, char strand);
+  int bam_fetch_reads(bamFile fp, const bam_index_t *idx, int tid, int beg, int end, void *data, bam_header_t* header, vector<CRead*>* reads, char strand, bool var_aware = false);
 
 // callback for bam_plbuf_init()
 static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pl, void *data)
@@ -50,7 +50,7 @@ int parse_sam_line(char* line, CRead* read);
 //void parse_cigar(bam1_t* b, CRead* read);
 
 
-int get_reads_from_bam(char* filename, char* region, vector<CRead*>* reads, char strand, int lsubsample)
+int get_reads_from_bam(char* filename, char* region, vector<CRead*>* reads, char strand, int lsubsample, bool var_aware)
 {
 	subsample = lsubsample;
 	//set_strand(strand);
@@ -83,7 +83,7 @@ int get_reads_from_bam(char* filename, char* region, vector<CRead*>* reads, char
 
 	buf = bam_plbuf_init(pileup_func, &tmp); // initialize pileup
 
-	bam_fetch_reads(tmp.in->x.bam, idx, ref, tmp.beg, tmp.end, buf, tmp.in->header, reads, strand);
+	bam_fetch_reads(tmp.in->x.bam, idx, ref, tmp.beg, tmp.end, buf, tmp.in->header, reads, strand, var_aware);
 	//fprintf(stdout, "intron_list: %d \n", intron_list->size());
 
 	bam_plbuf_push(0, buf); // finalize pileup
@@ -94,7 +94,7 @@ int get_reads_from_bam(char* filename, char* region, vector<CRead*>* reads, char
 }
 
 
-int bam_fetch_reads(bamFile fp, const bam_index_t *idx, int tid, int beg, int end, void *data, bam_header_t* header, vector<CRead*>* reads, char strand)
+int bam_fetch_reads(bamFile fp, const bam_index_t *idx, int tid, int beg, int end, void *data, bam_header_t* header, vector<CRead*>* reads, char strand, bool var_aware)
 {
 	int n_off;
 	pair64_t *off = get_chunk_coordinates(idx, tid, beg, end, &n_off);
@@ -125,7 +125,7 @@ int bam_fetch_reads(bamFile fp, const bam_index_t *idx, int tid, int beg, int en
 					if ((rr%1000 < subsample))
 					{
 						CRead* read = new CRead();
-						parse_cigar(b, read, header);
+						parse_cigar(b, read, header, var_aware);
 
 						if (strand == '0' || strand==read->strand[0] || read->strand[0]=='0')
 						{
@@ -159,7 +159,7 @@ int bam_fetch_reads(bamFile fp, const bam_index_t *idx, int tid, int beg, int en
 	return 0;
 }
 
-void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header)
+void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 {
 	read->left = (b->core.flag & left_flag_mask) >0;
 	read->right = (b->core.flag & right_flag_mask) >0;
@@ -255,11 +255,24 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header)
 				uint8_t matches = *s;
 				read->matches = (int) matches;
 			}
-			if ( key[0] =='N' && key[1] == 'M')
-			{
-				uint8_t mismatches = *s;
-				read->mismatches = (int) mismatches;
-			}
+            if ( var_aware ) {
+                if ( key[0] =='X' && key[1] == 'M')
+                {
+                    uint8_t mismatches = *s;
+                    read->mismatches += (int) mismatches;
+                }
+                if ( key[0] =='X' && key[1] == 'G')
+                {
+                    uint8_t mismatches = *s;
+                    read->mismatches += (int) mismatches;
+                }
+            } else {
+                if ( key[0] =='N' && key[1] == 'M')
+                {
+                    uint8_t mismatches = *s;
+                    read->mismatches = (int) mismatches;
+                }
+            }
 			if ( key[0] =='H' && key[1] == 'I')
 			{
 				uint8_t mai = *s;

@@ -32,6 +32,7 @@
  * [15] only_clipped 
  * [15] switch of pair filter
  * [16] pair flag filter (0 no flag info, 1 right flag info, 2 left flag info, 3 both flag info)
+ * [17] switch for variation aware alignment (use XM and XG for edit ops)
  *
  * output: 
  * 1 coverage
@@ -45,7 +46,7 @@
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	
 	if (nrhs<5 || nrhs>17 || (nlhs<1 || nlhs>4)) {
-		fprintf(stderr, "usage: [x [introns] [pair]] = get_reads(fname, chr, start, end, strand, [collapse], [subsample], [max intron length], [min exonlength], [max mismatches], [mapped], [spliced], [maxminlen], [pair], [only clipped], [all pairs], [pair flag filter]);\n");
+		fprintf(stderr, "usage: [x [introns] [pair]] = get_reads(fname, chr, start, end, strand, [collapse], [subsample], [max intron length], [min exonlength], [max mismatches], [mapped], [spliced], [maxminlen], [pair], [only clipped], [all pairs], [pair flag filter] [variation aware switch]);\n");
 		return; 
 	}
 	
@@ -118,6 +119,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (nrhs>=17)
         pair_flag_filter = get_int(prhs[16]);
 
+    bool variation_aware = false; 
+    if (nrhs>=18)
+        variation_aware = (get_int(prhs[17]) > 0);
+
 
 	/* call function to get reads
 	 * **************************/	
@@ -126,7 +131,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	vector<CRead*> all_reads;
 	
-	get_reads_from_bam(fname, region, &all_reads, strand[0], subsample);
+	get_reads_from_bam(fname, region, &all_reads, strand[0], subsample, variation_aware);
 
 	for (int i=0; i<all_reads.size(); i++) {
 		all_reads[i]->strip_leftright_tag() ;

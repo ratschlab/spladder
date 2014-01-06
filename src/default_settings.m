@@ -124,3 +124,4 @@
     CFG.read_length = 36;
 
     CFG.rproc = 0;
+    CFG.var_aware = 0;

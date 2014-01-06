@@ -1,5 +1,5 @@
-function blocks = add_reads_from_bam(blocks, base_dir, which_data, tmp, maxval, filter)
-% blocks = add_reads_from_bam(blocks, base_dir, which_data, tmp, maxval)
+function blocks = add_reads_from_bam(blocks, base_dir, which_data, tmp, maxval, filter, var_aware)
+% blocks = add_reads_from_bam(blocks, base_dir, which_data, tmp, maxval, filter, var_aware)
 
 % blocks coordinates are assumed to be in closed intervals
 
@@ -11,6 +11,9 @@ if nargin<6
 	filter.exon_len = 8;
 	filter.mismatch = 1;
 end
+if nargin < 7,
+    var_aware = 0;
+end;
 
 if isstruct(which_data)
 	%% assume this is the genome info struct
@@ -51,36 +54,36 @@ for b = 1:length(blocks),
 	if any(strcmp(types, 'exon_track'))
 		mapped = 1;
 		spliced = 1;
-		[introns, coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped);
+		[introns, coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped, var_aware);
 	end
 	if any(strcmp(types, 'mapped_exon_track'))
 		mapped = 1;
 		spliced = 0;
-		[introns, mapped_coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped);
+		[introns, mapped_coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped, var_aware);
 	end
 	if any(strcmp(types, 'spliced_exon_track'))
 		mapped = 0;
 		spliced = 1;
-		[introns, spliced_coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped);
+		[introns, spliced_coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped, var_aware);
 	end
 	if any(strcmp(types, 'polya_signal_track'))
 		mapped = 1;
 		spliced = 1;
         clipped = 1;
-		[introns, polya_signals, pair_cov] = get_all_data_uncollapsed(blocks(b), mapped, spliced, filenames, filter, clipped);
+		[introns, polya_signals, pair_cov] = get_all_data_uncollapsed(blocks(b), mapped, spliced, filenames, filter, clipped, var_aware);
 	end
 	if any(strcmp(types, 'end_signal_track'))
 		mapped = 1;
 		spliced = 1;
         clipped = 0;
-		[introns, read_end_signals, pair_cov] = get_all_data_uncollapsed(blocks(b), mapped, spliced, filenames, filter, clipped);
+		[introns, read_end_signals, pair_cov] = get_all_data_uncollapsed(blocks(b), mapped, spliced, filenames, filter, clipped, var_aware);
 	end
 	if ~exist('introns', 'var')
 		% no exon coverage needed at all
 		mapped = 0;
 		spliced = 1;
         clipped = 0;
-		[introns, spliced_coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped);
+		[introns, spliced_coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped, var_aware);
 	end
 
 	%% process introns
@@ -263,7 +266,7 @@ end;
 
 return
 
-function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, filenames, filter, pair, clipped) 
+function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, filenames, filter, pair, clipped, var_aware) 
 
 	block_len = block.stop - block.start + 1;
 	% get all data from bam file
@@ -293,10 +296,10 @@ function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, fi
         end;
         %%% get reads from bam file
 		if pair
-			[coverage_tmp, introns_cell, pair_cov_tmp] = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, subsample, filter.intron, filter.exon_len, filter.mismatch, mapped, spliced, maxminlen, pair, clipped);
+			[coverage_tmp, introns_cell, pair_cov_tmp] = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, subsample, filter.intron, filter.exon_len, filter.mismatch, mapped, spliced, maxminlen, pair, clipped, 0, -1, var_aware);
 			pair_cov = pair_cov+double(pair_cov_tmp);
 		else
-			[coverage_tmp, introns_cell] = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, subsample, filter.intron, filter.exon_len, filter.mismatch, mapped, spliced, clipped);
+			[coverage_tmp, introns_cell] = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, subsample, filter.intron, filter.exon_len, filter.mismatch, mapped, spliced, clipped, 0, -1, var_aware);
 		end;
 
         %%% compute total coverages
@@ -337,7 +340,7 @@ function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, fi
 	end
 return
 
-function [introns, coverage, pair_cov] = get_all_data_uncollapsed(block, mapped, spliced, filenames, filter) 
+function [introns, coverage, pair_cov] = get_all_data_uncollapsed(block, mapped, spliced, filenames, filter, var_aware) 
 
 	block_len = block.stop - block.start + 1;
 	% get all data from bam file
@@ -363,7 +366,7 @@ function [introns, coverage, pair_cov] = get_all_data_uncollapsed(block, mapped,
         pair = 0;
         coverage_tmp = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, ...
                                                  subsample, filter.intron, filter.exon_len, filter.mismatch, ...
-                                                 mapped, spliced, maxminlen, pair, clipped);
+                                                 mapped, spliced, maxminlen, pair, clipped, 0, -1, var_aware);
 		coverage = [coverage; sparse(coverage_tmp(1,:), coverage_tmp(2, :), 1)];
 	end
 return
