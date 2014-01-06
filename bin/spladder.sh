@@ -108,8 +108,8 @@ done
 
 ### check for mandatory parameters
 [[ -z "$S_BAM_FNAME" ]] && echo -e "\nAlignment file name is mandatory!\n" && usage && exit 1
-[[ -z "$S_ANNO_FNAME" ]] && echo -e "\nAnnotation file name is mandatory!\n" && usage && exit 1
 [[ -z "$S_OUT_DIRNAME" ]] && echo -e "\nOutput directory name is mandatory!\n" && usage && exit 1
+[[ -z "$S_INFILE" ]] && [[ -z "$S_ANNO_FNAME" ]] && echo -e "\nAnnotation file name is mandatory!\n" && usage && exit 1
 
 ### assemble parameter string
 PARAMS=""
@@ -123,17 +123,20 @@ do
 done
 
 ### prepare annotation if not in matlab format yet
-if [ "${S_ANNO_FNAME##*.}" != "mat" ]
+if [ ! -z "$S_ANNO_FNAME" ]
 then
-    S_ANNO_FNAME_N=${S_ANNO_FNAME%.*}.mat
-    if [ -f "$S_ANNO_FNAME_N" ]
+    if [ "${S_ANNO_FNAME##*.}" != "mat" ]
     then
-        echo $S_ANNO_FNAME_N already exists
-    else
-        echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
-        ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
-        ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
-        S_ANNO_FNAME=$S_ANNO_FNAME_N
+        S_ANNO_FNAME_N=${S_ANNO_FNAME%.*}.mat
+        if [ -f "$S_ANNO_FNAME_N" ]
+        then
+            echo $S_ANNO_FNAME_N already exists
+        else
+            echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
+            ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
+            ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
+            S_ANNO_FNAME=$S_ANNO_FNAME_N
+        fi
     fi
 fi
 
