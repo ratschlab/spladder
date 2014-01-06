@@ -76,7 +76,7 @@ function alt_genes_collect(CFG)
             end;
 
             if isfield(CFG, 'spladder_infile'),
-                genes_fnames{ridx, i} = CFG.CFG.spladder_infile;
+                genes_fnames{ridx, i} = CFG.spladder_infile;
             elseif strcmp(CFG.merge_strategy, 'single')
                 genes_fnames{ridx, i} = sprintf('%s/spladder/genes_graph_conf%i%s.%s.mat', CFG.out_dirname, CFG.confidence_level, rep_tag, CFG.samples{i});
             else
