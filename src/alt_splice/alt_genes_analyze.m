@@ -164,7 +164,7 @@ function alt_genes_analyze(CFG, event_type)
                 %%% save summary file
                 save(fn_out_info, 'chunksize', 'max_len_all', 'max_len_confirmed');
                 events_confirmed = events_confirmed_;
-                event_all = events_all_;
+                events_all = events_all_;
             end;
         else
             fprintf('%s exists - loading chunk-wise!\n\n', fn_out_info);
@@ -204,7 +204,6 @@ function alt_genes_analyze(CFG, event_type)
             write_events_txt(fn_out_txt, CFG.strains, events_all) ;
         end;
 
-
         if isempty(events_confirmed),
             fprintf('No %s event could be confirmed. - Nothing to report.\n', event_type);
             continue;
@@ -236,8 +235,7 @@ function alt_genes_analyze(CFG, event_type)
         else
             fprintf('writing filtered events (sample freq 0.05)');
             cf_idx = ([events_confirmed.confirmed] >= 0.05 * length(events_confirmed(1).detected));
-            events_confirmed = events_confirmed(cf_idx);
-            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed);
+            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx));
         end;
 
         fn_out_conf_txt = strrep(fn_out_conf, '.mat', '.filt0.1.txt') ;
@@ -246,8 +244,7 @@ function alt_genes_analyze(CFG, event_type)
         else
             fprintf('writing filtered events (sample freq 0.01)');
             cf_idx = ([events_confirmed.confirmed] >= 0.1 * length(events_confirmed(1).detected));
-            events_confirmed = events_confirmed(cf_idx);
-            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed);
+            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx));
         end;
 
         %genes_alt3 = get_ALT_END_genes(CFG.strains, events_confirmed) ;
