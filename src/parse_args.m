@@ -101,6 +101,11 @@ if exist('S_BAM_FNAME', 'var') == 1, CFG.bam_fnames = split_string(S_BAM_FNAME, 
 if exist('S_ANNO_FNAME', 'var') == 1, CFG.anno_fname = S_ANNO_FNAME; end;
 if exist('S_OUT_DIRNAME', 'var') == 1, CFG.out_dirname = S_OUT_DIRNAME; end;
 
+%%% check if we got a list of bam files in a text file instead of a comma separated list
+if isequal(CFG.bam_fnames{1}(end-2:end), 'txt'),
+    CFG.bam_fnames = textread(CFG.bam_fnames{1}, '%s');
+end;
+
 if exist('S_REFERENCE_STRAIN', 'var') == 1,
     CFG.reference_strain = S_REFERENCE_STRAIN;
     ref_tag = sprintf('%s:', S_REFERENCE_STRAIN);
