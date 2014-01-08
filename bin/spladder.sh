@@ -144,21 +144,34 @@ fi
 
 ### Index Bam files
 echo "Indexing BAM files"
-SAMPLE_LIST=()
-OLD_IFS=$IFS
-IFS=',' 
-for BAM_FILE in ${S_BAM_FNAME}
-do
-    CURR_BAMFILE=$BAM_FILE
-    if [ ! -f ${CURR_BAMFILE}.bai ]
-    then
-        echo "Indexing $CURR_BAMFILE"
-        ${SPLADDER_SAMTOOLS_BIN_DIR} index $BAM_FILE
-    else
-        echo "$CURR_BAMFILE already indexed"
-    fi
-done
-IFS=$OLD_IFS
+if [ "${S_BAM_FNAME##*.}" == "txt" ]
+then
+    cat ${S_BAM_FNAME} | while read CURR_BAMFILE
+    do
+        if [ ! -f ${CURR_BAMFILE}.bai ]
+        then
+            echo "Indexing $CURR_BAMFILE"
+            ${SPLADDER_SAMTOOLS_BIN_DIR} index $BAM_FILE
+        else
+            echo "$CURR_BAMFILE already indexed"
+        fi
+    done
+else
+    OLD_IFS=$IFS
+    IFS=',' 
+    for BAM_FILE in ${S_BAM_FNAME}
+    do
+        CURR_BAMFILE=$BAM_FILE
+        if [ ! -f ${CURR_BAMFILE}.bai ]
+        then
+            echo "Indexing $CURR_BAMFILE"
+            ${SPLADDER_SAMTOOLS_BIN_DIR} index $BAM_FILE
+        else
+            echo "$CURR_BAMFILE already indexed"
+        fi
+    done
+    IFS=$OLD_IFS
+fi
 
 ### start the matlab/octave part of spladder
 exec ${DIR}/start_interpreter.sh ${PROG%.sh} "$PARAMS"
