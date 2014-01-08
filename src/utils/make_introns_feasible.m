@@ -14,7 +14,8 @@ function introns = make_introns_feasible(introns, genes, CFG)
     while ~isempty(unfeas),
         %%% make filter more stringent
         CFG.read_filter.exon_len = min(36, CFG.read_filter.exon_len + 4);
-        CFG.read_filter.mincount = CFG.read_filter.mincount + 10;
+        %CFG.read_filter.mincount = CFG.read_filter.mincount + 10;
+        CFG.read_filter.mincount = 2 * CFG.read_filter.mincount;
         CFG.read_filter.mismatch = max(CFG.read_filter.mismatch - 1, 0);
 
         %%% get new intron counts
