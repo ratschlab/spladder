@@ -299,7 +299,7 @@ function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, fi
 			[coverage_tmp, introns_cell, pair_cov_tmp] = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, subsample, filter.intron, filter.exon_len, filter.mismatch, mapped, spliced, maxminlen, pair, clipped, 0, -1, var_aware);
 			pair_cov = pair_cov+double(pair_cov_tmp);
 		else
-			[coverage_tmp, introns_cell] = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, subsample, filter.intron, filter.exon_len, filter.mismatch, mapped, spliced, clipped, 0, -1, var_aware);
+			[coverage_tmp, introns_cell] = get_reads(fname, contig_name, block.start, block.stop, strand, collapse, subsample, filter.intron, filter.exon_len, filter.mismatch, mapped, spliced, maxminlen, pair, clipped, 0, -1, var_aware);
 		end;
 
         %%% compute total coverages
