@@ -45,7 +45,7 @@
  */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	
-	if (nrhs<5 || nrhs>17 || (nlhs<1 || nlhs>4)) {
+	if (nrhs<5 || nrhs>18 || (nlhs<1 || nlhs>4)) {
 		fprintf(stderr, "usage: [x [introns] [pair]] = get_reads(fname, chr, start, end, strand, [collapse], [subsample], [max intron length], [min exonlength], [max mismatches], [mapped], [spliced], [maxminlen], [pair], [only clipped], [all pairs], [pair flag filter] [variation aware switch]);\n");
 		return; 
 	}
