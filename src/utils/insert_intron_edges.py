@@ -8,7 +8,7 @@ print_intermediates = False
 strands = ['+', '-']
 P = []
 both_missing = [0 0]
-one_missing=[0 0]
+one_missing = [0 0]
 multi = 0
 next = 0
 prev = 0
@@ -25,15 +25,15 @@ inserted['exon_skip'] = 0
 inserted['gene_merge'] = 0 
 inserted['new_terminal_exon'] = 0 
 
-num_unused_introns = sp.zeros((1, len(genes))
+num_unused_introns = sp.zeros((1, genes.shape[0])
 
-for i in range(len(genes)):
+for i in range(genes.shape[0]):
 	if CFG['verbose'] and i % 1000 == 0:
-        print >> CFG['fd_log'], '%i of %i genes' % (i, len(genes))
+        print >> CFG['fd_log'], '%i of %i genes' % (i, genes.shape[0])
 
     s = strands.index(genes[i].strand)
 
-    if not genes(i).introns[s]:
+    if not genes[i].introns[s]:
         continue
 
 	unused_introns = []
@@ -41,7 +41,7 @@ for i in range(len(genes)):
         print >> CFG['fd_log'], 'processing gene %i; with %i introns; time since last tic' % (i, len(genes[i].introns[s]))
         ### TODO timing
 
-	for j in range(genes[i].introns[s].shape[1]):
+	for j in range(len(genes[i].introns[s])):
 		intron_used = False
 
         if ( j > 1 and genes[i].splicegraph.vertices.shape[1] > 1):
@@ -101,7 +101,6 @@ for i in range(len(genes)):
 		# find first end in previous gene on same strand
         if not idx1 and i > 0 and genes[i - 1].chr_num == genes[i].chr_num and genes[i - 1].strand == genes[i].strand: 
 			### find all exon ends in previuos gene that coincide with intron start j
-			idx1_ = find(abs(genes(i-1).splicegraph{1}(2,:) - genes(i).introns{s}(1,j) + 1) <= intron_tol) ;
             idx1_ = sp.where(sp.absolute(genes[i-1].splicegraph.vertices[1, :] - genes[i].introns[s][0, j] <= intron_tol))[0]
             if idx1_:
 				prev += 1
@@ -337,7 +336,7 @@ if print_intermediates:
     print 'num_unused_introns: $i' % sum(num_unused_introns)
 
 merge_idx = unique_rows(merge_idx)
-rm_map = sp.zeros((1, leng(genes)))
+rm_map = sp.zeros((1, len(genes)))
 
 for i in range(merge_idx.shape[0]):
 	
@@ -351,43 +350,32 @@ for i in range(merge_idx.shape[0]):
 	# merge intron lists
 	for k in range(genes[merge_idx[i, 1]].introns.shape[0]):
 		for j in range(genes[merge_idx[i, 1]].introns[k].shape[1]):
-			genes[merge_idx[i, 0]].introns{k}(:, end + 1) = genes(merge_idx(i, 2)).introns{k}(:, j) ;
-	% merge splice graphs
-	genes(merge_idx(i, 1)).splicegraph{1} = [genes(merge_idx(i,1)).splicegraph{1} genes(merge_idx(i,2)).splicegraph{1}] ;
-	m = size(genes(merge_idx(i, 1)).splicegraph{2}, 1) ;
-	n = size(genes(merge_idx(i, 2)).splicegraph{2}, 1) ;
-	genes(merge_idx(i, 1)).splicegraph{2}(m + 1 : n + m, m + 1 : n + m) = genes(merge_idx(i, 2)).splicegraph{2} ;
-	genes(merge_idx(i, 1)).splicegraph{3} = [genes(merge_idx(i, 1)).splicegraph{3} genes(merge_idx(i, 2)).splicegraph{3}] ;
+			genes[merge_idx[i, 0]].introns[k] = sp.c_[genes[merge_idx[i, 0]].introns[k], genes[merge_idx[i, 1]].introns[k][:, j]]
+	# merge splice graphs
+	genes[merge_idx[i, 0]].splicegraph.vertices = sp.c_[genes[merge_idx[i, 0]].splicegraph.vertices, genes[merge_idx[i, 1]].splicegraph.vertices]
+	m = genes[merge_idx[i, 0]].splicegraph{.edges.shape[0]
+	n = genes[merge_idx[i, 1]].splicegraph{.edges.shape[0]
+	genes[merge_idx[i, 0]].splicegraph.edges[m + 1 : n + m, :][m + 1 : n + m, :] = genes[merge_idx[i, 1]].splicegraph.edges
+	genes[merge_idx[i, 0]].splicegraph.terminals = sp.c_[genes[merge_idx[i, 0]].splicegraph.terminals, genes[merge_idx[i, 1]].splicegraph.terminals]
 
-	% extend start/stop
-	genes(merge_idx(i, 1)).start = min(genes(merge_idx(i, 1)).start, genes(merge_idx(i, 2)).start) ;
-	genes(merge_idx(i, 1)).stop = max(genes(merge_idx(i, 1)).stop, genes(merge_idx(i, 2)).stop) ;
+	# extend start/stop
+	genes[merge_idx[i, 0]].start = min(genes[merge_idx[i, 0]].start, genes[merge_idx[i, 1]].start)
+	genes[merge_idx[i, 0]].stop = max(genes[merge_idx[i, 0]].stop, genes[merge_idx[i, 1]].stop)
 
-	%genes(merge_idx(i,1))=build_splice_graph_caller(genes(merge_idx(i,1))) ;
-	%genes(merge_idx(i,1))=infer_splice_graph_caller(genes(merge_idx(i,1))) ;
+	rm_map[merge_idx[i, 1]] = 1
 
-	rm_map(merge_idx(i, 2)) = 1 ;
+	inserted['gene_merge'] += 1
 
-	inserted.gene_merge = inserted.gene_merge + 1 ;
-end ;
-genes(rm_map == 1) = [] ;
+genes[rm_map == 1] = []
 
-%size(P,1)/(size(P,1)+both_missing+one_missing)
-%both_missing/(size(P,1)+both_missing+one_missing)
-%one_missing/(size(P,1)+both_missing+one_missing)
+if genes[i].splicegraph.vertices.shape[1] > 1:
+    genes[i].splicegraph.uniquify()
 
-if ( size(genes(i).splicegraph{1},2) > 1) 
-    genes(i) = uniquify_splicegraph(genes(i));
-end ;
+for i in range(len(genes)):
+    assert(sp.all(genes[i].splicegraph.vertices[0, :] <= genes[i].splicegraph.vertices[1, :]))
 
-for i = 1:length(genes),
-    assert(all(genes(i).splicegraph{1}(1,:) <= genes(i).splicegraph{1}(2, :))) ;
-end ;
-
-for ix = 1:length(genes)
-	[dummy,exon_order] = sort(genes(ix).splicegraph{1}(1,:),2,'ascend');
-	genes(ix).splicegraph{1} = genes(ix).splicegraph{1}(:, exon_order);
-	genes(ix).splicegraph{2} = genes(ix).splicegraph{2}(exon_order, exon_order);
-	genes(ix).splicegraph{3} = genes(ix).splicegraph{3}(:, exon_order);
-end ;
-
+for ix in range(len(genes)):
+    exon_order = sp.argsort(genes[ix].splicegraph.vertices[0, :])
+	genes[ix].splicegraph.vertices = genes[ix].splicegraph.vertices[:, exon_order]
+	genes[ix].splicegraph.edges = genes[ix].splicegraph.edges[exon_order, :][:, exon_order]
+	genes[ix].splicegraph.terminals = genes[ix].splicegraph.terminals[:, exon_order]
