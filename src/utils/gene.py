@@ -1,4 +1,4 @@
-class genes:
+class Gene:
     
     def __init__:
         

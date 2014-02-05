@@ -1,6 +1,6 @@
 import scipy as sp
 
-class splicegraph:
+class Splicegraph:
     
     def __init__(self, genes = None):
         
