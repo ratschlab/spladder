@@ -193,10 +193,10 @@ function alt_genes_analyze(CFG, event_type)
         end;
 
         if isempty(events_all) || isempty([events_all.event_type]),
-            fprintf('No %s event could be found. - Nothing to report.\n', event_type);
+            fprintf('\nNo %s event could be found. - Nothing to report.\n', event_type);
             continue;
         else
-            fprintf('Reporting complete %s events.\n', event_type);
+            fprintf('\nReporting complete %s events:\n', event_type);
         end;
         if exist(fn_out_txt, 'file')
             fprintf('%s already exists\n', fn_out_txt);
@@ -205,10 +205,10 @@ function alt_genes_analyze(CFG, event_type)
         end;
 
         if isempty(events_confirmed),
-            fprintf('No %s event could be confirmed. - Nothing to report.\n', event_type);
+            fprintf('\nNo %s event could be confirmed. - Nothing to report.\n', event_type);
             continue;
         else
-            fprintf('Reporting confirmed %s events.\n', event_type);
+            fprintf('\nReporting confirmed %s events:\n', event_type);
         end;
 
         if exist(fn_out_conf_gff3, 'file')
@@ -233,7 +233,7 @@ function alt_genes_analyze(CFG, event_type)
         if exist(fn_out_conf_txt, 'file')
             fprintf('%s already exists\n', fn_out_conf_txt);
         else
-            fprintf('writing filtered events (sample freq 0.05)');
+            fprintf('\nWriting filtered events (sample freq 0.05):\n');
             cf_idx = ([events_confirmed.confirmed] >= 0.05 * length(events_confirmed(1).detected));
             write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx));
         end;
@@ -242,7 +242,7 @@ function alt_genes_analyze(CFG, event_type)
         if exist(fn_out_conf_txt, 'file')
             fprintf('%s already exists\n', fn_out_conf_txt);
         else
-            fprintf('writing filtered events (sample freq 0.01)');
+            fprintf('\nWriting filtered events (sample freq 0.01):\n');
             cf_idx = ([events_confirmed.confirmed] >= 0.1 * length(events_confirmed(1).detected));
             write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx));
         end;
