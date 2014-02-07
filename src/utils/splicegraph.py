@@ -190,4 +190,23 @@ class Splicegraph:
         if 'term' in splicegraph:
             splicegraph['term'] = sp.c_[splicegraph['term'], sp.array([splicegraph['term'][1, idx1], splicegraph['term'][2, idx2]])]
 
+    def uniquify(self):
+        # OUTPUT: splice graph that has been made unique on exons for each gene
+
+        (s_tmp, s_idx) = sort_rows(vertices.T, index=True)
+        vertices = s_tmp.T
+        edges = vertices[s_idx, :][:, s_idx]
+        terminals = erminals[:, s_idx]
+
+        rm_idx = []
+        for j in range(1, vertices.shape[1]):
+            if sp.all(vertices[:, j-1] == vertices[:, j]):
+                edges[:, j] = edges[:, j-1] | edges[:, j]
+                edges[j, :] = edges[j-1, :] | edges[j, :]
+                rm_idx.append(j - 1)
+
+        keep_idx = sp.where(~sp.in1d(sp.array(range(vertices.shape[1])), rm_idx))[0]
+        vertices = vertices[:, keep_idx]
+        edges = edges[keep_idx, :][:, keep_idx]
+        terminals = terminals[:, keep_idx]
 
