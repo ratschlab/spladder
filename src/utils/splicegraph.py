@@ -2,29 +2,30 @@ import scipy as sp
 
 class Splicegraph:
     
-    def __init__(self, genes = None):
+    def __init__(self, gene = None):
         
         vertices = sp.zeros((2, 0))
         edges = sp.zeros((0, 0))
         terminals = sp.zeros((2, 0))
 
-        if genes:
-            from_genes(genes)
+        if gene:
+            from_gene(gene)
 
     def new_edge(self):
 
         edges = sp.c_[edges, sp.zeros((edges.shape[0],))]
         edges = sp.r_[edges, sp.zeros((edges.shape[1],))]
-
-    def from_genes(self, genes):
+    
+    def subset(self, keep_idx):
         
-        if gene_idx % 100 == 0:
-            print '.',
-            if gene_idx % 1000 == 0:
-                 print '%i' % gene_idx
+        vertices = vertices[:, keep_idx]
+        edges = edges[keep_idx, :][:, keep_idx]
+        terminals = terminals[:, keep_idx]
 
-        for transcript_idx = len(genes[gene_idx].transcripts):
-            exon_start_end = genes[gene_idx].exons[transcript_idx]
+    def from_gene(self, gene):
+        
+        for transcript_idx = len(gene.transcripts):
+            exon_start_end = gene.exons[transcript_idx]
             
             ### only one exon in the transcript
             if exon_start_end.shape[0] == 1,
