@@ -14,14 +14,13 @@ def get_intron_list(genes, CFG):
 
     ### collect all possible combinations of contigs and strands
     regions = init_regions(CFG['bam_fnames'])
-    chr_num = sp.array([x.chr_num for x in regions])
-    keepidx = sp.where(sp.in1d(chr_num, sp.unique(sp.array([x.chr_num for x in genes]))))[0]
+    keepidx = sp.where(sp.in1d(sp.arra([x.chr_num for x in regions]), sp.unique(sp.array([x.chr_num for x in genes]))))[0]
     regions = regions[keepidx]
 
     c = 0
     num_introns_filtered = 0
 
-    for j in range(len(regions['chr'])):
+    for j in range(regions.shape[0]):
         chr = regions[j].chr
         chr_num = regions[j].chr_num
         s = strands.index(regions[j].strand)
