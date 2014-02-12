@@ -23,3 +23,11 @@ def sort_rows(array, index = None):
         return (sp.sort(array_v, axis = 0).view(array.dtype).reshape(array_u.shape[0], array.shape[1]), sp.argsort(array_v, axis = 0).view(array.dtype)[:, 0])
     else:
         return sp.sort(array_v, axis = 0).view(array.dtype).reshape(array_u.shape[0], array.shape[1])
+
+def ismember(element, array, rows=False):
+    """Check if element is member of array"""
+
+    if rows:
+        return sp.any([sp.all(array[x, :] == element) for x in range(array.shape[0])])
+    else:
+        return sp.all([element[i] in array for i in element.shape[0])
