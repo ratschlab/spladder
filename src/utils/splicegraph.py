@@ -22,6 +22,13 @@ class Splicegraph:
         edges = edges[keep_idx, :][:, keep_idx]
         terminals = terminals[:, keep_idx]
 
+
+    def reorder(self, idx):
+        
+        vertices = vertices[:, idx]
+        edges = edges[idx, :][:, idx]
+        terminals = terminals[:, idx]
+
     def from_gene(self, gene):
         
         for transcript_idx = len(gene.transcripts):
