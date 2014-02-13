@@ -11,6 +11,10 @@ class Splicegraph:
         if gene:
             from_gene(gene)
 
+    def get_len(self):
+        
+        return vertices.shape[1]
+
     def new_edge(self):
 
         edges = sp.c_[edges, sp.zeros((edges.shape[0],))]
