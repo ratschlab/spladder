@@ -5,9 +5,9 @@ def detect_multipleskips(genes, idx_alt):
     # [idx_multiple_skips, exon_multiple_skips, id_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
 
     id = 0
-    idx_multiple_skips = zeros(1,0);
-    id_multiple_skips = zeros(1,0);
-    exon_multiple_skips = zeros(1,0) ;
+    idx_multiple_skips = []
+    id_multiple_skips = []
+    exon_multiple_skips = []
     for ix in idx_alt:
         if ix % 50 == 0:
             print '.',
@@ -76,20 +76,20 @@ def detect_multipleskips(genes, idx_alt):
                         backtrace = sp.c_[backtrace, path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips = sp.c_[idx_multiple_skips, repmat(ix, 1, backtrace.shape[1] + 2)]
-                    exon_multiple_skips = sp.c_[exon_multiple_skips, exon_idx_first, backtrace, exon_idx_last]
+                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[1] + 2))
+                    exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
                     id += 1
-                    id_multiple_skips = sp.c_[id_multiple_skips, id * sp.ones((1, backtrace.shape[1] + 2)]
+                    id_multiple_skips.append(id * sp.ones((1, backtrace.shape[1] + 2))
                 elif (long_exist_path(exon_idx_first,exon_idx_last) > 2) && ~isinf(long_exist_path(exon_idx_first,exon_idx_last)),
                     backtrace = long_path(exon_idx_first,exon_idx_last);
                     while backtrace[-1] > exon_idx_first:
                         backtrace = sp.c_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips = sp.c_[idx_multiple_skips, repmat(ix, 1, backtrace.shape[1] + 2)]
-                    exon_multiple_skips = sp.c_[exon_multiple_skips, exon_idx_first, backtrace, exon_idx_last]
+                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[1] + 2))
+                    exon_multiple_skips.append(exon_idx_first, backtrace, exon_idx_last])
                     id += 1
-                    id_multiple_skips = sp.c_[id_multiple_skips, id * sp.ones(1, backtrace.shape[1] + 2)]
+                    id_multiple_skips.append(id * sp.ones(1, backtrace.shape[1] + 2))
 
     print 'Number of multiple exon skips:\t\t\t\t\t%d' % length(idx_multiple_skips)
     return (idx_multiple_skips, exon_multiple_skips, id_multiple_skips)
