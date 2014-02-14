@@ -18,17 +18,25 @@ class Event:
         self.p_values = None
         self.gene_name = None
         self.transcript_type = None
+        self.num_detected = None
+        self.id = None
 
-    def get_inner_coords():
+    def get_inner_coords(trafo=False):
         
-        tmp = sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
+        if trafo:
+            tmp = sp.sort(sp.unique(sp.c_[exons1_col.ravel(), exons2_col.ravel()]))
+        else:
+            tmp = sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
         
         if tmp.shape[0] > 2:
             return tmp[1:-1]
         else:
             return []
 
-    def get_coords():
+    def get_coords(trafo=False):
         
-        return sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
+        if trafo:
+            return sp.sort(sp.unique(sp.c_[exons1_col.ravel(), exons2_col.ravel()]))
+        else:
+            return sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
         
