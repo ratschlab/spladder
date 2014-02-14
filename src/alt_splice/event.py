@@ -28,3 +28,7 @@ class Event:
         else:
             return []
 
+    def get_coords():
+        
+        return sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
+        
