@@ -19,3 +19,12 @@ class Event:
         self.gene_name = None
         self.transcript_type = None
 
+    def get_inner_coords():
+        
+        tmp = sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
+        
+        if tmp.shape[0] > 2:
+            return tmp[1:-1]
+        else:
+            return []
+
