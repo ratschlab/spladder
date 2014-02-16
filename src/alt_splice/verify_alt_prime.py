@@ -10,15 +10,16 @@ info['valid'] = 1
 verified = [0, 0]
 
 ### check validity of exon coordinates (>=0)
-if sp.any(event.exon_alt1) <= 0 or sp.any(event.exon_alt2) <= 0:
-    info.valid = 0 
+if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
+    info['valid'] = 0 
     return (verified, info)
 
 ### check validity of intron coordinates (only one side is differing)
-if (event.intron1[0] != event.intron2[0]) and (event.intron1[1] != event.intron2[1]):
-    info.valid = 0 
+if (event.exons1[0, 1] != event.exons2[0, 1]) and (event.exons1[1, 0] != event.exons2[1, 0]):
+    info['valid'] = 0 
     return (verified, info)
 
+gg = Gene()
 gg.strand = event.strand 
 gg.chr = event.chr 
 gg.chr_num = event.chr_num 
