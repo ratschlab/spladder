@@ -104,13 +104,13 @@ def alt_genes_collect(CFG):
 
                             ### build intron retention data structure
                             event = Event('intron_retention', gene.chr, gene.chr_num, gene.strand)
-                            event.strain = [strain]
+                            event.strain = sp.array([strain])
                             event.exons1 = sp.r_[exons[:, intron_intron_reten[k][0]].T, exons[:, intron_intron_reten[k][1]].T]
                             event.exons2 = exons[:, intron_intron_reten[k][2]].T
                             event.exons1_col = sp.r_[exons_col[:, intron_intron_reten[k][0]].T, exons_col[:, intron_intron_reten[k][1]].T]
                             event.exons2_col = exons_col[:, intron_intron_reten[k][2]].T
-                            event.gene_name = [gene.name]
-                            event.transcript_type = [gene.transcript_type]
+                            event.gene_name = sp.array([gene.name])
+                            event.transcript_type = sp.array([gene.transcript_type])
                             intron_reten_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_ir
@@ -136,13 +136,13 @@ def alt_genes_collect(CFG):
 
                             ### build exon skip data structure
                             event = Event('exon_skip', gene.chr, gene.chr_num, gene.strand)
-                            event.strain = [strain]
+                            event.strain = sp.array([strain])
                             event.exons1 = sp.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][2]]].T
                             event.exons2 = sp.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][1]], exons[:, exon_exon_skip[k][2]]].T
                             event.exons1_col = sp.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][2]]].T
                             event.exons2_col = sp.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][1]], exons_col[:, exon_exon_skip[k][2]]].T
-                            event.gene_name = [gene.name]
-                            event.transcript_type = [gene.transcript_type]
+                            event.gene_name = sp.array([gene.name])
+                            event.transcript_type = sp.array([gene.transcript_type])
                             exon_skip_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_es
@@ -178,7 +178,7 @@ def alt_genes_collect(CFG):
                                         continue
 
                                     event = Event('alt_5prime', gene.chr, gene.chr_num, gene.strand)
-                                    event.strain = [strain]
+                                    event.strain = sp.array([strain])
                                     if gene.strand == '+':
                                         event.exons1 = sp.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
                                         event.exons2 = sp.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
@@ -189,8 +189,8 @@ def alt_genes_collect(CFG):
                                         event.exons2 = sp.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite'], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
                                         event.exons1_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite'], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
                                         event.exons2_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite'], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
-                                    event.gene_name = [gene.name]
-                                    event.transcript_type = [gene.transcript_type]
+                                    event.gene_name = sp.array([gene.name])
+                                    event.transcript_type = sp.array([gene.transcript_type])
                                     alt_end_5prime_pos[ridx, i].append(event)
 
                         ### handle 3 prime events
@@ -220,7 +220,7 @@ def alt_genes_collect(CFG):
                                         continue
 
                                     event = Event('alt_3prime', gene.chr, gene.chr_num, gene.strand)
-                                    event.strain = [strain]
+                                    event.strain = sp.array([strain])
                                     if gene.strand == '+':
                                         event.exons1 = sp.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
                                         event.exons2 = sp.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
@@ -231,8 +231,8 @@ def alt_genes_collect(CFG):
                                         event.exons2 = sp.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite'], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
                                         event.exons1_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite'], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
                                         event.exons2_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite'], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
-                                    event.gene_name = [gene.name]
-                                    event.transcript_type = [gene.transcript_type]
+                                    event.gene_name = sp.array([gene.name])
+                                    event.transcript_type = sp.array([gene.transcript_type])
                                     alt_end_3prime_pos[ridx, i].append(event)
                     else:
                         print '%s and %s already exists' % (fn_out_a5, fn_out_a3)
@@ -260,13 +260,13 @@ def alt_genes_collect(CFG):
 
                                 ### build multiple exon skip data structure
                                 event = Event('mult_exon_skip', gene.chr, gene.chr_num, gene.strand)
-                                event.strain = [strain]
+                                event.strain = sp.array([strain])
                                 event.exons1 = sp.c_[exons[:, exon_mult_exon_skip[k_[0]], exons[:, exon_mult_exon_skip[k_[-1]]].T
                                 event.exons2 = exons[:, sp.array(exons_mult_exon_skip)[k_]].T
                                 event.exons1_col = sp.c_[exons_col[:, exon_mult_exon_skip[k_[0]], exons_col[:, exon_mult_exon_skip[k_[-1]]].T
                                 event.exons2_col = exons_col[:, sp.array(exons_mult_exon_skip)[k_]].T
-                                event.gene_name = [gene.name]
-                                event.transcript_type = [gene.transcript_type]
+                                event.gene_name = sp.array([gene.name])
+                                event.transcript_type = sp.array([gene.transcript_type])
                                 mult_exon_skip_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_mes
@@ -282,8 +282,7 @@ def alt_genes_collect(CFG):
         ################################################%
         if do_intron_retention:
             if not os.path.exists(fn_out_ir):
-                intron_reten_pos_all = intron_reten_pos[ridx, :]
-                intron_reten_pos_all = intron_reten_pos_all.ravel()
+                intron_reten_pos_all = sp.array([item for sublist in intron_reten_pos[ridx, :] for item in sublist])
 
                 ### post process event structure by sorting and making events unique
                 events_all = post_process_event_struct(intron_reten_pos_all)
@@ -300,8 +299,7 @@ def alt_genes_collect(CFG):
         ################################################%
         if do_exon_skip:
             if not os.path.exists(fn_out_es):
-                exon_skip_pos_all = exon_skip_pos[ridx, :]
-                exon_skip_pos_all = exon_skip_pos_all.ravel()
+                exon_skip_pos_all = sp.array([item for sublist in exon_skip_pos[ridx, :] for item in sublist])
 
                 ### post process event structure by sorting and making events unique
                 events_all = post_process_event_struct(exon_skip_pos_all)
@@ -318,8 +316,7 @@ def alt_genes_collect(CFG):
         ################################################%
         if do_mult_exon_skip:
             if os.path.exists(fn_out_mes):
-                mult_exon_skip_pos_all = mult_exon_skip_pos[ridx, :]
-                mult_exon_skip_pos_all = mult_exon_skip_pos_all.ravel()
+                mult_exon_skip_pos_all = sp.array([item for sublist in mult_exon_skip_pos[ridx, :] for item in sublist])
 
                 ### post process event structure by sorting and making events unique
                 events_all = post_process_event_struct(mult_exon_skip_pos_all)
@@ -336,8 +333,7 @@ def alt_genes_collect(CFG):
         ################################################%
         if do_alt_5prime:
             if not os.path.exists(fn_out_a5):
-                alt_end_5prime_pos_all = alt_end_5prime_pos[ridx, :]
-                alt_end_5prime_pos_all = alt_end_5prime_pos_all.ravel()
+                alt_end_5prime_pos_all = sp.array([item for sublist in alt_end_5prime_pos[ridx, :] for item in sublist])
               
                 ### post process event structure by sorting and making events unique
                 events_all = post_process_event_struct(alt_end_5prime_pos_all)
@@ -360,8 +356,7 @@ def alt_genes_collect(CFG):
         ################################################%
         if do_alt_3prime:
             if not os.path.exists(fn_out_a3):
-                alt_end_3prime_pos_all = alt_end_3prime_pos[ridx, :]
-                alt_end_3prime_pos_all = alt_end_3prime_pos_all.ravel()
+                alt_end_3prime_pos_all = sp.array([item for sublist in alt_end_3prime_pos[ridx, :] for item in sublist])
                
                 ### post process event structure by sorting and making events unique
                 events_all = post_process_event_struct(alt_end_3prime_pos_all)

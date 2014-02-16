@@ -21,7 +21,14 @@ class Event:
         self.num_detected = None
         self.id = None
 
-    def get_inner_coords(trafo=False):
+    def get_len(self, trafo=False):
+
+        if trafo:
+            return max(exons1_col[-1, -1], exons1_col[-1, -1]) - min(exons1_col[0, 0], exons2_col[0, 0])
+        else:
+            return max(exons1[-1, -1], exons1[-1, -1]) - min(exons1[0, 0], exons2[0, 0])
+
+    def get_inner_coords(self, trafo=False):
         
         if trafo:
             tmp = sp.sort(sp.unique(sp.c_[exons1_col.ravel(), exons2_col.ravel()]))
@@ -33,7 +40,7 @@ class Event:
         else:
             return []
 
-    def get_coords(trafo=False):
+    def get_coords(self, trafo=False):
         
         if trafo:
             return sp.sort(sp.unique(sp.c_[exons1_col.ravel(), exons2_col.ravel()]))
