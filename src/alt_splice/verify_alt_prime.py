@@ -57,11 +57,11 @@ if exon_diff_coverage >= CFG['alt_prime']['min_diff_rel_cov'] * exon_const_cover
 ### check intron confirmations as sum of valid intron scores
 ### intron score is the number of reads confirming this intron
 intron_tol = 0
-idx = sp.where((abs(intron_list[0,:] - event.intron1[0]) <= intron_tol) & (abs(intron_list[1,:] - event.intron1[1]) <= intron_tol))[0]
+idx = sp.where((abs(intron_list[0,:] - event.exons1[0, 1]) <= intron_tol) & (abs(intron_list[1,:] - event.exons1[1, 0]) <= intron_tol))[0]
 if idx.shape[0] > 0:
     info['intron1_conf'] = sp.sum(intron_list[2, idx])
 
-idx = sp.where((abs(intron_list[0,:] - event.intron2[0]) <= intron_tol) & (abs(intron_list[1,:] - event.intron2[1]) <= intron_tol))[0]
+idx = sp.where((abs(intron_list[0,:] - event.exons2[0, 1]) <= intron_tol) & (abs(intron_list[1,:] - event.exons2[1, 0]) <= intron_tol))[0]
 if idx.shape[0] > 0:
     info['intron2_conf'] = sp.sum(intron_list[2, idx])
 
