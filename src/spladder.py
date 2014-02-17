@@ -20,13 +20,13 @@ def spladder(ARGS):
     if not 'spladder_infile' in CFG:
         ### iterate over files, if merge strategy is single
         if CFG['merge_strategy'] in ['single', 'merge_graphs']:
-            idxs = range(CFG.samples)
+            idxs = range(len(CFG['samples']))
         else:
             idxs = [0]
         
         ### set parallelization
-        if CFG.rproc:
-            ### TODO init pygrid
+        if CFG['rproc']:
+            jobinfo = []
 
         ### create out-directory
         if not os.path.exists(CFG['out_dirname']):
@@ -56,9 +56,7 @@ def spladder(ARGS):
                 print >> sys.stdout, 'All result files already exist.'
             else:
                 if CFG['rproc']:
-                    # TODO: start pygrid
-                   # jobinfo(job_nr) = rproc('spladder_core', CFG, 10000, CFG.options_rproc, 40*60) ;
-                   # job_nr = job_nr + 1;
+                    jobinfo.append(rproc('spladder_core', CFG, 10000, CFG['options_rproc'], 40*60))
                 else:
                     spladder_core(CFG)
 
@@ -66,8 +64,7 @@ def spladder(ARGS):
 
         ### collect results after parallelization
         if CFG['rproc']:
-            # TODO: pygrid heartbeat
-            # jobinfo = rproc_wait(jobinfo, 30, 1, 1) ;
+            jobinfo = rproc_wait(jobinfo, 30, 1, 1)
 
         ### merge parts if necessary
         if CFG['merge_strategy'] == 'merge_graphs':

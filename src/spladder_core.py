@@ -1,3 +1,8 @@
+import sys
+import os
+import scipy as sp
+import cPickle
+
 def spladder_core(CFG):
 
     ### add dependencies provided in config section
@@ -12,15 +17,13 @@ def spladder_core(CFG):
         print >> sys.stdout, 'Augmenting splice graphs.'
         print >> sys.stdout, '========================='
         if not 'genes' in CFG:
-            ### TODO load gene struc
-            #load(CFG.anno_fname, 'genes');
+            genes = cPickle.load(open(CFG['anno_fname'], 'r'))
         else:
-            genes = CFG.genes
+            genes = CFG['genes']
         genes = gen_graphs(genes, CFG)
 
         print 'Saving genes to %s'% (CFG['out_fname'])
-        ### TODO store gene struct
-        #save(CFG.out_fname, 'genes') ;
+        cPickle.dump(genes, open(CFG['out_fname'], 'w'), -1)
 
         genes_loaded = True
     else:
@@ -33,8 +36,7 @@ def spladder_core(CFG):
         if not os.path.exists(CFG['out_fname']):
             ### load genes if not present yet
             if not genes_loaded:
-                ### TODO load gene structr
-                #load(load_fn);
+                genes = cPickle.load(open(load_fn), 'r')
 
             ### make splice graphs unique
             genes = uniquify_splicegraph(genes)
@@ -46,8 +48,7 @@ def spladder_core(CFG):
 
             ### save pruned genes
             print 'saving genes to %s' % (CFG['out_fname'])
-            ### TODO store gene struct
-            #save(CFG.out_fname, 'genes')
+            cPickle.dump(genes, open(CFG['out_fname'], 'w'), -1)
 
             genes_loaded = True;
         else:
@@ -62,8 +63,7 @@ def spladder_core(CFG):
         if not os.path.exists(CFG['out_fname']):
             ### load genes if not present yet
             if not genes_loaded == 0:
-                ### TODO load gene struct
-                #load(load_fn);
+                genes = cPickle.load(open(load_fn))
 
             ### generate isoforms
             print 'Generating all isoforms'
@@ -75,9 +75,8 @@ def spladder_core(CFG):
             genes = splice_graph(genes, conf['do_infer_splice_graph'])
 
             ### save splicing graph with isoforms
-            print '\tSaving genes to %s\n' % CFG['out_fname']
-            ### TODO store gene struct
-            #save(CFG.out_fname, 'genes', 'genes_unsimplified') ;
+            print '\tSaving genes to %s' % CFG['out_fname']
+            cPickle.dump((genes, genes_unsimplified), open(CFG['out_fname'], 'w'), -1)
         else:
             print 'Generating all isoforms already done'
     else:

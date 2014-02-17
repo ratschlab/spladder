@@ -18,6 +18,7 @@ class Event:
         self.transcript_type = None
         self.num_detected = None
         self.id = None
+        self.detected = None
 
     def get_len(self, trafo=False):
 
