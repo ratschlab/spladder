@@ -1,3 +1,5 @@
+import cPickle
+
 def alt_genes_collect(CFG):
 # alt_genes_collect(CFG)
 
@@ -289,8 +291,7 @@ def alt_genes_collect(CFG):
 
                 ### store intron retentions
                 print 'saving intron retentions to %s' % fn_out_ir
-                # TODO save
-                #save(fn_out_ir, 'events_all') ;
+                cPickle.dump(events_all, open(fn_out_ir, 'w'), -1)
             else:
                 print '%s already exists' % fn_out_ir
         
@@ -306,8 +307,7 @@ def alt_genes_collect(CFG):
 
                 ### store exons skip events
                 print 'saving exon skips to %s' % fn_out_es
-                # TODO save
-                #save(fn_out_es, 'events_all') ;
+                cPickle.dump(events_all, open(fn_out_es, 'w'), -1)
             else:
                 print '%s already exists' % fn_out_es
 
@@ -323,8 +323,7 @@ def alt_genes_collect(CFG):
                 
                 ### store exons skip events
                 print 'saving multiple exon skips to %s' % fn_out_mes
-                # TODO save
-                #save(fn_out_mes, 'events_all')
+                cPickle.dump(events_all, open(fn_out_mes, 'w'), -1)
             else:
                 print '%s already exists' % fn_out_mes
 
@@ -346,8 +345,7 @@ def alt_genes_collect(CFG):
 
                 ### store alt 5 prime events
                 print 'saving alt 5 prime events to %s' % fn_out_a5
-                # TODO save
-                #save(fn_out_a5, 'events_all') ;
+                cPickle.dump(events_all, open(fn_out_a5, 'w'), -1)
             else:
                 print '%s already exists' % fn_out_a5
 
@@ -369,6 +367,6 @@ def alt_genes_collect(CFG):
 
                 ### store alt 3 prime events
                 print 'saving alt 3 prime events to %s' % fn_out_a3
-                #save(fn_out_a3, 'events_all') ;
+                cPickle.dump(events_all, open(fn_out_a3, 'w'), -1)
             else:
                 printf '%s already exists' % fn_out_a3

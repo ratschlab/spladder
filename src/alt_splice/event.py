@@ -1,3 +1,5 @@
+import scipy as sp
+
 class Event:
 
     def __init__(self, event_type, chr=None, chr_num=None, strand=None):
