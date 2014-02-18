@@ -1,4 +1,6 @@
 
+def default_setings():
+
     ### import necessary paths 
     CFG['paths'] = []
     if 'SPLADDER_SRC_PATH' in os.environ:
@@ -119,3 +121,5 @@
 
     CFG['rproc'] = 0
     CFG['var_aware'] = 0
+
+    return CFG
