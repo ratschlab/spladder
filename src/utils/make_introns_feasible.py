@@ -28,3 +28,4 @@ def make_introns_feasible(introns, genes, CFG):
             print >> CFG['fd_log'], '[feasibility] set criteria for gene %s to: min_ex %i, min_conf %i, max_mism %i' % (genes[i].name, CFG['read_filter']['exon_len'], CFG['read_filter']['mincount'], CFG['read_filter']['mismatch'])
         unfeas = still_unfeas;
 
+    return introns
