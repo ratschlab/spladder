@@ -3,7 +3,7 @@
 def insert_cassette_exons(genes, CFG):
     # [genes, inserted] = insert_cassette_exons(genes, CFG)
 
-    inserted['cassette_exon'] = 0
+    inserted = 0
 
     ### form chunks for quick sorting
     chunks = sp.c_[sp.array(genes.chr_num, dtype = 'int'), sp.array(genes.strand, dtype = 'int'), sp.array(genes.start, dtype = 'int'), sp.array(genes.stop. dtyp = 'int')]
@@ -95,7 +95,7 @@ def insert_cassette_exons(genes, CFG):
                            max(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) / min(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and
                            max(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) / min(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
                             new_cassette[k, l] = 1
-                            inserted['cassette_exon'] += 1 
+                            inserted += 1 
             any_added = False
             if any(new_cassette.ravel()):
                 curr_sg = gg.splicegraph.vertices
@@ -119,3 +119,5 @@ def insert_cassette_exons(genes, CFG):
             ### clean up gene structure
             genes[chunk_idx[c]] = gg
             c += 1
+
+    return (genes, inserted)

@@ -45,3 +45,5 @@ def get_intron_list(genes, CFG):
             intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'])
             num_introns_filtered += intron_list_tmp[0].shape[0]
             introns[chunk_idx[c], s] = intron_list_tmp[0]
+
+    return introns
