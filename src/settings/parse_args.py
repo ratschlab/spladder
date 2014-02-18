@@ -102,9 +102,9 @@ def parse_args(options):
     CFG.list_config = {};
     CFG.samples = {};
     CFG.strains = {};
-    for i in range(len(CFG['bam_fnames']):
+    for i in range(len(CFG['bam_fnames'])):
         if options.label != '-':
-            CFG['samples'].append('%s_%s' % (options.label, CFG['bam_fnames'][i].split('/')[-1].replace('.bam', ''))
+            CFG['samples'].append('%s_%s' % (options.label, CFG['bam_fnames'][i].split('/')[-1].replace('.bam', '')))
         else:
             CFG['samples'].append(CFG['bam_fnames'][i].split('/')[-1].replace('.bam', ''))
         CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))

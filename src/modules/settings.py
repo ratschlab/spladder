@@ -1,9 +1,11 @@
-
+import os
 import sys
 import scipy as sp
 import math
 
-def default_setings():
+def default_settings():
+
+    CFG = dict()
 
     ### import necessary paths 
     CFG['paths'] = []
@@ -11,7 +13,7 @@ def default_setings():
         CFG['paths'].append(os.environ['SPLADDER_SRC_PATH'])
         CFG['paths'].append('%s/rproc' % os.environ['SPLADDER_SRC_PATH'])
         CFG['paths'].append('%s/utils' % os.environ['SPLADDER_SRC_PATH'])
-        CFG['paths'].append('%s/alt_splice' % os.environ['SPLADDER_SRC_PATH')]
+        CFG['paths'].append('%s/alt_splice' % os.environ['SPLADDER_SRC_PATH'])
     else:
         ### infer src path from current script path
         #SPLADDER_SRC_PATH = fileparts(which('default_settings'))
@@ -28,12 +30,13 @@ def default_setings():
         SPLADDER_SRC_PATH = os.getcwd()
         CFG['paths'].append('%s/../mex' % SPLADDER_SRC_PATH)
     
-    if len(CFG['paths']) > 0:
-        for p in paths:
-            eval('import %s' % p )
+    # TODO
+    #if len(CFG['paths']) > 0:
+    #    for p in CFG['paths']:
+    #        eval('import %s' % p )
 
     ### settings for adding new intron edges
-    CFG['intron_edges'] = []
+    CFG['intron_edges'] = dict()
     CFG['intron_edges']['min_exon_len'] = 50
     CFG['intron_edges']['min_exon_len_remove'] = 8
     CFG['intron_edges']['vicinity_region'] = 40
@@ -52,10 +55,10 @@ def default_setings():
 
     ### settings for short exon removal
     CFG['remove_exons'] = dict()
-	CFG['remove_exons']['terminal_short_extend'] = 40
-	CFG['remove_exons']['terminal_short_len'] = 10
-	CFG['remove_exons']['min_exon_len'] = 50
-	CFG['remove_exons']['min_exon_len_remove'] = 10
+    CFG['remove_exons']['terminal_short_extend'] = 40
+    CFG['remove_exons']['terminal_short_len'] = 10
+    CFG['remove_exons']['min_exon_len'] = 50
+    CFG['remove_exons']['min_exon_len_remove'] = 10
 
     ### settings for splice graph augmentations
     CFG['do_insert_intron_retentions'] = 1
@@ -228,9 +231,9 @@ def parse_args(options):
         ref_tag = ''
 
     ### assemble strain list
-    CFG.list_config = {};
-    CFG.samples = {};
-    CFG.strains = {};
+    CFG['list_config'] = []
+    CFG['samples'] = []
+    CFG['strains'] = []
     for i in range(len(CFG['bam_fnames'])):
         if options.label != '-':
             CFG['samples'].append('%s_%s' % (options.label, CFG['bam_fnames'][i].split('/')[-1].replace('.bam', '')))
@@ -278,7 +281,7 @@ def set_confidence_level(CFG):
         CFG['read_filter']['mincount'] = 5
 
     ### settings for accepted cassette exons
-    CFG['cassette_exon'] = []
+    CFG['cassette_exon'] = dict()
     CFG['cassette_exon']['min_cassette_cov'] = 5 
     CFG['cassette_exon']['min_cassette_region'] = 0.9
     CFG['cassette_exon']['min_cassette_rel_diff'] = 0.5 
@@ -313,5 +316,5 @@ def set_confidence_level(CFG):
 
     CFG['intron_retention']['read_filter'] = CFG['read_filter'] 
 
-return CFG
+    return CFG
 

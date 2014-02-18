@@ -15,6 +15,8 @@ import sys
 import os
 import scipy as sp
 
+from modules import settings
+
 def parse_options(argv):
 
     """Parses options from the command line """
@@ -53,8 +55,8 @@ def parse_options(argv):
     optional.add_option('-T', '--extract_as', dest='extract_as', metavar='y|n', help='extract alternative splicing events [y]', default='y')
     optional.add_option('-X', '--var_aware', dest='var_aware', metavar='y|n', help='alignment files are variation aware (presence of XM and XG tags) [n]', default='n')
     optional.add_option('-t', '--event_types', dest='event_types', metavar='y|n', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip')
+    optional.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     #optional.add_option('-', '--', dest='', metavar='y|n', help='', default=False)
-    optional.add_option('-v', '--verbose', dest='verbose', action='store_true', help='verbosity', default=False)
     parser.add_option_group(required)
     parser.add_option_group(optional)
 
@@ -69,16 +71,16 @@ def spladder():
     options = parse_options(sys.argv)
 
     ### parse parameters from options object
-    CFG = parse_args(options)
+    CFG = settings.parse_args(options)
 
     ### add dependencies provided in config section
-    if 'paths' in CFG:
-        for i in CFG['paths']:
-            eval('import %s'% CFG['paths'][i])
+    #if 'paths' in CFG:
+    #    for i in CFG['paths']:
+    #        eval('import %s'% CFG['paths'][i])
 
     ### load confidence level settings
     if not CFG['no_reset_conf']:
-        CFG = set_confidence_level(CFG)
+        CFG = settings.set_confidence_level(CFG)
 
     if not 'spladder_infile' in CFG:
         ### iterate over files, if merge strategy is single
