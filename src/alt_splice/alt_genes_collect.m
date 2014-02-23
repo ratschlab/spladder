@@ -440,7 +440,7 @@ function alt_genes_collect(CFG)
 
                 %%% store intron retentions
                 fprintf('saving intron retentions to %s\n', fn_out_ir) ;
-                save(fn_out_ir, 'events_all') ;
+                secsave(fn_out_ir, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_ir);
             end;
@@ -460,7 +460,7 @@ function alt_genes_collect(CFG)
 
                 %%% store exons skip events
                 fprintf('saving exon skips to %s\n', fn_out_es) ;
-                save(fn_out_es, 'events_all') ;
+                secsave(fn_out_es, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_es);
             end;
@@ -484,7 +484,7 @@ function alt_genes_collect(CFG)
                 
                 %%% store exons skip events
                 fprintf('saving multiple exon skips to %s\n', fn_out_mes) ;
-                save(fn_out_mes, 'events_all') ;
+                secsave(fn_out_mes, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_mes);
             end;
@@ -511,7 +511,7 @@ function alt_genes_collect(CFG)
 
                 %%% store alt 5 prime events
                 fprintf('saving alt 5 prime events to %s\n', fn_out_a5) ;
-                save(fn_out_a5, 'events_all') ;
+                secsave(fn_out_a5, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_a5);
             end;
@@ -538,7 +538,7 @@ function alt_genes_collect(CFG)
 
                 %%% store alt 3 prime events
                 fprintf('saving alt 3 prime events to %s\n', fn_out_a3) ;
-                save(fn_out_a3, 'events_all') ;
+                secsave(fn_out_a3, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_a3);
             end;
