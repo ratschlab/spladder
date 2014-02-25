@@ -101,6 +101,11 @@ def spladder():
         if not os.path.exists(os.path.join(CFG['out_dirname'], 'spladder')):
             os.makedirs(os.path.join(CFG['out_dirname'], 'spladder'))
 
+        ### pre-process annotation, if necessary
+        if CFG['anno_fname'].split('.')[-1] == 'pickle':
+            genes = init_genes(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
+            CFG['anno_fname'] += '.pickle'
+
         for idx in idxs:
             CFG_ = CFG
             if CFG['merge_strategy'] != 'merge_bams':
