@@ -1,128 +1,110 @@
 import scipy as sp
+import pdb
 
 class Splicegraph:
-    
+
     def __init__(self, gene = None):
         
-        vertices = sp.zeros((2, 0))
-        edges = sp.zeros((0, 0))
-        terminals = sp.zeros((2, 0))
+        self.vertices = sp.zeros((2, 0))
+        self.edges = sp.zeros((0, 0))
+        self.terminals = sp.zeros((2, 0))
 
         if gene:
-            from_gene(gene)
+            self.from_gene(gene)
 
     def get_len(self):
         
-        return vertices.shape[1]
+        return self.vertices.shape[1]
 
     def new_edge(self):
 
-        edges = sp.c_[edges, sp.zeros((edges.shape[0],))]
-        edges = sp.r_[edges, sp.zeros((edges.shape[1],))]
+        self.edges = sp.c_[self.edges, sp.zeros((self.edges.shape[0], 1))]
+        self.edges = sp.r_[self.edges, sp.zeros((1, self.edges.shape[1]))]
     
     def subset(self, keep_idx):
         
-        vertices = vertices[:, keep_idx]
-        edges = edges[keep_idx, :][:, keep_idx]
-        terminals = terminals[:, keep_idx]
+        self.vertices = vertices[:, keep_idx]
+        self.edges = edges[keep_idx, :][:, keep_idx]
+        self.terminals = terminals[:, keep_idx]
 
 
     def reorder(self, idx):
         
-        vertices = vertices[:, idx]
-        edges = edges[idx, :][:, idx]
-        terminals = terminals[:, idx]
+        self.vertices = vertices[:, idx]
+        self.edges = edges[idx, :][:, idx]
+        self.terminals = terminals[:, idx]
 
     def from_gene(self, gene):
         
-        for transcript_idx = len(gene.transcripts):
+        for transcript_idx in range(len(gene.transcripts)):
             exon_start_end = gene.exons[transcript_idx]
             
             ### only one exon in the transcript
-            if exon_start_end.shape[0] == 1,
+            if exon_start_end.shape[0] == 1:
                 exon1_start = exon_start_end[0, 0]
                 exon1_end = exon_start_end[0, 1]
 
-                if vertices.shape[1] == 0:
-                  vertices[0, 0] = exon1_start
-                  vertices[1, 0] = exon1_end
-                  edges = 0
-                  num_exons = 0
+                if self.vertices.shape[1] == 0:
+                    self.vertices = sp.array([[exon1_start], [exon1_end]], dtype='int')
+                    self.edges = sp.array([[0]])
                 else:
-                  vertices[0, num_exons + 1) = exon1_start
-                  vertices[1, num_exons + 1) = exon1_end
-                  edges[0, num_exons + 1] = 0
-                  edges[num_exons + 1, 0] = 0
-                  num_exons += 1
+                    self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
+                    self.new_edge()
             ### more than one exon in the transcript
             else:
-                for exon_idx in  xrange(exon_start_end.shape[0] - 1):
+                for exon_idx in xrange(exon_start_end.shape[0] - 1):
                     exon1_start = exon_start_end[exon_idx , 0]
                     exon1_end = exon_start_end[exon_idx, 1]
                     exon2_start = exon_start_end[exon_idx + 1, 0]
                     exon2_end = exon_start_end[exon_idx + 1, 1]
           
-                    if vertices.shape[1] == 0:
-                        vertices[0, 0] = exon1_start
-                        vertices[1, 0] = exon1_end
-                        vertices[0, 1] = exon2_start
-                        vertices[1, 1] = exon2_end
-                        edges = sp.zeros((2, 2))
-                        edges[0, 1] = 1
-                        edges[1, 0] = 1
-                        num_exons = 2
+                    if self.vertices.shape[1] == 0:
+                        self.vertices = sp.array([[exon1_start, exon2_start], [exon1_end, exon2_end]], dtype='int')
+                        self.edges = sp.array([[0, 1], [1, 0]])
                     else:
                         exon1_idx = 0
                         exon2_idx = 0
                         ### check if current exon already occurred
-                        for idx in range(num_exons):
-                            if ((vertices[0, idx] == exon1_start) && (vertices[1, idx] == exon1_end)):
+                        for idx in range(self.vertices.shape[1]):
+                            if ((self.vertices[0, idx] == exon1_start) and (self.vertices[1, idx] == exon1_end)):
                                  exon1_idx = idx
-                            if ((vertices[0, idx] == exon2_start) && (vertices[1, idx] == exon2_end)):
+                            if ((self.vertices[0, idx] == exon2_start) and (self.vertices[1, idx] == exon2_end)):
                                  exon2_idx = idx
 
                         ### both exons already occured -> only add an edge
-                        if (exon1_idx !=0) && (exon2_idx != 0):
-                            edges[exon1_idx, exon2_idx] = 1
-                            edges[exon2_idx, exon1_idx] = 1
+                        if (exon1_idx !=0) and (exon2_idx != 0):
+                            self.edges[exon1_idx, exon2_idx] = 1
+                            self.edges[exon2_idx, exon1_idx] = 1
                         else:
                             ### 2nd exon occured
-                            if ((exon1_idx == 0) && (exon2_idx !=0 )):
-                                vertices[0, num_exons + 1] = exon1_start
-                                vertices[1, num_exons + 1] = exon1_end
-                                edges[exon2_idx, num_exons + 1] = 1
-                                edges[num_exons + 1, exon2_idx] = 1
-                                num_exons += 1
+                            if ((exon1_idx == 0) and (exon2_idx !=0 )):
+                                self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
+                                self.new_edge()
+                                self.edges[exon2_idx, -1] = 1
+                                self.edges[-1, exon2_idx] = 1
                             ### 1st exon occured
-                            elif ((exon2_idx == 0) && (exon1_idx !=0)):
-                                vertices[0, num_exons + 1] = exon2_start
-                                vertices[1, num_exons + 1] = exon2_end
-                                edges[exon1_idx, num_exons + 1] = 1
-                                edges[num_exons + 1, exon1_idx] = 1
-                                num_exons += 1
+                            elif ((exon2_idx == 0) and (exon1_idx !=0)):
+                                self.vertices = sp.c_[self.vertices, [exon2_start, exon2_end]]
+                                self.new_edge()
+                                self.edges[exon1_idx, -1] = 1
+                                self.edges[-1, exon1_idx] = 1
                             ### no exon occured
                             else:
-                                assert((exon1_idx == 0) && (exon2_idx == 0))
-                                vertices[0, num_exons + 1] = exon1_start
-                                vertices[1, num_exons + 1] = exon1_end
-                                num_exons += 1
-                                vertices[0, num_exons + 1] = exon2_start
-                                vertices[1, num_exons + 1] = exon2_end
-                                num_exons += 1    
-                              
-                                edges[num_exons - 1, num_exons] = 1
-                                edges[num_exons, num_exons - 1] = 1
+                                assert((exon1_idx == 0) and (exon2_idx == 0))
+                                self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
+                                self.vertices = sp.c_[self.vertices, [exon2_start, exon2_end]]
+                                self.new_edge()
+                                self.new_edge()
+                                self.edges[-2, -1] = 1
+                                self.edges[-1, -2] = 1
 
-                terminals[0, sp.where(vertices[0, :] == exon_start_end.max())[0]] = 1
-                terminals[1, sp.where(vertices[1, :] == exon_start_end.max())[0]] = 1
-
-          ### take care of the sorting by exon start
-          s_idx = sp.argsort(vertices[0, :])
-          vertices = vertices[:, s_idx]
-          edges = edges[s_idx, :][:, s_idx]
-          if vertices.shape != terminals.shape:
-            terminals = sp.c_[terminals, sp.zeros((2,))]
-          terminals = terminals[:, s_idx]
+        ### take care of the sorting by exon start
+        s_idx = sp.argsort(self.vertices[0, :])
+        self.vertices = self.vertices[:, s_idx]
+        self.edges = self.edges[s_idx, :][:, s_idx]
+        self.terminals = sp.zeros(self.vertices.shape)
+        self.terminals[0, sp.where(sp.tril(self.edges).sum(axis=1) == 0)[0]] = 1
+        self.terminals[1, sp.where(sp.triu(self.edges).sum(axis=1) == 0)[0]] = 1
 
     def add_intron(self, idx1, flag1, idx2, flag2):
         """adds new introns into splicegraph between idx1 and idx2"""
@@ -131,7 +113,7 @@ class Splicegraph:
         ### if flag2, all start terminal exons in idx2 are preserved
 
         if idx2:
-            adj_mat = sp.triu(edges)
+            adj_mat = sp.triu(self.edges)
 
             if flag1:
                 for i1 in idx1:
@@ -139,50 +121,50 @@ class Splicegraph:
                     ### if exon is end-terminal
                     if sp.all(adj_mat[i1, :] == 0):
 
-                        vertices = sp.c_[vertices, vertices[:, i1]]
+                        self.vertices = sp.c_[self.vertices, self.vertices[:, i1]]
 
                         _new_edge()
-                        edges[:, -1] = edges[:, i1]
-                        edges[-1, :] = edges[i1, :]
+                        self.edges[:, -1] = self.edges[:, i1]
+                        self.edges[-1, :] = self.edges[i1, :]
 
-                        terminals = sp.c_[terminals, terminals[:, i1]]
-            if flag2:,
+                        self.terminals = sp.c_[self.terminals, self.terminals[:, i1]]
+            if flag2:
                 for i2 in idx2:
                     ### if exon is start-terminal
                     if sp.all(adj_mat[:, i2] == 0):
-                        vertices = sp.c_[vertices, vertices[:, i2]]
+                        self.vertices = sp.c_[self.vertices, self.vertices[:, i2]]
 
                         _new_edge()
-                        edges[:, -1] = edges[:, i2]
-                        edges[-1, :] = edges[i2, :]
+                        self.edges[:, -1] = self.edges[:, i2]
+                        self.edges[-1, :] = self.edges[i2, :]
 
-                        terminals = sp.c_[terminals, terminals[:, i2]]
+                        self.terminals = sp.c_[self.terminals, self.terminals[:, i2]]
 
         for i1 in idx1:
             for i2 in idx2:
-                edges[i1, i2] = 1
-                edges[i2, i1] = 1
+                self.edges[i1, i2] = 1
+                self.edges[i2, i1] = 1
 
-    def add_cassette_exon(self, new_exon, exons_pre, exons_aft)
+    def add_cassette_exon(self, new_exon, exons_pre, exons_aft):
         ### exon_pre contains the indices of preceding exons
         ### exon_aft contains the indices of successing exons
         
-        vertices = sp.r_[vertices, new_exon.T]
+        self.vertices = sp.r_[self.vertices, new_exon.T]
 
         _new_edge()
 
-        edges[exons_pre, -1] = 1
-        edges[exons_aft, -1] = 1
-        edges[-1, :] = edges[:, -1].T
+        self.edges[exons_pre, -1] = 1
+        self.edges[exons_aft, -1] = 1
+        self.edges[-1, :] = self.edges[:, -1].T
 
-        terminals = sp.c_[terminals, sp.zeros((2,))]
+        self.terminals = sp.c_[self.terminals, sp.zeros((2,))]
 
 
     def add_intron_retention(self, idx1, idx2):
 
-        adj_mat = sp.triu(edges)
+        adj_mat = sp.triu(self.edges)
 
-        vertices = sp.c_[vertices, sp.array([vertices[0, idx1], vertices[1, idx2]])]
+        self.vertices = sp.c_[self.vertices, sp.array([self.vertices[0, idx1], self.vertices[1, idx2]])]
 
         _new_edge()
 
@@ -191,34 +173,33 @@ class Splicegraph:
 
         ### check if adjacency matrix is symmetric
         ### otherwise or is not justyfied
-        assert(sp.all(sp.all(adj_mat - (splicegraph['graph'] - adj_mat).T == 0)))
+        assert(sp.all(sp.all(adj_mat - (self.edges - adj_mat).T == 0)))
 
         ### AK: under the assumption that our splice graph representation is symmetric
         ### I preserve symmetry by using OR over the adj_mat column and row
         
-        splicegraph['graph'] = adj_mat[:, idx1] | adj_mat[idx2, :].T
-        splicegraph['graph'] = adj_mat[:, idx1].T | adj_mat[idx2, :]
+        self.edges = adj_mat[:, idx1] | adj_mat[idx2, :].T
+        self.edges = adj_mat[:, idx1].T | adj_mat[idx2, :]
 
-        if 'term' in splicegraph:
-            splicegraph['term'] = sp.c_[splicegraph['term'], sp.array([splicegraph['term'][1, idx1], splicegraph['term'][2, idx2]])]
+        self.terminals = sp.c_[self.terminals, sp.array([self.terminals[1, idx1], self.terminals[2, idx2]])]
 
     def uniquify(self):
         # OUTPUT: splice graph that has been made unique on exons for each gene
 
-        (s_tmp, s_idx) = sort_rows(vertices.T, index=True)
-        vertices = s_tmp.T
-        edges = vertices[s_idx, :][:, s_idx]
-        terminals = erminals[:, s_idx]
+        (s_tmp, s_idx) = sort_rows(self.vertices.T, index=True)
+        self.vertices = s_tmp.T
+        self.edges = self.vertices[s_idx, :][:, s_idx]
+        self.terminals = self.terminals[:, s_idx]
 
         rm_idx = []
-        for j in range(1, vertices.shape[1]):
-            if sp.all(vertices[:, j-1] == vertices[:, j]):
-                edges[:, j] = edges[:, j-1] | edges[:, j]
-                edges[j, :] = edges[j-1, :] | edges[j, :]
+        for j in range(1, self.vertices.shape[1]):
+            if sp.all(self.vertices[:, j-1] == self.vertices[:, j]):
+                self.edges[:, j] = self.edges[:, j-1] | self.edges[:, j]
+                self.edges[j, :] = self.edges[j-1, :] | self.edges[j, :]
                 rm_idx.append(j - 1)
 
-        keep_idx = sp.where(~sp.in1d(sp.array(range(vertices.shape[1])), rm_idx))[0]
-        vertices = vertices[:, keep_idx]
-        edges = edges[keep_idx, :][:, keep_idx]
-        terminals = terminals[:, keep_idx]
+        keep_idx = sp.where(~sp.in1d(sp.array(range(self.vertices.shape[1])), rm_idx))[0]
+        self.vertices = self.vertices[:, keep_idx]
+        self.edges = self.edges[keep_idx, :][:, keep_idx]
+        self.terminals = self.terminals[:, keep_idx]
 
