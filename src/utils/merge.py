@@ -520,7 +520,10 @@ def run_merge(CFG):
 
     ### generate validated version of splice graph
     if CFG['validate_splicegraphs'] and not os.path.exists(fn_out_val):
-        filter_by_edgecount(CFG, fn_out, fn_out_val)
+        genes = cPickle.load(open(fn_out, 'r'))
+        genes = filter_by_edgecount(genes, CFG)
+        cPickle.dump(genes, open(fn_out_val, 'w'), -1)
+        del genes
 
     if CFG['do_gen_isoforms']:
         fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
