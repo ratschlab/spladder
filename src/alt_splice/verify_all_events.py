@@ -22,19 +22,19 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                 ev_tmp = ev[i]
                 ev_tmp.subset_strain(s_idx) ### TODO 
                 if event_type == 'exon_skip':
-                    ver, info = verify_exon_skip(ev_tmp, list_bam[:, s_idx], CFG)
+                    ver, info = verify_exon_skip(ev_tmp, list_bam[s_idx], CFG)
                     ev[i].verified[j] = ver
                     ev[i].info[j] = info
                 elif event_type in ['alt_3prime', 'alt_5prime']:
-                    ver, info = verify_alt_prime(ev_tmp, list_bam[:, s_idx], CFG)
+                    ver, info = verify_alt_prime(ev_tmp, list_bam[s_idx], CFG)
                     ev[i].verified[j] = ver
                     ev[i].info[j] = info
                 elif event_type == 'intron_retention':
-                    ver, info = verify_intron_retention(ev_tmp, list_bam[:, s_idx], CFG)
+                    ver, info = verify_intron_retention(ev_tmp, list_bam[s_idx], CFG)
                     ev[i].verified[j] = ver
                     ev[i].info[j] = info
                 elif event_type == 'mult_exon_skip':
-                    ver, info = verify_mult_exon_skip(ev_tmp, list_bam[:, s_idx], CFG)
+                    ver, info = verify_mult_exon_skip(ev_tmp, list_bam[s_idx], CFG)
                     ev[i].verified[j] = ver
                     ev[i].info[j] = info
 
