@@ -40,9 +40,9 @@ function alt_genes_analyze(CFG, event_type)
 
             %%% handle case where we did not find any event of this type
             if isempty([events_all.event_type]),
-                save(strrep(fn_out_count, '.mat', '.chunk1.mat'), 'events_all');
+                secsave(strrep(fn_out_count, '.mat', '.chunk1.mat'), 'events_all');
                 events_confirmed = events_all;
-                save(strrep(fn_out_conf, '.mat', '.chunk1.mat'), 'events_confirmed');
+                secsave(strrep(fn_out_conf, '.mat', '.chunk1.mat'), 'events_confirmed');
                 max_len_all = 0;
                 max_len_confirmed = 0;
                 chunksize = 200;
@@ -51,14 +51,14 @@ function alt_genes_analyze(CFG, event_type)
                 %%% add strain information, so we can do two way chunking!
                 if ~exist('events_all_strains', 'var'),
                     [events_all, events_all_strains] = add_strains(events_all, CFG);
-                    save(fn_out, 'events_all', 'events_all_strains');
+                    secsave(fn_out, 'events_all', 'events_all_strains');
                 end;
                 
                 if ~CFG.rproc,
                     events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), event_type, CFG) ;
                 else
                     jobinfo = rproc_empty() ;
-                    chunk_size_events = 25 ;
+                    chunk_size_events = 100 ;
                     chunk_size_strains = 50 ;
                     job_nr = 1;
                     for i = 1:chunk_size_events:length(events_all),
@@ -67,15 +67,15 @@ function alt_genes_analyze(CFG, event_type)
                             idx_strains = j:min(j+chunk_size_strains-1, length(CFG.strains));
                             PAR.ev = events_all(idx_events) ;
                             PAR.strain_idx = idx_strains ;
-                            PAR.list_bam = CFG.bam_fnames(replicate, :) ;
+                            PAR.list_bam = CFG.bam_fnames(:, replicate) ;
                             PAR.out_fn = sprintf('%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat', CFG.out_dirname, event_type, i, j, replicate, CFG.confidence_level);
                             PAR.event_type = event_type;
                             PAR.CFG = CFG;
                             if exist(PAR.out_fn, 'file')
                                 fprintf('Chunk event %i, strain %i already completed\n', i, j);
                             else
-                                fprintf('Submitting job %i, event chunk %i, strain chunk %i\n', job_nr, i, j);
-                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 60) ;
+                                fprintf('Submitting job %i, event chunk %i (%i), strain chunk %i (%i)\n', job_nr, i, length(events_all), j, length(CFG.strains));
+                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 10*60) ;
                                 %verify_all_events(PAR);
                                 job_nr = job_nr + 1;
                             end ;
@@ -143,7 +143,7 @@ function alt_genes_analyze(CFG, event_type)
                         tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_all);
                         events_all = events_all_(tmp_idx);
                         fprintf('saving counted %s events to %s\n', event_type, fn_out_count_chunk) ;
-                        save(fn_out_count_chunk, 'events_all');
+                        secsave(fn_out_count_chunk, 'events_all');
                     else
                         fprintf('%s exists\n', fn_out_count_chunk);
                     end;
@@ -155,7 +155,7 @@ function alt_genes_analyze(CFG, event_type)
                         tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_confirmed);
                         events_confirmed = events_confirmed_(tmp_idx);
                         fprintf('saving confirmed %s events to %s\n', event_type, fn_out_conf_chunk) ;
-                        save(fn_out_conf_chunk, 'events_confirmed');
+                        secsave(fn_out_conf_chunk, 'events_confirmed');
                     else
                         fprintf('%s exists\n', fn_out_conf_chunk);
                     end;
@@ -201,7 +201,7 @@ function alt_genes_analyze(CFG, event_type)
         if exist(fn_out_txt, 'file')
             fprintf('%s already exists\n', fn_out_txt);
         else
-            write_events_txt(fn_out_txt, CFG.strains, events_all) ;
+            write_events_txt(fn_out_txt, CFG.strains, events_all, CFG.global_gene_list) ;
         end;
 
         if isempty(events_confirmed),
@@ -220,7 +220,7 @@ function alt_genes_analyze(CFG, event_type)
         if exist(fn_out_conf_txt, 'file')
             fprintf('%s already exists\n', fn_out_conf_txt);
         else
-            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed) ;
+            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed, CFG.global_gene_list) ;
         end;
 
         if exist(fn_out_conf_tcga, 'file')
@@ -235,7 +235,7 @@ function alt_genes_analyze(CFG, event_type)
         else
             fprintf('writing filtered events (sample freq 0.05)');
             cf_idx = ([events_confirmed.confirmed] >= 0.05 * length(events_confirmed(1).detected));
-            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx));
+            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx), CFG.global_gene_list);
         end;
 
         fn_out_conf_txt = strrep(fn_out_conf, '.mat', '.filt0.1.txt') ;
@@ -244,7 +244,7 @@ function alt_genes_analyze(CFG, event_type)
         else
             fprintf('writing filtered events (sample freq 0.01)');
             cf_idx = ([events_confirmed.confirmed] >= 0.1 * length(events_confirmed(1).detected));
-            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx));
+            write_events_txt(fn_out_conf_txt, CFG.strains, events_confirmed(cf_idx), CFG.global_gene_list);
         end;
 
         %genes_alt3 = get_ALT_END_genes(CFG.strains, events_confirmed) ;
