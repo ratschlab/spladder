@@ -32,13 +32,13 @@ if CFG.verify_alt_events,
                 end;
             end;
             if strcmp(event_type, 'exon_skip'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_exon_skip(ev_tmp, list_bam(:,s_idx), CFG) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_exon_skip(ev_tmp, list_bam(s_idx), CFG) ;
             elseif strcmp(event_type, 'alt_3prime') || strcmp(event_type, 'alt_5prime') || strcmp(event_type, 'alt_prime'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_alt_prime(ev_tmp, list_bam(:,s_idx), CFG) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_alt_prime(ev_tmp, list_bam(s_idx), CFG) ;
             elseif strcmp(event_type, 'intron_retention'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_intron_retention(ev_tmp, list_bam(:,s_idx), CFG) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_intron_retention(ev_tmp, list_bam(s_idx), CFG) ;
             elseif strcmp(event_type, 'mult_exon_skip'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_mult_exon_skip(ev_tmp, list_bam(:,s_idx), CFG) ;
+                [ev(i).verified(j,:), ev(i).info(j)] = verify_mult_exon_skip(ev_tmp, list_bam(s_idx), CFG) ;
             end;
         end ;
     end ;
