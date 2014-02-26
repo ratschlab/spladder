@@ -1,4 +1,4 @@
-def filter_by_edgecount(CFG, fn_genes, fn_out)
+def filter_by_edgecount(genes, CFG):
 
     ### filter splicegraphs by support count over samples
     for i in len(genes):
