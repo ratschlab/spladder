@@ -11,7 +11,11 @@ function [result, jobwalltime] = rproc_reached_timelimit(jobinfo)
   end ;
   ii=find(w==10) ; % extract last line .. ignore the error lines
   ii=[1 ii] ;
-  jobwalltime=str2num(w(ii(end-1):ii(end))) ; % in seconds
+  try
+      jobwalltime=str2num(w(ii(end-1):ii(end))) ; % in seconds
+  catch
+    jobwalltime = -1 ;
+  end;
   if isempty(jobwalltime), 
     jobwalltime = -1 ; 
     return ; 
