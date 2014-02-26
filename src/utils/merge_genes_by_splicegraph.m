@@ -31,7 +31,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
 
     %%% add all single bam file graphs
     for i = 1:length(samples),
-        merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{i}, prune_tag);
+        merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, samples{i}, prune_tag);
     end;
     %%% add also graph of all bam files combined
     if CFG.do_merge_all && exist(sprintf('%s/spladder/genes_graph_conf%i.merge_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag), 'file')
@@ -104,7 +104,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
                     %%% still count edges that can be confirmed
                     [~, c_idx, a_idx] = intersect(genes2(g_idx).splicegraph{1}', genes(j).splicegraph{1}',  'rows');
                     if ~isempty(c_idx),
-                        genes2(g_idx).edge_count(c_idx, c_idx) = genes2(g_idx).edge_count(c_idx, c_idx) + genes(j).splicegraph{2}(a_idx, a_idx);
+                        genes2(g_idx).edge_count(c_idx, c_idx) = genes2(g_idx).edge_count(c_idx, c_idx) + splice1(a_idx, a_idx);
                     end;
                 else
                     m_graph = [genes(j).splicegraph{1}' ones(s1_len, 1); genes2(g_idx).splicegraph{1}' 2*ones(s2_len, 1)];
@@ -124,7 +124,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
                         idx1_ = find(m_graph(u_f, 3) == 1);
                         idx2_ = find(m_graph(u_l, 3) == 2);
                         splice1_(idx1_, idx1_) = splice1;
-                        splice2(idx2_, idx2_) = splice2;
+                        splice2_(idx2_, idx2_) = splice2;
                         edgecnt(idx2_, idx2_) = genes2(g_idx).edge_count;
                     else
                         splice1_ = splice1;
