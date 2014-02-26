@@ -6,7 +6,7 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
         return
     end;
 
-    if nargin > 3,
+    if nargin > 3 && ~isempty(anno_fn),
        load(anno_fn);
        anno = genes;
        [anno_names s_idx] = sort({genes.name});
