@@ -27,12 +27,22 @@ class Splicegraph:
         self.edges = edges[keep_idx, :][:, keep_idx]
         self.terminals = terminals[:, keep_idx]
 
+    def update_terminals(self):
+        
+        self.terminals = sp.zeros(self.vertices.shape)
+        self.terminals[0, sp.where(sp.sum(sp.tril(self.edges), axis=1) == 0)[0]] = 1
+        self.terminals[1, sp.where(sp.sum(sp.triu(self.edges), axis=1) == 0)[0]] = 1
 
     def reorder(self, idx):
         
         self.vertices = vertices[:, idx]
         self.edges = edges[idx, :][:, idx]
         self.terminals = terminals[:, idx]
+
+    def sort(self):
+        
+        s_idx = sp.argsort(self.vertices[0, :])
+        self.reorder(s_idx)
 
     def from_gene(self, gene):
         
