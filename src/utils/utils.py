@@ -1,5 +1,20 @@
 import scipy as sp
 
+def isequal(A, B):
+    
+    if not sp.all(A.shape == B.shape):
+        return False
+    else:
+        return sp.all(A == B)
+
+def issubset(A, B):
+    # function found = issubset(A,B)
+    #
+    # returns true if A is a subset of B, where 
+    # both A and B are vectors with 1 where elements exists and 0 otherwise.
+    return sp.all(sp.where(A)[0] == sp.in1d(sp.where(A)[0], sp.where(B)[0]))
+
+
 def intersect_rows(array1, array2, index = None):
     """Return intersection of rows"""
 
