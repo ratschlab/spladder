@@ -1,7 +1,6 @@
 import cPickle
 
-def alt_genes_collect(CFG):
-# alt_genes_collect(CFG)
+def collect_events(CFG):
 
     ### which events do we call
     do_exon_skip = ('exon_skip' in CFG['event_types'])

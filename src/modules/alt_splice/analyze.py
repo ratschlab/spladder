@@ -1,5 +1,4 @@
-def alt_genes_analyze(CFG, event_type):
-# function alt_genes_analyze(CFG, event_type)
+def analyze_events(CFG, event_type):
 
     if CFG['rproc']:
         os.makedirs('%s/event_count_chunks' % CFG['out_dirname'])

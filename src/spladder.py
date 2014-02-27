@@ -16,6 +16,8 @@ import os
 import scipy as sp
 
 from modules import settings
+from modules.alt_splice.collect import collect_events
+from modules.alt_splice.analyze import analyze_events
 
 def parse_options(argv):
 
@@ -142,10 +144,10 @@ def spladder():
 
     ### handle alternative splicing part
     if CFG['run_as_analysis']:
-        alt_genes_collect(CFG)
+        collect_events(CFG)
 
         for idx in range(len(CFG['event_types'])):
-            alt_genes_analyze(CFG, CFG['event_types'][idx])
+            analyze_events(CFG, CFG['event_types'][idx])
 
 
 if __name__ == "__main__":
