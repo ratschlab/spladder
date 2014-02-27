@@ -15,7 +15,9 @@ import sys
 import os
 import scipy as sp
 
+
 from modules import settings
+from modules.core import spladdercore
 from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
 

@@ -3,6 +3,8 @@ import os
 import scipy as sp
 import cPickle
 
+from gen_graphs import gen_graphs
+
 def spladder_core(CFG):
 
     ### add dependencies provided in config section
