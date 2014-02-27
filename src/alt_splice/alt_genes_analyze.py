@@ -51,7 +51,7 @@ def alt_genes_analyze(CFG, event_type):
             else:
                 ### add strain information, so we can do two way chunking!
                 if events_all_strains is None:
-                    events_all, events_all_strains = add_strains(events_all, CFG)
+                    events_all_strains = CFG['strains']
                     cPickle.dump((events_all, events_all_strains), open(fn_out, 'w'), -1)
                 
                 if not CFG['rproc']:
