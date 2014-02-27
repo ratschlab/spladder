@@ -29,7 +29,13 @@ def gen_graphs(genes, CFG=None):
         genes[ix].splicegraph.sort()
 
 	### label alternative and constitutive genes
-	genes = label_alt_genes(genes, CFG)
+	for ix in rang(genes.shape[0]):
+        genes[ix].label_alt()
+    if CFG['verbose']:
+        print >> CFG['fd_log'],'\nTotal genes:\t\t\t\t\t\t\t%d' % genes.shape[0]
+        print >> CFG['fd_log'],'Total genes with alternative isoforms:\t\t\t\t%d' % sp.sum([x.is_alt for x in genes])
+        print >> CFG['fd_log'],'Total genes alternatively spliced:\t\t\t\t%d' % sp.sum([x.is_alt_spliced for x in genes])
+        print >> CFG['fd_log'],'Total constitutively spliced:\t\t\t\t\t%d' % genes.shape[0] - sp.sum([x.is_alt_spliced for x in genes])
 
     ### update terminals, start terminals in row 1, end terminals in row 2
 	for i in range(genes.shape[0]):
