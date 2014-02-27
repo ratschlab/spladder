@@ -663,3 +663,5 @@ def infer_splice_graph_caller(genes):
         genes[gene_idx].splicegraph.edges = edges.copy()
         genes[gene_idx].splicegraph.subset(sp.where(to_keep)[0])
         genes[gene_idx].splicegraph.update_terminals()
+
+    return genes
