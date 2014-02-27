@@ -18,18 +18,18 @@ def gen_graphs(genes, CFG=None):
     # build splice graph for all genes 
     ##############################################################################%%
     print >> CFG['fd_log'], 'Generating splice graph ...'
-	### merge exons if possible / reduce graph
+    ### merge exons if possible / reduce graph
     ### originially implemented for ESTs, reduces complexity, 
     ### but removes alternative transcript starts and ends !
-	if CFG['do_infer_splice_graph']
-		genes = infer_splice_graph(genes)
+    if CFG['do_infer_splice_graph']:
+        genes = infer_splice_graph(genes)
 
-	### sort exons by start position in ascending order
-	for ix in rang(genes.shape[0]):
+    ### sort exons by start position in ascending order
+    for ix in rang(genes.shape[0]):
         genes[ix].splicegraph.sort()
 
-	### label alternative and constitutive genes
-	for ix in rang(genes.shape[0]):
+    ### label alternative and constitutive genes
+    for ix in rang(genes.shape[0]):
         genes[ix].label_alt()
     if CFG['verbose']:
         print >> CFG['fd_log'],'\nTotal genes:\t\t\t\t\t\t\t%d' % genes.shape[0]
@@ -38,11 +38,11 @@ def gen_graphs(genes, CFG=None):
         print >> CFG['fd_log'],'Total constitutively spliced:\t\t\t\t\t%d' % genes.shape[0] - sp.sum([x.is_alt_spliced for x in genes])
 
     ### update terminals, start terminals in row 1, end terminals in row 2
-	for i in range(genes.shape[0]):
+    for i in range(genes.shape[0]):
         genes[i].splicegraph.update_terminals()
 
-	### reset gene start and gene stop according to exons and splice graph
-	for i in range(genes.shape[0]):
+    ### reset gene start and gene stop according to exons and splice graph
+    for i in range(genes.shape[0]):
         genes[i].start = min([x.min() for x in genes[j].exons])
         genes[i].stop = max([x.max() for x in genes[j].exons])
     print >> CFG['fd_log'], '...done.\n'
