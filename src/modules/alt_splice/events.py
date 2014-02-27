@@ -32,6 +32,9 @@ def sort_events_by_event(event_list):
 def post_process_event_struct(events):
     # events = post_process_event_struct(events)
 
+    if events.shape[0] == 0:
+        return events
+
     ### filter out invalid coordinate projections
     idx_valid_col = sp.zeros((events.shape[0],))
     for i in range(events.shape[0]):
@@ -169,7 +172,7 @@ def curate_alt_prime(event_list):
             continue
 
         ### check if alt exons overlap, otherwise we cannot curate (trim to shortest length)
-        if (sp.all(event_list[i].exons1[0, :] == event_list[i].exons2[0, :]) and (event_list[i].exons1[1, 1] < event_list[i].exons2[1, 0] or event_list[i].exons1[1, 0] > event_list[i].exons2[1, 1])) or
+        if (sp.all(event_list[i].exons1[0, :] == event_list[i].exons2[0, :]) and (event_list[i].exons1[1, 1] < event_list[i].exons2[1, 0] or event_list[i].exons1[1, 0] > event_list[i].exons2[1, 1])) or \
            (sp.all(event_list[i].exons1[1, :] == event_list[i].exons2[1, :]) and (event_list[i].exons1[0, 1] < event_list[i].exons2[0, 0] or event_list[i].exons1[0, 0] > event_list[i].exons2[0, 1])):
             continue
          

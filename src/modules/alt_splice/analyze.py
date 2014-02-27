@@ -5,9 +5,9 @@ def analyze_events(CFG, event_type):
 
     for replicate in CFG['replicate_idxs']:
         
-        print, 'confidence %i / replicate %i' % (CFG['confidence_level'], replicate)
+        print 'confidence %i / replicate %i' % (CFG['confidence_level'], replicate)
 
-        if len(CFG['replicate_idxs') > 1:
+        if len(CFG['replicate_idxs']) > 1:
             rep_tag = '_R%i' % r_idx
         else:
             rep_tag = ''
@@ -84,9 +84,9 @@ def analyze_events(CFG, event_type):
                     for i in range(0, events_all.shape[0], chunk_size_events):
                         idx_events = sp.arange(i, min(i + chunk_size_events - 1, events_all.shape[0]))
                         ev_ = []
-                        for j in range(0, len(CFG['strains'], chunk_size_strains):
+                        for j in range(0, len(CFG['strains']), chunk_size_strains):
                             idx_strains = sp.arange(j, min(j + chunk_size_strains - 1, len(CFG['strains'])))
-                            print '\r%i (%i), %i (%i)', i, events_all.shape[0], j, len(CFG['strains']))
+                            print '\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(CFG['strains']))
                             out_fn = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
                             if not os.path.exists(out_fn):
                                 print >> sys.stderr, 'ERROR: not finished %s' % out_fn
@@ -161,7 +161,7 @@ def analyze_events(CFG, event_type):
                 else:
                     events_all = sp.r_[events_all, events_all_]
 
-        if isempty(events_all) || isempty([events_all.event_type]),
+        if events_all.shape[0] == 0:
             print '\nNo %s event could be found. - Nothing to report' % event_type
             continue
         else:

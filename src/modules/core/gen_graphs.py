@@ -109,16 +109,16 @@ def gen_graphs(genes, CFG=None):
         for i in range(genes.shape[0]):
             genes[i].introns = introns[i, :]
 
-        print >> CFG['fd_log'], 'Inserting new intron edges ...\n')
+        print >> CFG['fd_log'], 'Inserting new intron edges ...'
         chr_nums = sp.array([x.chr_num for x in genes])
-        for chr_idx = sp.unique1d(chr_nums):
+        for chr_idx in sp.unique1d(chr_nums):
             tmp_genes = genes(sp.where(chr_nums == chr_idx)[0])
             #
             ##############################################################################%%
             if not 'insert_intron_iterations' in CFG:
                 CFG['insert_intron_iterations'] = 5
             for iter in range(1, CFG['insert_intron_iterations'] + 1):
-                print >> CFG['fd_log'], '... chr %i - iteration %i/%i\n', chr_idx, iter, CFG.insert_intron_iterations)
+                print >> CFG['fd_log'], '... chr %i - iteration %i/%i\n' % (chr_idx, iter, CFG.insert_intron_iterations)
                 genes_mod, inserted_ = insert_intron_edges(tmp_genes, CFG)
 
                 inserted['intron_in_exon'] += inserted_['intron_in_exon']
@@ -132,7 +132,7 @@ def gen_graphs(genes, CFG=None):
                 genes_mod = merge_duplicate_exons(genes_mod, CFG)
 
                 # inserted
-                if isequal(genes_mod, tmp_genes)
+                if isequal(genes_mod, tmp_genes):
                     break
                 tmp_genes = genes_mod
             chr_nums = sp.array([x.chr_num for x in genes])

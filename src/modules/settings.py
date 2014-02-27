@@ -73,7 +73,7 @@ def default_settings():
     CFG['validate_splicegraphs'] = 0
     CFG['same_genestruct_for_all_samples'] = 1
     CFG['curate_alt_prime_events'] = 1
-    CFG['replicate_idxs'] = 1
+    CFG['replicate_idxs'] = [0]
     CFG['verify_alt_events'] = 1
 
     ### settings for verifying exon skips
@@ -195,7 +195,8 @@ def parse_args(options):
     CFG['merge_strategy'] = options.merge
     CFG['validate_splicegraphs'] = (options.validate_sg == 'y')
     CFG['same_genestruct_for_all_samples'] = (options.same_genome == 'y')
-    CFG['replicate_idxs'] = options.replicates.split(',')
+    if options.replicates != '-':
+        CFG['replicate_idxs'] = [int(x) for x in options.replicates.split(',')]
     CFG['curate_alt_prime_events'] = (options.curate_alt_prime == 'y')
 
     ### open log file, if specified
