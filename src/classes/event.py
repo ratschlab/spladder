@@ -23,16 +23,16 @@ class Event:
     def get_len(self, trafo=False):
 
         if trafo:
-            return max(exons1_col[-1, -1], exons1_col[-1, -1]) - min(exons1_col[0, 0], exons2_col[0, 0])
+            return max(self.exons1_col[-1, -1], self.exons1_col[-1, -1]) - min(self.exons1_col[0, 0], self.exons2_col[0, 0])
         else:
-            return max(exons1[-1, -1], exons1[-1, -1]) - min(exons1[0, 0], exons2[0, 0])
+            return max(self.exons1[-1, -1], self.exons1[-1, -1]) - min(self.exons1[0, 0], self.exons2[0, 0])
 
     def get_inner_coords(self, trafo=False):
         
         if trafo:
-            tmp = sp.sort(sp.unique(sp.c_[exons1_col.ravel(), exons2_col.ravel()]))
+            tmp = sp.sort(sp.unique(sp.c_[self.exons1_col.ravel(), self.exons2_col.ravel()]))
         else:
-            tmp = sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
+            tmp = sp.sort(sp.unique(sp.c_[self.exons1.ravel(), self.exons2.ravel()]))
         
         if tmp.shape[0] > 2:
             return tmp[1:-1]
@@ -42,7 +42,7 @@ class Event:
     def get_coords(self, trafo=False):
         
         if trafo:
-            return sp.sort(sp.unique(sp.c_[exons1_col.ravel(), exons2_col.ravel()]))
+            return sp.sort(sp.unique(sp.c_[self.exons1_col.ravel(), self.exons2_col.ravel()]))
         else:
-            return sp.sort(sp.unique(sp.c_[exons1.ravel(), exons2.ravel()]))
+            return sp.sort(sp.unique(sp.c_[self.exons1.ravel(), self.exons2.ravel()]))
         
