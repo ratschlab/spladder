@@ -66,6 +66,11 @@ def parse_options(argv):
 
     (options, args) = parser.parse_args()
 
+    if len(argv) < 2:
+        parser.print_help()
+        sys.exit(2)
+
+    options.parser = parser
     return options
 
 
