@@ -217,9 +217,24 @@ def parse_args(options):
     CFG['event_types'] = options.event_types.split(',')
 
     ### mandatory parameters
-    CFG['bam_fnames'] = options.bams.split(',')
-    CFG['anno_fname'] = options.annotation
-    CFG['out_dirname'] = options.outdir
+    if options.bams == '-':
+        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: bam files\n\n'
+        options.parser.print_help()
+        sys.exit(2)
+    else:
+        CFG['bam_fnames'] = options.bams.split(',')
+    if options.annotation == '-':
+        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: annotation\n\n'
+        options.parser.print_help()
+        sys.exit(2)
+    else:
+        CFG['anno_fname'] = options.annotation
+    if options.outdir == '-':
+        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: out directore\n\n'
+        options.parser.print_help()
+        sys.exit(2)
+    else:
+        CFG['out_dirname'] = options.outdir
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
     if CFG['bam_fnames'][0].split('.')[-1] == 'txt':
