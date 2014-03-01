@@ -1,3 +1,9 @@
+import scipy as sp
+
+from ..reads import *
+from ..helpers import *
+from ..editgraph import *
+
 def gen_graphs(genes, CFG=None):
     # [genes, inserted] = gen_graphs(genes, CFG)
 
@@ -7,6 +13,7 @@ def gen_graphs(genes, CFG=None):
         CFG = PAR['CFG']
 
     ### init the stats for inserted elements
+    inserted = dict()
     inserted['cassette_exon'] = 0
     inserted['intron_retention'] = 0
     inserted['intron_in_exon'] = 0
@@ -25,17 +32,17 @@ def gen_graphs(genes, CFG=None):
         genes = infer_splice_graph(genes)
 
     ### sort exons by start position in ascending order
-    for ix in rang(genes.shape[0]):
+    for ix in range(genes.shape[0]):
         genes[ix].splicegraph.sort()
 
     ### label alternative and constitutive genes
-    for ix in rang(genes.shape[0]):
+    for ix in range(genes.shape[0]):
         genes[ix].label_alt()
     if CFG['verbose']:
         print >> CFG['fd_log'],'\nTotal genes:\t\t\t\t\t\t\t%d' % genes.shape[0]
         print >> CFG['fd_log'],'Total genes with alternative isoforms:\t\t\t\t%d' % sp.sum([x.is_alt for x in genes])
         print >> CFG['fd_log'],'Total genes alternatively spliced:\t\t\t\t%d' % sp.sum([x.is_alt_spliced for x in genes])
-        print >> CFG['fd_log'],'Total constitutively spliced:\t\t\t\t\t%d' % genes.shape[0] - sp.sum([x.is_alt_spliced for x in genes])
+        print >> CFG['fd_log'],'Total constitutively spliced:\t\t\t\t\t%d' % (genes.shape[0] - sp.sum([x.is_alt_spliced for x in genes]))
 
     ### update terminals, start terminals in row 1, end terminals in row 2
     for i in range(genes.shape[0]):
@@ -43,8 +50,8 @@ def gen_graphs(genes, CFG=None):
 
     ### reset gene start and gene stop according to exons and splice graph
     for i in range(genes.shape[0]):
-        genes[i].start = min([x.min() for x in genes[j].exons])
-        genes[i].stop = max([x.max() for x in genes[j].exons])
+        genes[i].start = min([x.min() for x in genes[i].exons])
+        genes[i].stop = max([x.max() for x in genes[i].exons])
     print >> CFG['fd_log'], '...done.\n'
 
     # append list of introns supported by RNA-seq data to 

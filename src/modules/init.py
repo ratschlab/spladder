@@ -4,7 +4,8 @@ import os
 import pysam
 import scipy as sp
 from .classes.gene import Gene
-from splicegraph import Splicegraph
+from .classes.region import Region
+from .classes.splicegraph import Splicegraph
 
 def get_tags_gff3(tagline):
     """Extract tags from given tagline"""
@@ -40,6 +41,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
         print >> sys.stderr, "... init structure"
 
     genes = dict()
+    chrms = []
 
     for line in open(infile, 'r'):
         if line[0] == '#':
@@ -56,6 +58,11 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
             except ValueError:
                 stop = -1
             genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=tags['gene_type'])
+            chrms.append(sl[0])
+
+    chrms = sp.sort(sp.unique(chrms))
+    for gid in genes:
+        genes[gid].chr_num = sp.where(chrms == genes[gid].chr)[0]
 
     counter = 1
     for line in open(infile, 'r'):
@@ -130,6 +137,7 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
     trans2gene = dict() ### dict with: keys = transcript IDs, values = gene IDs
     exon2trans = dict() ### dict with: keys = exon IDs, values = transcript IDs
     genes = dict()
+    chrms = []
 
     for line in open(infile, 'r'):
         if line[0] == '#':
@@ -150,6 +158,11 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
             except ValueError:
                 stop = -1
             genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2])
+            chrms.append(sl[0])
+
+    chrms = sp.sort(sp.unique(chrms))
+    for gid in genes:
+        genes[gid].chr_num = sp.where(chrms == genes[gid].chr)[0]
 
     counter = 1
     for line in open(infile, 'r'):
@@ -212,6 +225,9 @@ def init_regions(fn_bams):
     regions = []
     processed = []
     cnt = 0
+
+    if not isinstance(fn_bams, list):
+        fn_bams = [fn_bams]
 
     for i in range(len(fn_bams)):
         if not os.path.exists(fn_bams[i]):

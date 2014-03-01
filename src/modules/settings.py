@@ -189,7 +189,8 @@ def parse_args(options):
 
     CFG['insert_intron_iterations'] = options.iterations
     CFG['confidence_level'] = options.confidence
-    CFG['spladder_infile'] = options.spladderfile
+    if options.spladderfile != '-':
+        CFG['spladder_infile'] = options.spladderfile
 
     ### settings for the alt splice part
     CFG['merge_strategy'] = options.merge

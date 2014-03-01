@@ -20,6 +20,7 @@ from modules import settings
 from modules.core import spladdercore
 from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
+import modules.init as init
 
 def parse_options(argv):
 
@@ -111,8 +112,15 @@ def spladder():
             os.makedirs(os.path.join(CFG['out_dirname'], 'spladder'))
 
         ### pre-process annotation, if necessary
-        if CFG['anno_fname'].split('.')[-1] == 'pickle':
-            genes = init_genes(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
+        if CFG['anno_fname'].split('.')[-1] != 'pickle':
+            if not os.path.exists(CFG['anno_fname'] + '.pickle'):
+                if CFG['anno_fname'].split('.')[-1] in ['gff', 'gff3']:
+                    genes = init.init_genes_gff3(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
+                elif CFG['anno_fname'].split('.')[-1] in ['gtf']:
+                    genes = init.init_genes_gtf(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
+                else:
+                    print >> sys.stderr, 'ERROR: Unknown annotation format. File needs to end in gtf or gff/gff3\nCurrent file: %s' % CFG['anno_fname']
+                    sys.exit(1)
             CFG['anno_fname'] += '.pickle'
 
         for idx in idxs:
@@ -135,9 +143,9 @@ def spladder():
                 print >> sys.stdout, 'All result files already exist.'
             else:
                 if CFG['rproc']:
-                    jobinfo.append(rproc('spladder_core', CFG, 10000, CFG['options_rproc'], 40*60))
+                    jobinfo.append(rproc('spladdercore', CFG, 10000, CFG['options_rproc'], 40*60))
                 else:
-                    spladder_core(CFG)
+                    spladdercore.spladder_core(CFG)
 
             CFG = CFG_
 

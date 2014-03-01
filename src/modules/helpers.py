@@ -1,3 +1,5 @@
+import scipy as sp
+
 def make_introns_feasible(introns, genes, CFG):
 # introns = make_introns_feasible(introns, genes, CFG)
 

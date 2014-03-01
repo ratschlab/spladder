@@ -4,7 +4,7 @@ class Region:
         chr = None
         chr_num = None
         strand = None
-        start = NOne
+        start = None
         stop = None
         id = None
 

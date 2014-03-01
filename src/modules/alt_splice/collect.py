@@ -38,7 +38,7 @@ def collect_events(CFG):
         if CFG['same_genestruct_for_all_samples'] == 1 and i == 2:
             break
 
-        if i > 1:
+        if i > 0:
             if do_intron_retention:
                 intron_reten_pos = sp.c_[intron_reten_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
             if do_exon_skip:
@@ -51,21 +51,18 @@ def collect_events(CFG):
 
         strain = CFG['strains'][i]
 
-        genes_fnames = []
         for ridx in CFG['replicate_idxs']:
             if len(CFG['replicate_idxs']) > 1:
                 rep_tag = '_R%i' % ridx
             else:
                 rep_tag = ''
 
-            genes_fnames.append([])
-            
             if 'spladder_infile' in CFG:
-                genes_fnames[ridx].append(CFG['spladder_infile'])
+                genes_fnames = CFG['spladder_infile']
             elif CFG['merge_strategy'] == 'single':
-                genes_fnames[ridx].append('%s/spladder/genes_graph_conf%i%s.%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['samples'][i]))
+                genes_fnames = '%s/spladder/genes_graph_conf%i%s.%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['samples'][i])
             else:
-                genes_fnames[ridx].append('%s/spladder/genes_graph_conf%i%s.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['merge_strategy'], validate_tag))
+                genes_fnames = '%s/spladder/genes_graph_conf%i%s.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['merge_strategy'], validate_tag)
 
             ### define outfile names
             fn_out_ir = '%s/%s_intron_retention%s_C%i.mat' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
@@ -82,9 +79,9 @@ def collect_events(CFG):
 
             print '\nconfidence %i / sample %i / replicate %i' % (CFG['confidence_level'], i, ridx)
 
-            if os.path.exists(genes_fnames[ridx][i]):
-                print 'Loading gene structure from %s ...' % genes_fnames[ridx][i]
-                genes = cPickle.load(open(genes_fnames[ridx][i], 'r'))
+            if os.path.exists(genes_fnames):
+                print 'Loading gene structure from %s ...' % genes_fnames
+                genes = cPickle.load(open(genes_fnames, 'r'))
                 print '... done.'
 
                 ### detect intron retentions from splicegraph
@@ -276,7 +273,7 @@ def collect_events(CFG):
                         print '%s already exists' % fn_out_mes
             ### genes file does not exist
             else:
-                print 'result file not found: %s' % genes_fnames[ridx][i] 
+                print 'result file not found: %s' % genes_fnames
 
     ### combine events for all samples
     for ridx in CFG['replicate_idxs']:

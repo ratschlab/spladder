@@ -23,9 +23,9 @@ class Splicegraph:
     
     def subset(self, keep_idx):
         
-        self.vertices = vertices[:, keep_idx]
-        self.edges = edges[keep_idx, :][:, keep_idx]
-        self.terminals = terminals[:, keep_idx]
+        self.vertices = self.vertices[:, keep_idx]
+        self.edges = self.edges[keep_idx, :][:, keep_idx]
+        self.terminals = self.terminals[:, keep_idx]
 
     def update_terminals(self):
         
@@ -35,9 +35,9 @@ class Splicegraph:
 
     def reorder(self, idx):
         
-        self.vertices = vertices[:, idx]
-        self.edges = edges[idx, :][:, idx]
-        self.terminals = terminals[:, idx]
+        self.vertices = self.vertices[:, idx]
+        self.edges = self.edges[idx, :][:, idx]
+        self.terminals = self.terminals[:, idx]
 
     def sort(self):
         

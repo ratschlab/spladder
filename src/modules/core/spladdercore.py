@@ -8,14 +8,14 @@ from gen_graphs import gen_graphs
 def spladder_core(CFG):
 
     ### add dependencies provided in config section
-    if 'paths' in CFG:
-        for i in CFG['paths']:
-            eval('import %s'% CFG['paths'][i])
+    #if 'paths' in CFG:
+    #    for i in CFG['paths']:
+    #        eval('import %s'% CFG['paths'][i])
 
     genes_loaded = False
 
     ### check if result file exists and start gen graph step if necessary
-    if not os.path.exist(CFG['out_fname']):
+    if not os.path.exists(CFG['out_fname']):
         print >> sys.stdout, 'Augmenting splice graphs.'
         print >> sys.stdout, '========================='
         if not 'genes' in CFG:

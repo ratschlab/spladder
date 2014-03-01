@@ -2,6 +2,10 @@ import pysam
 import re
 import scipy as sp
 import scipy.sparse
+import pdb
+
+from utils import *
+from init import *
 
 def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped = True, spliced = True, var_aware = None, collapse = False):
     
@@ -38,7 +42,7 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
             ### contribute to the segments (hard- and softclips and insertions)
             cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
             ### split the string at the introns and sum the remaining segment elements, compare to filter
-            if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) < filter['min_exon_len']:
+            if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) < filter['exon_len']:
                 continue
         
         ### get introns
@@ -76,7 +80,7 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
         return (read_matrix, introns)
 
 
-def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = False)
+def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = False):
     # blocks coordinates are assumed to be in closed intervals
 
     if filter is None:
@@ -101,7 +105,7 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
 
         if verbose and  b % 10 == 0:
             print '\radd_exon_track_from_bam: %i(%i)' % (b, blocks.shape[0])
-        block_len = blocks[b].stop - blocks[b].start + 1
+        block_len = blocks[b].stop - blocks[b].start
 
         ## get data from bam
         if 'exon_track' in types:
@@ -117,24 +121,24 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
 
         if introns is None:
             # no exon coverage needed at all
-            (introns, spliced_coverage) = get_all_data(blocks[b], mapped=False, filenames, filter=filter, var_aware=var_aware)
+            (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware)
 
         # add requested data to block
-        for j = 1:length(types),
         tracks = sp.zeros((0, block_len))
+        intron_list = []
         for type in types:
             ## add exon track to block
             ##############################################################################
             if type == 'exon_track':
-                tracks = tracks.r_[tracks, coverage] 
+                tracks = sp.r_[tracks, coverage] 
             ## add mapped exon track to block
             ##############################################################################
             elif type == 'mapped_exon_track':
-                tracks = tracks.r_[tracks, mapped_coverage] 
+                tracks = sp.r_[tracks, mapped_coverage] 
             ## add spliced exon track to block
             ##############################################################################
             elif type == 'spliced_exon_track':
-                tracks = tracks.r_[tracks, spliced_coverage] 
+                tracks = sp.r_[tracks, spliced_coverage] 
             ## add intron coverage track to block
             ##############################################################################
             elif type == 'intron_track':
@@ -143,26 +147,29 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
                     for k in range(introns.shape[0]):
                         from_pos = max(0, introns[k, 0])
                         to_pos = min(block_len, intron_list[k, 1])
-                        intron_coverage(from_pos:to_pos) += 1
-                tracks = tracks.r_[tracks, intron_coverage] 
+                        intron_coverage[from_pos:to_pos] += 1
+                tracks = sp.r_[tracks, intron_coverage] 
             ## compute intron list
             ##############################################################################
             elif type == 'intron_list':
-                ### compute number of occurences
-                introns = sort_rows(introns)
-                num_introns = introns.shape[0]
-                (introns, fidx) = unique_rows(introns, index=True)
-                lidx = sp.r_[fidx, num_introns - 1]
-                introns = sp.c_[introns, lidx - fidx + 1]
-            
                 if introns.shape[0] > 0:
-                    s_idx = sp.argsort(introns[:, 0])
-                    introns = introns[s_idx, :]
+                    ### compute number of occurences
+                    introns = sort_rows(introns)
+                    num_introns = introns.shape[0]
+                    (introns, fidx) = unique_rows(introns, index=True)
+                    lidx = sp.r_[fidx[1:] - 1, num_introns - 1]
+                    introns = sp.c_[introns, lidx - fidx + 1]
                 
-                if 'mincount' in filter:
-                    take_idx = sp.where(introns[:, 2] >= filter['mincount']
-                    introns = introns[take_idx, :]
-                intron_list.append(introns)
+                    if introns.shape[0] > 0:
+                        s_idx = sp.argsort(introns[:, 0])
+                        introns = introns[s_idx, :]
+                    
+                    if 'mincount' in filter:
+                        take_idx = sp.where(introns[:, 2] >= filter['mincount'])[0]
+                        introns = introns[take_idx, :]
+                    intron_list.append(introns)
+                else:
+                    intron_list.append(sp.zeros((0, 2), dtype='int'))
             ## add polya signal track
             ##############################################################################
             elif type == 'polya_signal_track':
@@ -180,7 +187,7 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
                 end_signals = scipy.sparse.coo_matrix((sp.ones((shp[1],)), (sp.array(range(shp[1])), end_idx)), shape = shp)
                 tracks = sp.r_[tracks, end_signals.sum(axis = 0)]
             else: 
-                print >> sys.error, 'ERROR: unknown type of data requested: %s' % type
+                print >> sys.stderr, 'ERROR: unknown type of data requested: %s' % type
     
     if len(types) == 1 and types[0] == 'intron_list':
         return intron_list
@@ -192,19 +199,23 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
 #function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, filenames, filter, clipped, var_aware) 
 def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipped=False, var_aware=False):
 
-	block_len = block.stop - block.start
-	# get all data from bam file
-	coverage = sp.zeros((1, block_len))
-	introns = None
-	for j in range(len(filenames)):
-		fname = filenames[j]
+    block_len = block.stop - block.start
+    # get all data from bam file
+    coverage = sp.zeros((1, block_len))
+    introns = None
+
+    if isinstance(filenames, str):
+        filenames = [filenames]
+
+    for j in range(len(filenames)):
+        fname = filenames[j]
         if not os.path.exists(fname):
-			print >> sys.stderr, 'add_reads_from_bam: did not find file %s' % fname
-			continue
+            print >> sys.stderr, 'add_reads_from_bam: did not find file %s' % fname
+            continue
 
         ### TODO: implement subsampling, if needed
-		contig_name = block.chr
-		strand = block.strand
+        contig_name = block.chr
+        strand = block.strand
         ### check for filter maps -> requires uncollapsed reads
         if 'maps'in filter:
             collapse = False
@@ -243,25 +254,25 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
     return (introns, coverage)
 
 #function [introns, coverage, pair_cov] = get_all_data_uncollapsed(block, mapped, spliced, filenames, filter, var_aware) 
-def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=None, var_aware=False) 
+def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=None, var_aware=False):
 
-	block_len = block.stop - block.start
-	# get all data from bam file
-	coverage = sp.zeros((1, block_len))
-	introns = None
+    block_len = block.stop - block.start
+    # get all data from bam file
+    coverage = sp.zeros((1, block_len))
+    introns = None
 
-	for j in range(lenfilenames)):
-		fname = filenames[j]
+    for j in range(lenfilenames):
+        fname = filenames[j]
         if not ot.path.exists(fname):
-			print >> sys.stderr, 'add_reads_from_bam: did not find file %s' % fname
-			continue
+            print >> sys.stderr, 'add_reads_from_bam: did not find file %s' % fname
+            continue
 
         ### TODO: implement subsampling, if needed
-		contig_name = block.chr
-		strand = block.strand
+        contig_name = block.chr
+        strand = block.strand
         collapse = False
         (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse)
-		coverage = sp.r_[coverage, coverage_tmp]
+        coverage = sp.r_[coverage, coverage_tmp]
 
     return (introns, coverage)
 
@@ -273,16 +284,17 @@ def get_intron_list(genes, CFG):
     #function introns = get_intron_list(genes, CFG)
 
     ### form chunks for quick sorting
-    chunks = sp.c_[sp.array(genes.chr_num, dtype = 'int'), sp.array(genes.strand, dtype = 'int'), sp.array(genes.start, dtype = 'int'), sp.array(genes.stop. dtyp = 'int')]
+    strands = ['+', '-']
+    chunks = sp.array([[x.chr_num, strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
+    #chunks = sp.c_[sp.array([x.chr_num for x in genes], dtype = 'int'), sp.array([x.strand for x in genes], dtype = 'int'), sp.array([x.start for x in genes], dtype = 'int'), sp.array([x.stop for x in genes], dtype = 'int')]
     (chunks, chunk_idx) = sort_rows(chunks, index=True)
 
-    strands = ['+', '-']
-
     introns = sp.zeros((chunks.shape[0], 2), dtype = 'object')
+    introns[:] = None
 
     ### collect all possible combinations of contigs and strands
     regions = init_regions(CFG['bam_fnames'])
-    keepidx = sp.where(sp.in1d(sp.arra([x.chr_num for x in regions]), sp.unique(sp.array([x.chr_num for x in genes]))))[0]
+    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([x.chr_num for x in genes]))))[0]
     regions = regions[keepidx]
 
     c = 0
@@ -294,7 +306,7 @@ def get_intron_list(genes, CFG):
         s = strands.index(regions[j].strand)
         
         # fill the chunks on the corresponding chromosome
-        while c <= chunks.shape[0]:
+        while c < chunks.shape[0]:
             if chunks[c, 0] > chr_num or chunks[c, 1] > strands[s]:
                 break
             if chunks[c, 0] != chr_num:
@@ -304,14 +316,22 @@ def get_intron_list(genes, CFG):
             if CFG['verbose'] and c % 100 == 0:
                 print >> sys.stdout, '%i (%i) genes done (%i introns taken)' % (c, chunks.shape[0], num_introns_filtered)
 
-            gg = genes[chunk_idx[c]]
-            gg.strand = strands[s]
-            gg.start = max(gg.start - 5000, 1)
-            gg.stop = gg.stop + 5000
-            assert(gg.chr == chr)
+            gg = sp.array([genes[chunk_idx[c]]], dtype='object')
+            gg[0].strand = strands[s]
+            gg[0].start = max(gg[0].start - 5000, 1)
+            gg[0].stop = gg[0].stop + 5000
+            assert(gg[0].chr == chr)
 
             intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'])
             num_introns_filtered += intron_list_tmp[0].shape[0]
             introns[chunk_idx[c], s] = intron_list_tmp[0]
+
+            c += 1
+
+    for j in range(introns.shape[0]):
+        if introns[j, 0] is None:
+            introns[j, 0] = sp.zeros((0, 3), dtype='int')
+        elif introns[j, 1] is None:
+            introns[j, 1] = sp.zeros((0, 3), dtype='int')
 
     return introns
