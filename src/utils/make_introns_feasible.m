@@ -3,7 +3,7 @@ function introns = make_introns_feasible(introns, genes, CFG)
 
     tmp1 = [];
     tmp2 = [];
-    for i = 1:length(introns),
+    for i = 1:size(introns, 1),
         tmp1 = [tmp1 length(introns{i, 1})];
         tmp2 = [tmp2 length(introns{i, 2})];
     end;
@@ -25,7 +25,7 @@ function introns = make_introns_feasible(introns, genes, CFG)
         %%% stil unfeasible?
         tmp1 = [];
         tmp2 = [];
-        for i = 1:length(introns),
+        for i = 1:size(introns, 1),
             tmp1 = [tmp1 length(introns{i, 1})];
             tmp2 = [tmp2 length(introns{i, 2})];
         end;
