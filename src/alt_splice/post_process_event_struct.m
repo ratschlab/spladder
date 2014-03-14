@@ -1,5 +1,9 @@
 function events = post_process_event_struct(events)
 
+    if isempty([events.event_type]),
+        return
+    end;
+
     %%% filter out invalid coordinate projections
     idx_valid_col = zeros(1, length(events)) ;
     for i = 1:length(events),
