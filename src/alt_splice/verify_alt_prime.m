@@ -28,10 +28,20 @@ if (event.intron1(1) ~= event.intron2(1) && event.intron1(2) ~= event.intron2(2)
     return ;
 end ;
 
-if is_half_open == 1 && event.strand == '-'
-    event.exon_alt1 = event.exon_alt1 + 1;
-    event.exon_alt2 = event.exon_alt2 + 1;
-    event.exon_const = event.exon_const + 1;
+if is_half_open == 1,
+    if event.strand == '-',
+        event.exon_alt1(1) = event.exon_alt1(1) + 1;
+        event.exon_alt2(1) = event.exon_alt2(1) + 1;
+        event.exon_const(1) = event.exon_const(1) + 1;
+        event.intron1(1) = event.intron1(1) + 1;
+        event.intron2(1) = event.intron2(1) + 1;
+    else
+        event.exon_alt1(2) = event.exon_alt1(2) - 1;
+        event.exon_alt2(2) = event.exon_alt2(2) - 1;
+        event.exon_const(2) = event.exon_const(2) - 1;
+        event.intron1(2) = event.intron1(2) - 1;
+        event.intron2(2) = event.intron2(2) - 1;
+    end;
 end;
 
 gg.strand = event.strand ;
@@ -44,29 +54,22 @@ gg.tracks=[] ;
 %%% add RNA-seq evidence to the gene structure
 gg = add_count_tracks(gg, fn_bam, CFG);
 
-%%% set offset for half open intervals
-if is_half_open,
-    ho_offset = 1;
-else
-    ho_offset = 0;
-end;
-
 %%% compute exon coverages as mean of position wise coverage
 if (event.exon_alt1(1) == event.exon_alt2(1)),
     if event.exon_alt1(2) > event.exon_alt2(2),
-        idx_diff = [event.exon_alt2(2) + 1:event.exon_alt1(2)] - gg.start + 1 - ho_offset;
-        idx_const = [event.exon_alt2(1):event.exon_alt2(2) - ho_offset] - gg.start + 1;
+        idx_diff = [event.exon_alt2(2) + 1:event.exon_alt1(2)] - gg.start + 1;
+        idx_const = [event.exon_alt2(1):event.exon_alt2(2)] - gg.start + 1;
     else
-        idx_diff = [event.exon_alt1(2) + 1:event.exon_alt2(2)] - gg.start + 1 - ho_offset;
-        idx_const = [event.exon_alt1(1):event.exon_alt1(2) - ho_offset] - gg.start + 1;
+        idx_diff = [event.exon_alt1(2) + 1:event.exon_alt2(2)] - gg.start + 1;
+        idx_const = [event.exon_alt1(1):event.exon_alt1(2)] - gg.start + 1;
     end;
 elseif (event.exon_alt1(2) == event.exon_alt2(2)),
     if event.exon_alt1(1) < event.exon_alt2(1),
         idx_diff = [event.exon_alt1(1):event.exon_alt2(1) - 1] - gg.start + 1;
-        idx_const = [event.exon_alt2(1):event.exon_alt2(2) - ho_offset] - gg.start + 1;
+        idx_const = [event.exon_alt2(1):event.exon_alt2(2)] - gg.start + 1;
     else
         idx_diff = [event.exon_alt2(1):event.exon_alt1(1) - 1] - gg.start + 1;
-        idx_const = [event.exon_alt1(1):event.exon_alt1(2) - ho_offset] - gg.start + 1;
+        idx_const = [event.exon_alt1(1):event.exon_alt1(2)] - gg.start + 1;
     end;
 end;
 
@@ -83,12 +86,12 @@ end;
 %%% check intron confirmations as sum of valid intron scores
 %%% intron score is the number of reads confirming this intron
 intron_tol = 0 ;
-idx = find(abs(gg.introns(1,:) - (event.intron1(1))) <= intron_tol & abs(gg.introns(2,:) - (event.intron1(2) - ho_offset)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - (event.intron1(1))) <= intron_tol & abs(gg.introns(2,:) - event.intron1(2)) <= intron_tol) ;
 if ~isempty(idx),
     assert(length(idx)>=1) ;
     info.intron1_conf = sum(gg.introns(3,idx)) ;
 end ;
-idx = find(abs(gg.introns(1,:) - (event.intron2(1))) <= intron_tol & abs(gg.introns(2,:) - (event.intron2(2) - ho_offset)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - (event.intron2(1))) <= intron_tol & abs(gg.introns(2,:) - event.intron2(2)) <= intron_tol) ;
 if ~isempty(idx),
     assert(length(idx)>=1) ;
     info.intron2_conf = sum(gg.introns(3,idx)) ;
@@ -97,9 +100,3 @@ end ;
 if min(info.intron1_conf, info.intron2_conf) >= CFG.alt_prime.min_intron_count,
     verified(2) = 1 ;
 end ;
-
-if is_half_open == 1 && event.strand == '-'
-    event.exon_alt1 = event.exon_alt1 - 1;
-    event.exon_alt2 = event.exon_alt2 - 1;
-    event.exon_const = event.exon_const - 1;
-end;

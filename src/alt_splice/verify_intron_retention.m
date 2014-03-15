@@ -28,10 +28,16 @@ elseif event.exon1(1)>=event.exon1(2) || event.exon2(1)>=event.exon2(2) || ...
     return ;
 end ;
 
-if is_half_open == 1 && event.strand == '-'
-    event.exon1 = event.exon1 + 1;
-    event.exon2 = event.exon2 + 1;
-    event.intron = event.intron + 1;
+if is_half_open == 1,
+    if event.strand == '-',
+        event.exon1(1) = event.exon1(1) + 1;
+        event.exon2(1) = event.exon2(1) + 1;
+        event.intron(1) = event.intron(1) + 1;
+    else
+        event.exon1(2) = event.exon1(2) - 1;
+        event.exon2(2) = event.exon2(2) - 1;
+        event.intron(2) = event.intron(2) - 1;
+    end;
 end;
 
 gg.strand = event.strand ;
@@ -69,17 +75,10 @@ if mean(icov) > CFG.intron_retention.min_retention_cov && ...
     verified(1) = 1 ;
 end ;
 
-%%% set offset for half open intervals
-if is_half_open,
-    ho_offset = 1;
-else
-    ho_offset = 0;
-end;
-
 %%% check intron confirmation as sum of valid intron scores
 %%% intron score is the number of reads confirming this intron
 intron_tol = 0;
-idx = find(abs(gg.introns(1,:) - event.intron(1)) <= intron_tol & abs(gg.introns(2,:) - (event.intron(2) - ho_offset)) <= intron_tol) ;
+idx = find(abs(gg.introns(1,:) - event.intron(1)) <= intron_tol & abs(gg.introns(2,:) - event.intron(2)) <= intron_tol) ;
 if ~isempty(idx),
     assert(length(idx) >= 1) ;
     info.intron_conf = sum(gg.introns(3,idx)) ;
@@ -87,9 +86,3 @@ if ~isempty(idx),
         verified(2) = 1 ;
     end;
 end ;
-
-if is_half_open == 1 && event.strand == '-'
-    event.exon1 = event.exon1 - 1;
-    event.exon2 = event.exon2 - 1;
-    event.intron = event.intron - 1;
-end;
