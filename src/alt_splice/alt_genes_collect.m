@@ -506,7 +506,7 @@ function alt_genes_collect(CFG)
                 %%% cut to min len, if alt exon lengths differ
                 %%% remove, if alt exons do not overlap
                 if CFG.curate_alt_prime_events == 1,
-                    events_all = curate_alt_prime(events_all);
+                    events_all = curate_alt_prime(events_all, CFG);
                 end
 
                 %%% store alt 5 prime events
@@ -533,7 +533,7 @@ function alt_genes_collect(CFG)
                 %%% cut to min len, if alt exon lengths differ
                 %%% remove, if alt exons do not overlap
                 if CFG.curate_alt_prime_events == 1,
-                    events_all = curate_alt_prime(events_all);
+                    events_all = curate_alt_prime(events_all, CFG);
                 end
 
                 %%% store alt 3 prime events
