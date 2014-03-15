@@ -40,9 +40,9 @@ function alt_genes_analyze(CFG, event_type)
 
             %%% handle case where we did not find any event of this type
             if isempty([events_all.event_type]),
-                secsave(strrep(fn_out_count, '.mat', '.chunk1.mat'), 'events_all');
+                secsave(strrep(fn_out_count, '.mat', '.chunk1.mat'), events_all, 'events_all');
                 events_confirmed = events_all;
-                secsave(strrep(fn_out_conf, '.mat', '.chunk1.mat'), 'events_confirmed');
+                secsave(strrep(fn_out_conf, '.mat', '.chunk1.mat'), events_confirmed, 'events_confirmed');
                 max_len_all = 0;
                 max_len_confirmed = 0;
                 chunksize = 200;
@@ -51,7 +51,7 @@ function alt_genes_analyze(CFG, event_type)
                 %%% add strain information, so we can do two way chunking!
                 if ~exist('events_all_strains', 'var'),
                     [events_all, events_all_strains] = add_strains(events_all, CFG);
-                    secsave(fn_out, 'events_all', 'events_all_strains');
+                    secsave(fn_out, {events_all, events_all_strains}, {'events_all', 'events_all_strains'});
                 end;
                 
                 if ~CFG.rproc,
@@ -75,7 +75,7 @@ function alt_genes_analyze(CFG, event_type)
                                 fprintf('Chunk event %i, strain %i already completed\n', i, j);
                             else
                                 fprintf('Submitting job %i, event chunk %i (%i), strain chunk %i (%i)\n', job_nr, i, length(events_all), j, length(CFG.strains));
-                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 10*60) ;
+                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 48*60) ;
                                 %verify_all_events(PAR);
                                 job_nr = job_nr + 1;
                             end ;
@@ -143,7 +143,7 @@ function alt_genes_analyze(CFG, event_type)
                         tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_all);
                         events_all = events_all_(tmp_idx);
                         fprintf('saving counted %s events to %s\n', event_type, fn_out_count_chunk) ;
-                        secsave(fn_out_count_chunk, 'events_all');
+                        secsave(fn_out_count_chunk, events_all, 'events_all');
                     else
                         fprintf('%s exists\n', fn_out_count_chunk);
                     end;
@@ -155,7 +155,7 @@ function alt_genes_analyze(CFG, event_type)
                         tmp_idx = c1_idx:min(c1_idx + chunksize - 1, max_len_confirmed);
                         events_confirmed = events_confirmed_(tmp_idx);
                         fprintf('saving confirmed %s events to %s\n', event_type, fn_out_conf_chunk) ;
-                        secsave(fn_out_conf_chunk, 'events_confirmed');
+                        secsave(fn_out_conf_chunk, events_confirmed, 'events_confirmed');
                     else
                         fprintf('%s exists\n', fn_out_conf_chunk);
                     end;
