@@ -1,5 +1,5 @@
-function ev = verify_all_events(ev, strain_idx, list_bam, event_type, CFG) ;
-% ev = verify_all_events(ev, strain_idx, list_bam, event_type, CFG) ;
+function ev = verify_all_events(ev, event_type, CFG) ;
+% ev = verify_all_events(ev, event_type, CFG) ;
 
 out_fn = '' ;
 
@@ -9,8 +9,6 @@ fieldnames = {'intron', 'exon1', 'exon2', 'exon_alt1', 'exon_alt2', 'exon_const'
 if nargin==1,
     PAR = ev ;
     ev = PAR.ev ;
-    strain_idx = PAR.strain_idx ;
-    list_bam = PAR.list_bam ;
     if isfield(PAR, 'out_fn'),
         out_fn = PAR.out_fn ;
     end ;
@@ -18,11 +16,24 @@ if nargin==1,
     CFG = PAR.CFG;
 end ;
 
+%%% load counts
+prune_tag = '';
+if CFG.do_prune,
+    prune_tag = '_pruned';
+end;
+validate_tag = '';
+if CFG.validate_splicegraphs,
+    validate_tag = '.validated';
+end;
+fn_count = sprintf('%s/spladder/genes_graph_conf%i.%s%s%s.count.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, validate_tag, prune_tag);
+load(fn_count);
+fn_genes = sprintf('%s/spladder/genes_graph_conf%i.%s%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, validate_tag, prune_tag);
+load(fn_genes);
+
 %%% verify the events if demanded
 if CFG.verify_alt_events,
-    for j = 1:length(strain_idx),
-        s_idx = strain_idx(j);
-        fprintf('%i/%i\r', j, length(strain_idx));
+    for s_idx = 1:length(CFG.strains),
+        fprintf('%i/%i\r', s_idx, length(CFG.strains));
         for i = 1:length(ev),
             ev_tmp = ev(i) ;
             for f_idx = 1:length(fieldnames),
@@ -32,13 +43,13 @@ if CFG.verify_alt_events,
                 end;
             end;
             if strcmp(event_type, 'exon_skip'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_exon_skip(ev_tmp, list_bam(s_idx), CFG) ;
+                [ev(i).verified(s_idx,:), ev(i).info(s_idx)] = verify_exon_skip(ev_tmp, genes, counts(s_idx, :), CFG) ;
             elseif strcmp(event_type, 'alt_3prime') || strcmp(event_type, 'alt_5prime') || strcmp(event_type, 'alt_prime'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_alt_prime(ev_tmp, list_bam(s_idx), CFG) ;
+                [ev(i).verified(s_idx,:), ev(i).info(s_idx)] = verify_alt_prime(ev_tmp, genes, counts(s_idx, :), CFG) ;
             elseif strcmp(event_type, 'intron_retention'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_intron_retention(ev_tmp, list_bam(s_idx), CFG) ;
+                [ev(i).verified(s_idx,:), ev(i).info(s_idx)] = verify_intron_retention(ev_tmp, genes, counts(s_idx, :), CFG) ;
             elseif strcmp(event_type, 'mult_exon_skip'),
-                [ev(i).verified(j,:), ev(i).info(j)] = verify_mult_exon_skip(ev_tmp, list_bam(s_idx), CFG) ;
+                [ev(i).verified(s_idx,:), ev(i).info(s_idx)] = verify_mult_exon_skip(ev_tmp, genes, counts(s_idx, :), CFG) ;
             end;
         end ;
     end ;
