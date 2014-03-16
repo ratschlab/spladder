@@ -2,7 +2,11 @@ import cPickle
 import scipy as sp
 import os
 
-from . import events
+from .events import *
+from .detect import *
+
+from ..classes.event import Event
+
 
 def collect_events(CFG):
 
@@ -60,16 +64,16 @@ def collect_events(CFG):
             if 'spladder_infile' in CFG:
                 genes_fnames = CFG['spladder_infile']
             elif CFG['merge_strategy'] == 'single':
-                genes_fnames = '%s/spladder/genes_graph_conf%i%s.%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['samples'][i])
+                genes_fnames = '%s/spladder/genes_graph_conf%i%s.%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['samples'][i])
             else:
-                genes_fnames = '%s/spladder/genes_graph_conf%i%s.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['merge_strategy'], validate_tag)
+                genes_fnames = '%s/spladder/genes_graph_conf%i%s.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['merge_strategy'], validate_tag)
 
             ### define outfile names
-            fn_out_ir = '%s/%s_intron_retention%s_C%i.mat' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
-            fn_out_es = '%s/%s_exon_skip%s_C%i.mat' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
-            fn_out_mes = '%s/%s_mult_exon_skip%s_C%i.mat' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level']) 
-            fn_out_a5 = '%s/%s_alt_5prime%s_C%i.mat' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
-            fn_out_a3 = '%s/%s_alt_3prime%s_C%i.mat' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+            fn_out_ir = '%s/%s_intron_retention%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+            fn_out_es = '%s/%s_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+            fn_out_mes = '%s/%s_mult_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level']) 
+            fn_out_a5 = '%s/%s_alt_5prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+            fn_out_a3 = '%s/%s_alt_3prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
 
             intron_reten_pos[ridx, i] = []
             exon_skip_pos[ridx, i] = []
@@ -86,7 +90,7 @@ def collect_events(CFG):
 
                 ### detect intron retentions from splicegraph
                 if do_intron_retention:
-                    if not os.path.exist(fn_out_ir):
+                    if not os.path.exists(fn_out_ir):
                         idx_intron_reten, intron_intron_reten = detect_intronreten(genes, sp.where([x.is_alt for x in genes])[0])
                         for k in range(len(idx_intron_reten)):
                             gene = genes[idx_intron_reten[k]]
@@ -111,14 +115,15 @@ def collect_events(CFG):
                             event.exons1_col = sp.r_[exons_col[:, intron_intron_reten[k][0]].T, exons_col[:, intron_intron_reten[k][1]].T]
                             event.exons2_col = exons_col[:, intron_intron_reten[k][2]].T
                             event.gene_name = sp.array([gene.name])
-                            event.transcript_type = sp.array([gene.transcript_type])
+                            event.gene_idx = idx_intron_reten[k]
+                            #event.transcript_type = sp.array([gene.transcript_type])
                             intron_reten_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_ir
 
                 ### detect exon_skips from splicegraph
                 if do_exon_skip:
-                    if os.path.exist(fn_out_es):
+                    if os.path.exists(fn_out_es):
                         idx_exon_skip, exon_exon_skip = detect_exonskips(genes, sp.where([x.is_alt for x in genes])[0])
                         for k in range(len(idx_exon_skip)):
                             gene = genes[idx_exon_skip[k]]
@@ -143,7 +148,8 @@ def collect_events(CFG):
                             event.exons1_col = sp.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][2]]].T
                             event.exons2_col = sp.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][1]], exons_col[:, exon_exon_skip[k][2]]].T
                             event.gene_name = sp.array([gene.name])
-                            event.transcript_type = sp.array([gene.transcript_type])
+                            event.gene_idx = idx_exon_skip[k]
+                            #event.transcript_type = sp.array([gene.transcript_type])
                             exon_skip_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_es
@@ -191,7 +197,8 @@ def collect_events(CFG):
                                         event.exons1_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
                                         event.exons2_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
                                     event.gene_name = sp.array([gene.name])
-                                    event.transcript_type = sp.array([gene.transcript_type])
+                                    event.gene_idx = idx_alt_end_5prime[k]
+                                    #event.transcript_type = sp.array([gene.transcript_type])
                                     alt_end_5prime_pos[ridx, i].append(event)
 
                         ### handle 3 prime events
@@ -210,8 +217,8 @@ def collect_events(CFG):
                                 print 'skipping non-mappable alt 3-prime event'
                                 continue
 
-                            for k1 in range(len(exon_alt_end_3prime[k].threeprimesites) - 1):
-                                for k2 in range(k1 + 1, len(exon_alt_end_3prime[k].threeprimesites)):
+                            for k1 in range(len(exon_alt_end_3prime[k]['threeprimesites']) - 1):
+                                for k2 in range(k1 + 1, len(exon_alt_end_3prime[k]['threeprimesites'])):
 
                                     exon_alt1_col = exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]].T
                                     exon_alt2_col = exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]].T
@@ -233,14 +240,15 @@ def collect_events(CFG):
                                         event.exons1_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
                                         event.exons2_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
                                     event.gene_name = sp.array([gene.name])
-                                    event.transcript_type = sp.array([gene.transcript_type])
+                                    event.gene_idx = idx_alt_end_3prime[k]
+                                    #event.transcript_type = sp.array([gene.transcript_type])
                                     alt_end_3prime_pos[ridx, i].append(event)
                     else:
                         print '%s and %s already exists' % (fn_out_a5, fn_out_a3)
 
                 ### detect multiple_exon_skips from splicegraph
                 if do_mult_exon_skip:
-                    if not os.path.exist(fn_out_mes):
+                    if not os.path.exists(fn_out_mes):
                         idx_mult_exon_skip, exon_mult_exon_skip, id_mult_exon_skip = detect_multipleskips(genes, sp.where([x.is_alt for x in genes])[0])
                         if len(id_mult_exon_skip) == 0:
                             for k in sp.unique(id_mult_exon_skip):
@@ -267,7 +275,8 @@ def collect_events(CFG):
                                 event.exons1_col = sp.c_[exons_col[:, exon_mult_exon_skip[k_[0]]], exons_col[:, exon_mult_exon_skip[k_[-1]]]].T
                                 event.exons2_col = exons_col[:, sp.array(exons_mult_exon_skip)[k_]].T
                                 event.gene_name = sp.array([gene.name])
-                                event.transcript_type = sp.array([gene.transcript_type])
+                                event.gene_idx = idx_mult_exon_skip[k]
+                                #event.transcript_type = sp.array([gene.transcript_type])
                                 mult_exon_skip_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_mes
@@ -286,7 +295,7 @@ def collect_events(CFG):
                 intron_reten_pos_all = sp.array([item for sublist in intron_reten_pos[ridx, :] for item in sublist])
 
                 ### post process event structure by sorting and making events unique
-                events_all = events.post_process_event_struct(intron_reten_pos_all)
+                events_all = post_process_event_struct(intron_reten_pos_all)
 
                 ### store intron retentions
                 print 'saving intron retentions to %s' % fn_out_ir
@@ -340,7 +349,7 @@ def collect_events(CFG):
                 ### cut to min len, if alt exon lengths differ
                 ### remove, if alt exons do not overlap
                 if CFG['curate_alt_prime_events']:
-                    events_all = curate_alt_prime(events_all)
+                    events_all = curate_alt_prime(events_all, CFG)
 
                 ### store alt 5 prime events
                 print 'saving alt 5 prime events to %s' % fn_out_a5
@@ -362,7 +371,7 @@ def collect_events(CFG):
                 ### cut to min len, if alt exon lengths differ
                 ### remove, if alt exons do not overlap
                 if CFG['curate_alt_prime_events']:
-                    events_all = curate_alt_prime(events_all)
+                    events_all = curate_alt_prime(events_all, CFG)
 
                 ### store alt 3 prime events
                 print 'saving alt 3 prime events to %s' % fn_out_a3
