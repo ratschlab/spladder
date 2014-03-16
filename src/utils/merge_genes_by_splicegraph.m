@@ -4,6 +4,10 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
 %   This script takes several gene structures and merges them into one. 
 %   the merge is based on the splicegraphs within the genes struct
     
+    if nargin < 2,
+        chunk_idx = [];
+    end;
+
     %%% if we are running with rproc we only get one parameter struct
     if isfield(CFG, 'CFG'),
         if isfield(CFG, 'chunk_idx'),

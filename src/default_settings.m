@@ -109,7 +109,7 @@
     CFG.debug = 0;
     CFG.fd_log = 1;
 
-    CFG.sg_min_edge_count = 1;
+    CFG.sg_min_edge_count = 1; %%% TODO DEBUG was 10
     CFG.no_reset_conf = 0;
 
     CFG.do_prune = 0;

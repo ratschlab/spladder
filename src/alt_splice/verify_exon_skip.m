@@ -70,4 +70,3 @@ end ;
 if info.exon_pre_exon_aft_conf >= CFG.exon_skip.min_skip_count,
     verified(4) = 1 ;
 end ;
-

@@ -75,7 +75,7 @@ function alt_genes_analyze(CFG, event_type)
                                 fprintf('Chunk event %i, strain %i already completed\n', i, j);
                             else
                                 fprintf('Submitting job %i, event chunk %i (%i), strain chunk %i (%i)\n', job_nr, i, length(events_all), j, length(CFG.strains));
-                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 10*60) ;
+                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 8000, CFG.options_rproc, 48*60) ;
                                 %verify_all_events(PAR);
                                 job_nr = job_nr + 1;
                             end ;

@@ -87,6 +87,7 @@ for b = 1:length(blocks),
 	end
 
     introns = sortrows(introns);
+
 	%% process introns
 	if blocks(b).strand == '+'
 		introns = introns - blocks(b).start + 1;  %%% ONE based, introns are in closed intervals!
