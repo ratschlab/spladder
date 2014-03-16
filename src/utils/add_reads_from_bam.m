@@ -86,6 +86,7 @@ for b = 1:length(blocks),
 		[introns, spliced_coverage, pair_cov] = get_all_data(blocks(b), mapped, spliced, filenames, filter, pair, clipped, var_aware);
 	end
 
+    introns = sortrows(introns);
 	%% process introns
 	if blocks(b).strand == '+'
 		introns = introns - blocks(b).start + 1;  %%% ONE based, introns are in closed intervals!
