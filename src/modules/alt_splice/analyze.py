@@ -1,3 +1,9 @@
+import sys
+import os
+import scipy as sp
+import cPickle
+
+
 def analyze_events(CFG, event_type):
 
     if CFG['rproc']:
@@ -12,16 +18,16 @@ def analyze_events(CFG, event_type):
         else:
             rep_tag = ''
 
-        fn_out = '%s/%s_%s%s_C%i.mat' % (CFG['out_dirname'], CFG['merge_strategy'], event_type, rep_tag, CFG['confidence_level'])
-        fn_out_conf = fn_out.replace('.mat', '.confirmed.mat')
-        fn_out_count = fn_out.replace('.mat', '.counts.mat')
-        fn_out_info = fn_out.replace('.mat', '.info.mat')
+        fn_out = '%s/%s_%s%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], event_type, rep_tag, CFG['confidence_level'])
+        fn_out_conf = fn_out.replace('.pickle', '.confirmed.pickle')
+        fn_out_count = fn_out.replace('.pickle', '.counts.pickle')
+        fn_out_info = fn_out.replace('.pickle', '.info.pickle')
 
         ### define result files
-        fn_out_txt = fn_out.replace('.mat', '.txt')
-        fn_out_conf_txt = fn_out_conf.replace('.mat', '.txt')
-        fn_out_conf_tcga = fn_out_conf.replace('.mat', '.tcga.txt')
-        fn_out_conf_gff3 = fn_out_conf.replace('.mat', '.gff3')
+        fn_out_txt = fn_out.replace('.pickle', '.txt')
+        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt')
+        fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt')
+        fn_out_conf_gff3 = fn_out_conf.replace('.pickle', '.gff3')
 
         ### check if there is anything to do
         if os.path.exists(fn_out_txt) and os.path.exists(fn_out_conf_txt) and os.path.exists(fn_out_conf_tcga) and os.path.exists(fn_out_conf_gff3):
@@ -40,9 +46,9 @@ def analyze_events(CFG, event_type):
 
             ### handle case where we did not find any event of this type
             if len([1 for x in events_all if x.event_type == event_type]) == 0:
-                cPickle.dump(events_all, open(fn_out_count.replace('.mat', '.chunk1.mat'), 'w'), -1)
+                cPickle.dump(events_all, open(fn_out_count.replace('.pickle', '.chunk1.pickle'), 'w'), -1)
                 events_confirmed = events_all
-                cPickle.dump(events_confirmed, open(fn_out_conf.replace('.mat', '.chunk1.mat'), 'w'), -1)
+                cPickle.dump(events_confirmed, open(fn_out_conf.replace('.pickle', '.chunk1.pickle'), 'w'), -1)
                 max_len_all = 0
                 max_len_confirmed = 0
                 chunksize = 200
@@ -67,7 +73,7 @@ def analyze_events(CFG, event_type):
                             PAR['ev'] = events_all[idx_events]
                             PAR['strain_idx'] = idx_strains
                             PAR['list_bam'] = CFG['bam_fnames'][replicate, :]
-                            PAR['out_fn'] = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
+                            PAR['out_fn'] = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.pickle' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
                             PAR['event_type'] = event_type
                             PAR['CFG'] = CFG
                             if os.path.exists(PAR['out_fn']):
@@ -87,7 +93,7 @@ def analyze_events(CFG, event_type):
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
                             idx_strains = sp.arange(j, min(j + chunk_size_strains - 1, len(CFG['strains'])))
                             print '\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(CFG['strains']))
-                            out_fn = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.mat' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
+                            out_fn = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.pickle' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
                             if not os.path.exists(out_fn):
                                 print >> sys.stderr, 'ERROR: not finished %s' % out_fn
                                 sys.exit(1)
@@ -121,7 +127,7 @@ def analyze_events(CFG, event_type):
                 max_len_confirmed = events_confirmed.shape[0]
 
                 for c1_idx in range(0, max_len_all, chunksize):
-                    fn_out_count_chunk = fn_out_count.replace('.mat', '.chunk%i.mat' % c1_idx)
+                    fn_out_count_chunk = fn_out_count.replace('.pickle', '.chunk%i.pickle' % c1_idx)
                     if not os.path.exists(fn_out_count_chunk):
                         tmp_idx = sp.arange(c1_idx, min(c1_idx + chunksize - 1, max_len_all))
                         print 'saving counted %s events to %s' % (event_type, fn_out_count_chunk)
@@ -130,7 +136,7 @@ def analyze_events(CFG, event_type):
                         print '%s exists' % fn_out_count_chunk
 
                 for c1_idx in range(0, max_len_confirmed, chunksize):
-                    fn_out_conf_chunk = fn_out_conf.replace('.mat', '.chunk%i.mat' % c1_idx)
+                    fn_out_conf_chunk = fn_out_conf.replace('.pickle', '.chunk%i.pickle' % c1_idx)
                     if not os.path.exists(fn_out_conf_chunk):
                         tmp_idx = sp.arange(c1_idx, min(c1_idx + chunksize - 1, max_len_confirmed))
                         print 'saving confirmed %s events to %s' % (event_type, fn_out_conf_chunk) 
@@ -145,7 +151,7 @@ def analyze_events(CFG, event_type):
             (chunksize, max_len_all, max_len_confirmed) = cPickle.load(open(fn_out_info, 'r'))
             for c1_idx in range(0, max_len_confirmed, chunksize):
                 print '...loading chunk %i' % c1_idx
-                fn_out_conf_chunk = fn_out_conf.replace('.mat', '.chunk%i.mat' % c1_idx)
+                fn_out_conf_chunk = fn_out_conf.replace('.pickle', '.chunk%i.pickle' % c1_idx)
                 events_confirmed_ = cPickle.load(open(fn_out_conf_chunk, 'r'))
                 if c1_idx == 0:
                     events_confirmed = events_confirmed_.copy()
@@ -154,7 +160,7 @@ def analyze_events(CFG, event_type):
 
             for c1_idx in range(0, max_len_all, chunksize):
                 print '...loading chunk %i' % c1_idx
-                fn_out_count_chunk = fn_out_count.replace('.mat', '.chunk%i.mat' % c1_idx)
+                fn_out_count_chunk = fn_out_count.replace('.pickle', '.chunk%i.pickle' % c1_idx)
                 events_all_ = cPcikle.load(open(fn_out_count_chunk, 'r'))
                 if c1_idx == 0:
                     events_all = events_all_.copy()
@@ -193,7 +199,7 @@ def analyze_events(CFG, event_type):
         else:
             write_events_tcga(fn_out_conf_tcga, CFG['strains'], events_confirmed)
 
-        fn_out_conf_txt = fn_out_conf.replace('.mat', '.filt0.05.txt')
+        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
         if os.path.exists(fn_out_conf_txt):
             print '%s already exists' % fn_out_conf_txt
         else:
@@ -201,7 +207,7 @@ def analyze_events(CFG, event_type):
             cf_idx = sp.where([x.confirmed for x in events_confirmed] >= (0.05 * len(events_confirmed[0].detected)))[0]
             write_events_txt(fn_out_conf_txt, CFG['strains'], events_confirmed[cf_idx])
 
-        fn_out_conf_txt = fn_out_conf.replace('.mat', '.filt0.1.txt')
+        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
         if os.path.exists(fn_out_conf_txt):
             print '%s already exists' %  fn_out_conf_txt
         else:
