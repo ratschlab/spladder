@@ -1,8 +1,11 @@
 import scipy as sp
+import pdb
+import sys
 
 from ..reads import *
 from ..helpers import *
 from ..editgraph import *
+from ..merge import *
 
 def gen_graphs(genes, CFG=None):
     # [genes, inserted] = gen_graphs(genes, CFG)
@@ -71,22 +74,22 @@ def gen_graphs(genes, CFG=None):
 
     if CFG['do_insert_cassette_exons']:
         print >> CFG['fd_log'], 'Inserting cassette exons ...'
-        CFG_ = CFG
+        CFG_ = CFG.copy()
         if 'cassette_exon' in CFG and 'read_filter' in CFG['cassette_exon']:
             CFG['read_filter'] = CFG['cassette_exon']['read_filter']
         genes, inserted_ = insert_cassette_exons(genes, CFG)
         inserted['cassette_exon'] = inserted_
-        CFG = CFG_
+        CFG = CFG_.copy()
         print >> CFG['fd_log'], '\n... inserted %i casette exons ....\n... done.\n' % inserted['cassette_exon']
 
     if CFG['do_insert_intron_retentions']:
         print >> CFG['fd_log'], 'Inserting intron retentions ...'
-        CFG_ = CFG
+        CFG_ = CFG.copy()
         if 'read_filter' in CFG['intron_retention']:
             CFG['read_filter'] = CFG['intron_retention']['read_filter']
         genes, inserted_ = insert_intron_retentions(genes, CFG)
         inserted['intron_retention'] = inserted_
-        CFG = CFG_
+        CFG = CFG_.copy()
         print >> CFG['fd_log'], '\n... inserted %i new intron retentions ...\n...done.\n' % inserted['intron_retention']
 
     if CFG['do_remove_short_exons']:
@@ -107,7 +110,7 @@ def gen_graphs(genes, CFG=None):
 
     # sanity checking
     for g in genes:
-        assert(all(g.splicegraph.vertices[0, :] <= g[i].splicegraph.vertices[1, :]))
+        assert(all(g.splicegraph.vertices[0, :] <= g.splicegraph.vertices[1, :]))
 
     if CFG['do_insert_intron_edges']:
         # re-set list of introns supported by RNA-seq data to 
@@ -118,14 +121,14 @@ def gen_graphs(genes, CFG=None):
 
         print >> CFG['fd_log'], 'Inserting new intron edges ...'
         chr_nums = sp.array([x.chr_num for x in genes])
-        for chr_idx in sp.unique1d(chr_nums):
-            tmp_genes = genes(sp.where(chr_nums == chr_idx)[0])
+        for chr_idx in sp.unique(chr_nums):
+            tmp_genes = genes[sp.where(chr_nums == chr_idx)[0]]
             #
             ##############################################################################%%
             if not 'insert_intron_iterations' in CFG:
                 CFG['insert_intron_iterations'] = 5
             for iter in range(1, CFG['insert_intron_iterations'] + 1):
-                print >> CFG['fd_log'], '... chr %i - iteration %i/%i\n' % (chr_idx, iter, CFG.insert_intron_iterations)
+                print >> CFG['fd_log'], '... chr %i - iteration %i/%i\n' % (chr_idx, iter, CFG['insert_intron_iterations'])
                 genes_mod, inserted_ = insert_intron_edges(tmp_genes, CFG)
 
                 inserted['intron_in_exon'] += inserted_['intron_in_exon']
@@ -147,15 +150,16 @@ def gen_graphs(genes, CFG=None):
         print >> CFG['fd_log'], '... done.\n'
 
     print >> CFG['fd_log'], 'Re-labeleling new alternative genes ...'
-    genes = label_alt_genes(genes, CFG)
+    for ix in range(genes.shape[0]):
+        genes[ix].label_alt()
     print >> CFG['fd_log'], '... done.\n'
 
     ### print summary to log file
     print >> CFG['fd_log'], 'Inserted:'
     for fn in inserted:
-        print >> CFG['fd_log'], '\t%s:\t%i\n' % (fn, inserted[fn])
+        print >> CFG['fd_log'], '\t%s:\t%i' % (fn, inserted[fn])
 
-    if isinstance(CFG['fd_log'], file):
+    if CFG['fd_log'] != sys.stdout:
         CFG['fd_log'].close()
 
     return (genes, inserted)

@@ -1,4 +1,11 @@
-def merge_chunks_by_splicegraph(CFG, chunksize=None) 
+import random
+import os
+import sys
+import cPickle
+
+from .utils import *
+
+def merge_chunks_by_splicegraph(CFG, chunksize=None):
 # merge_chunks_by_splicegraph(CFG, chunksize) 
 #
 #   This script takes several gene structures and merges them into one. 
@@ -25,7 +32,7 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None)
 
     ### add all single bam file graphs
     for c_idx in range(0, merge_list_len, chunksize):
-        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(c_idx + chunksize - 1, merge_list_len)))
+        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(c_idx + chunksize - 1, merge_list_len)))
 
     ### iterate over merge list
     for i in range(len(merge_list)):
@@ -110,10 +117,10 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None)
                     f_idx = sp.where(u_graph == 0)[0]
 
                     if f_idx.shape[0] > 0:
-                        splice1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]))
-                        splice2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]))
-                        edgecnt1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]))
-                        edgecnt2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]))
+                        splice1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        splice2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        edgecnt1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        edgecnt2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
                         idx1_ = sp.where(m_graph[u_f, 2] == 1)[0]
                         idx2_ = sp.where(m_graph[u_l, 2] == 2)[0]
                         splice1_[idx1_, :][:, idx1_] = splice1
@@ -150,7 +157,7 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None)
     genes = genes2.copy()
     del genes2
 
-    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print 'Store genes at: %s' % fn_out
     cPickle.dump(genes, open(fn_out, 'w'), -1)
 
@@ -164,7 +171,7 @@ def merge_duplicate_exons(genes, CFG):
             print '%i\r' % i
 
         ### check if there are non unique exons
-        if uniqe_rows(genes[i].splicegraph.vertices.T).shape[0] == genes[i].splicegraph.shape[1]:
+        if unique_rows(genes[i].splicegraph.vertices.T).shape[0] == genes[i].splicegraph.vertices.shape[1]:
             continue
 
         exon_order = sp.argsort(genes[i].splicegraph.vertices[0, :])
@@ -177,7 +184,7 @@ def merge_duplicate_exons(genes, CFG):
         initial = genes[i].splicegraph.terminals[0, :]
         terminal = genes[i].splicegraph.terminals[1, :]
 
-        remove = sp.zeros((1, exons.shape[1]), dtype='bool')
+        remove = sp.zeros((exons.shape[1],), dtype='bool')
         for j in range(exons.shape[1]):
             if remove[j]:
                 continue
@@ -200,12 +207,14 @@ def merge_duplicate_exons(genes, CFG):
 
         k_idx = sp.where(~remove)[0]
         genes[i].splicegraph.vertices = genes[i].splicegraph.vertices[:, k_idx]
-        genes[i].splicegraph.edges = genes[i].splicegraph.edges[kidx, :][:, k_idx]
+        genes[i].splicegraph.edges = genes[i].splicegraph.edges[k_idx, :][:, k_idx]
         genes[i].splicegraph.terminals = genes[i].splicegraph.terminals[:, k_idx]
         num_removed += sum(remove)
 
     if CFG['verbose']:
         print '\n... removed %i duplicate exons ...' % num_removed
+
+    return genes
 
 
 def merge_genes_by_isoform(CFG):
@@ -224,11 +233,11 @@ def merge_genes_by_isoform(CFG):
 
     ### add all single bam file isoforms
     for i in range(len(CFG['samples'])):
-        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][i], prune_tag)
+        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][i], prune_tag))
 
     ### add also isoforms of all bam files combined
-    fn_bam_merged = sprintf('%s/spladder/genes_graph_conf%i.merge_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag);
-    if CFG['merge_strategy'] == 'merge_all')  and os.path.exists(fn_bam_merged):
+    fn_bam_merged = '%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag)
+    if CFG['merge_strategy'] == 'merge_all' and os.path.exists(fn_bam_merged):
         merge_list.append(fn_bam_merged)
 
     for i in range(len(merge_list)):
@@ -251,9 +260,10 @@ def merge_genes_by_isoform(CFG):
 
         ### did we append genes in the last round? --> re-sort
         if appended:
-            name_list = {genes2(:).name};
-            [name_list, s_idx] = sort(name_list);
-            genes2 = genes2(s_idx);
+            name_list = sp.array([x.name for x in genes2])
+            s_idx = sp.argsort(name_list)
+            name_list = name_list[s_idx]
+            genes2 = genes2[s_idx]
             appended = False
 
         ### iterate over current genes
@@ -299,7 +309,7 @@ def merge_genes_by_isoform(CFG):
     genes = genes2
     del genes2
 
-    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print 'Store genes at: %s' % fn
     cPickle.dump(genes, open(fn, 'w'), -1)
 
@@ -308,8 +318,7 @@ def merge_genes_by_isoform(CFG):
     for i in range(genes.shape[0]):
         if len(genes[i].transcripts) > max_num_isoforms:
             print 'Subsample for gene %i from %i transcripts.' % (i, len(genes[i].transcripts))
-            r_idx = randperm(length(genes(i).transcripts));
-            for r_idx in sorted(ransom.sample(range(len(genes[i].transcripts)), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
+            for r_idx in sorted(random.sample(range(len(genes[i].transcripts)), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
                 del genes[i].transcripts[r_idx]
                 del genes[i].exons[r_idx]
             genes[i].start = min(genes[i].start, genes[i].exons[0][:, 0].min())
@@ -317,7 +326,7 @@ def merge_genes_by_isoform(CFG):
             genes.splicegraph = Splicegraph(genes[i])
     print '... done\n'
 
-    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms_subsampled.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms_subsampled.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print 'Store subsampled genes at: %s' % fn
     cPickle.dump(genes, open(fn, 'w'), -1)       
 
@@ -329,7 +338,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
     #   the merge is based on the splicegraphs within the genes struct
     
     ### if we are running with rproc we only get one parameter struct
-    if chunk_idx is None and isinstance(CFG, dict):
+    if chunk_idx is None and 'CFG' in CFG:
         if 'chunk_idx' in CFG:
             chunk_idx = CFG['chunk_idx']
         CFG = CFG['CFG']
@@ -349,20 +358,19 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
 
     ### add all single bam file graphs
     for i in range(len(samples)):
-        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG['out_dirname'], CFG['confidence_level'], samples[i], prune_tag)
+        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], samples[i], prune_tag))
 
     ### add also graph of all bam files combined
-    if CFG['do_merge_all'] and os.path.exists('%s/spladder/genes_graph_conf%i.merge_bams%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag)):
-        merge_list.append('%s/spladder/genes_graph_conf%i.merge_bams%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag))
+    if CFG['do_merge_all'] and os.path.exists('%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag)):
+        merge_list.append('%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag))
 
     ### iterate over merge list 
     appended = False
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
-        genes = cPickle.load(open(merge_list[i], 'r'))
+        (genes, tmp) = cPickle.load(open(merge_list[i], 'r'))
         print '... done (%i / %i)' % (i, len(merge_list))
-        assert(genes.splicegraph is not None)
 
         ### sort genes by name
         name_list = sp.array([x.name for x in genes])
@@ -370,7 +378,8 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
         genes = genes[s_idx]
 
         ### make sure, that splicegraph is unique
-        genes.splicegraph.uniquify()
+        for g in genes:
+            g.splicegraph.uniquify()
 
         ### jump over first sample - nothig to add yet 
         if i == 0:
@@ -418,20 +427,20 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
                     if c_idx.shape[0] > 0:
                         genes2[g_idx].edge_count[c_idx, :][:, c_idx] = genes2[g_idx].edge_count[c_idx, :][:, c_idx] + splice1[a_idx, :][:, a_idx]
                 else:
-                    m_graph = sp.r_[sp.c_[genes[j].splicegraph.vertices.T, sp.ones((s1_len, 1))], sp.c_[genes2[g_idx].splicegraph.vertices.T, 2 * sp.ones((s2_len, 1))]]
+                    m_graph = sp.r_[sp.c_[genes[j].splicegraph.vertices.T, sp.ones((s1_len, 1), dtype='int')], sp.c_[genes2[g_idx].splicegraph.vertices.T, 2 * sp.ones((s2_len, 1), dtype='int')]]
                     tmp, s_idx = sort_rows(m_graph[:, 0:3], index=True)
                     m_graph = m_graph[s_idx, :]
 
-                    um_graph, u_f = unique(m_graph[:, 0:2], index=True)
+                    um_graph, u_f = unique_rows(m_graph[:, 0:2], index=True)
                     u_l = sp.r_[u_f[1:] - 1, m_graph.shape[0] - 1]
                     u_graph = u_l - u_f
                     
                     f_idx = sp.where(u_graph == 0)[0]
 
                     if f_idx.shape[0] > 0:
-                        splice1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]))
-                        splice2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]))
-                        edgecnt = sp.zeros((u_graph.shape[0], u_graph.shape[0]))
+                        splice1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        splice2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        edgecnt = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
                         idx1_ = sp.where(m_graph[u_f, 2] == 1)[0]
                         idx2_ = sp.where(m_graph[u_l, 2] == 2)[0]
                         splice1_[idx1_, :][:, idx1_] = splice1
@@ -463,10 +472,10 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
     genes = genes2.copy()
     del genes2
 
-    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     if chunk_idx is not None:
         chunk_tag = '_chunk%i_%i' % (chunk_idx[0], chunk_idx[-1])
-        fn_out = fn_out.replace('.mat', '%s.mat' % chunk_tag)
+        fn_out = fn_out.replace('.pickle', '%s.pickle' % chunk_tag)
     
     print 'Store genes at: %s' % fn_out
     cPickle.dump(genes, open(fn_out, 'w'), -1)
@@ -485,8 +494,12 @@ def run_merge(CFG):
 
     chunksize = 50
 
-    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.mat' % (CFG['out_dirname'] , CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
-    fn_out_val = '%s/spladder/genes_graph_conf%i.%s%s.validated.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'] , CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn_out_val = '%s/spladder/genes_graph_conf%i.%s%s.validated.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    if CFG['validate_splicegraphs']:
+        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.validated.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
+    else:
+        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
 
     if not os.path.exists(fn_out):
         if not CFG['rproc']:
@@ -500,7 +513,7 @@ def run_merge(CFG):
                 if merge_all:
                     merge_list_len += 1
                 for c_idx in range(0, merge_list_len, chunksize):
-                    fn = '%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(merge_list_len, c_idx + chunksize - 1))
+                    fn = '%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(merge_list_len, c_idx + chunksize - 1))
                     if os.path.exists(fn):
                         continue
                     else:
@@ -525,8 +538,14 @@ def run_merge(CFG):
         cPickle.dump(genes, open(fn_out_val, 'w'), -1)
         del genes
 
+    ### count segment graph
+    if CFG['validate_splicegraphs']:
+       count_graph_coverage_wrapper(fn_out_val, fn_out_count, CFG)
+    else:
+       count_graph_coverage_wrapper(fn_out, fn_out_count, CFG)
+
     if CFG['do_gen_isoforms']:
-        fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+        fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
         if not os.path.exists(fn_out):
             if not CFG['rproc']:
                 merge_genes_by_isoform(CFG['out_dirname'], CFG['confidence_level'], merge_all, experiment)

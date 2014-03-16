@@ -1,5 +1,7 @@
 import scipy as sp
 
+from ..utils import *
+
 def sort_events_full(event_list):
     # event_list = sort_events_full(event_list),
 
@@ -8,8 +10,8 @@ def sort_events_full(event_list):
 
     coord_list = sp.array([x.get_coords() for x in event_list]) 
     chr_list = sp.array([x.chr_num for x in event_list])
-    strand_list = sp.array([x.strand for x in event_list], dtype = 'double')
-    sort_list = sp.c_[chr_list, strand_list, sort_list]
+    strand_list = sp.array([x.strand == '-' for x in event_list], dtype = 'double')
+    sort_list = sp.c_[chr_list, strand_list, coord_list]
     tmp, idx = sort_rows(sort_list, index=True)
 
     return event_list[idx]
@@ -21,8 +23,8 @@ def sort_events_by_event(event_list):
    
     coord_list = sp.array([x.get_inner_coords() for x in event_list]) 
     chr_list = sp.array([x.chr_num for x in event_list])
-    strand_list = sp.array([x.strand for x in event_list], dtype = 'double')
-    sort_list = sp.c_[chr_list, strand_list, sort_list]
+    strand_list = sp.array([x.strand == '-' for x in event_list], dtype = 'double')
+    sort_list = sp.c_[chr_list, strand_list, coord_list]
     tmp, idx = sort_rows(sort_list, index=True)
 
     return event_list[idx]
@@ -36,10 +38,10 @@ def post_process_event_struct(events):
         return events
 
     ### filter out invalid coordinate projections
-    idx_valid_col = sp.zeros((events.shape[0],))
+    idx_valid = sp.zeros((events.shape[0],))
     for i in range(events.shape[0]):
         idx_valid[i] = sp.all(events[i].get_coords(trafo=True) > 0)
-    events = events[sp.where(idx_valid_col)[0]]
+    events = events[sp.where(idx_valid)[0]]
    
     ### sort exon skip events by all coordinates
     events = sort_events_full(events) 
@@ -91,15 +93,15 @@ def make_unique_by_strain(event_list):
                     event_list[i-1].gene_name = sp.c_[event_list[i-1].gene_name, event_list[i].gene_name[0]]
                 event_list[i] = event_list[i-1]
             else: 
-                event_list[i].strain = sp.c_[event_list[i-1].strain[0], event_list[i].strain] ;
-                assert(sp.all(sp.sort(event_list[i].strain) == sp.sort(sp.unique1d(event_list[i].strain))))
+                event_list[i].strain = sp.c_[sp.array([event_list[i-1].strain[0]]), event_list[i].strain]
+                assert(sp.all(sp.sort(event_list[i].strain) == sp.sort(sp.unique(event_list[i].strain))))
                 ### TODO !!!!!!!!!!!!! make sure that we keep different coordinates if the strains differ ...
                 if not event_list[i].gene_name[0] in event_list[i-1].gene_name:
-                    event_list[i].gene_name = sp.c_[event_list[i-1].gene_name, event_list[i].gene_name[0]]
+                    event_list[i].gene_name = sp.c_[sp.array([event_list[i-1].gene_name]), event_list[i].gene_name[0]]
             rm_idx.append(i - 1)
 
     print 'events dropped: %i' % len(rm_idx)
-    keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0])), rm_idx)[0]
+    keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0]), rm_idx))[0]
     event_list = event_list[keep_idx]
 
     return event_list
@@ -152,7 +154,7 @@ def make_unique_by_event(event_list):
             last_kept = i
 
     print 'events dropped: %i' % len(rm_idx)
-    keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0])), rm_idx)[0]
+    keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0]), rm_idx))[0]
     event_list = event_list[keep_idx]
 
     return event_list
@@ -160,6 +162,9 @@ def make_unique_by_event(event_list):
 
 def curate_alt_prime(event_list):
     # event_list = curate_alt_prime(event_list)
+
+    if event_list.shape[0] == 0:
+        return event_list
 
     rm_idx = []
     corr_count = 0
@@ -193,7 +198,7 @@ def curate_alt_prime(event_list):
 
     ### remove events with non-overlapping alt_exons
     if len(rm_idx) > 0:
-        keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0])), rm_idx)[0]
+        keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0]), rm_idx))[0]
         event_list = event_list[keep_idx]
 
     print 'Corrected %i events' % corr_count

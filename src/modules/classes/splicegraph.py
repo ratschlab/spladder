@@ -1,13 +1,16 @@
 import scipy as sp
+
+from ..utils import *
+
 import pdb
 
 class Splicegraph:
 
     def __init__(self, gene = None):
         
-        self.vertices = sp.zeros((2, 0))
-        self.edges = sp.zeros((0, 0))
-        self.terminals = sp.zeros((2, 0))
+        self.vertices = sp.zeros((2, 0), dtype='int')
+        self.edges = sp.zeros((0, 0), dtype='int')
+        self.terminals = sp.zeros((2, 0), dtype='int')
 
         if gene:
             self.from_gene(gene)
@@ -18,8 +21,8 @@ class Splicegraph:
 
     def new_edge(self):
 
-        self.edges = sp.c_[self.edges, sp.zeros((self.edges.shape[0], 1))]
-        self.edges = sp.r_[self.edges, sp.zeros((1, self.edges.shape[1]))]
+        self.edges = sp.c_[self.edges, sp.zeros((self.edges.shape[0], 1), dtype='int')]
+        self.edges = sp.r_[self.edges, sp.zeros((1, self.edges.shape[1]), dtype='int')]
     
     def subset(self, keep_idx):
         
@@ -29,7 +32,7 @@ class Splicegraph:
 
     def update_terminals(self):
         
-        self.terminals = sp.zeros(self.vertices.shape)
+        self.terminals = sp.zeros(self.vertices.shape, dtype='int')
         self.terminals[0, sp.where(sp.sum(sp.tril(self.edges), axis=1) == 0)[0]] = 1
         self.terminals[1, sp.where(sp.sum(sp.triu(self.edges), axis=1) == 0)[0]] = 1
 
@@ -56,7 +59,7 @@ class Splicegraph:
 
                 if self.vertices.shape[1] == 0:
                     self.vertices = sp.array([[exon1_start], [exon1_end]], dtype='int')
-                    self.edges = sp.array([[0]])
+                    self.edges = sp.array([[0]], dtype='int')
                 else:
                     self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
                     self.new_edge()
@@ -70,7 +73,7 @@ class Splicegraph:
           
                     if self.vertices.shape[1] == 0:
                         self.vertices = sp.array([[exon1_start, exon2_start], [exon1_end, exon2_end]], dtype='int')
-                        self.edges = sp.array([[0, 1], [1, 0]])
+                        self.edges = sp.array([[0, 1], [1, 0]], dtype='int')
                     else:
                         exon1_idx = 0
                         exon2_idx = 0
@@ -112,7 +115,7 @@ class Splicegraph:
         s_idx = sp.argsort(self.vertices[0, :])
         self.vertices = self.vertices[:, s_idx]
         self.edges = self.edges[s_idx, :][:, s_idx]
-        self.terminals = sp.zeros(self.vertices.shape)
+        self.terminals = sp.zeros(self.vertices.shape, dtype='int')
         self.terminals[0, sp.where(sp.tril(self.edges).sum(axis=1) == 0)[0]] = 1
         self.terminals[1, sp.where(sp.triu(self.edges).sum(axis=1) == 0)[0]] = 1
 
@@ -122,7 +125,7 @@ class Splicegraph:
         ### if flag1, all end terminal exons in idx1 are preserved
         ### if flag2, all start terminal exons in idx2 are preserved
 
-        if idx2:
+        if idx2.shape[0] > 0:
             adj_mat = sp.triu(self.edges)
 
             if flag1:
@@ -133,7 +136,7 @@ class Splicegraph:
 
                         self.vertices = sp.c_[self.vertices, self.vertices[:, i1]]
 
-                        _new_edge()
+                        self.new_edge()
                         self.edges[:, -1] = self.edges[:, i1]
                         self.edges[-1, :] = self.edges[i1, :]
 
@@ -144,7 +147,7 @@ class Splicegraph:
                     if sp.all(adj_mat[:, i2] == 0):
                         self.vertices = sp.c_[self.vertices, self.vertices[:, i2]]
 
-                        _new_edge()
+                        self.new_edge()
                         self.edges[:, -1] = self.edges[:, i2]
                         self.edges[-1, :] = self.edges[i2, :]
 
@@ -159,27 +162,27 @@ class Splicegraph:
         ### exon_pre contains the indices of preceding exons
         ### exon_aft contains the indices of successing exons
         
-        self.vertices = sp.r_[self.vertices, new_exon.T]
+        self.vertices = sp.c_[self.vertices, new_exon]
 
-        _new_edge()
+        self.new_edge()
 
         self.edges[exons_pre, -1] = 1
         self.edges[exons_aft, -1] = 1
         self.edges[-1, :] = self.edges[:, -1].T
 
-        self.terminals = sp.c_[self.terminals, sp.zeros((2,))]
+        self.terminals = sp.c_[self.terminals, sp.zeros((2,), dtype='int')]
 
 
     def add_intron_retention(self, idx1, idx2):
-
+        
         adj_mat = sp.triu(self.edges)
 
-        self.vertices = sp.c_[self.vertices, sp.array([self.vertices[0, idx1], self.vertices[1, idx2]])]
+        self.vertices = sp.c_[self.vertices, sp.array([self.vertices[0, idx1], self.vertices[1, idx2]], dtype='int')]
 
-        _new_edge()
+        self.new_edge()
 
-        adj_mat = sp.r_[adj_mat, sp.zeros((adj_mat.shape[1],))]
-        adj_mat = sp.c_[adj_mat, sp.zeros((adj_mat.shape[2],))]
+        adj_mat = sp.r_[adj_mat, sp.zeros((1, adj_mat.shape[1]), dtype='int')]
+        adj_mat = sp.c_[adj_mat, sp.zeros((adj_mat.shape[0], 1), dtype='int')]
 
         ### check if adjacency matrix is symmetric
         ### otherwise or is not justyfied
@@ -188,17 +191,17 @@ class Splicegraph:
         ### AK: under the assumption that our splice graph representation is symmetric
         ### I preserve symmetry by using OR over the adj_mat column and row
         
-        self.edges = adj_mat[:, idx1] | adj_mat[idx2, :].T
-        self.edges = adj_mat[:, idx1].T | adj_mat[idx2, :]
+        self.edges[:, -1] = adj_mat[:, idx1] | adj_mat[idx2, :].T
+        self.edges[-1, :] = adj_mat[:, idx1].T | adj_mat[idx2, :]
 
-        self.terminals = sp.c_[self.terminals, sp.array([self.terminals[1, idx1], self.terminals[2, idx2]])]
+        self.terminals = sp.c_[self.terminals, sp.array([self.terminals[0, idx1], self.terminals[1, idx2]], dtype='int')]
 
     def uniquify(self):
         # OUTPUT: splice graph that has been made unique on exons for each gene
 
         (s_tmp, s_idx) = sort_rows(self.vertices.T, index=True)
         self.vertices = s_tmp.T
-        self.edges = self.vertices[s_idx, :][:, s_idx]
+        self.edges = self.edges[s_idx, :][:, s_idx]
         self.terminals = self.terminals[:, s_idx]
 
         rm_idx = []
