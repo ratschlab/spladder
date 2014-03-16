@@ -40,9 +40,9 @@ function alt_genes_analyze(CFG, event_type)
 
             %%% handle case where we did not find any event of this type
             if isempty([events_all.event_type]),
-                secsave(strrep(fn_out_count, '.mat', '.chunk1.mat'), events_all, 'events_all');
+                save(strrep(fn_out_count, '.mat', '.chunk1.mat'), 'events_all');
                 events_confirmed = events_all;
-                secsave(strrep(fn_out_conf, '.mat', '.chunk1.mat'), events_confirmed, 'events_confirmed');
+                save(strrep(fn_out_conf, '.mat', '.chunk1.mat'), 'events_confirmed');
                 max_len_all = 0;
                 max_len_confirmed = 0;
                 chunksize = 200;
@@ -55,7 +55,7 @@ function alt_genes_analyze(CFG, event_type)
                 end;
                 
                 if ~CFG.rproc,
-                    events_all = verify_all_events(events_all, 1:length(CFG.strains), CFG.bam_fnames(replicate, :), event_type, CFG) ;
+                    events_all = verify_all_events(events_all, event_type, CFG) ;
                 else
                     jobinfo = rproc_empty() ;
                     chunk_size_events = 100 ;

@@ -150,6 +150,7 @@ function alt_genes_collect(CFG)
                             if isfield(gene, 'transcript_type')
                                 intron_reten_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                             end;
+                            intron_reten_pos{ridx,i}(end).gene_idx = idx_intron_reten{ridx, i}(k);
                         end ;
                     else
                         fprintf(1, '%s already exists\n', fn_out_ir);
@@ -203,6 +204,7 @@ function alt_genes_collect(CFG)
                             if isfield(gene, 'transcript_type')
                                 exon_skip_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                             end;
+                            exon_skip_pos{ridx,i}(end).gene_idx = idx_exon_skip{ridx,i}(k);
                         end ;
                     else
                         fprintf(1, '%s already exists\n', fn_out_es);
@@ -233,7 +235,6 @@ function alt_genes_collect(CFG)
                             
                             for k1 = 1:length(exon_alt_end_5prime{ridx, i}(k).fiveprimesites) - 1,
                                 for k2 = k1 + 1:length(exon_alt_end_5prime{ridx, i}(k).fiveprimesites),
-
                                     exon_alt1_col = exons_col(:, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1))';
                                     exon_alt2_col = exons_col(:, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2))';
 
@@ -278,6 +279,7 @@ function alt_genes_collect(CFG)
                                     if isfield(gene, 'transcript_type')
                                         alt_end_5prime_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                                     end;
+                                    alt_end_5prime_pos{ridx,i}(end).gene_idx = idx_alt_end_5prime{ridx,i}(k);
                                 end;
                             end;
                         end;
@@ -345,6 +347,7 @@ function alt_genes_collect(CFG)
                                     if isfield(gene, 'transcript_type')
                                         alt_end_3prime_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                                     end;
+                                    alt_end_3prime_pos{ridx,i}(end).gene_idx = idx_alt_end_3prime{ridx,i}(k);
                                 end;
                             end;
                         end;
@@ -404,6 +407,7 @@ function alt_genes_collect(CFG)
                                 if isfield(gene, 'transcript_type')
                                     mult_exon_skip_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                                 end;
+                                mult_exon_skip_pos{ridx,i}(end).gene_idx = idx_mult_exon_skip{ridx,i}(k_(1));
                             end ;
                         end ;
                     else
