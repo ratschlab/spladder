@@ -70,9 +70,6 @@ function [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
                     end;
                 end;
             end;
-            %if strcmp(gg.name, 'AT1G25098'),
-            %    keyboard;
-            %end;
         end;
     end;
 
