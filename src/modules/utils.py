@@ -2,6 +2,9 @@ import scipy as sp
 
 def isequal(A, B):
     
+    if A is None or B is None:
+        return False
+
     if not sp.all(A.shape == B.shape):
         return False
     else:
@@ -18,11 +21,16 @@ def issubset(A, B):
 def intersect_rows(array1, array2, index = None):
     """Return intersection of rows"""
 
-    if (array1.shape[0] == 0) or (array2.shape[0] == 0):
+    if (array1.shape[0] == 0):
         if index == True:
-            return (array, sp.zeros((0,)), sp.zeros((0,)))
+            return (array1, sp.zeros((0,)), sp.zeros((0,)))
         else:
-            return array
+            return array1
+    if (array2.shape[0] == 0):
+        if index == True:
+            return (array2, sp.zeros((0,)), sp.zeros((0,)))
+        else:
+            return array2
 
     array1_v = array1.view([('', array1.dtype)] * array1.shape[1])
     array2_v = array2.view([('', array2.dtype)] * array2.shape[1])
@@ -43,25 +51,35 @@ def unique_rows(array, index = None):
         if index == True:
             return (array, [])
         else:
-            return array
+            return (array)
+    (array_s, s_idx) = sort_rows(array, True)
+    tmp = [False]
+    tmp.extend([sp.all(array_s[i-1, :] == array_s[i, :]) for i in range(1, array.shape[0])])
+    k_idx = sp.where(~sp.array(tmp, dtype='bool'))[0]
+
     if index == True:
-        array_u, index = sp.unique(array.view([('', array.dtype)] * array.shape[1]), return_index=True)
-        return (array_u.view(array.dtype).reshape(array_u.shape[0], array.shape[1]), index)
+        return (array[s_idx[k_idx], :], s_idx[k_idx])
     else:
-        array_u = sp.unique(array.view([('', array.dtype)] * array.shape[1]))
-        return array_u.view(array.dtype).reshape(array_u.shape[0], array.shape[1])
+        return array[s_idx[k_idx], :]
+
+
 
 def sort_rows(array, index = None):
     """Sort array by rows"""
 
     if array.shape[0] == 0:
-        return array
+        if index == True:
+            return (array, [])
+        else:
+            return (array)
 
-    array_v = array.view([('', array.dtype)] * array.shape[1])
+    s_idx = sp.lexsort([array[:, -i] for i in range(1, array.shape[1] + 1)])
+
     if index == True:
-        return (sp.sort(array_v, axis = 0).view(array.dtype).reshape(array_v.shape[0], array.shape[1]), sp.argsort(array_v, axis = 0).view(array.dtype)[:, 0])
+        return (array[s_idx, :], s_idx)
     else:
-        return sp.sort(array_v, axis = 0).view(array.dtype).reshape(array_v.shape[0], array.shape[1])
+        return array[s_idx, :]
+
 
 def ismember(element, array, rows=False):
     """Check if element is member of array"""

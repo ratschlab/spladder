@@ -123,6 +123,8 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
             # no exon coverage needed at all
             (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware)
 
+        introns = sort_rows(introns)
+
         # add requested data to block
         tracks = sp.zeros((0, block_len))
         intron_list = []
@@ -169,7 +171,7 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
                         introns = introns[take_idx, :]
                     intron_list.append(introns)
                 else:
-                    intron_list.append(sp.zeros((0, 2), dtype='int'))
+                    intron_list.append(sp.zeros((0, 3), dtype='int'))
             ## add polya signal track
             ##############################################################################
             elif type == 'polya_signal_track':
@@ -331,7 +333,7 @@ def get_intron_list(genes, CFG):
     for j in range(introns.shape[0]):
         if introns[j, 0] is None:
             introns[j, 0] = sp.zeros((0, 3), dtype='int')
-        elif introns[j, 1] is None:
+        if introns[j, 1] is None:
             introns[j, 1] = sp.zeros((0, 3), dtype='int')
 
     return introns

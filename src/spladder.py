@@ -21,6 +21,7 @@ from modules.core import spladdercore
 from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
 import modules.init as init
+from modules.merge import run_merge
 
 def parse_options(argv):
 
@@ -124,13 +125,13 @@ def spladder():
             CFG['anno_fname'] += '.pickle'
 
         for idx in idxs:
-            CFG_ = CFG
+            CFG_ = CFG.copy()
             if CFG['merge_strategy'] != 'merge_bams':
                 CFG['bam_fnames'] = CFG['bam_fnames'][idx]
                 CFG['samples'] = CFG['samples'][idx]
-                CFG['out_fname'] = '%s/spladder/genes_graph_conf%i.%s.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][0])
+                CFG['out_fname'] = '%s/spladder/genes_graph_conf%i.%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'])
             else:
-                CFG['out_fname'] = '%s/spladder/genes_graph_conf%i.%s.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'])
+                CFG['out_fname'] = '%s/spladder/genes_graph_conf%i.%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'])
 
             ### assemble out filename to check if we are already done
             fn_out = CFG['out_fname']
@@ -147,7 +148,7 @@ def spladder():
                 else:
                     spladdercore.spladder_core(CFG)
 
-            CFG = CFG_
+            CFG = CFG_.copy()
 
         ### collect results after parallelization
         if CFG['rproc']:
