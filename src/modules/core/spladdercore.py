@@ -24,7 +24,7 @@ def spladder_core(CFG):
             genes = CFG['genes']
         genes = gen_graphs(genes, CFG)
 
-        print 'Saving genes to %s'% (CFG['out_fname'])
+        print 'Saving genes to %s' % (CFG['out_fname'])
         cPickle.dump(genes, open(CFG['out_fname'], 'w'), -1)
 
         genes_loaded = True
@@ -34,7 +34,7 @@ def spladder_core(CFG):
     ### prune splice graph if necessary
     if CFG['do_prune']:
         load_fn = CFG['out_fname']
-        CFG['out_fname'] = re.sub(r'.mat$', '_pruned.mat', CFG['out_fname'])
+        CFG['out_fname'] = re.sub(r'.pickle$', '_pruned.pickle', CFG['out_fname'])
         if not os.path.exists(CFG['out_fname']):
             ### load genes if not present yet
             if not genes_loaded:
@@ -61,7 +61,7 @@ def spladder_core(CFG):
     ### generate isoforms if necessary
     if CFG['do_gen_isoforms']:
         load_fn = CFG['out_fname']
-        CFG['out_fame'] = re.sub(r'.mat$', '_with_isoforms.mat', CFG['out_fname']);
+        CFG['out_fame'] = re.sub(r'.pickle$', '_with_isoforms.pickle', CFG['out_fname']);
         if not os.path.exists(CFG['out_fname']):
             ### load genes if not present yet
             if not genes_loaded == 0:
