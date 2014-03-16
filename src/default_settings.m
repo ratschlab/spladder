@@ -109,7 +109,7 @@
     CFG.debug = 0;
     CFG.fd_log = 1;
 
-    CFG.sg_min_edge_count = 10;
+    CFG.sg_min_edge_count = 1;
     CFG.no_reset_conf = 0;
 
     CFG.do_prune = 0;
@@ -120,6 +120,7 @@
 
     CFG.run_as_analysis = 1;
     CFG.event_types = {'exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip'};
+    CFG.global_gene_list = '';
 
     CFG.read_length = 36;
 
