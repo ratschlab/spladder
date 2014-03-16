@@ -12,6 +12,8 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
             chunk_idx = [];
         end;
         CFG = CFG.CFG
+    elseif nargin < 2,
+        chunk_idx = [];
     end;
 
     %%% generate merge list
