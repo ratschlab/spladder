@@ -1,5 +1,6 @@
 from scipy.sparse import lil_matrix
-from scipy.matlib import repmat
+from numpy.matlib import repmat
+import scipy as sp
 
 def detect_multipleskips(genes, idx_alt):
     # [idx_multiple_skips, exon_multiple_skips, id_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
@@ -13,7 +14,7 @@ def detect_multipleskips(genes, idx_alt):
             print '.',
         num_exons = genes[ix].splicegraph.get_len()
         edges = genes[ix].splicegraph.edges
-        labels = repmat(sp.arange(num_exons), 1, num_exons)
+        labels = repmat(sp.arange(num_exons), num_exons, 1).T
         
         # adjecency matrix: upper half only
         A = sp.zeros((num_exons, num_exons))
@@ -23,15 +24,15 @@ def detect_multipleskips(genes, idx_alt):
         
         # possible starting and ending exons of a multiple exon skip
         Pairs = lil_matrix((num_exons, num_exons))
-        Ai = sp.dot(sp.dot(A, A) * A) #paths of length 3
+        Ai = sp.dot(sp.dot(A, A), A) #paths of length 3
         while sp.any(Ai.ravel() > 0):
             coords = sp.where((A > 0 ) & (Ai > 0)) # multiple skip
             Pairs[coords[0], coords[1]] = 1
             Ai = sp.dot(Ai, A)  # paths of length ..+1
         
-        edge = sp.where(Pairs == 1)
+        edge = sp.where(Pairs.toarray() == 1)
         
-        if edge[0].shape[0] > 10000,
+        if edge[0].shape[0] > 10000:
             print 'Warning: not processing gene %d, because there are more than 10000 potential hits.' % ix
             continue
         
@@ -42,13 +43,13 @@ def detect_multipleskips(genes, idx_alt):
             if edges[exon_idx_first, exon_idx_last] == 1:
                 
                 # find all pairs shortest path
-                exist_path = triu(edges).astype('double')
+                exist_path = sp.triu(edges).astype('double')
                 exist_path[exon_idx_first, exon_idx_last] = 0
                 exist_path[exist_path == 0] = sp.inf
                 # set diagonal to 0
                 exist_path[sp.arange(exist_path.shape[0]), sp.arange(exist_path.shape[0])] = 0
                 
-                long_exist_path = -triu(edges).astype('double')
+                long_exist_path = -sp.triu(edges).astype('double')
                 long_exist_path[exon_idx_first, exon_idx_last] = 0
                 long_exist_path[long_exist_path == 0] = sp.inf
                 # set diagonal to 0
@@ -71,27 +72,29 @@ def detect_multipleskips(genes, idx_alt):
                 long_exist_path[temp_ix] = -long_exist_path[temp_ix]
                 
                 if (exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(exist_path[exon_idx_first, exon_idx_last]):
-                    backtrace = path[exon_idx_first, exon_idx_last]
+                    #import pdb
+                    #pdb.set_trace()
+                    backtrace = sp.array([path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
-                        backtrace = sp.c_[backtrace, path[exon_idx_first, backtrace[-1]]]
+                        backtrace = sp.r_[backtrace, path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[1] + 2))
+                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
                     id += 1
-                    id_multiple_skips.append(id * sp.ones((1, backtrace.shape[1] + 2))
-                elif (long_exist_path(exon_idx_first,exon_idx_last) > 2) && ~isinf(long_exist_path(exon_idx_first,exon_idx_last)),
-                    backtrace = long_path(exon_idx_first,exon_idx_last);
+                    id_multiple_skips.append(id * sp.ones((1, backtrace.shape[0] + 2)))
+                elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
+                    backtrace = sp.array([long_path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
-                        backtrace = sp.c_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
+                        backtrace = sp.r_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[1] + 2))
-                    exon_multiple_skips.append(exon_idx_first, backtrace, exon_idx_last])
+                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[0] + 2))
+                    exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
                     id += 1
-                    id_multiple_skips.append(id * sp.ones(1, backtrace.shape[1] + 2))
+                    id_multiple_skips.append(id * sp.ones((1, backtrace.shape[0] + 2)))
 
-    print 'Number of multiple exon skips:\t\t\t\t\t%d' % length(idx_multiple_skips)
+    print 'Number of multiple exon skips:\t\t\t\t\t%d' % len(idx_multiple_skips)
     return (idx_multiple_skips, exon_multiple_skips, id_multiple_skips)
 
 
@@ -119,15 +122,15 @@ def detect_intronreten(genes, idx_alt):
                     if (vertices[1, exon_idx] >= vertices[0, exon_idx1]) and (vertices[0, exon_idx2] <= vertices[1, exon_idx1]):
                         is_intron_reten = True
                         long_exon = exon_idx1 
-                        for len in range(len(introns):
-                            if (vertices[1, exon_idx] == introns[len][0]) and (vertices[0, exon_idx2] == introns[len][1]):
+                        for l in range(len(introns)):
+                            if (vertices[1, exon_idx] == introns[l][0]) and (vertices[0, exon_idx2] == introns[l][1]):
                                 is_intron_reten = False
                 if is_intron_reten:
                     idx_intron_reten.append(ix)
                     intron_intron_reten.append([exon_idx, exon_idx2, long_exon])
                     introns.append([vertices[1, exon_idx], vertices[0, exon_idx2]])
 
-    print '\nNumber of intron retentions:\t\t\t\t\t%d', len(idx_intron_reten)
+    print '\nNumber of intron retentions:\t\t\t\t\t%d' % len(idx_intron_reten)
     return (idx_intron_reten, intron_intron_reten)
 
 
@@ -147,7 +150,7 @@ def detect_exonskips(genes, idx_alt):
                     if (edges[exon_idx, exon_idx1] == 1) and edges[exon_idx, exon_idx2] and edges[exon_idx1, exon_idx2]:
                         idx_exon_skips.append(ix)
                         exon_exon_skips.append([exon_idx, exon_idx1, exon_idx2])
-    print '\nNumber of single exon skips:\t\t\t\t\t%d', len(idx_exon_skips))
+    print '\nNumber of single exon skips:\t\t\t\t\t%d' % len(idx_exon_skips)
     return (idx_exon_skips, exon_exon_skips)
 
 
@@ -163,11 +166,11 @@ def detect_altprime(genes, idx_alt):
 
     idx_alt_5prime = []
     idx_alt_3prime = []
-    exon_alt_5prime = {}
-    exon_alt_3prime = {}
+    exon_alt_5prime = []
+    exon_alt_3prime = []
 
     for ix in idx_alt:
-        if idx % 50 == 0:
+        if ix % 50 == 0:
             print '.',
         num_exons = genes[ix].splicegraph.get_len()
         vertices = genes[ix].splicegraph.vertices
@@ -178,9 +181,9 @@ def detect_altprime(genes, idx_alt):
         for exon_idx in range(num_exons - 2):
             rightsites = []
             rightidx = []
-            nr_exons = sp.sum(edges[exon_idx, exon_idx + 1 : num_exons])
+            nr_exons = sp.sum(edges[exon_idx, exon_idx + 1:])
             if nr_exons >= 2:
-                which_exons = sp.where(edges[exon_idx, exon_idx + 1 : num_exons])[0] + exon_idx
+                which_exons = sp.where(edges[exon_idx, exon_idx + 1:])[0] + exon_idx + 1
                 exons = vertices[:, which_exons]
                 for i in range(nr_exons - 1):
                     for j in range(i + 1, nr_exons):
@@ -190,7 +193,7 @@ def detect_altprime(genes, idx_alt):
                         # - left splice site of exon(j) is in exon(i)
                         # note that the 'overlap' relationship is not transitive
                         if ((exons[0, i] != exons[0, j]) and 
-                          (((exons[0, i] >= exons[0, j]) and (exons[0, i] <= exons[1, j])) or ((exons[0, j] >= exons[0, i]) and (exons[0, j] <= exons[1, i]))) and
+                          (((exons[0, i] > exons[0, j]) and (exons[0, i] < exons[1, j])) or ((exons[0, j] > exons[0, i]) and (exons[0, j] < exons[1, i]))) and
                           (min(exons[1, i], exons[1, j]) - max(exons[0, i], exons[0, j]) >= MIN_OVERLAP)):
 
                             assert(not ((exons[0, i] == exons[0, j]) and (exons[1, i] == exons[1, j])));
@@ -246,14 +249,14 @@ def detect_altprime(genes, idx_alt):
 
             # construct the output
             if len(leftsites) >= 2:
-                if strand=='+'
+                if strand == '+':
                     exon_alt_5prime.append({'threeprimesite':exon_idx, 'fiveprimesites':leftidx})
                     idx_alt_5prime.append(ix) 
-                if strand =='-'
+                if strand == '-':
                     exon_alt_3prime.append({'fiveprimesite':exon_idx, 'threeprimesites':leftidx})
                     idx_alt_3prime.append(ix)
 
-        print '\nNumber of alternative 5 prime sites:\t\t\t\t%d' % len(idx_alt_5prime)
-        print 'Number of alternative 3 prime sites:\t\t\t\t%d' % len(idx_alt_3prime)
+    print '\nNumber of alternative 5 prime sites:\t\t\t\t%d' % len(idx_alt_5prime)
+    print 'Number of alternative 3 prime sites:\t\t\t\t%d' % len(idx_alt_3prime)
 
-        return (idx_alt_5prime, exon_alt_5prime, idx_alt_3prime, exon_alt_3prime)
+    return (idx_alt_5prime, exon_alt_5prime, idx_alt_3prime, exon_alt_3prime)
