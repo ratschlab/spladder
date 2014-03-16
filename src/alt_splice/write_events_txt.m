@@ -6,6 +6,7 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
         return
     end;
 
+    anno_names = '';
     if nargin > 3 && ~isempty(anno_fn),
        load(anno_fn);
        anno = genes;
@@ -49,7 +50,7 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
 
     for i = 1:length(events),
         fprintf(fd, '%s\t%c\t%s_%i\t%s', events(i).chr, events(i).strand, events(i).event_type, events(i).id, events(i).gene_name{1});
-        if nargin > 3,
+        if nargin > 3 && ~isempty(anno_names),
             a_idx = strmatch(events(i).gene_name{1}, anno_names, 'exact');
             assert(~isempty(a_idx));
             fprintf(fd, '\t%i\t%i', anno(a_idx).start, anno(a_idx).stop);
