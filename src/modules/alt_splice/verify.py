@@ -242,6 +242,40 @@ def verify_alt_prime(event, fn_bam, cfg):
         info['valid'] = 0 
         return (verified, info)
 
+    ### find exons corresponding to event
+    sg = genes[event.gene_idx].splicegraph
+    segs = genes[event.gene_idx].segmentgraph
+    idx_exon11 = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon12 = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
+    idx_exon21 = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
+    idx_exon22 = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    idx_exon_alt2  = sp.where(sg.vertices[0, :] == event.exon_alt2(1) & sg{1}(2, :) == event.exon_alt2(2));
+    idx_exon_const = sp.where(sg.vertices[0, :] == event.exon_const(1) & sg{1}(2, :) == event.exon_const(2));
+    if isempty(idx_exon_alt1),
+        seg_exon_alt1 = find(segs{1}(1, :) >= event.exon_alt1(1) & segs{1}(2, :) <= event.exon_alt1(2));
+    else
+        seg_exon_alt1 = find(segs{2}(idx_exon_alt1, :));
+    end;
+    if isempty(idx_exon_alt2),
+        seg_exon_alt2 = find(segs{1}(1, :) >= event.exon_alt2(1) & segs{1}(2, :) <= event.exon_alt2(2));
+    else
+        seg_exon_alt2 = find(segs{2}(idx_exon_alt2, :));
+    end;
+    if isempty(idx_exon_const),
+        seg_exon_const = find(segs{1}(1, :) >= event.exon_const(1) & segs{1}(2, :) <= event.exon_const(2));
+    else
+        seg_exon_const = find(segs{2}(idx_exon_const, :));
+    end;
+    assert(~isempty(seg_exon_alt1));
+    assert(~isempty(seg_exon_alt2));
+    assert(~isempty(seg_exon_const));
+
+    seg_diff = setdiff(seg_exon_alt1, seg_exon_alt2);
+    seg_const = intersect(seg_exon_alt2, seg_exon_alt1);
+    if isempty(seg_diff),
+        seg_diff = setdiff(seg_exon_alt2, seg_exon_alt1);
+    end;
+
     gg = gene()
     gg.strand = event.strand 
     gg.chr = event.chr 
