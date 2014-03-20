@@ -1,4 +1,4 @@
-function genes = build_splice_graph(genes) ;
+function genes = build_splice_graph(genes, g_idx) ;
 % genes = build_splice_graph(genes) ;
 %
 % This script takes the given gene structure and
@@ -9,7 +9,11 @@ function genes = build_splice_graph(genes) ;
 % !!! is replaced by the newly constructed one!
 %
 
-for gene_idx = 1:length(genes)
+if nargin < 2,
+    g_idx = 1:length(genes);
+end;
+
+for gene_idx = g_idx,
   % construct a new empty splice graph, based on
   % http://proline.bic.nus.edu.sg/dedb/
   vertices =  [];
