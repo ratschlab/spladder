@@ -31,6 +31,9 @@ function [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
         %%% and the splice junctions in the splice graph
         for i = 1:length(genes),
             fprintf(1, '.');
+            if mod(i, 50) == 0,
+                fprintf('%i\n', i);
+            end;
             gg = genes(i);
             gg.tracks = [];
             if ho_offset == 1,
