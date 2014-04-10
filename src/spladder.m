@@ -62,7 +62,7 @@ if ~isfield(CFG, 'spladder_infile'),
             fprintf('All result files already exist.\n');
         else
             if CFG.rproc,
-                jobinfo(job_nr) = rproc('spladder_core', CFG, 80000, CFG.options_rproc, 100*60) ;
+                jobinfo(job_nr) = rproc('spladder_core', CFG, 25000, CFG.options_rproc, 100*60) ;
                 job_nr = job_nr + 1;
             else
                 spladder_core(CFG);

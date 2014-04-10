@@ -126,3 +126,11 @@
 
     CFG.rproc = 0;
     CFG.var_aware = 0;
+    CFG.only_primary = 0;
+
+    %%% define which output files are written
+    CFG.output_txt = 0;
+    CFG.output_confirmed_gff3 = 1;
+    CFG.output_confirmed_txt = 1;
+    CFG.output_filtered_txt = 0;
+    CFG.output_confirmed_tcga = 0;

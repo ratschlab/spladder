@@ -31,6 +31,7 @@ class CRead {
 		bool right;
 		bool reverse;
 		bool is_clipped;
+        bool secondary;
 		
 		void get_coverage(int p_start_pos, int p_end_pos, uint32_t* coverage);
 		int get_last_position();

@@ -1,10 +1,17 @@
 function gg = add_count_tracks(gg, fn_bam, CFG)
 
+if isempty(gg.start),
+    %%% TODO!!!!
+    gg = build_splice_graph(gg);
+    gg.start = min(gg.splicegraph{1}(1, :));
+    gg.stop = max(gg.splicegraph{1}(2, :));
+end;
+
 maxval = inf; 
 if ~iscell(fn_bam)
     fn = fn_bam ;
     if ~isempty(fn),
-        gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, CFG.read_filter, CFG.var_aware);
+        gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, CFG.read_filter, CFG.var_aware, CFG.only_primary);
     else
         gg.tracks = zeros(1, gg.stop-gg.start) ;
         gg.segment_lists={} ;
@@ -20,7 +27,7 @@ else
         conf_filter = CFG.read_filter;
         conf_filter.mincount = 1;
         if ~isempty(fn),
-            gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, conf_filter, CFG.var_aware);
+            gg = add_reads_from_bam(gg, fn, 'exon_track,intron_list', '', maxval, conf_filter, CFG.var_aware, CFG.only_primary);
             if ~isempty(gg.segment_lists{end}),
                 segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
             end;
