@@ -1,12 +1,10 @@
-function [verified, info] = verify_alt_prime(event, genes, counts, CFG)
-% [verified, info] = verify_exon_skip(event, genes, counts, CFG)
+function [verified, info] = verify_alt_prime(event, gene, counts_segments, counts_edges, CFG)
+% [verified, info] = verify_exon_skip(event, gene, counts_segments, counts_edges, CFG)
 %
 
-info.exon_diff_cov = 0;
-info.exon_const_cov = 0;
-info.intron1_conf = 0;
-info.intron2_conf = 0;
-info.valid = 1 ;
+% (1) valid, (2) exon_diff_cov, (3) exon_const_cov
+% (4) intron1_conf, (5) intron2_conf
+info = [1, 0, 0, 0, 0];
 
 verified = [0 0] ;
 
@@ -17,19 +15,19 @@ end;
 
 %%% check validity of exon coordinates (>=0)
 if any([event.exon_alt1 event.exon_alt2] <= 0),
-    info.valid = 0 ;
+    info(1) = 0 ;
     return ;
 end ;
 
 %%% check validity of intron coordinates (only one side is differing)
 if (event.intron1(1) ~= event.intron2(1) && event.intron1(2) ~= event.intron2(2)),
-    info.valid = 0 ;
+    info(1) = 0 ;
     return ;
 end ;
 
 %%% find exons corresponding to event
-sg = genes(event.gene_idx).splicegraph;
-segs = genes(event.gene_idx).segmentgraph;
+sg = gene.splicegraph;
+segs = gene.segmentgraph;
 idx_exon_alt1  = find(sg{1}(1, :) == event.exon_alt1(1) & sg{1}(2, :) == event.exon_alt1(2));
 idx_exon_alt2  = find(sg{1}(1, :) == event.exon_alt2(1) & sg{1}(2, :) == event.exon_alt2(2));
 idx_exon_const = find(sg{1}(1, :) == event.exon_const(1) & sg{1}(2, :) == event.exon_const(2));
@@ -57,32 +55,40 @@ seg_const = intersect(seg_exon_alt2, seg_exon_alt1);
 if isempty(seg_diff),
     seg_diff = setdiff(seg_exon_alt2, seg_exon_alt1);
 end;
-%seg_const = [seg_const, seg_exon_const]; TODO
+seg_const = [seg_const, seg_exon_const];
 
-info.exon_diff_cov = sum(counts(event.gene_idx).segments(seg_diff) .* (segs{1}(2, seg_diff) - segs{1}(1, seg_diff) + 1 - ho_offset)) / (segs{1}(2, seg_diff(end)) - segs{1}(1, seg_diff(1)) + 1 - ho_offset);
-info.exon_const_cov = sum(counts(event.gene_idx).segments(seg_const) .* (segs{1}(2, seg_const) - segs{1}(1, seg_const) + 1 - ho_offset)) / (segs{1}(2, seg_const(end)) - segs{1}(1, seg_const(1)) + 1 - ho_offset);
+seg_lens = segs{1}(2, :) - segs{1}(1, :) + 1 - ho_offset;
 
-if info.exon_diff_cov >= CFG.alt_prime.min_diff_rel_cov * info.exon_const_cov,
+% exon_diff_cov
+info(2) = sum(counts_segments(seg_diff) .* seg_lens(seg_diff)) / sum(seg_lens(seg_diff));
+% exon_const_cov
+info(3) = sum(counts_segments(seg_const) .* seg_lens(seg_const)) / sum(seg_lens(seg_const)); 
+
+if info(2) >= CFG.alt_prime.min_diff_rel_cov * info(3),
     verified(1) = 1;
 end;
 
 %%% check intron confirmations as sum of valid intron scores
 %%% intron score is the number of reads confirming this intron
 if seg_exon_alt1(end) < seg_exon_const(1) && seg_exon_alt2(end) < seg_exon_const(1),
-    idx = find(counts(event.gene_idx).edges(:, 1) == sub2ind(size(segs{3}), seg_exon_alt1(end), seg_exon_const(1)));
-    info.intron1_conf = counts(event.gene_idx).edges(idx, 2);
-    idx = find(counts(event.gene_idx).edges(:, 1) == sub2ind(size(segs{3}), seg_exon_alt2(end), seg_exon_const(1)));
-    info.intron2_conf = counts(event.gene_idx).edges(idx, 2);
+    % intron1_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_alt1(end), seg_exon_const(1)));
+    info(4) = counts_edges(idx, 2);
+    % intron2_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_alt2(end), seg_exon_const(1)));
+    info(5) = counts_edges(idx, 2);
 elseif seg_exon_alt1(1) > seg_exon_const(end) && seg_exon_alt2(1) > seg_exon_const(end),
-    idx = find(counts(event.gene_idx).edges(:, 1) == sub2ind(size(segs{3}), seg_exon_const(end), seg_exon_alt1(1)));
-    info.intron1_conf = counts(event.gene_idx).edges(idx, 2);
-    idx = find(counts(event.gene_idx).edges(:, 1) == sub2ind(size(segs{3}), seg_exon_const(end), seg_exon_alt2(1)));
-    info.intron2_conf = counts(event.gene_idx).edges(idx, 2);
+    % intron1_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_const(end), seg_exon_alt1(1)));
+    info(4) = counts_edges(idx, 2);
+    % intron2_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_const(end), seg_exon_alt2(1)));
+    info(5) = counts_edges(idx, 2);
 else
-    info.valid = 0;
+    info(1) = 0;
     return;
 end;
 
-if min(info.intron1_conf, info.intron2_conf) >= CFG.alt_prime.min_intron_count,
+if min(info(4), info(5)) >= CFG.alt_prime.min_intron_count,
     verified(2) = 1 ;
 end ;
