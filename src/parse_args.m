@@ -83,6 +83,7 @@ if exist('F_SHARE_GENESTRUCT', 'var') == 1, CFG.same_genestruct_for_all_samples 
 if exist('S_REPLICATE_IDX', 'var') == 1, CFG.replicate_idxs = split_string(S_REPLICATE_IDX, ','); end;
 if exist('F_CURATE_ALTPRIME', 'var') == 1, CFG.curate_alt_prime_events = F_CURATE_ALTPRIME; end;
 if exist('F_HALF_OPEN', 'var') == 1, CFG.is_half_open = F_HALF_OPEN; end;
+if exist('F_DETECT_TRUNC', 'var') == 1, CFG.detect_trunc = F_DETECT_TRUNC; end;
 
 %%% open log file, if specified
 if exist('S_LOG_FNAME', 'var') == 1,

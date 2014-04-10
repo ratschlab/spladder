@@ -39,42 +39,68 @@ if ~isfield(CFG, 'spladder_infile'),
     %%% create spladder sub-directory
     [tmp, tmp] = mkdir(CFG.out_dirname,'spladder');
 
+    %%% create truncation sub-directory, if necessary
+    if CFG.detect_trunc,
+        [tmp, tmp] = mkdir(CFG.out_dirname, 'truncations');
+    end;
+
     for idx = idxs,
         CFG_ = CFG;
         if ~strcmp(CFG.merge_strategy, 'merge_bams'),
             CFG.bam_fnames = CFG.bam_fnames(idx);
             CFG.samples = CFG.samples(idx);
-            CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{1});
-        else
-            CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
         end;
-
-        %%% assemble out filename to check if we are already done
-        fn_out = CFG.out_fname;
-        if CFG.do_prune,
-            fn_out = strrep(fn_out, '.mat', '_pruned.mat');
-        end;
-        if CFG.do_gen_isoforms,
-            fn_out = strrep(fn_out, '.mat', '_with_isoforms.mat');
-        end;
-
-        if exist(fn_out, 'file'),
-            fprintf('All result files already exist.\n');
-        else
+        %%% truncation detection mode?
+        if CFG.detect_trunc,
+            if ~strcmp(CFG.merge_strategy, 'merge_bams'),
+                CFG.out_fname = sprintf('%s/truncations/genes_graph_conf%i.%s.tsv', CFG.out_dirname, CFG.confidence_level, CFG.samples{1});
+            else
+                CFG.out_fname = sprintf('%s/truncations/genes_graph_conf%i.%s.tsv', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
+            end;
             if CFG.rproc,
-                jobinfo(job_nr) = rproc('spladder_core', CFG, 25000, CFG.options_rproc, 100*60) ;
+                jobinfo(job_nr) = rproc('detect_truncations', CFG, 25000, CFG.options_rproc, 100*60) ;
                 job_nr = job_nr + 1;
             else
-                spladder_core(CFG);
+                detect_truncations(CFG);
+            end;
+        else
+            %%% spladder output files
+            if ~strcmp(CFG.merge_strategy, 'merge_bams'),
+                CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{1});
+            else
+                CFG.out_fname = sprintf('%s/spladder/genes_graph_conf%i.%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
+            end;
+
+            %%% assemble out filename to check if we are already done
+            fn_out = CFG.out_fname;
+            if CFG.do_prune,
+                fn_out = strrep(fn_out, '.mat', '_pruned.mat');
+            end;
+            if CFG.do_gen_isoforms,
+                fn_out = strrep(fn_out, '.mat', '_with_isoforms.mat');
+            end;
+
+            if exist(fn_out, 'file'),
+                fprintf('All result files already exist.\n');
+            else
+                if CFG.rproc,
+                    jobinfo(job_nr) = rproc('spladder_core', CFG, 25000, CFG.options_rproc, 100*60) ;
+                    job_nr = job_nr + 1;
+                else
+                    spladder_core(CFG);
+                end;
             end;
         end;
-
         CFG = CFG_;
     end;
 
     %%% collect results after parallelization
     if CFG.rproc,
         jobinfo = rproc_wait(jobinfo, 30, 1, 1) ;
+    end;
+
+    if CFG.detect_trunc,
+        return
     end;
 
     %%% merge parts if necessary

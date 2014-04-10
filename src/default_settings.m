@@ -134,3 +134,5 @@
     CFG.output_confirmed_txt = 1;
     CFG.output_filtered_txt = 0;
     CFG.output_confirmed_tcga = 0;
+
+    CFG.detect_trunc = 0;

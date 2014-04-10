@@ -1,8 +1,14 @@
-% written by Georg Zeller & Gunnar Raetsch, Mpi Tuebingen, Germany, 2009
-function [genes, inserted] = insert_truncations(genes, CFG, out_fname)
-% [genes, inserted] = insert_truncations(genes, CFG, out_fname)
+function detect_truncations(CFG)
+% detect_truncations(CFG)
+
+if ~isfield(CFG, 'genes'),
+    load(CFG.anno_fname, 'genes');
+else
+    genes = CFG.genes ;
+end;
 
 inserted.truncation = 0 ;
+
 
 %%% form chunks for quick sorting
 chunks = [[genes.chr_num]', cast([genes.strand]', 'int32'), [genes.start]', [genes.stop]'];
@@ -160,13 +166,11 @@ for j = 1:length(regions)
 	end;
 end;
 
-if nargin > 2,
-    fd_out = fopen(out_fname, 'w');
-    for i = 1:size(truncations_left, 1),
-        fprintf(fd_out, '%s\t%i\tL\n', truncations_left{i, :});
-    end;
-    for i = 1:size(truncations_right, 1),
-        fprintf(fd_out, '%s\t%i\tR\n', truncations_right{i, :});
-    end;
-    fclose(fd_out);
+fd_out = fopen(CFG.out_fname, 'w');
+for i = 1:size(truncations_left, 1),
+    fprintf(fd_out, '%s\t%i\tL\n', truncations_left{i, :});
 end;
+for i = 1:size(truncations_right, 1),
+    fprintf(fd_out, '%s\t%i\tR\n', truncations_right{i, :});
+end;
+fclose(fd_out);
