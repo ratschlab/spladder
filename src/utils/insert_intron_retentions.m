@@ -96,6 +96,7 @@ for j = 1:length(regions)
 		end ;
 		any_added = 0 ;
 		if any(new_retention(:))
+            %%% capture transitive relations: IR btw 1 & 2 and IR btw 2 & 3 --> IR btw 1 & 3
 			new_retention = expm(new_retention) ;
 			while (1),
 				any_added=0 ;
