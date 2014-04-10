@@ -1,13 +1,17 @@
-function write_events_txt(fn_out_txt, strains, events, anno_fn)
-% function write_events_txt(fn_out_txt, strains, events, anno_fn)
+function write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, anno_fn)
+% function write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, anno_fn)
     
     if isempty(events),
         fprintf('No events present.\n');
         return
     end;
 
+    if nargin < 5,
+        event_idx = 1:length(events);
+    end;
+
     anno_names = '';
-    if nargin > 3 && ~isempty(anno_fn),
+    if nargin > 5 && ~isempty(anno_fn),
        load(anno_fn);
        anno = genes;
        [anno_names s_idx] = sort({genes.name});
@@ -18,7 +22,7 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
     fprintf('writing %s events in flat txt format to %s\n', events(1).event_type, fn_out_txt);
 
     fd = fopen(fn_out_txt, 'w+') ;
-    if nargin > 3,
+    if nargin > 5,
         gene_header = sprintf('\tgene_start\tgene_end');
     else
         gene_header = '';
@@ -48,9 +52,22 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
         error(sprintf('Unknown event type: %s\n', events(1).event_type));
     end;
 
-    for i = 1:length(events),
+    %%% prepare chunked loading of count hdf5
+    size_info = h5info(fn_counts, '/event_counts');
+    events_size = size_info.Dataspace.Size;
+    plist = 'H5P_DEFAULT';
+    fid = H5F.open(fn_counts);
+    dset_id = H5D.open(fid,'/event_counts');
+    dims = fliplr([events_size(1:2) 1]);
+    file_space_id = H5D.get_space(dset_id);
+    mem_space_id = H5S.create_simple(3, dims, []);
+    for i = event_idx,
+        %%% load current event-slice from count files
+        H5S.select_hyperslab(file_space_id, 'H5S_SELECT_SET', fliplr([0 0 i - 1]),[], [], dims);
+        counts = H5D.read(dset_id, 'H5ML_DEFAULT', mem_space_id, file_space_id, plist);
+
         fprintf(fd, '%s\t%c\t%s_%i\t%s', events(i).chr, events(i).strand, events(i).event_type, events(i).id, events(i).gene_name{1});
-        if nargin > 3 && ~isempty(anno_names),
+        if nargin > 5 && ~isempty(anno_names),
             a_idx = strmatch(events(i).gene_name{1}, anno_names, 'exact');
             assert(~isempty(a_idx));
             fprintf(fd, '\t%i\t%i', anno(a_idx).start, anno(a_idx).stop);
@@ -60,9 +77,8 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
             fprintf(fd, '\t%i\t%i\t%i\t%i\t%i\t%i', ev.exon_pre_col(1), ev.exon_pre_col(2), ev.exon_col(1), ev.exon_col(2), ...
                     ev.exon_aft_col(1), ev.exon_aft_col(2)) ;
             for j = 1:length(strains),
-                if ev.info(j).valid,
-                    fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i', ev.info(j).exon_pre_cov, ev.info(j).exon_cov, ev.info(j).exon_aft_cov, ...
-                            ev.info(j).exon_pre_exon_conf, ev.info(j).exon_exon_aft_conf, ev.info(j).exon_pre_exon_aft_conf) ;
+                if counts(j, 1),
+                    fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i', counts(j, 3), counts(j, 2), counts(j, 4), counts(j, 5), counts(j, 6), counts(j, 7)) ;
                 else
                     fprintf(fd, '\t-1\t-1\t-1\t-1') ;
                 end ;
@@ -71,8 +87,8 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
             fprintf(fd, '\t%i\t%i\t%i\t%i\t%i\t%i', ev.exon1_col(1), ev.exon1_col(2), ev.intron_col(1), ev.intron_col(2), ...
                     ev.exon2_col(1), ev.exon2_col(2)) ;
             for j = 1:length(strains),
-                if ev.info(j).valid,
-                    fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i', ev.info(j).exon1_cov, ev.info(j).intron_cov, ev.info(j).exon2_cov, ev.info(j).intron_conf) ;
+                if counts(j, 1),
+                    fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i', counts(j, 3), counts(j, 2), counts(j, 4), counts(j, 5)) ;
                 else
                     fprintf(fd, '\t-1\t-1\t-1') ;
                 end ;
@@ -81,9 +97,8 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
             fprintf(fd, '\t%i\t%i\t%i\t%i\t%i\t%i', ev.exon_const_col(1), ev.exon_const_col(2), ev.exon_alt1_col(1), ...
                     ev.exon_alt1_col(2), ev.exon_alt2_col(1), ev.exon_alt2_col(2)) ;
             for j = 1:length(strains),
-                if ev.info(j).valid,
-                    fprintf(fd, '\t%1.1f\t%1.1f\t%i\t%i', ev.info(j).exon_diff_cov, ev.info(j).exon_const_cov, ...
-                            ev.info(j).intron1_conf, ev.info(j).intron2_conf) ;
+                if counts(j, 1),
+                    fprintf(fd, '\t%1.1f\t%1.1f\t%i\t%i', counts(j, 2), counts(j, 3), counts(j, 4), counts(j, 5)) ;
                 else
                     fprintf(fd, '\t-1\t-1\t-1\t-1') ;
                 end ;
@@ -98,9 +113,9 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
             end;
             fprintf(fd, '\t%s\t%s\t%i\t%i', starts, ends, ev.exon_aft_col(1), ev.exon_aft_col(2)) ;
             for j = 1:length(strains),
-                if ev.info(j).valid,
-                    fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i\t%i', ev.info(j).exon_pre_cov, ev.info(j).exons_cov, ev.info(j).exon_aft_cov, ev.info(j).exon_pre_exon_conf, ...
-                            ev.info(j).sum_inner_exon_conf, ev.info(j).num_inner_exon, ev.info(j).exon_exon_aft_conf, ev.info(j).exon_pre_exon_aft_conf) ;
+                if counts(j, 1),
+                    fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i\t%i', counts(j, 2), counts(j, 3), counts(j, 4), counts(j, 5), ...
+                            counts(j, 8), counts(j, 9), counts(j, 6), counts(j, 7)) ;
                 else
                     fprintf(fd, '\t-1\t-1\t-1\t-1\t-1\t-1\t-1') ;
                 end ;
@@ -109,3 +124,7 @@ function write_events_txt(fn_out_txt, strains, events, anno_fn)
         fprintf(fd, '\n') ;
     end ;
     fclose(fd) ;
+    %%% close HDF5 files
+    H5D.close(dset_id);
+    H5F.close(fid);
+

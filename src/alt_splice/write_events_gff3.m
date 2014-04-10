@@ -1,9 +1,13 @@
-function write_events_gff3(fn_out_gff3, events)
-% function write_events_gff3(fn_out_gff3, events)
+function write_events_gff3(fn_out_gff3, events, idx)
+% function write_events_gff3(fn_out_gff3, events, idx)
     
     if isempty(events),
         fprintf('No events present.\n');
         return
+    end;
+
+    if nargin < 3,
+        idx = 1:size(events, 2);
     end;
 
     fprintf('writing %s events in gff3 format to %s\n', events(1).event_type, fn_out_gff3) ;
@@ -12,7 +16,7 @@ function write_events_gff3(fn_out_gff3, events)
     fprintf(fd_out, '##gff-version 3\n') ;
 
     %%% load gene structure
-    for i = 1:size(events, 2),
+    for i = idx,
 
         ev = events(i);
         exons = {};
