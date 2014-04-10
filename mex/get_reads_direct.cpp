@@ -164,6 +164,7 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 	read->left = (b->core.flag & left_flag_mask) >0;
 	read->right = (b->core.flag & right_flag_mask) >0;
 	read->reverse = (b->core.flag & reverse_flag_mask) >0;
+	read->secondary = (b->core.flag & secondary_flag_mask) >0;
 
 	read->start_pos = b->core.pos+1;
 	read->set_strand('0');

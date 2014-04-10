@@ -15,6 +15,9 @@ function event_list = sort_events_by_event(event_list),
         sort_list = [vertcat(event_list.intron_col)];
     elseif isfield(event_list, 'intron1_col') && isfield(event_list, 'intron2_col') && isfield(event_list, 'exon_alt1_col') && isfield(event_list, 'exon_alt2_col') && isfield(event_list, 'exon_const_col'),
         int_tmp = [vertcat(event_list.intron1_col) vertcat(event_list.intron2_col)];
+        %%% keep introns half open for sorting
+        int_tmp(:, 2) = int_tmp(:, 2) + 1;
+        int_tmp(:, 4) = int_tmp(:, 4) + 1;
         sort_list = zeros(size(int_tmp, 1), 3); 
         for i = 1:size(int_tmp, 1),
             sort_list(i, :) = sort(unique(int_tmp(i, :)));

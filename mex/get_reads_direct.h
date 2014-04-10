@@ -13,6 +13,7 @@
 static int left_flag_mask = strtol((char*) "0x40", 0, 0);
 static int right_flag_mask = strtol((char*) "0x80", 0, 0);
 static int reverse_flag_mask = strtol((char*) "0x10", 0, 0);
+static int secondary_flag_mask = strtol((char*) "0x100", 0, 0);
 
 static int subsample = 1000; 
 //static int collapse = 0;

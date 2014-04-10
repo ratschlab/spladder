@@ -64,10 +64,12 @@ function run_merge(CFG)
     end;
 
     %%% count segment graph
-    if CFG.validate_splicegraphs,
-        count_graph_coverage_wrapper(fn_out_val, fn_out_count, CFG);
-    else
-        count_graph_coverage_wrapper(fn_out, fn_out_count, CFG);
+    if ~exist(fn_out_count, 'file'),
+        if CFG.validate_splicegraphs,
+            count_graph_coverage_wrapper(fn_out_val, fn_out_count, CFG);
+        else
+            count_graph_coverage_wrapper(fn_out, fn_out_count, CFG);
+        end;
     end;
 
     if CFG.do_gen_isoforms,

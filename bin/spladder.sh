@@ -40,8 +40,10 @@ function usage () {
                             alignment files) [all R1 - no replicated]
     -L  STRING              label for current experiment [-]
     -S  STRING              reference strain [-]
+    -P  y|n                 only use primary alignments from provided files [n]
     -d  y|n                 use debug mode [n]
     -p  y|n                 use rproc [n]
+    -O  y|n                 annotation is in half-open coordinates
     -V  y|n                 validate splice graph [n]
     -v  y|n                 use verbose output mode [n]
     -A  y|n                 curate alt prime events [y]
@@ -73,7 +75,7 @@ S_ANNO_FNAME=""
 S_OUT_DIRNAME=""
 
 ### parse parameters from command lines
-while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:T:t:n:F:X:h" opt
+while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:O:v:A:x:i:e:E:r:s:T:t:n:F:X:P:h" opt
 do
     case $opt in
     b ) S_BAM_FNAME="$OPTARG" ;;
@@ -90,6 +92,8 @@ do
     d ) F_DEBUG="$OPTARG" ;;
     p ) F_RPROC="$OPTARG" ;;
     V ) F_VALIDATE_SG="$OPTARG" ;;
+    P ) F_ONLY_PRIMARY="$OPTARG" ;;
+    O ) F_HALF_OPEN="$OPTARG" ;;
     v ) F_VERBOSE="$OPTARG" ;;
     A ) F_CURATE_ALTPRIME="$OPTARG" ;;
     x ) F_SHARE_GENESTRUCT="$OPTARG" ;;
@@ -115,7 +119,7 @@ done
 
 ### assemble parameter string
 PARAMS=""
-for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC F_RUN_AS S_AS_TYPES I_READ_LEN S_INFILE
+for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC F_RUN_AS S_AS_TYPES I_READ_LEN S_INFILE F_HALF_OPEN F_ONLY_PRIMARY
 do
     val=$(eval "echo \$${opt}")
     if [ ! -z "$val" ]

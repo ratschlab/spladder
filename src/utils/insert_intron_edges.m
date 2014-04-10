@@ -151,7 +151,7 @@ for i = 1:length(genes)
                     gg.start = genes(i).introns{s}(2, j) + 1; %%% start of presumable exon
                     gg.stop = genes(i).splicegraph{1}(2, idx1__); %%% stop of next exon
                     maxval = inf; 
-                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware);
+                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware, CFG.only_primary);
                     if gg.strand == '-',
                         gg.tracks = gg.tracks(:, end:-1:1) ;
                     end ;
@@ -253,7 +253,7 @@ for i = 1:length(genes)
                     gg.start = genes(i).introns{s}(2, j) + 1; %%% start of presumable exon
                     gg.stop = genes(i).splicegraph{1}(2, idx2__); %%% stop of next exon
                     maxval = inf; 
-                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware);
+                    gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware, CFG.only_primary);
                     if gg.strand == '-',
                         gg.tracks = gg.tracks(:, end:-1:1) ;
                     end ;
