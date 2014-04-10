@@ -7,6 +7,8 @@ else
     genes = CFG.genes ;
 end;
 
+genes = splice_graph(genes, CFG);
+
 inserted.truncation = 0 ;
 
 
