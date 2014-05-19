@@ -48,28 +48,7 @@ function alt_genes_analyze(CFG, event_type)
             load(fn_out);
 
             %%% write strain and gene indices to hdf5
-            h5fid = H5F.create(fn_out_count, 'H5F_ACC_TRUNC', 'H5P_DEFAULT', 'H5P_DEFAULT');
-            type_id = H5T.copy('H5T_C_S1');
-            H5T.set_size(type_id, 'H5T_VARIABLE');
-            space_id = H5S.create_simple(1, [length(CFG.strains)], H5ML.get_constant_value('H5S_UNLIMITED'));
-            plist = H5P.create('H5P_DATASET_CREATE');
-            H5P.set_chunk(plist,2); % 2 strings per chunk
-            dset_id = H5D.create(h5fid, 'strains', type_id, space_id, plist);
-            H5D.write(dset_id, type_id, 'H5S_ALL', 'H5S_ALL','H5P_DEFAULT', CFG.strains);
-            H5S.close(space_id);
-            H5D.close(dset_id);
-
-            space_id = H5S.create_simple(1, [length(event_features)], H5ML.get_constant_value('H5S_UNLIMITED'));
-            dset_id = H5D.create(h5fid, 'event_features', type_id, space_id, plist);
-            H5D.write(dset_id, type_id, 'H5S_ALL', 'H5S_ALL','H5P_DEFAULT', event_features);
-            H5S.close(space_id);
-            H5T.close(type_id);
-            H5D.close(dset_id);
-            H5F.close(h5fid);
-            %h5create(fn_out_count, '/strains', [length(CFG.strains)], 'ChunkSize', min(length(CFG.strains), 50), 'Deflate', 6);
-            %h5write(fn_out_count, '/strains', CFG.strains);
-            %h5create(fn_out_count, '/event_features', [length(event_features)]);
-            %h5write(fn_out_count, '/event_features', event_features);
+            prepare_count_hdf5(CFG, fn_out_count, events_all, event_features);
 
             %%% handle case where we did not find any event of this type
             if isempty([events_all.event_type]),
@@ -110,14 +89,14 @@ function alt_genes_analyze(CFG, event_type)
                                 fprintf('Chunk event %i, strain %i already completed\n', i, j);
                             else
                                 fprintf('Submitting job %i, event chunk %i (%i), strain chunk %i (%i)\n', job_nr, i, length(events_all), j, length(CFG.strains));
-                                %jobinfo(job_nr) = rproc('verify_all_events', PAR, 10000, CFG.options_rproc, 48*60) ;
-                                verify_all_events(PAR);
+                                jobinfo(job_nr) = rproc('verify_all_events', PAR, 10000, CFG.options_rproc, 60) ;
+                                %verify_all_events(PAR);
                                 job_nr = job_nr + 1;
                             end ;
                         end ;
                     end ;
                     
-                    [jobinfo nr_crashed] = rproc_wait(jobinfo, 20, 1, 1) ;
+                    [jobinfo nr_crashed] = rproc_wait(jobinfo, 20, 1, -1) ;
                     
                     %%% open event count file to directly write counts into common hdf5
                     dims = [length(CFG.strains) length(event_features) size(events_all, 2)];
@@ -163,6 +142,29 @@ function alt_genes_analyze(CFG, event_type)
                     events_all = events_all_ ;
                 end ;
                 
+                %%% write more event infos to hdf5
+                if strcmp(event_type, 'exon_skip'),
+                    event_pos = [vertcat(events_all.exon_pre), vertcat(events_all.exon), vertcat(events_all.exon_aft)];
+                elseif strcmp(event_type, 'intron_retention'),
+                    event_pos = [vertcat(events_all.exon1), vertcat(events_all.exon2)];
+                elseif strcmp(event_type, 'alt_3prime') || strcmp(event_type, 'alt_5prime'),
+                    tmp = zeros(length(events_all), 6);
+                    for tt = 1:length(events_all),
+                        ttmp = sortrows([events_all(tt).exon_alt1; events_all(tt).exon_alt2; events_all(tt).exon_const])';
+                        tmp(tt, :) = ttmp(:)';
+                    end;
+                    event_pos = tmp;
+                elseif strcmp(event_type, 'mult_exon_skip'),
+                    tmp = zeros(length(events_all), 2);
+                    for tt = 1:length(events_all),
+                        tmp(tt, 1) = events_all(tt).exons(1, 1);
+                        tmp(tt, 2) = events_all(tt).exons(end, end);
+                    end;
+                    event_pos = [vertcat(events_all.exon_pre), tmp, vertcat(events_all.exon_aft)];
+                end;
+                h5create(fn_out_count, '/event_pos', size(event_pos));
+                h5write(fn_out_count, '/event_pos', event_pos);
+
                 for i = 1:length(events_all),
                     events_all(i).num_verified = sum(events_all(i).verified, 1) ;
                     events_all(i).confirmed = min(events_all(i).num_verified) ;
@@ -180,8 +182,13 @@ function alt_genes_analyze(CFG, event_type)
                 %%% save events
                 secsave(fn_out, {events_all, events_all_strains}, {'events_all', 'events_all_strains'});
                 secsave(fn_out_conf, confirmed_idx, 'confirmed_idx');
-                h5create(fn_out_count, '/conf_idx', [length(confirmed_idx)]);
-                h5write(fn_out_count, '/conf_idx', confirmed_idx);
+                if isempty(confirmed_idx),
+                    h5create(fn_out_count, '/conf_idx', 1);
+                    h5write(fn_out_count, '/conf_idx', -1);
+                else
+                    h5create(fn_out_count, '/conf_idx', [length(confirmed_idx)]);
+                    h5write(fn_out_count, '/conf_idx', confirmed_idx);
+                end;
                 h5create(fn_out_count, '/verified', size(num_verified));
                 h5write(fn_out_count, '/verified', num_verified);
             end;
