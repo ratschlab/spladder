@@ -35,6 +35,12 @@ function [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
                 fprintf('%i\n', i);
             end;
             gg = genes(i);
+            if isempty(gg.splicegraph{1}),
+                gg = build_splice_graph(gg);
+            end;
+            if isempty(gg.segmentgraph{1}),
+                gg = create_segment_graph(gg, CFG);
+            end;
             gg.tracks = [];
             if ho_offset == 1,
                 if gg.strand == '-',
