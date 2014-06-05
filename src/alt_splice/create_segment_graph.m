@@ -17,6 +17,7 @@ function genes = create_segment_graph(genes, CFG),
                 segments = [segments, [breakpoints(j-1); breakpoints(j) - ho_offset]];
             end;
         end;
+        sg(2, :) = sg(2, :) - ho_offset;
         %%% match nodes to segments
         seg_match = [];
         for j = 1:size(sg, 2),
