@@ -84,7 +84,7 @@ for j = 1:length(regions)
 					idx = [gg.splicegraph{1}(2, k) + 1:gg.splicegraph{1}(1, l) - 1] - gg.start + 1 ;
 					icov = sum(gg.tracks(:, idx), 1) ;
                     %%% check if left exon can be extended into the intron 
-                    if size(idx, 2) > 10 && mean(gg.exon_coverage(k)) > 1 && mean(icov(1:10)) > 0.75 * mean(gg.exon_coverage(k)),
+                    if size(idx, 2) > 10 && mean(gg.exon_coverage(k)) > CFG.min_truncation_cov && mean(icov(1:10)) > 0.75 * mean(gg.exon_coverage(k)),
                         %%% find end point
                         tmp = conv(icov, ones(1, 10)/10);
                         idx2 = find(tmp(5:end-5) < 0.1 * gg.exon_coverage(k), 1, 'first');
@@ -105,7 +105,7 @@ for j = 1:length(regions)
                         end;
                     end;
                     %%% check if right exon can be extended into the intron 
-                    if size(idx, 2) > 10 && mean(gg.exon_coverage(l)) > 1 && mean(icov(end-10:end)) > 0.75 * mean(gg.exon_coverage(l)),
+                    if size(idx, 2) > 10 && mean(gg.exon_coverage(l)) > CFG.min_truncation_cov && mean(icov(end-10:end)) > 0.75 * mean(gg.exon_coverage(l)),
                         %%% find end point
                         tmp = conv(icov, ones(1, 10)/10);
                         idx2 = find(tmp(5:end-5) < 0.1 * mean(gg.exon_coverage(l)), 1, 'last');

@@ -84,6 +84,7 @@ if exist('S_REPLICATE_IDX', 'var') == 1, CFG.replicate_idxs = split_string(S_REP
 if exist('F_CURATE_ALTPRIME', 'var') == 1, CFG.curate_alt_prime_events = F_CURATE_ALTPRIME; end;
 if exist('F_HALF_OPEN', 'var') == 1, CFG.is_half_open = F_HALF_OPEN; end;
 if exist('F_DETECT_TRUNC', 'var') == 1, CFG.detect_trunc = F_DETECT_TRUNC; end;
+if exist('F_COUNT_INT_COV', 'var') == 1, CFG.count_intron_cov = F_COUNT_INT_COV; end;
 
 %%% open log file, if specified
 if exist('S_LOG_FNAME', 'var') == 1,
@@ -133,7 +134,7 @@ if exist('F_RPROC', 'var') == 1,
     CFG.rproc = F_RPROC;
     CFG.options_rproc = struct();
     CFG.options_rproc.mem_req_resubmit  = [40000 80000 100000];
-    CFG.options_rproc.time_req_resubmit = [100*60 100*60 200*60];
+    CFG.options_rproc.time_req_resubmit = [24*60 48*60 96*60];
     CFG.options_rproc.resubmit = 3;
     CFG.options_rproc.priority = 100;
     CFG.options_rproc.addpaths = CFG.paths;

@@ -136,3 +136,5 @@
     CFG.output_confirmed_tcga = 0;
 
     CFG.detect_trunc = 0;
+    CFG.count_intron_cov = 0;
+    CFG.min_truncation_cov = 5;
