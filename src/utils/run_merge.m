@@ -16,11 +16,6 @@ function run_merge(CFG)
 
     fn_out = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
     fn_out_val = sprintf('%s/spladder/genes_graph_conf%i.%s%s.validated.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
-    if CFG.validate_splicegraphs,
-        fn_out_count = sprintf('%s/spladder/genes_graph_conf%i.%s%s.validated.count.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
-    else
-        fn_out_count = sprintf('%s/spladder/genes_graph_conf%i.%s%s.count.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
-    end;
 
     if ~exist(fn_out, 'file'),
         if ~CFG.rproc,
@@ -61,15 +56,6 @@ function run_merge(CFG)
     %%% generate validated version of splice graph
     if CFG.validate_splicegraphs && ~exist(fn_out_val, 'file'),
         filter_by_edgecount(CFG, fn_out, fn_out_val);
-    end;
-
-    %%% count segment graph
-    if ~exist(fn_out_count, 'file'),
-        if CFG.validate_splicegraphs,
-            count_graph_coverage_wrapper(fn_out_val, fn_out_count, CFG);
-        else
-            count_graph_coverage_wrapper(fn_out, fn_out_count, CFG);
-        end;
     end;
 
     if CFG.do_gen_isoforms,
