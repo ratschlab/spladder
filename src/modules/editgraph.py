@@ -240,6 +240,8 @@ def filter_by_edgecount(genes, CFG):
 
     ### filter splicegraphs by support count over samples
     for i in len(genes):
+        u_exons = unique_rows(sp.vstack([x.exons for x in genes]))
+        (tmp, tmp, k_idx) = intersect_rows(u_exons, genes[i].splicegraph.vertices.T)
         k_idx = sp.where(genes[i].splicegraph.edges.sum(axis = 1) == 0)[0]
         genes[i].splicegraph.edges = (genes[i].edge_count >= CFG['sg_min_edge_count'])
         ### remove all exons that have no incoming or outgoing edges (caused by validation, keep single exon transcripts that occured before)
