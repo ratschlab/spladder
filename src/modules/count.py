@@ -1,4 +1,6 @@
 import cPickle
+import math
+import h5py
 
 def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 # [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
@@ -20,7 +22,11 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
         ### and the splice junctions in the splice graph
         for i in range(genes.shape[0]):
             print '.',
+            if i % 50 == 0:
+                print '%i' % i
             gg = genes[i].copy()
+            if gg.segmentgraph is None:
+                gg = create_segment_graph(gg, CFG)
             gg.start = gg.segmentgraph.segments.ravel().min()
             gg.stop = gg.segmentgraph.segments.ravel().max()
 
@@ -63,12 +69,23 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
         genes = create_segment_graph(genes, CFG)
         cPickle.dump(open(fname_in, 'w'), genes, -1)
 
+    counts = dict()
     if CFG['rproc']:
         for s_idx in range(CFG['strains'].shape[0]):
             print '%i/%i\r' % (j, CFG['strains'].shape[0])
-            counts = count_graph_coverage(genes, CFG['list_bam'][s_idx], CFG)
+            counts_tmp = count_graph_coverage(genes, CFG['list_bam'][s_idx], CFG)
+        for c in range(counts_tmp.shape[1]):
+            counts['segments'].append(sp.hstack([x.segments.T for x in counts_tmp[:, c]]))
+            counts['seg_pos'].append(sp.hstack([x.seg_pos.T for x in counts_tmp[:, c]]))
+            counts['gene_ids_segs'].append(sp.ones((counts_tmp[0, c].seg_pos.shape[1],), dtype='int') * c)
+            tmp = sp.hstack([x.edges for x in counts_tmp[:, c]])
+            if tmp.shape[0] > 0:
+                counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
+                counts['gene_ids_edges'].append(sp.ones((tmp.shape[0],), dtype='int') * c)
     else:
-        chunksize = 10
+        ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
+        chunksize = max(1, math.floor(10000 / len(CFG['strains'])));
+
         jobinfo = rproc_empty(0)
         PAR = dict()
         PAR['CFG'] = CFG
@@ -83,9 +100,9 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                 PAR['fn_bam'] = CFG['bam_fnames']
                 PAR['fn_out'] = fn
                 PAR['CFG'] = CFG
-                jobinfo.append(rproc('count_graph_coverage', PAR, 30000, CFG['options_rproc'], 48*60))
+                jobinfo.append(rproc('count_graph_coverage', PAR, 30000, CFG['options_rproc'], 60))
 
-        jobinfo = rproc_wait(jobinfo, 30, 1, 1) ;
+        jobinfo = rproc_wait(jobinfo, 30, 1, -1)
 
         ### merge results
         counts = sp.zeros((CFG['strains'].shape[0], genes.shape[0]), dtype='object')
@@ -96,7 +113,27 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                 print >> sys.stderr, 'ERROR: Not all chunks in counting graph coverage completed!'
                 sys.exit(1)
             else:
-                counts_ = cPickle.load(open(fn, 'r'))
-                counts[:, c_idx:cc_idx] = counts_
+                counts_tmp = cPickle.load(open(fn, 'r'))
+                for c in range(counts_tmp.shape[1]):
+                    counts['segments'].append(sp.hstack([x.segments.T for x in counts_tmp[:, c]]))
+                    counts['seg_pos'].append(sp.hstack([x.seg_pos.T for x in counts_tmp[:, c]]))
+                    counts['gene_ids_segs'].append(sp.ones((counts_tmp[0, c].seg_pos.shape[1],), dtype='int') * c)
+                    tmp = sp.hstack([x.edges for x in counts_tmp[:, c]])
+                    if tmp.shape[0] > 0:
+                        counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
+                    counts['gene_ids_edges'].append(sp.ones((tmp.shape[0],), dtype='int') * c)
 
-    cPickle.dump(open(fname_out, 'w'), counts, -1)
+    for key in counts:
+        counts[key] = sp.vstack(counts[key])
+    counts['edge_idx'] = counts['edges'][:, 0]
+    counts['edges'] = counts['edges'][:, 1:]
+    counts['seg_len'] = sp.array([x.segmentgraph.segments[:, 1] - x.segmentgraph.segments[:, 0] for x in genes])
+
+    ### write result data to hdf5
+    h5fid = h5py.File(fname_out, 'w')
+    h5fid.create_dataset(name='gene_names', data=sp.array([x.name for x in genes], dtype='str'))
+    h5fid.create_dataset(name='strains', data=CFG['strains'])
+    for key in counts:
+        h5fid.create_dataset(name=key, data=counts[key])
+    h5fid.close()
+
