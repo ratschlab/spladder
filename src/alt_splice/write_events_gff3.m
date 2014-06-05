@@ -56,6 +56,7 @@ function write_events_gff3(fn_out_gff3, events, idx)
         if ~strcmp(ev.event_type, 'intron_ret') && ~strcmp(ev.event_type, 'intron_retention'),
             fprintf(fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1\n', ev.chr, ev.event_type, ...
                     exons{o_idx(1)}(2, 1), exons{o_idx(1)}(2, 2), ev.strand, name) ;
+        end;
         if strcmp(ev.event_type, 'exon_skip'),
             fprintf(fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1\n', ev.chr, ev.event_type, ...
                     exons{o_idx(1)}(3, 1), exons{o_idx(1)}(3, 2), events(1, i).strand, name) ;
@@ -66,6 +67,5 @@ function write_events_gff3(fn_out_gff3, events, idx)
                 exons{o_idx(2)}(1, 1), exons{o_idx(2)}(1, 2), ev.strand, name) ;
         fprintf(fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2\n', ev.chr, ev.event_type, ...
                 exons{o_idx(2)}(2, 1), exons{o_idx(2)}(2, 2), ev.strand, name) ;
-        end;
     end ;
     fclose(fd_out) ;
