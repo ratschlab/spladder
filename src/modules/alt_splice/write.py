@@ -191,6 +191,6 @@ def write_events_gff3(fn_out_gff3, events):
         for i in range(ev.exons1.shape[0]):
             print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1' % (ev.chr, ev.event_type, ev.exons1[i, 0], exons1[i, 1], ev.strand, name)
         print >> fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso2;Parent=%s;GeneName="%s"' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, ev.gene_name[0])
-        for i in range(ev.exons1.shape[0]):
+        for i in range(ev.exons2.shape[0]):
             print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[i, 0], exons2[i, 1], ev.strand, name)
     fd_out.close()
