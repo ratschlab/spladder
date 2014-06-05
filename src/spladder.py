@@ -95,7 +95,16 @@ def spladder():
     if not CFG['no_reset_conf']:
         CFG = settings.set_confidence_level(CFG)
 
-    if not 'spladder_infile' in CFG:
+    ### do not compute components of merged set, if result file already exists
+    fn_out_merge = '' 
+    if CFG['merge_strategy'] == 'merge_graphs':
+        prune_tag = ''
+        if CFG['do_prune']:
+            prune_tag = '_pruned'
+        fn_out_merge = '%s/spladder/genes_graph_conf%i.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+
+
+    if not 'spladder_infile' in CFG and not os.path.exists(fn_out_merge):
         ### iterate over files, if merge strategy is single
         if CFG['merge_strategy'] in ['single', 'merge_graphs']:
             idxs = range(len(CFG['samples']))
