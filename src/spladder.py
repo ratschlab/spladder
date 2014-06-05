@@ -61,6 +61,8 @@ def parse_options(argv):
     optional.add_option('-T', '--extract_as', dest='extract_as', metavar='y|n', help='extract alternative splicing events [y]', default='y')
     optional.add_option('-X', '--var_aware', dest='var_aware', metavar='y|n', help='alignment files are variation aware (presence of XM and XG tags) [n]', default='n')
     optional.add_option('-t', '--event_types', dest='event_types', metavar='y|n', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip')
+    optional.add_option('-C', '--truncations', dest='truncations', metavar='y|n', help='truncation detection mode [n]', default='n')
+    optional.add_option('-C', '--intron_cov', dest='intron_cov', metavar='y|n', help='count intron coverage [n]', default='n')
     optional.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     #optional.add_option('-', '--', dest='', metavar='y|n', help='', default=False)
     parser.add_option_group(required)
@@ -152,7 +154,7 @@ def spladder():
 
         ### collect results after parallelization
         if CFG['rproc']:
-            jobinfo = rproc_wait(jobinfo, 30, 1, 1)
+            jobinfo = rproc_wait(jobinfo, 30, 1, -1)
 
         ### merge parts if necessary
         if CFG['merge_strategy'] == 'merge_graphs':

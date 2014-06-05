@@ -129,6 +129,9 @@ def default_settings():
     CFG['rproc'] = 0
     CFG['var_aware'] = 0
 
+    CFG['count_intron_cov'] = False
+    CFG['min_truncation_cov'] = 5
+
     return CFG
 
 
@@ -186,6 +189,11 @@ def parse_args(options):
     else:
         print >> sys.stderr, 'ERROR: option var_aware should have value y or n, but has %s' % options.var_aware
         sys.exit(1)
+
+    if options.intron_cov in ['n', 'y']:
+        CFG['count_intron_cov'] = (options.intron_cov == 'y')
+    else:
+        print >> sys.stderr, 'ERROR: option intron_cov should have value y or n, but has %s' % options.intron_cov
 
     CFG['insert_intron_iterations'] = options.iterations
     CFG['confidence_level'] = options.confidence
