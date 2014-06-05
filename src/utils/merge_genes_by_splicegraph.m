@@ -144,11 +144,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
                     genes2(g_idx).splicegraph{2} = splice1_ | splice2_;
                     genes2(g_idx).splicegraph{1} = um_graph';
                     genes2(g_idx).splicegraph{3} = [[sum(tril(genes2(g_idx).splicegraph{2}), 2) == 0]'; [sum(triu(genes2(g_idx).splicegraph{2}), 2) == 0]'];
-                    try
-                        genes2(g_idx).edge_count = edgecnt + splice1_;
-                    catch
-                        keyboard;
-                    end;
+                    genes2(g_idx).edge_count = edgecnt + splice1_;
                 end;
             %%% we did not find the gene name --> append new gene to genes2
             elseif g_idx > length(genes2) || strlexcmp(genes2(g_idx).name, genes(j).name) > 0,
