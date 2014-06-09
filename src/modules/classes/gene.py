@@ -15,6 +15,7 @@ class Gene:
         self.transcripts = []
         self.source = source
         self.splicegraph = None
+        self.segmentgraph = None
         self.gene_type=gene_type
         self.is_alt = None
         self.is_alt_spliced = None

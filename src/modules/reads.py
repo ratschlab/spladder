@@ -99,6 +99,9 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
     pair = ('pair_coverage' in types)
     clipped = False
 
+    if type(blocks).__module__ != 'numpy':
+        blocks = sp.array([blocks])
+
     for b in range(blocks.shape[0]):
 
         introns = None
@@ -128,22 +131,22 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
         # add requested data to block
         tracks = sp.zeros((0, block_len))
         intron_list = []
-        for type in types:
+        for ttype in types:
             ## add exon track to block
             ##############################################################################
-            if type == 'exon_track':
+            if ttype == 'exon_track':
                 tracks = sp.r_[tracks, coverage] 
             ## add mapped exon track to block
             ##############################################################################
-            elif type == 'mapped_exon_track':
+            elif ttype == 'mapped_exon_track':
                 tracks = sp.r_[tracks, mapped_coverage] 
             ## add spliced exon track to block
             ##############################################################################
-            elif type == 'spliced_exon_track':
+            elif ttype == 'spliced_exon_track':
                 tracks = sp.r_[tracks, spliced_coverage] 
             ## add intron coverage track to block
             ##############################################################################
-            elif type == 'intron_track':
+            elif ttype == 'intron_track':
                 intron_coverage = sp.zeros((1, block_len))
                 if introns.shape[0] > 0:
                     for k in range(introns.shape[0]):
@@ -153,7 +156,7 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
                 tracks = sp.r_[tracks, intron_coverage] 
             ## compute intron list
             ##############################################################################
-            elif type == 'intron_list':
+            elif ttype == 'intron_list':
                 if introns.shape[0] > 0:
                     ### compute number of occurences
                     introns = sort_rows(introns)
@@ -174,7 +177,7 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
                     intron_list.append(sp.zeros((0, 3), dtype='int'))
             ## add polya signal track
             ##############################################################################
-            elif type == 'polya_signal_track':
+            elif ttype == 'polya_signal_track':
                 ### get only end positions of reads
                 shp = polya_signals
                 end_idx = shp[0] - 1 - polya_signals[:, ::-1].argmax(axis = 1)
@@ -182,14 +185,14 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
                 tracks = sp.r_[tracks, polya_signals.sum(axis = 0)]
             ## add end signal track
             ##############################################################################
-            elif type == 'end_signal_track':
+            elif ttype == 'end_signal_track':
                 ### get only end positions of reads
                 shp = end_signals
                 end_idx = shp[0] - 1 - end_signals[:, ::-1].argmax(axis = 1)
                 end_signals = scipy.sparse.coo_matrix((sp.ones((shp[1],)), (sp.array(range(shp[1])), end_idx)), shape = shp)
                 tracks = sp.r_[tracks, end_signals.sum(axis = 0)]
             else: 
-                print >> sys.stderr, 'ERROR: unknown type of data requested: %s' % type
+                print >> sys.stderr, 'ERROR: unknown type of data requested: %s' % ttype
     
     if len(types) == 1 and types[0] == 'intron_list':
         return intron_list

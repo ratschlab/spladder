@@ -565,7 +565,7 @@ def insert_intron_edges(genes, CFG):
                 ### check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
                 if idx2__.shape[0] == 0:
                     idx2__ = sp.argmax(genes[i].splicegraph.vertices[0, :] > genes[i].introns[s][j, 1])
-                    if len(idx2__) > 0 and idx2__.shape[0] > 0:
+                    if len(idx2__.shape) > 0 and idx2__.shape[0] > 0:
                         gg = genes[i]
                         gg.strand = strands[s]
                         gg.strands = strands[s]
@@ -676,7 +676,7 @@ def insert_intron_edges(genes, CFG):
         unused_introns = sp.array(unused_introns, dtype='int')
         idx_unused = sp.where((genes[i].introns[s][unused_introns, 1] >= genes[i].start) & (genes[i].introns[s][unused_introns, 0] <= genes[i].stop))[0]
         unused_introns = unused_introns[idx_unused]
-        if unused_introns:
+        if unused_introns.shape[0] > 0:
             print 'Warning: unused introns: %s' % str(unused_introns)
         num_unused_introns[i] += unused_introns.shape[0]
 

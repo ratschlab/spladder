@@ -1,6 +1,7 @@
 import cPickle
 import scipy as sp
 import os
+import pdb
 
 from .events import *
 from .detect import *

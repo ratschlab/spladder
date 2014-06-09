@@ -68,7 +68,7 @@ def default_settings():
     CFG['do_infer_splice_graph'] = 0
 
     CFG['insert_intron_iterations'] = 5
-    CFG['merge_strategy'] = 'merge_bams' ### alternatives are: merge_graphs, single, merge_all
+    CFG['merge_strategy'] = 'merge_graphs' ### alternatives are: merge_graphs, single, merge_all
     CFG['confidence_level'] = 3
     CFG['validate_splicegraphs'] = 0
     CFG['same_genestruct_for_all_samples'] = 1
@@ -265,6 +265,7 @@ def parse_args(options):
         else:
             CFG['samples'].append(CFG['bam_fnames'][i].split('/')[-1].replace('.bam', ''))
         CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))
+    CFG['strains'] = sp.array(CFG['strains'])
 
     ### rproc options
     if options.parallel == 'y':

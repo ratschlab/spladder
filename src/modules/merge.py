@@ -4,6 +4,7 @@ import sys
 import cPickle
 
 from .utils import *
+from .count import count_graph_coverage_wrapper
 
 def merge_chunks_by_splicegraph(CFG, chunksize=None):
 # merge_chunks_by_splicegraph(CFG, chunksize) 

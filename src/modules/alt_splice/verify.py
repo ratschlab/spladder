@@ -1,3 +1,11 @@
+import scipy as sp
+import cPickle
+import h5py
+import sys
+import os
+
+from ..utils import *
+
 def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # [verified, info] = verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG) 
 
@@ -28,8 +36,8 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
         seg_exons.append(tmp)
     
     ### find segments corresponding to exons
-    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[0])
-    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[0])
+    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
     seg_exons_u = sp.sort(sp.unique([x for sublist in seg_exons for x in sublist]))
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
@@ -42,7 +50,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     info[2] = sp.sum(counts_segments[seg_exons_u] * seg_lens[seg_exons_u]) / sp.sum(seg_lens[seg_exons_u])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
-    if info[2] >= CFG['mult_exon_skip']['min_skip_rel_cov'] * (info[1] + info[3]) / 2 
+    if info[2] >= CFG['mult_exon_skip']['min_skip_rel_cov'] * (info[1] + info[3]) / 2:
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -101,8 +109,8 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     idx_exon2  = sp.where((sg.segments[0, :] == event.exons1[1, 0]) & (sg.segments[1, :] == event.exons1[1, 1]))[0]
 
     ### find segments corresponding to exons
-    seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[0])
-    seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[0])
+    seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
+    seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
     seg_all = sp.arange(seg_exon1[0], seg_exon2[-1])
 
     seg_intron = sp.setdiff1d(seg_all, seg_exon1)
@@ -166,9 +174,9 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     idx_exon_aft = sp.where((sg.vertices[0, :] == event.exons2[2, 0]) & (sg.vertices[1, :] == event.exons2[2, 1]))[0]
 
     ### find segments corresponding to exons
-    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[0])
-    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[0])
-    seg_exon = sp.sort(sp.where(segs.seg_match[idx_exon, :])[0])
+    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
+    seg_exon = sp.sort(sp.where(segs.seg_match[idx_exon, :])[1])
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
@@ -180,7 +188,7 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     info[1] = sp.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /sp.sum(seg_lens[seg_exon])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
-    if info[1] >= CFG['exon_skip']['min_skip_rel_cov'] * (info[2] + info[3]) / 2 
+    if info[1] >= CFG['exon_skip']['min_skip_rel_cov'] * (info[2] + info[3]) / 2: 
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -230,27 +238,27 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     if idx_exon11.shape[0] == 0:
         segs_exon11 = sp.where((segs.segments[0, :] >= event.exons1[0, 0]) & (segs.segments[1, :] <= event.exons1[0, 1]))[0]
     else:
-        segs_exon11 = sp.where(segs.seg_match[idx_exon11, :] > 0)[0]
+        segs_exon11 = sp.where(segs.seg_match[idx_exon11, :])[1]
     idx_exon12 = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
     if idx_exon12.shape[0] == 0:
         segs_exon12 = sp.where((segs.segments[0, :] >= event.exons1[1, 0]) & (segs.segments[1, :] <= event.exons1[1, 1]))[0]
     else:
-        segs_exon12 = sp.where(segs.seg_match[idx_exon12, :] > 0)[0]
+        segs_exon12 = sp.where(segs.seg_match[idx_exon12, :])[1]
     idx_exon21 = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
     if idx_exon21.shape[0] == 0:
         segs_exon21 = sp.where((segs.segments[0, :] >= event.exons2[0, 0]) & (segs.segments[1, :] <= event.exons2[0, 1]))[0]
     else:
-        segs_exon21 = sp.where(segs.seg_match[idx_exon21, :] > 0)[0]
+        segs_exon21 = sp.where(segs.seg_match[idx_exon21, :])[1]
     idx_exon22 = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
     if idx_exon22.shape[0] == 0:
         segs_exon22 = sp.where((segs.segments[0, :] >= event.exons2[1, 0]) & (segs.segments[1, :] <= event.exons2[1, 1]))[0]
     else:
-        segs_exon22 = sp.where(segs.seg_match[idx_exon22, :] > 0)[0]
+        segs_exon22 = sp.where(segs.seg_match[idx_exon22, :] > 0)[1]
 
-    assert(idx_exon11.shape[0] > 0)
-    assert(idx_exon12.shape[0] > 0)
-    assert(idx_exon21.shape[0] > 0)
-    assert(idx_exon22.shape[0] > 0)
+    assert(segs_exon11.shape[0] > 0)
+    assert(segs_exon12.shape[0] > 0)
+    assert(segs_exon21.shape[0] > 0)
+    assert(segs_exon22.shape[0] > 0)
 
     if sp.all(segs_exon11 == segs_exon21):
         seg_exon_const = segs_exon11
@@ -280,16 +288,15 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     if info[1] >= CFG['alt_prime']['min_diff_rel_cov'] * info[2]:
         verified[0] = 1
 
-    if exon_diff_coverage >= cfg['alt_prime']['min_diff_rel_cov'] * exon_const_coverage:
-        verified[0] = 1
-
     ### check intron confirmations as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # intron1_conf 
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], segs.seg_edges.shape))[0]
+    assert(idx.shape[0] > 0)
     info[3] = counts_edges[idx, 1]
     # intron2_conf 
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], segs.seg_edges.shape))[0]
+    assert(idx.shape[0] > 0)
     info[4] = counts_edges[idx, 1]
 
     if min(info[3], info[4]) >= CFG['alt_prime']['min_intron_count']:
@@ -298,7 +305,7 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     return (verified, info)
 
 
-def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=None):
+def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=None, out_fn=None):
     # (ev, counts) = verify_all_events(ev, strain_idx, list_bam, event_type, CFG) ;
 
     ### set parameters if called by rproc
@@ -315,15 +322,21 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
     ### verify the events if demanded
     if CFG['verify_alt_events']:
 
-        fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
+        prune_tag = ''
+        if CFG['do_prune']:
+            prune_tag = '_pruned'
+        validate_tag = ''
+        if CFG['validate_splicegraphs']:
+            validate_tag = '.validated'
+
+        genes = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
+
+        fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
         ### load count index data from hdf5
         IN = h5py.File(fn_count, 'r')
         gene_ids_segs = IN['gene_ids_segs'][:]
         gene_ids_edges = IN['gene_ids_edges'][:]
 
-        fn_genes = '%s/spladder/genes_graph_conf%i.%s%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
-        genes = cPickle.load(open(fn_genes, 'r'))
-        
         ### sort events by gene idx
         s_idx = sp.argsort([x.gene_idx for x in ev])
         ev = ev[s_idx]
@@ -341,6 +354,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
 
         gr_idx_segs = 1
         gr_idx_edges = 1
+        counts = []
         for i in range(ev.shape[0]):
             g_idx = ev[i].gene_idx
 
@@ -365,23 +379,23 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                 print '%i/%i\r' % (j, len(strain_idx))
                # ev_tmp.subset_strain(s_idx) ### TODO 
                 if event_type == 'exon_skip':
-                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.r_[edge_idx edges[:, s_idx]], CFG)
-                    ev[i].verified[j] = ver
-                    counts[j, :] = info
+                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
                 elif event_type in ['alt_3prime', 'alt_5prime']:
-                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.r_[edge_idx edges[:, s_idx]], CFG)
-                    ev[i].verified[j] = ver
-                    counts[j, :] = info
+                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
                 elif event_type == 'intron_retention':
-                    ver, info_ = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.r_[edge_idx edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
-                    ev[i].verified[j] = ver
-                    counts[j, :] = info
+                    ver, info_ = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
                 elif event_type == 'mult_exon_skip':
-                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.r_[edge_idx edges[:, s_idx]], CFG)
-                    ev[i].verified[j] = ver
-                    counts[j, :] = info
+                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+
+                ev[i].verified.append(ver)
+                if j == 0:
+                    counts.append(sp.array([info]))
+                else:
+                    counts[-1] = sp.r_[counts[-1], sp.array([info])]
+            ev[i].verified = sp.array(ev[i].verified)
 
         IN.close()
+        counts = sp.dstack(counts)
     ev = ev[old_idx]
 
     if out_fn is not None:

@@ -2,6 +2,11 @@ import sys
 import os
 import scipy as sp
 import cPickle
+import h5py
+
+### local imports
+from verify import *
+from write import *
 
 def _prepare_count_hdf5(CFG, OUT, events, event_features):
     
@@ -15,11 +20,13 @@ def _prepare_count_hdf5(CFG, OUT, events, event_features):
         validate_tag = ''
         if CFG['validate_splicegraphs']:
             validate_tag = '.validated'
-        genes = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy,'] validate_tag, prune_tag)))
+        genes = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
 
     ### write strain and gene indices to hdf5
     OUT.create_dataset(name='strains', data=CFG['strains'])
-    OUT.create_dataset(name='event_features', data=event_features)
+    feat = OUT.create_group(name='event_features')
+    for f in event_features:
+        feat.create_dataset(name=f, data=event_features[f])
     OUT.create_dataset(name='gene_names', data=sp.array([x.name for x in genes], dtype='str'))
     OUT.create_dataset(name='gene_chr', data=sp.array([x.chr for x in genes], dtype='str'))
     OUT.create_dataset(name='gene_strand', data=sp.array([x.strand for x in genes], dtype='str'))
@@ -58,7 +65,7 @@ def analyze_events(CFG, event_type):
         event_features = {'exon_skip':7, 'alt_3prime':5, 'alt_5prime':5, 'intron_retention':6, 'mult_exon_skip':9}
 
         ### check, if confirmed version exists
-        if not os.path.exists(fn_out_info):
+        if not os.path.exists(fn_out_count):
 
             events_all_ = cPickle.load(open(fn_out, 'r'))
             if isinstance(events_all_, tuple):
@@ -66,23 +73,26 @@ def analyze_events(CFG, event_type):
                 events_all_strains = events_all_[1]
             else:
                 events_all = events_all_
+                events_all_strains = None
 
+            ### add strain information, so we can do two way chunking!
+            if events_all_strains is None:
+                events_all_strains = CFG['strains']
+                
             ### handle case where we did not find any event of this type
-            if len([1 for x in events_all if x.event_type == event_type]) == 0:
+            if sp.sum([x.event_type == event_type for x in events_all]) == 0:
                 OUT = h5py.File(fn_out_count, 'w')
                 OUT.create_dataset(name='event_counts', data=[0])
                 _prepare_count_hdf5(CFG, OUT, events_all, event_features)
                 OUT.close()
+                confirmed_idx = sp.array([], dtype='int')
             else:
-                ### add strain information, so we can do two way chunking!
-                if events_all_strains is None:
-                    events_all_strains = CFG['strains']
-                    cPickle.dump((events_all, events_all_strains), open(fn_out, 'w'), -1)
-                
                 if not CFG['rproc']:
                     OUT = h5py.File(fn_out_count, 'w')
-                    events_all = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'][replicate, :], event_type, CFG)
-                    OUT.create_dataset(name='event_counts', data=sp.array([x.info for x in event_all), compression='gzip')
+                    #events_all = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'][replicate, :], event_type, CFG)
+                    # TODO handle replicate setting
+                    (events_all, counts) = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
+                    OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
                     _prepare_count_hdf5(CFG, OUT, events_all, event_features)
                 else:
                     jobinfo = rproc_empty()
@@ -95,7 +105,9 @@ def analyze_events(CFG, event_type):
                             idx_strains = sp.arang(j, min(j + chunk_size_strains - 1, len(CFG['strains'])))
                             PAR['ev'] = events_all[idx_events]
                             PAR['strain_idx'] = idx_strains
-                            PAR['list_bam'] = CFG['bam_fnames'][replicate, :]
+                            #PAR['list_bam'] = CFG['bam_fnames'][replicate, :]
+                            # TODO handle replicate setting
+                            PAR['list_bam'] = CFG['bam_fnames']
                             PAR['out_fn'] = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.pickle' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
                             PAR['event_type'] = event_type
                             PAR['CFG'] = CFG
@@ -121,20 +133,19 @@ def analyze_events(CFG, event_type):
                             if not os.path.exists(out_fn):
                                 print >> sys.stderr, 'ERROR: not finished %s' % out_fn
                                 sys.exit(1)
-                            ev = cPickle.load(open(out_fn, 'r'))
+                            ev, counts = cPickle.load(open(out_fn, 'r'))
                             if j == 0:
                                 ev_ = ev
                             else:
                                 for jj in range(len(ev_)):
                                     ev_[jj].verified[idx_strains, :] = ev[jj].verified
-                                    ev_[jj].info[idx_strains] = ev[jj].info
                                     
                         if i == 0:
-                            OUT.create_dataset(name='event_counts', data=[x.info for x in ev_], maxshape=(len(CFG['strains']), len(event_features), None))
+                            OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(CFG['strains']), len(event_features), None))
                         else:
                             tmp = OUT['event_counts'].shape
                             OUT['event_counts'].resize((tmp[0], tmp[1], tmp[2] + len(ev_)))
-                            OUT['event_counts'][:, :, tmp[2]:] = [x.info for x in ev_]
+                            OUT['event_counts'][:, :, tmp[2]:] = counts
                         events_all_ = sp.r_[events_all_, ev_]
                         gene_idx_ = sp.r_[gene_idx_, [x.gene_idx for x in ev_]]
 
@@ -152,13 +163,14 @@ def analyze_events(CFG, event_type):
                     event_pos = sp.array([unique_rows(sp.c_[x.exons1, x.exons2]).ravel() for x in events_all])
                 elif event_type == 'mult_exon_skip':
                     event_pos = sp.array([x.exons2[[0, 1, -2, -1], :].ravel() for x in events_all])
+
                 OUT.create_dataset(name='event_pos', data=event_pos)
 
                 for i in range(events_all.shape[0]):
                     events_all[i].num_verified = sp.sum(events_all[i].verified, axis=0)
                     events_all[i].confirmed = sp.array(events_all[i].num_verified).min()
                 
-                num_verified = sp.array([x.verified for x in events_all.verified])
+                num_verified = sp.array([x.num_verified for x in events_all])
 
                 #verified_count = []
                 #for min_verified = 1:length(CFG.strains),
@@ -166,14 +178,18 @@ def analyze_events(CFG, event_type):
                 
                 confirmed_idx = sp.where([x.confirmed for x in events_all] >= 1)[0]
                 
-                ### save events
-                cPickle.dump((events_all, events_all_strains), open(fn_out, 'w'), -1)
-                cPickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)
-
                 OUT.create_dataset(name='conf_idx', data=confirmed_idx)
                 OUT.create_dataset(name='verified', data=num_verified)
+
+                ### close HDF5
+                OUT.close()
+
+            ### save events
+            cPickle.dump((events_all, events_all_strains), open(fn_out, 'w'), -1)
+            cPickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)
+
         else:
-            (events_all, events_all_strains) = cPickle.load(open(fn_outm 'r'))
+            (events_all, events_all_strains) = cPickle.load(open(fn_out, 'r'))
             confirmed_idx = cPickle.load(open(fn_out_conf, 'r'))
 
         if events_all.shape[0] == 0:

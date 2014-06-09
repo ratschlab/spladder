@@ -1,4 +1,6 @@
 import sys
+import os
+import scipy as sp
 
 def write_events_txt(fn_out_txt, strains, events, anno_fn=None):
     # write_events_txt(fn_out_txt, strains, events, anno_fn)
@@ -36,8 +38,9 @@ def write_events_txt(fn_out_txt, strains, events, anno_fn=None):
         for i in range(len(strains)):
             print >> fd, '\t%s:exon1_cov\t%s:intron_cov\t%s:exon2_cov\t%s:intron_conf' % (strains[i], strains[i], strains[i], strains[i]),
             print >> fd, '\n',
-    elif strcmp(events(1).event_type, 'mult_exon_skip'),
+    elif strcmp(events(1).event_type, 'mult_exon_skip'):
         print >> fd, 'contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_starts\texon_ends\texon_aft_start\texon_aft_end' % gene_header,
+        for i in range(len(strains)):
             print >> fd, '\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_inner_conf\t%s:exon_inner_count\t%s:intron_aft_conf\t%s:intron_skip_conf' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]),
             print >> fd, '\n',
     else:
@@ -153,7 +156,7 @@ def write_events_tcga(fn_out, strains, events):
                 if confirmation < 10:
                     print >> fd, '\tNA',
                 else:
-                    print >> fd, '\t%1.1f', % (num / denom),
+                    print >> fd, '\t%1.1f' % (num / float(denom)),
             else:
                 print >> fd, '\tNA',
         print >> fd, '\n',
@@ -173,7 +176,7 @@ def write_events_gff3(fn_out_gff3, events):
     print >> fd_out, '##gff-version 3'
 
     ### load gene structure
-    for ev = in range(events.shape[0]):
+    for ev in range(events.shape[0]):
 
         ev = events[i]
         gene_name = events[i].gene_name[0] ### TODO - why only first?

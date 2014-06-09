@@ -1,3 +1,5 @@
+import scipy as sp
+
 class Counts:
 
     def __init__(self, seg_num):

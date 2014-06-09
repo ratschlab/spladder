@@ -38,22 +38,28 @@ def post_process_event_struct(events):
         return events
 
     ### filter out invalid coordinate projections
-    idx_valid = sp.zeros((events.shape[0],))
+    idx_valid = sp.zeros((events.shape[0],), dtype='int')
     for i in range(events.shape[0]):
         idx_valid[i] = sp.all(events[i].get_coords(trafo=True) > 0)
     events = events[sp.where(idx_valid)[0]]
    
-    ### sort exon skip events by all coordinates
+
+    ### sort exons in events
+    for e in events:
+        e.exons1 = sort_rows(e.exons1) 
+        e.exons2 = sort_rows(e.exons2) 
+
+    ### sort events by all coordinates
     events = sort_events_full(events) 
     
-    ### make exon skip events unique by strain
-    print '\nMake %s events unique by strain', events[0].event_type
+    ### make events unique by strain
+    print '\nMake %s events unique by strain' % events[0].event_type
     events = make_unique_by_strain(events)
 
-    ### sort exon skip events by event coordinates
+    ### sort events by event coordinates
     events = sort_events_by_event(events) 
     
-    ### make exon skip events unique by strain
+    ### make events unique by event
     print '\nMake %s events unique by event' % events[0].event_type
     events = make_unique_by_event(events)
 
@@ -160,7 +166,7 @@ def make_unique_by_event(event_list):
     return event_list
 
 
-def curate_alt_prime(event_list):
+def curate_alt_prime(event_list, CFG):
     # event_list = curate_alt_prime(event_list)
 
     if event_list.shape[0] == 0:
@@ -172,7 +178,8 @@ def curate_alt_prime(event_list):
     for i in range(event_list.shape[0]):
         
         ### check if we have introns of zero length
-        if sp.any(event_list[i].exons1[:, 1] - event_list[i].exons1[:, 1] < 2) or sp.any(event_list[i].exons2[:, 1] - event_list[i].exons2[:, 1] < 2):
+        #if sp.any(event_list[i].exons1[:, 1] - event_list[i].exons1[:, 1] < 2) or sp.any(event_list[i].exons2[:, 1] - event_list[i].exons2[:, 1] < 2):
+        if (event_list[i].exons1[1, 0] - event_list[i].exons1[0, 1] < 1) or (event_list[i].exons2[1, 0] - event_list[i].exons2[0, 1] < 1):
             rm_idx.append(i)
             continue
 
@@ -203,3 +210,5 @@ def curate_alt_prime(event_list):
 
     print 'Corrected %i events' % corr_count
     print 'Removed %i events' % len(rm_idx)
+
+    return event_list
