@@ -16,11 +16,20 @@ inserted.exon_skip = 0 ;
 inserted.gene_merge = 0 ;
 inserted.new_terminal_exon = 0 ;
 
+% convert intervals to closed intervals
+if CFG.is_half_open,
+    genes = half_open_to_closed(genes);
+end;
+
 % build splice graph for all genes 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fprintf(CFG.fd_log, 'Generating splice graph ...\n');
 genes = splice_graph(genes, CFG);
 fprintf(CFG.fd_log, '...done.\n\n');
+
+for i = 1:length(genes),
+	assert(all(genes(i).splicegraph{1}(1, :) <= genes(i).splicegraph{1}(2, :)));
+end ;
 
 % append list of introns supported by RNA-seq data to 
 % the genes structure
@@ -141,6 +150,11 @@ fn = fieldnames(inserted);
 fprintf(CFG.fd_log, 'Inserted:\n');
 for i = 1:length(fn),
     fprintf(CFG.fd_log, '\t%s:\t%i\n', fn{i}, inserted.(fn{i}));
+end;
+
+% convert intervals back
+if CFG.is_half_open,
+    genes = closed_to_half_open(genes);
 end;
 
 if CFG.fd_log > 1,
