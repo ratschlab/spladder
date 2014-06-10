@@ -19,7 +19,17 @@ if CFG.no_reset_conf == 0,
     CFG = set_confidence_level(CFG);
 end;
 
-if ~isfield(CFG, 'spladder_infile'),
+%%% do not compute components of merged set, if result file already exists
+fn_out_merge = '';
+if strcmp(CFG.merge_strategy, 'merge_graphs'),
+    prune_tag = '';
+    if CFG.do_prune,
+        prune_tag = '_pruned';
+    end;
+    fn_out_merge = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
+end;
+
+if ~isfield(CFG, 'spladder_infile') && ~exist(fn_out_merge, 'file'),
     %%% iterate over files, if merge strategy is single
     if strcmp(CFG.merge_strategy, 'single') || strcmp(CFG.merge_strategy, 'merge_graphs'),
         idxs = 1:length(CFG.samples);
@@ -57,11 +67,15 @@ if ~isfield(CFG, 'spladder_infile'),
             else
                 CFG.out_fname = sprintf('%s/truncations/genes_graph_conf%i.%s.tsv', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy);
             end;
-            if CFG.rproc,
-                jobinfo(job_nr) = rproc('detect_truncations', CFG, 25000, CFG.options_rproc, 100*60) ;
-                job_nr = job_nr + 1;
+            if exist(CFG.out_fname, 'file'),
+                fprintf(1, '%s exists\n', CFG.out_fname);
             else
-                detect_truncations(CFG);
+                if CFG.rproc,
+                    jobinfo(job_nr) = rproc('detect_truncations', CFG, 25000, CFG.options_rproc, 60) ;
+                    job_nr = job_nr + 1;
+                else
+                    detect_truncations(CFG);
+                end;
             end;
         else
             %%% spladder output files
@@ -84,7 +98,7 @@ if ~isfield(CFG, 'spladder_infile'),
                 fprintf('All result files already exist.\n');
             else
                 if CFG.rproc,
-                    jobinfo(job_nr) = rproc('spladder_core', CFG, 25000, CFG.options_rproc, 100*60) ;
+                    jobinfo(job_nr) = rproc('spladder_core', CFG, 30000, CFG.options_rproc, 12*60) ;
                     job_nr = job_nr + 1;
                 else
                     spladder_core(CFG);
@@ -96,7 +110,7 @@ if ~isfield(CFG, 'spladder_infile'),
 
     %%% collect results after parallelization
     if CFG.rproc,
-        jobinfo = rproc_wait(jobinfo, 30, 1, 1) ;
+        jobinfo = rproc_wait(jobinfo, 30, 1, -1) ;
     end;
 
     if CFG.detect_trunc,
@@ -107,6 +121,29 @@ if ~isfield(CFG, 'spladder_infile'),
     if strcmp(CFG.merge_strategy, 'merge_graphs'),
         run_merge(CFG);
     end;
+end;
+
+%%% determine count output file
+if ~isfield(CFG, 'spladder_infile'),
+    if CFG.validate_splicegraphs,
+        fn_in_count = sprintf('%s/spladder/genes_graph_conf%i.%s%s.validated.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
+    else
+        fn_in_count = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, prune_tag);
+    end;
+else
+    fn_in_count = CFG.spladder_infile;
+end;
+fn_out_count = [strrep(fn_in_count, '.mat', ''), '.count.mat'];
+
+%%% count segment graph
+if ~exist(fn_out_count, 'file'),
+    count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG);
+end;
+
+%%% count intron coverage phenotype
+if CFG.count_intron_cov,
+    fn_out_intron_count = strrep(fn_out_count, 'mat', 'introns.mat');
+    count_intron_coverage_wrapper(fn_in_count, fn_out_intron_count, CFG);
 end;
 
 %%% handle alternative splicing part
