@@ -121,6 +121,25 @@ done
 [[ -z "$S_OUT_DIRNAME" ]] && echo -e "\nOutput directory name is mandatory!\n" && usage && exit 1
 [[ -z "$S_INFILE" ]] && [[ -z "$S_ANNO_FNAME" ]] && echo -e "\nAnnotation file name is mandatory!\n" && usage && exit 1
 
+### prepare annotation if not in matlab format yet
+if [ ! -z "$S_ANNO_FNAME" ]
+then
+
+    if [ "${S_ANNO_FNAME##*.}" != "mat" ]
+    then
+        S_ANNO_FNAME_N=${S_ANNO_FNAME%.*}.mat
+        if [ -f "$S_ANNO_FNAME_N" ]
+        then
+            echo $S_ANNO_FNAME_N already exists
+        else
+            echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
+            ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
+            ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
+        fi
+        S_ANNO_FNAME=$S_ANNO_FNAME_N
+    fi
+fi
+
 ### assemble parameter string
 PARAMS=""
 for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC F_RUN_AS S_AS_TYPES I_READ_LEN S_INFILE F_HALF_OPEN F_ONLY_PRIMARY F_DETECT_TRUNC F_VAR_AWARE F_COUNT_INT_COV
@@ -132,23 +151,6 @@ do
     fi
 done
 
-### prepare annotation if not in matlab format yet
-if [ ! -z "$S_ANNO_FNAME" ]
-then
-    if [ "${S_ANNO_FNAME##*.}" != "mat" ]
-    then
-        S_ANNO_FNAME_N=${S_ANNO_FNAME%.*}.mat
-        if [ -f "$S_ANNO_FNAME_N" ]
-        then
-            echo $S_ANNO_FNAME_N already exists
-        else
-            echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
-            ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
-            ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
-            S_ANNO_FNAME=$S_ANNO_FNAME_N
-        fi
-    fi
-fi
 
 ### Index Bam files
 echo "Indexing BAM files"
