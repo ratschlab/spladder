@@ -31,8 +31,8 @@ for ix=idx_alt
   % Store the splice site at the left of the intron in 'starts'.
   starts=[] ;
   for exon_idx = 1:num_exons-2
-    if sum(find(starts==vertices(2,exon_idx)))==0,
-      starts=[starts, vertices(2,exon_idx)] ;
+    %if sum(find(starts==vertices(2,exon_idx)))==0,
+    %  starts=[starts, vertices(2,exon_idx)] ;
       nr_exons=sum(edges(exon_idx,exon_idx+1:num_exons)) ;
       rightsites=[] ;
       rightidx=[] ;
@@ -81,7 +81,7 @@ for ix=idx_alt
           idx_alt_5prime = [idx_alt_5prime, ix] ;
         end
       end  % construct output
-    end
+    %end
   end % for exon_idx
 
   
@@ -90,13 +90,13 @@ for ix=idx_alt
   % Store the splice site at the right of the intron in 'starts'.
   starts=[] ;
   for exon_idx = 3:num_exons
-    if sum(find(starts==vertices(1,exon_idx)))==0,
-      starts=[starts, vertices(1,exon_idx)] ;
+    %if sum(find(starts==vertices(1,exon_idx)))==0,
+    %  starts=[starts, vertices(1,exon_idx)] ;
       nr_exons=sum(edges(1:exon_idx-1,exon_idx)) ;
       leftsites=[] ;
       leftidx=[] ;
       if nr_exons>=2,
-	which_exons = find([edges(1:exon_idx-1,exon_idx)', zeros(1,num_exons-exon_idx+1)]);
+	    which_exons = find([edges(1:exon_idx-1,exon_idx)', zeros(1,num_exons-exon_idx+1)]);
         exons=[vertices(:, which_exons)] ;
         for i=1:nr_exons-1
           for j=i+1:nr_exons
@@ -141,7 +141,7 @@ for ix=idx_alt
           idx_alt_3prime = [idx_alt_3prime, ix] ;
         end
       end % construct output
-    end
+    %end
   end % for exon_idx
   
 
