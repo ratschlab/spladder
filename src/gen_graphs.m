@@ -21,6 +21,14 @@ if CFG.is_half_open,
     genes = half_open_to_closed(genes);
 end;
 
+if isempty([genes.chr_num]),
+    chrms = unique({genes.chr});
+    for c = 1:length(chrms),
+        c_idx = strmatch(chrms{c}, {genes.chr}, 'exact');
+        [genes(c_idx).chr_num] = deal(strmatch(chrms{c}, chrms, 'exact'));
+    end;
+end;
+
 % build splice graph for all genes 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fprintf(CFG.fd_log, 'Generating splice graph ...\n');
