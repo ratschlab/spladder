@@ -120,7 +120,7 @@ function alt_genes_analyze(CFG, event_type)
                                 ev_ = ev;
                             else 
                                 for jj = 1:length(ev_),
-                                    ev_(jj).verified(idx_strains, :) = ev(jj).verified;
+                                    ev_(jj).verified(idx_strains, :) = ev(jj).verified(1:min(chunk_size_events, size(idx_strains, 2)), :);
                                     ev_(jj).info(idx_strains, :) = ev(jj).info;
                                 end;
                             end;
