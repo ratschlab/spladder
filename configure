@@ -324,5 +324,5 @@ echo Done.
 echo 
 
 echo Please use \'make\' to compile the mex files before using SplAdder.
-echo To test SplAdder use \'make example\' or \'make threeexamples\'.
+#echo To test SplAdder use \'make example\' or \'make threeexamples\'.
 echo
