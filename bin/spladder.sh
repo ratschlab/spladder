@@ -161,7 +161,7 @@ then
         if [ ! -f ${CURR_BAMFILE}.bai ]
         then
             echo "Indexing $CURR_BAMFILE"
-            ${SPLADDER_SAMTOOLS_BIN_DIR} index $CURR_BAMFILE
+            ${SPLADDER_SAMTOOLS_BIN_DIR}/samtools index $CURR_BAMFILE
         else
             echo "$CURR_BAMFILE already indexed"
         fi
@@ -175,7 +175,7 @@ else
         if [ ! -f ${CURR_BAMFILE}.bai ]
         then
             echo "Indexing $CURR_BAMFILE"
-            ${SPLADDER_SAMTOOLS_BIN_DIR} index $CURR_BAMFILE
+            ${SPLADDER_SAMTOOLS_BIN_DIR}/samtools index $CURR_BAMFILE
         else
             echo "$CURR_BAMFILE already indexed"
         fi
