@@ -17,7 +17,7 @@ import scipy as sp
 
 
 from modules import settings
-from modules.core import spladdercore
+from modules.core.spladdercore import spladder_core
 from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
 import modules.init as init
@@ -155,9 +155,9 @@ def spladder():
                 print >> sys.stdout, 'All result files already exist.'
             else:
                 if CFG['rproc']:
-                    jobinfo.append(rproc('spladdercore', CFG, 10000, CFG['options_rproc'], 40*60))
+                    jobinfo.append(rproc('spladder_core', CFG, 10000, CFG['options_rproc'], 40*60))
                 else:
-                    spladdercore.spladder_core(CFG)
+                    spladder_core(CFG)
 
             CFG = CFG_.copy()
 
