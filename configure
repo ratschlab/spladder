@@ -6,8 +6,8 @@
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 #
-# Written (W) 2009-2013 Gunnar Raetsch, Regina Bohnert. Philipp Drewe, Andre Kahles
-# Copyright (C) 2009-2013 Max Planck Society, Sloan-Kettering Institute
+# Written (W) 2009-2014 Gunnar Raetsch, Regina Bohnert. Philipp Drewe, Andre Kahles
+# Copyright (C) 2009-2014 Max Planck Society, Sloan-Kettering Institute
 #
 
 set -e 
@@ -16,7 +16,8 @@ if [ -z "$1" -o "$1" == "-h" ];
 then
           echo Usage: "$0 -h   (this help)"
           echo Usage: "$0 -i   (interactive configuration)"
-          echo Usage: "$0 [-a] (automatic configuration)"
+          echo Usage: "$0 -o   (automatic configuration for use with Octave)"
+          echo Usage: "$0 -m   (automatic configuration for use with Matlab)"
           exit -1
 fi
 
@@ -324,5 +325,5 @@ echo Done.
 echo 
 
 echo Please use \'make\' to compile the mex files before using SplAdder.
-#echo To test SplAdder use \'make example\' or \'make threeexamples\'.
+echo To test SplAdder use \'make example\' or \'make threeexamples\'.
 echo
