@@ -21,7 +21,7 @@ if CFG.is_half_open,
     genes = half_open_to_closed(genes);
 end;
 
-if isempty([genes.chr_num]),
+if ~isfield(genes, 'chr_num') || isempty([genes.chr_num]),
     chrms = unique({genes.chr});
     for c = 1:length(chrms),
         c_idx = strmatch(chrms{c}, {genes.chr}, 'exact');
