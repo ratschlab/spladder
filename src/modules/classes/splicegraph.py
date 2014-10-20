@@ -119,6 +119,15 @@ class Splicegraph:
         self.terminals[0, sp.where(sp.tril(self.edges).sum(axis=1) == 0)[0]] = 1
         self.terminals[1, sp.where(sp.triu(self.edges).sum(axis=1) == 0)[0]] = 1
 
+
+    def from_matfile(self, mat_struct):
+        """generates a splicing graph structure from a matfile structure"""
+
+        self.vertices = mat_struct['splicegraph'][0, 0].astype('int')
+        self.edges = mat_struct['splicegraph'][0, 1].astype('int')
+        self.terminals = mat_struct['splicegraph'][0, 2].astype('int')
+        
+
     def add_intron(self, idx1, flag1, idx2, flag2):
         """adds new introns into splicegraph between idx1 and idx2"""
 
