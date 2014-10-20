@@ -129,6 +129,15 @@ def default_settings():
     CFG['rproc'] = 0
     CFG['var_aware'] = 0
 
+    ### define which output files are written
+    CFG['output_txt'] = 0
+    CFG['output_confirmed_gff3'] = 1
+    CFG['output_confirmed_txt'] = 1
+    CFG['output_filtered_txt'] = 0
+    CFG['output_confirmed_tcga'] = 0
+
+    ### settings for truncation detection mode
+    CFG['detect_trunc'] = False
     CFG['count_intron_cov'] = False
     CFG['min_truncation_cov'] = 5
 
@@ -304,7 +313,7 @@ def set_confidence_level(CFG):
         CFG['read_filter']['intron'] = 20000 
         CFG['read_filter']['exon_len'] = math.ceil(CFG['read_length'] * 0.25)
         CFG['read_filter']['mismatch'] = 0
-        CFG['read_filter']['mincount'] = 5
+        CFG['read_filter']['mincount'] = 6
 
     ### settings for accepted cassette exons
     CFG['cassette_exon'] = dict()
