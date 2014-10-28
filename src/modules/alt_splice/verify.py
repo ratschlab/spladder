@@ -29,10 +29,10 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
 
     ### find exons corresponding to event
     idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
-    idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons2[-1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons2[-1, 0]) & (sg.vertices[1, :] == event.exons2[-1, 1]))[0]
     seg_exons = []
-    for i in range(1, event.exons2.shape[1] - 1):
-        tmp = sp.where((sg.segments[0, :] == event.exons2[i, 0]) & (sg.segments[1, :] == event.exons2[i, 1]))[0]
+    for i in range(1, event.exons2.shape[0] - 1):
+        tmp = sp.where((sg.vertices[0, :] == event.exons2[i, 0]) & (sg.vertices[1, :] == event.exons2[i, 1]))[0]
         seg_exons.append(tmp)
     
     ### find segments corresponding to exons
@@ -70,7 +70,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
         info[7] += counts_edges[idx, 1]
 
     # num_inner_exon
-    info[9] = event.exons2.shape[1] - 2
+    info[8] = event.exons2.shape[0] - 2
     if info[4] >= CFG['mult_exon_skip']['min_non_skip_count']:
         verified[1] = 1
     if info[5] >= CFG['mult_exon_skip']['min_non_skip_count']:
@@ -97,7 +97,7 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
         info[0] = 0
         return (verified, info)
     ### check validity of exon coordinates (start < stop && non-overlapping)
-    elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any(event.exons2[:, 1] - event.exons2[:, 0] < 1):
+    elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any((event.exons2[1] - event.exons2[0]) < 1):
         info[0] = 0
         return (verified, info)
 
@@ -105,8 +105,8 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     segs = gene.segmentgraph
 
     ### find exons corresponding to event
-    idx_exon1  = sp.where((sg.segments[0, :] == event.exons1[0, 0]) & (sg.segments[1, :] == event.exons1[0, 1]))[0]
-    idx_exon2  = sp.where((sg.segments[0, :] == event.exons1[1, 0]) & (sg.segments[1, :] == event.exons1[1, 1]))[0]
+    idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon2  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
 
     ### find segments corresponding to exons
     seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
@@ -131,7 +131,7 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
 
     ### check if counts match verification criteria
     if info[1] > CFG['intron_retention']['min_retention_cov'] and \
-       info[5] > CFG['intron_retentio']['.min_retention_region'] and \
+       info[5] > CFG['intron_retention']['min_retention_region'] and \
        info[1] >= CFG['intron_retention']['min_retention_rel_cov'] * (info[2] + info[3]) / 2:
         verified[0] = 1
 
@@ -275,8 +275,7 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     else:
         print >> sys.stderr, "ERROR: both exons differ in alt prime event in verify_alt_prime"
         sys.exit(1)
-
-    # seg_const = sp.r_[seg_exon_const, seg_const] TODO
+    seg_const = sp.r_[seg_exon_const, seg_const]
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
@@ -329,7 +328,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         if CFG['validate_splicegraphs']:
             validate_tag = '.validated'
 
-        genes = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
+        (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
 
         fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
         ### load count index data from hdf5
@@ -352,8 +351,8 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         tmp, genes_f_idx_edges = sp.unique(gene_ids_edges, return_index=True)
         genes_l_idx_edges = sp.r_[genes_f_idx_edges[1:] - 1, gene_ids_edges.shape[0]]
 
-        gr_idx_segs = 1
-        gr_idx_edges = 1
+        gr_idx_segs = 0
+        gr_idx_edges = 0
         counts = []
         for i in range(ev.shape[0]):
             g_idx = ev[i].gene_idx
@@ -383,7 +382,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                 elif event_type in ['alt_3prime', 'alt_5prime']:
                     ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
                 elif event_type == 'intron_retention':
-                    ver, info_ = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
+                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
                 elif event_type == 'mult_exon_skip':
                     ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
 
@@ -397,6 +396,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         IN.close()
         counts = sp.dstack(counts)
     ev = ev[old_idx]
+    counts = counts[:, :, old_idx]
 
     if out_fn is not None:
         cPickle.dump((ev, counts), open(out_fn, 'w'))

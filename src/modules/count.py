@@ -74,12 +74,12 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
 def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
 
-    genes = cPickle.load(open(fname_in, 'r'))
+    (genes, inserted) = cPickle.load(open(fname_in, 'r'))
     
     if genes[0].segmentgraph is None:
         for g in genes:
             g.segmentgraph = Segmentgraph(g)
-        cPickle.dump(genes, open(fname_in, 'w'), -1)
+        cPickle.dump((genes, inserted), open(fname_in, 'w'), -1)
 
     counts = dict()
     counts['segments'] = []

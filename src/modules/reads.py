@@ -2,7 +2,9 @@ import pysam
 import re
 import scipy as sp
 import scipy.sparse
+import copy
 import pdb
+import time
 
 from utils import *
 from init import *
@@ -19,34 +21,47 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
     introns = []
 
     ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
-    for read in infile.fetch(chr_name, start, stop):
+    for read in infile.fetch(chr_name, start, stop, until_eof=True):
+
         if read.is_unmapped:
             continue
-        if 3 in [x[0] for x in read.cigar]:
+        is_spliced = ('N' in read.cigarstring)
+        if is_spliced:
             if not spliced:
                 continue
-        else:
-            if not mapped:
-                continue
+        elif not mapped:
+            continue
+
+        tags = dict(read.tags)
 
         if filter is not None:
             ### handle mismatches
             if var_aware:
-                mm = sum([x[1] for x in read.tags if x[0] in ['XM', 'XG']])
+                mm = tags['XM'] + tags['XG']
             else:
-                mm = sum([x[1] for x in read.tags if x[0] == 'NM'])
+                mm = tags['NM']
             if filter['mismatch'] < mm:
                 continue
-            ### handle min segment length
-            ### remove all elements from CIGAR sting that do not 
-            ### contribute to the segments (hard- and softclips and insertions)
-            cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
-            ### split the string at the introns and sum the remaining segment elements, compare to filter
-            if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) < filter['exon_len']:
-                continue
+
+            if is_spliced:
+                ### handle min segment length
+                ### remove all elements from CIGAR sting that do not 
+                ### contribute to the segments (hard- and softclips and insertions)
+                cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
+                ### split the string at the introns and sum the remaining segment elements, compare to filter
+                if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) <= filter['exon_len']:
+                    continue
         
+        ### check strand information
+        if strand is not None:
+            try:
+                if tags['XS'] != strand:
+                    continue
+            except KeyError:
+                pass
+
         ### get introns
-        if 3 in [x[0] for x in read.cigar]:
+        if is_spliced:
             p = read.pos 
             for o in read.cigar:
                 if o[0] == 3:
@@ -72,7 +87,10 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
     read_matrix = scipy.sparse.coo_matrix((sp.ones(i.shape), (i, j)), shape = (read_cnt, stop - start), dtype = 'int')
 
     ### construct introns
-    introns = sp.array(introns, dtype = 'int')
+    if len(introns) > 0:
+        introns = sp.array(introns, dtype = 'int')
+    else:
+        introns = sp.zeros((0, 2), dtype='int')
 
     if collapse:
         return (read_matrix.sum(axis = 0), introns)
@@ -164,15 +182,22 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
                     (introns, fidx) = unique_rows(introns, index=True)
                     lidx = sp.r_[fidx[1:] - 1, num_introns - 1]
                     introns = sp.c_[introns, lidx - fidx + 1]
-                
+
+                    ### filter introns for location relative to block
+                    ### this is legacy behavior for matlab versions!
+                    k_idx = sp.where((introns[:, 0] > blocks[0].start) & (introns[:, 1] < blocks[0].stop))[0]
+                    introns = introns[k_idx, :]
+
                     if introns.shape[0] > 0:
                         s_idx = sp.argsort(introns[:, 0])
                         introns = introns[s_idx, :]
                     
                     if 'mincount' in filter:
                         take_idx = sp.where(introns[:, 2] >= filter['mincount'])[0]
-                        introns = introns[take_idx, :]
-                    intron_list.append(introns)
+                        if take_idx.shape[0] > 0:
+                            intron_list.append(introns[take_idx, :])
+                        else:
+                            intron_list.append(sp.zeros((0, 3), dtype='int'))
                 else:
                     intron_list.append(sp.zeros((0, 3), dtype='int'))
             ## add polya signal track
@@ -254,7 +279,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
         if introns is None:
             introns = introns_tmp
         else:
-            introns = sp.c_[introns, introns_tmp]
+            introns = sp.r_[introns, introns_tmp]
 
     return (introns, coverage)
 
@@ -304,6 +329,7 @@ def get_intron_list(genes, CFG):
 
     c = 0
     num_introns_filtered = 0
+    t0 = time.time()
 
     for j in range(regions.shape[0]):
         chr = regions[j].chr
@@ -312,16 +338,18 @@ def get_intron_list(genes, CFG):
         
         # fill the chunks on the corresponding chromosome
         while c < chunks.shape[0]:
-            if chunks[c, 0] > chr_num or chunks[c, 1] > strands[s]:
+            if chunks[c, 0] > chr_num or chunks[c, 1] > s:
                 break
             if chunks[c, 0] != chr_num:
                 print >> sys.stderr, 'ERROR: c logic seems wrong' 
                 sys.exit(1)
 
-            if CFG['verbose'] and c % 100 == 0:
-                print >> sys.stdout, '%i (%i) genes done (%i introns taken)' % (c, chunks.shape[0], num_introns_filtered)
+            if CFG['verbose'] and (c+1) % 100 == 0:
+                t1 = time.time()
+                print >> sys.stdout, '%i (%i) genes done (%i introns taken) ... took %i secs' % (c+1, chunks.shape[0], num_introns_filtered, t1 - t0)
+                t0 = t1
 
-            gg = sp.array([genes[chunk_idx[c]]], dtype='object')
+            gg = sp.array([copy.copy(genes[chunk_idx[c]])], dtype='object')
             gg[0].strand = strands[s]
             gg[0].start = max(gg[0].start - 5000, 1)
             gg[0].stop = gg[0].stop + 5000

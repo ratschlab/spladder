@@ -33,9 +33,9 @@ class Event:
     def get_inner_coords(self, trafo=False):
         
         if trafo:
-            return sp.sort(sp.unique(sp.c_[sp.sort(self.exons1_col.ravel())[1:-1], sp.sort(self.exons2_col.ravel())[1:-1]]))
+            return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:-1], sp.sort(self.exons2_col.ravel())[1:-1]]))
         else:
-            return sp.sort(sp.unique(sp.c_[sp.sort(self.exons1.ravel())[1:-1], sp.sort(self.exons2.ravel())[1:-1]]))
+            return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:-1], sp.sort(self.exons2.ravel())[1:-1]]))
         
 
     def get_coords(self, trafo=False):

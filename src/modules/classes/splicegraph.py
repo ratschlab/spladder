@@ -75,8 +75,8 @@ class Splicegraph:
                         self.vertices = sp.array([[exon1_start, exon2_start], [exon1_end, exon2_end]], dtype='int')
                         self.edges = sp.array([[0, 1], [1, 0]], dtype='int')
                     else:
-                        exon1_idx = 0
-                        exon2_idx = 0
+                        exon1_idx = -1
+                        exon2_idx = -1
                         ### check if current exon already occurred
                         for idx in range(self.vertices.shape[1]):
                             if ((self.vertices[0, idx] == exon1_start) and (self.vertices[1, idx] == exon1_end)):
@@ -85,25 +85,25 @@ class Splicegraph:
                                  exon2_idx = idx
 
                         ### both exons already occured -> only add an edge
-                        if (exon1_idx !=0) and (exon2_idx != 0):
+                        if (exon1_idx != -1) and (exon2_idx != -1):
                             self.edges[exon1_idx, exon2_idx] = 1
                             self.edges[exon2_idx, exon1_idx] = 1
                         else:
                             ### 2nd exon occured
-                            if ((exon1_idx == 0) and (exon2_idx !=0 )):
+                            if ((exon1_idx == -1) and (exon2_idx != -1)):
                                 self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
                                 self.new_edge()
                                 self.edges[exon2_idx, -1] = 1
                                 self.edges[-1, exon2_idx] = 1
                             ### 1st exon occured
-                            elif ((exon2_idx == 0) and (exon1_idx !=0)):
+                            elif ((exon2_idx == -1) and (exon1_idx != -1)):
                                 self.vertices = sp.c_[self.vertices, [exon2_start, exon2_end]]
                                 self.new_edge()
                                 self.edges[exon1_idx, -1] = 1
                                 self.edges[-1, exon1_idx] = 1
                             ### no exon occured
                             else:
-                                assert((exon1_idx == 0) and (exon2_idx == 0))
+                                assert((exon1_idx == -1) and (exon2_idx == -1))
                                 self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
                                 self.vertices = sp.c_[self.vertices, [exon2_start, exon2_end]]
                                 self.new_edge()

@@ -52,6 +52,13 @@ def unique_rows(array, index = None):
             return (array, [])
         else:
             return (array)
+
+    if len(array.shape) == 1:
+        if index == True:
+            return (array, [0])
+        else:
+            return array
+
     (array_s, s_idx) = sort_rows(array, True)
     tmp = [False]
     tmp.extend([sp.all(array_s[i-1, :] == array_s[i, :]) for i in range(1, array.shape[0])])
@@ -81,12 +88,21 @@ def intersect_rows(array1, array2, index=None):
 def sort_rows(array, index = None):
     """Sort array by rows"""
 
+    ### empty array
     if array.shape[0] == 0:
         if index == True:
             return (array, [])
         else:
             return (array)
 
+    ### only one row
+    if len(array.shape) == 1:
+        if index == True:
+            return (array, [0])
+        else:
+            return (array)
+
+    ### more than one row
     s_idx = sp.lexsort([array[:, -i] for i in range(1, array.shape[1] + 1)])
 
     if index == True:

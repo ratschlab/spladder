@@ -5,9 +5,9 @@
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 #
-# Written (W) 2009-2013 Andre Kahles, Jonas Behr, Gunnar Raetsch
+# Written (W) 2009-2014 Andre Kahles, Jonas Behr, Gunnar Raetsch
 # Copyright (C) 2009-2011 Max Planck Society
-# Copyright (C) 2012-2013 Memorial Sloan-Kettering Cancer Center
+# Copyright (C) 2012-2014 Memorial Sloan-Kettering Cancer Center
 #
 # SplAdder wrapper script to start the interpreter with the correct list of arguments
 
@@ -20,6 +20,7 @@ from modules import settings
 from modules.core.spladdercore import spladder_core
 from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
+from modules.count import count_graph_coverage_wrapper
 import modules.init as init
 from modules.merge import run_merge
 
@@ -38,10 +39,10 @@ def parse_options(argv):
     optional.add_option('-l', '--logfile', dest='logfile', metavar='FILE', help='log file name [stdout]', default='-')
     optional.add_option('-u', '--user', dest='user', metavar='FILE', help='file with user settings [-]', default='-')
     optional.add_option('-F', '--spladderfile', dest='spladderfile', metavar='FILE', help='use existing SplAdder output file as input (advanced) [-]', default='-')
-    optional.add_option('-c', '--confidence', dest='confidence', metavar='INT', help='confidence level (0 lowest to 3 highest) [3]', default=3)
-    optional.add_option('-I', '--iterations', dest='iterations', metavar='INT', help='number of iterations to insert new introns into the graph [5]', default=5)
+    optional.add_option('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
+    optional.add_option('-I', '--iterations', dest='iterations', metavar='INT', type='int', help='number of iterations to insert new introns into the graph [5]', default=5)
     optional.add_option('-M', '--merge_strat', dest='merge', metavar='<STRAT>', help='merge strategy, where <STRAT> is one of: merge_bams, merge_graphs, merge_all [merge_graphs]', default='merge_graphs')
-    optional.add_option('-n', '--readlen', dest='readlen', metavar='INT', help='read length (used for automatic confidence levele settings) [36]', default=36)
+    optional.add_option('-n', '--readlen', dest='readlen', metavar='INT', type='int', help='read length (used for automatic confidence levele settings) [36]', default=36)
     optional.add_option('-R', '--replicates', dest='replicates', metavar='R1,R2,...', help='replicate structure of files (same number as alignment files) [all R1 - no replicated]', default='-')
     optional.add_option('-L', '--label', dest='label', metavar='STRING', help='label for current experiment [-]', default='-')
     optional.add_option('-S', '--ref_strain', dest='refstrain', metavar='STRING', help='reference strain [-]', default='-')
@@ -97,11 +98,11 @@ def spladder():
 
     ### do not compute components of merged set, if result file already exists
     fn_out_merge = '' 
+    prune_tag = ''
+    if CFG['do_prune']:
+        prune_tag = '_pruned'
     if CFG['merge_strategy'] == 'merge_graphs':
-        prune_tag = ''
-        if CFG['do_prune']:
-            prune_tag = '_pruned'
-        fn_out_merge = '%s/spladder/genes_graph_conf%i.%s%s.mat' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+        fn_out_merge = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
 
 
     if not 'spladder_infile' in CFG and not os.path.exists(fn_out_merge):
@@ -147,9 +148,9 @@ def spladder():
             ### assemble out filename to check if we are already done
             fn_out = CFG['out_fname']
             if CFG['do_prune']:
-                fn_out = re.sub('.mat$', '_pruned.mat', fn_out)
+                fn_out = re.sub('.pickle$', '_pruned.pickle', fn_out)
             if CFG['do_gen_isoforms']:
-                fn_out = re.sub('.mat$', '_with_isoforms.mat', fn_out)
+                fn_out = re.sub('.pickle$', '_with_isoforms.pickle', fn_out)
     
             if os.path.exists(fn_out):
                 print >> sys.stdout, 'All result files already exist.'
@@ -168,6 +169,25 @@ def spladder():
         ### merge parts if necessary
         if CFG['merge_strategy'] == 'merge_graphs':
             run_merge(CFG)
+
+    ### determine count output file
+    if not 'spladder_infile' in CFG:
+        if CFG['validate_splicegraphs']:
+            fn_in_count = '%s/spladder/genes_graph_conf%i.%s%s.validated.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+        else:
+            fn_in_count = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    else:
+        fn_in_count = CFG['spladder_infile']
+    fn_out_count = fn_in_count.replace('.pickle', '') + '.count.pickle'
+
+    ### count segment graph
+    if not os.path.exists(fn_out_count):
+        count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
+
+    ### count intron coverage phenotype
+    if CFG['count_intron_cov']:
+        fn_out_intron_count = fn_out_count.replace('mat', 'introns.pickle')
+        count_intron_coverage_wrapper(fn_in_count, fn_out_intron_count, CFG)
 
     ### handle alternative splicing part
     if CFG['run_as_analysis']:

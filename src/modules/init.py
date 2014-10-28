@@ -96,7 +96,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
             except ValueError:
                 t_idx = len(genes[gene_id].transcripts)
                 genes[gene_id].transcripts.append(trans_id)
-            genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4]) - 1], dtype='int'), idx=t_idx)
+            genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
 
     ### add splicegraphs
     for gene in genes:
@@ -196,7 +196,7 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
             except ValueError:
                 t_idx = len(genes[gene_id].transcripts)
                 genes[gene_id].transcripts.append(trans_id)
-            genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4]) - 1], dtype='int'), idx=t_idx)
+            genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
 
     ### add splicegraphs
     for gene in genes:

@@ -72,27 +72,25 @@ def detect_multipleskips(genes, idx_alt):
                 long_exist_path[temp_ix] = -long_exist_path[temp_ix]
                 
                 if (exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(exist_path[exon_idx_first, exon_idx_last]):
-                    #import pdb
-                    #pdb.set_trace()
                     backtrace = sp.array([path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
                         backtrace = sp.r_[backtrace, path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[0] + 2))
+                    idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
+                    id_multiple_skips.append(id) # * sp.ones((1, backtrace.shape[0] + 2)))
                     id += 1
-                    id_multiple_skips.append(id * sp.ones((1, backtrace.shape[0] + 2)))
                 elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
                     backtrace = sp.array([long_path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
                         backtrace = sp.r_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(repmat(ix, 1, backtrace.shape[0] + 2))
+                    idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
+                    id_multiple_skips.append(id) # * sp.ones((1, backtrace.shape[0] + 2)))
                     id += 1
-                    id_multiple_skips.append(id * sp.ones((1, backtrace.shape[0] + 2)))
 
     print 'Number of multiple exon skips:\t\t\t\t\t%d' % len(idx_multiple_skips)
     return (idx_multiple_skips, exon_multiple_skips, id_multiple_skips)
@@ -112,9 +110,9 @@ def detect_intronreten(genes, idx_alt):
         introns  = []
         for exon_idx in range(num_exons - 1):  # start of intron
             idx = sp.where(edges[exon_idx, exon_idx + 1 : num_exons] == 1)[0]
-            if idx.shape[0]:
+            if idx.shape[0] == 0:
                 continue
-            idx += exon_idx
+            idx += (exon_idx + 1)
             for exon_idx2 in idx: # end of intron
                 is_intron_reten = False
                 for exon_idx1 in range(num_exons): # exon
@@ -219,11 +217,11 @@ def detect_altprime(genes, idx_alt):
         # Find alternative sites on the left of the intron,
         # same site on the right of the intron.
         for exon_idx in range(2, num_exons):
-            nr_exons = sp.sum(edges[:exon_idx-1, exon_idx])
+            nr_exons = sp.sum(edges[:exon_idx, exon_idx])
             leftsites = []
             leftidx = []
             if nr_exons >= 2:
-                which_exons = sp.where(edges[:exon_idx-1, exon_idx])[0]
+                which_exons = sp.where(edges[:exon_idx, exon_idx])[0]
                 exons = vertices[:, which_exons]
                 for i in range(nr_exons - 1):
                     for j in range(i + 1, nr_exons):
@@ -234,7 +232,7 @@ def detect_altprime(genes, idx_alt):
                         # note that the 'overlap' relationship is not transitive
                         if ((exons[1, i] != exons[1, j]) and
                           (((exons[1, i] <= exons[1, j]) and (exons[1, i] >= exons[0,j])) or ((exons[1, j] <= exons[1, i]) and (exons[1, j] >= exons[0, i]))) and
-                          (min(exons[1, i], exons[1, j]) - max(exons[1, i], exons[0, j]) >= MIN_OVERLAP)):
+                          (min(exons[1, i], exons[1, j]) - max(exons[0, i], exons[0, j]) >= MIN_OVERLAP)):
 
                             assert(not((exons[0, i] == exons[0, j]) and (exons[1, i] == exons[1, j])))
                             assert(exons[1, i] != exons[1, j])

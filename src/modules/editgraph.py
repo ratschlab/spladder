@@ -14,8 +14,8 @@ def remove_short_exons(genes, CFG):
 
     rm_idx = []
     for i in range(len(genes)):
-        if CFG['verbose'] and i % 1000 == 0:
-            print >> CFG['log_fd'], '%i' % i
+        if CFG['verbose'] and (i+1) % 1000 == 0:
+            print >> CFG['log_fd'], '%i' % (i+1)
 
         ### remove genes with no exons
         if genes[i].splicegraph.vertices.shape[0] == 0:
@@ -282,14 +282,14 @@ def insert_intron_retentions(genes, CFG):
         
         # fill the chunks on the corresponding chromosome
         while c < chunks.shape[0]:
-            if chunks[c, 0] > chr_num or chunks[c, 1] > strands[s]:
+            if chunks[c, 0] > chr_num or chunks[c, 1] > s:
                 break
             if chunks[c, 0] != chr_num:
                 print >> sys.stderr, 'ERROR: c logic seems wrong'
                 sys.exit(1)
 
-            if CFG['verbose'] and c % 100 == 0:
-                print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested introns, %2.1f%%)' % (c, chunks.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
+            if CFG['verbose'] and (c+1) % 100 == 0:
+                print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested introns, %2.1f%%)' % (c+1, chunks.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
 
             gg = genes[chunk_idx[c]]
             gg.strand = strands[s]
@@ -379,8 +379,8 @@ def insert_intron_edges(genes, CFG):
     num_unused_introns = sp.zeros((genes.shape[0],), dtype='int')
 
     for i in range(genes.shape[0]):
-        if CFG['verbose'] and i % 1000 == 0:
-            print >> CFG['fd_log'], '%i of %i genes' % (i, genes.shape[0])
+        if CFG['verbose'] and (i+1) % 1000 == 0:
+            print >> CFG['fd_log'], '%i of %i genes' % (i+1, genes.shape[0])
 
         s = strands.index(genes[i].strand)
 
@@ -487,8 +487,10 @@ def insert_intron_edges(genes, CFG):
 
                 ### check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
                 if idx1__.shape[0] == 0:
-                    idx1__ = sp.argmax(genes[i].splicegraph.vertices[0, :] >= genes[i].introns[s][j, 1])
+                    #idx1__ = sp.argmax(genes[i].splicegraph.vertices[0, :] >= genes[i].introns[s][j, 1])
+                    idx1__ = sp.where(genes[i].splicegraph.vertices[0, :] >= genes[i].introns[s][j, 1])[0]
                     if len(idx1__.shape) > 0 and idx1__.shape[0] > 0:
+                        idx1__ = idx1__.min()
                         gg = genes[i]
                         gg.strand = strands[s]
                         gg.strands = strands[s]
@@ -497,7 +499,7 @@ def insert_intron_edges(genes, CFG):
                         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
                         ### TODO: make the following a configurable
                         if sp.mean(sp.sum(tracks, axis = 0) > 10) < 0.9:
-                            idx1__ = sp.array([[]])
+                            idx1__ = sp.array([])
                 
                 # only take the case closest to an existing splice site
                 if len(idx1__.shape) > 0 and idx1__.shape[0] > 0:
@@ -550,7 +552,7 @@ def insert_intron_edges(genes, CFG):
                             genes[i].splicegraph.vertices[0, tmp_idx] = genes[i].introns[s][1, j] + 1
                     assert(sp.all(genes[i].splicegraph.vertices[1, :] >= genes[i].splicegraph.vertices[0, :]))
 
-                    genes[i].splicegraph.add_intron(idx2, 1, sp.array([genes[i].splicegraph.vertices.shape[0] - 1]), 0)
+                    genes[i].splicegraph.add_intron(idx2, 1, sp.array([genes[i].splicegraph.edges.shape[0] - 1]), 0)
                     intron_used = True
 
                 if intron_used:
@@ -564,8 +566,10 @@ def insert_intron_edges(genes, CFG):
 
                 ### check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
                 if idx2__.shape[0] == 0:
-                    idx2__ = sp.argmax(genes[i].splicegraph.vertices[0, :] > genes[i].introns[s][j, 1])
+                    #idx2__ = sp.argmax(genes[i].splicegraph.vertices[0, :] > genes[i].introns[s][j, 1])
+                    idx2__ = sp.where(genes[i].splicegraph.vertices[0, :] > genes[i].introns[s][j, 1])[0]
                     if len(idx2__.shape) > 0 and idx2__.shape[0] > 0:
+                        idx2__ = idx2__.min()
                         gg = genes[i]
                         gg.strand = strands[s]
                         gg.strands = strands[s]
@@ -574,7 +578,7 @@ def insert_intron_edges(genes, CFG):
                         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
                         ### TODO: make configurable
                         if sp.mean(sp.sum(tracks, axis=1) > 10) < 0.9:
-                            idx2__ = sp.array([[]])
+                            idx2__ = sp.array([])
 
                 # only take the case closest to an existing splice site
                 if len(idx2__.shape) > 0 and idx2__.shape[0] > 0:
@@ -762,26 +766,27 @@ def insert_cassette_exons(genes, CFG):
         
         # fill the chunks on the corresponding chromosome
         while c < chunks.shape[0]:
-            if chunks[c, 0] > chr_num or chunks[c, 1] > strands[s]:
+
+            if chunks[c, 0] > chr_num or chunks[c, 1] > s:
                 break
             if chunks[c, 0] != chr_num:
                 print >> sys.stderr, 'ERROR: c logic seems wrong'
                 sys.exit(1)
 
-            if CFG['verbose'] and c % 100 == 0:
-                print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
+            if CFG['verbose'] and (c+1) % 100 == 0:
+                print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
 
             gg = genes[chunk_idx[c]]
             gg.strand = strands[s]
             tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
 
             ### add introns implied by splicegraph to the list
-            all_introns = gg.introns[s]
+            all_introns = gg.introns[s][:, :2]
             for k in range(gg.splicegraph.edges.shape[0]):
                 for l in range(k+1, gg.splicegraph.edges.shape[0]):
                     if gg.splicegraph.edges[k, l] == 1:
                         try:
-                            all_introns = sp.r_[all_introns, sp.array([[gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l], 1]])] # introns are half open
+                            all_introns = sp.r_[all_introns, sp.array([[gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]]])] # introns are half open
                         except:
                             import pdb
                             pdb.set_trace()
@@ -806,7 +811,7 @@ def insert_cassette_exons(genes, CFG):
                         continue
                     curr_exon = [all_introns[k, 1], all_introns[l, 0]]
                     ### do not allow curr_exon to overlap existing exon
-                    if sp.sum((gg.splicegraph.vertices[0, :] < curr_exon[1]) & (gg.splicegraph.vertices[1, :] > curr_exon[0])) == 0:
+                    if sp.sum((gg.splicegraph.vertices[0, :] < curr_exon[1]) & (gg.splicegraph.vertices[1, :] > curr_exon[0])) > 0:
                         continue
 
                     num_exons += 1
@@ -853,6 +858,8 @@ def insert_cassette_exons(genes, CFG):
                 if not any_added:
                     break
             if any_added:
+                #import pdb
+                #pdb.set_trace()
                 exon_order = sp.argsort(gg.splicegraph.vertices[0, :])
                 gg.splicegraph.reorder(exon_order)
             ### clean up gene structure
