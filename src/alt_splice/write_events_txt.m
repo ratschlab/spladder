@@ -22,7 +22,7 @@ function write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, ann
     fprintf('writing %s events in flat txt format to %s\n', events(1).event_type, fn_out_txt);
 
     fd = fopen(fn_out_txt, 'w+') ;
-    if nargin > 5,
+    if nargin > 5 && ~isempty(anno_names),
         gene_header = sprintf('\tgene_start\tgene_end');
     else
         gene_header = '';
