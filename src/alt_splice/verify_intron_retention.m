@@ -8,11 +8,6 @@ verified = [0 0] ;
 % (5) intron_conf, (6) intron_cov_region
 info = [1, 0, 0, 0, 0, 0];
 
-ho_offset = 0;
-if isfield(CFG, 'is_half_open') && CFG.is_half_open,
-    ho_offset = 1;
-end;
-
 %%% check validity of exon coordinates (>=0)
 if any([event.exon1 event.exon2 event.intron] <= 0),
     info(1) = 0 ;
@@ -38,7 +33,7 @@ seg_intron = setdiff(seg_all, seg_exon1);
 seg_intron = setdiff(seg_intron, seg_exon2);
 assert(~isempty(seg_intron));
 
-seg_lens = segs{1}(2, :) - segs{1}(1, :) + 1 - ho_offset;
+seg_lens = segs{1}(2, :) - segs{1}(1, :) + 1;
 
 %%% compute exon coverages as mean of position wise coverage
 % exon1_cov

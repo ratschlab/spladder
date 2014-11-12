@@ -16,11 +16,6 @@ function [counts] = count_intron_coverage(genes, fn_bam, CFG, fn_out)
     counts = struct();
     intron_tol = 0 ;
 
-    ho_offset = 0;
-    if isfield(CFG, 'is_half_open') && CFG.is_half_open,
-        ho_offset = 1;
-    end;
-
     if ~iscell(fn_bam),
         fn_bam = {fn_bam};
     end;
@@ -42,13 +37,6 @@ function [counts] = count_intron_coverage(genes, fn_bam, CFG, fn_out)
                 gg = create_segment_graph(gg, CFG);
             end;
             gg.tracks = [];
-            if ho_offset == 1,
-                if gg.strand == '-',
-                    gg.segmentgraph{1}(1, :) = gg.segmentgraph{1}(1, :) + 1;
-                else,
-                    gg.segmentgraph{1}(2, :) = gg.segmentgraph{1}(2, :) - 1;
-                end;
-            end;
             gg.start = min(min(gg.segmentgraph{1}));
             gg.stop = max(max(gg.segmentgraph{1}));
             gg = add_count_tracks(gg, fn_bam{f}, CFG);

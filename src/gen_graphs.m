@@ -16,11 +16,6 @@ inserted.exon_skip = 0 ;
 inserted.gene_merge = 0 ;
 inserted.new_terminal_exon = 0 ;
 
-% convert intervals to closed intervals
-if CFG.is_half_open,
-    genes = half_open_to_closed(genes);
-end;
-
 if isempty([genes.chr_num]),
     chrms = unique({genes.chr});
     for c = 1:length(chrms),
@@ -153,16 +148,19 @@ fprintf(CFG.fd_log, 'Re-labeleling new alternative genes ...');
 genes = label_alt_genes(genes, CFG) ;
 fprintf(CFG.fd_log, '... done.\n');
 
+%%% make sure everything is sorted
+for i = 1:length(genes),
+    [tmp, s_idx] = sortrows(genes(i).splicegraph{1}');
+    genes(i).splicegraph{1} = genes(i).splicegraph{1}(:, s_idx);
+    genes(i).splicegraph{2} = genes(i).splicegraph{2}(s_idx, s_idx);
+    genes(i).splicegraph{3} = genes(i).splicegraph{3}(:, s_idx);
+end;
+
 %%% print summary to log file
 fn = fieldnames(inserted);
 fprintf(CFG.fd_log, 'Inserted:\n');
 for i = 1:length(fn),
     fprintf(CFG.fd_log, '\t%s:\t%i\n', fn{i}, inserted.(fn{i}));
-end;
-
-% convert intervals back
-if CFG.is_half_open,
-    genes = closed_to_half_open(genes);
 end;
 
 if CFG.fd_log > 1,

@@ -8,11 +8,6 @@ verified = [0 0 0 0] ;
 % (5) exon_pre_exon_conf, (6) exon_exon_aft_conf, (7) exon_pre_exon_aft_conf
 info = [1, 0, 0, 0, 0, 0, 0];
 
-ho_offset = 0;
-if isfield(CFG, 'is_half_open') && CFG.is_half_open,
-    ho_offset = 1;
-end;
-
 %%% check validity of exon coordinates (>=0)
 if any([event.exon event.exon_pre event.exon_aft] <= 0),
     info(1) = 0;
@@ -39,7 +34,7 @@ seg_exon_pre = sort(find(segs{2}(idx_exon_pre, :)));
 seg_exon_aft = sort(find(segs{2}(idx_exon_aft, :)));
 seg_exon = sort(find(segs{2}(idx_exon, :)));
 
-seg_lens = segs{1}(2, :) - segs{1}(1, :) + 1 - ho_offset;
+seg_lens = segs{1}(2, :) - segs{1}(1, :) + 1;
 
 % exon pre cov
 info(3) = sum(counts_segments(seg_exon_pre) .* seg_lens(seg_exon_pre)) / sum(seg_lens(seg_exon_pre));

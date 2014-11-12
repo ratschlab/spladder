@@ -6,15 +6,11 @@ function event_list = curate_alt_prime(event_list, CFG)
 
     rm_idx = [];
     corr_count = 0;
-    ho_offset = 0;
-    if isfield(CFG, 'is_half_open') && CFG.is_half_open,
-        ho_offset = 1;
-    end;
 
     for i = 1:length(event_list)
         
         %%% check if alt exons overlap
-        if event_list(i).exon_alt1_col(1) > event_list(i).exon_alt2_col(2) - ho_offset || event_list(i).exon_alt1_col(2) - ho_offset < event_list(i).exon_alt2_col(1)
+        if event_list(i).exon_alt1_col(1) > event_list(i).exon_alt2_col(2) || event_list(i).exon_alt1_col(2) < event_list(i).exon_alt2_col(1)
             rm_idx(end + 1) = i;
             continue;
         end;

@@ -86,14 +86,9 @@ function count_graph_coverage_wrapper(fname_in, fname_out, CFG)
     counts.edge_idx = counts.edges(:, 1);
     counts.edges = counts.edges(:, 2:end);
     seg_lens = [];
-    if CFG.is_half_open,
-        ho_offset = 1;
-    else
-        ho_offset = 1;
-    end;
     for i = 1:length(genes),
         if ~isempty(genes(i).segmentgraph{1}),
-            seg_lens = [seg_lens, genes(i).segmentgraph{1}(2, :) - genes(i).segmentgraph{1}(1, :) + 1 - ho_offset];
+            seg_lens = [seg_lens, genes(i).segmentgraph{1}(2, :) - genes(i).segmentgraph{1}(1, :) + 1];
         end;
     end;
 

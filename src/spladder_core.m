@@ -17,6 +17,13 @@ function spladder_core(CFG)
         else
             genes = CFG.genes ;
         end;
+
+        %%% force closed intervals
+        if CFG.is_half_open,
+            genes = half_open_to_closed(genes);
+            CFG.is_half_open = 0;
+        end;
+
         genes = gen_graphs(genes, CFG) ;
 
         fprintf('Saving genes to %s\n', CFG.out_fname) ;

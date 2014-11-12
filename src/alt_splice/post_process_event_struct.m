@@ -18,7 +18,7 @@ function events = post_process_event_struct(events)
         end;
     end ;
     events = events(idx_valid_col~=0) ;
-   
+
     %%% sort exon skip events by all coordinates
     events = sort_events_full(events) ;
     
