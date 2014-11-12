@@ -16,7 +16,7 @@ inserted.exon_skip = 0 ;
 inserted.gene_merge = 0 ;
 inserted.new_terminal_exon = 0 ;
 
-if isempty([genes.chr_num]),
+if ~isfield(genes, 'chr_num') || isempty([genes.chr_num]),
     chrms = unique({genes.chr});
     for c = 1:length(chrms),
         c_idx = strmatch(chrms{c}, {genes.chr}, 'exact');

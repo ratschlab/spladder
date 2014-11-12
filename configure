@@ -62,6 +62,7 @@ then
            SPLADDER_SAMTOOLS_INCLUDE_DIR=$SPLADDER_SAMTOOLS_BIN_DIR
         else
             echo "ERROR: Include sam.h include not found"
+            echo "please run interactive mode: ./configure -i"
             exit -1 ;
         fi
         echo "Include found: $SPLADDER_SAMTOOLS_INCLUDE_DIR"
@@ -75,11 +76,12 @@ then
             SPLADDER_SAMTOOLS_LIB_DIR=$SPLADDER_SAMTOOLS_BIN_DIR
         else
             echo "ERROR: Library libbam.a not found"
+            echo "please run interactive mode: ./configure -i"
             exit -1 ;
         fi
         echo "Library found: $SPLADDER_SAMTOOLS_LIB_DIR"
     else
-        echo SAMTools libraries not found
+        echo no SAMTools found on system
         echo please run interactive mode: ./configure -i
         exit -1 ;
     fi
@@ -87,13 +89,14 @@ else
     if [ ! -f ${SPLADDER_SAMTOOLS_BIN_DIR}/samtools ];
     then
         echo "ERROR: Binary ${SPLADDER_SAMTOOLS_BIN_DIR}/samtools not found"
-                echo please run interactive mode: ./configure -i
+        echo "please run interactive mode: ./configure -i"
         exit -1 ;
     fi
 
-    [[ -z "$SPLADDER_SAMTOOLS_INCLUDE_DIR" ]] && SPLADDER_SAMTOOLS_INCLUDE_DIR=$SPLADDER_SAMTOOLS_INCLUDE_DIR
-    echo "SAMTools Include directory (currently set to \"$SPLADDER_SAMTOOLS_INCLUDE_DIR\")"
-    read SPLADDER_SAMTOOLS_INCLUDE_DIR
+    [[ -z "$SPLADDER_SAMTOOLS_INCLUDE_DIR" ]] && SPLADDER_SAMTOOLS_INCLUDE_DIR=$SPLADDER_SAMTOOLS_BIN_DIR/../include
+    echo "SAMTools Include directory (currently set to \"$SPLADDER_SAMTOOLS_INCLUDE_DIR\", used if left empty)"
+    read SPLADDER_SAMTOOLS_INCLUDE_DIR_USER
+    [[ -z "$SPLADDER_SAMTOOLS_INCLUDE_DIR_USER" ]] || SPLADDER_SAMTOOLS_INCLUDE_DIR=$SPLADDER_SAMTOOLS_INCLUDE_DIR_USER
     if [ ! -f $SPLADDER_SAMTOOLS_INCLUDE_DIR/sam.h ]
     then
         echo "ERROR: Include $SPLADDER_SAMTOOLS_INCLUDE_DIR/sam.h include not found"
@@ -101,13 +104,14 @@ else
         exit -1 ;
     fi
     
-    [[ -z "$SPLADDER_SAMTOOLS_LIB_DIR" ]] && SPLADDER_SAMTOOLS_LIB_DIR=$SPLADDER_SAMTOOLS_LIB_DIR
-    echo "SAMTools library directory (currently set to \"$SPLADDER_SAMTOOLS_LIB_DIR\")"
-    read SPLADDER_SAMTOOLS_LIB_DIR
+    [[ -z "$SPLADDER_SAMTOOLS_LIB_DIR" ]] && SPLADDER_SAMTOOLS_LIB_DIR=$SPLADDER_SAMTOOLS_BIN_DIR/../lib
+    echo "SAMTools library directory (currently set to \"$SPLADDER_SAMTOOLS_LIB_DIR\", used if left empty)"
+    read SPLADDER_SAMTOOLS_LIB_DIR_USER
+    [[ -z "$SPLADDER_SAMTOOLS_LIB_DIR_USER" ]] || SPLADDER_SAMTOOLS_LIB_DIR=$SPLADDER_SAMTOOLS_LIB_DIR_USER
     if [ ! -f $SPLADDER_SAMTOOLS_LIB_DIR/libbam.a ]
     then
         echo "ERROR: Library $SPLADDER_SAMTOOLS_LIB_DIR/libbam.a include not found"
-                echo please run interactive mode: ./configure -i
+        echo "please run interactive mode: ./configure -i"
         exit -1 ;
     fi
 fi
@@ -224,22 +228,13 @@ then
     if [ "$1" == "-i" ];
     then
         echo "Please enter the full path to matlab (currently set to \"$SPLADDER_MATLAB_BIN_PATH\", system version used, if left empty)"
-        read SPLADDER_MATLAB_BIN_PATH
+        read SPLADDER_MATLAB_BIN_PATH_USER
+        [[ -z "$SPLADDER_MATLAB_BIN_PATH_USER" ]] && SPLADDER_MATLAB_BIN_PATH=$(which matlab) || SPLADDER_MATLAB_BIN_PATH=$SPLADDER_MATLAB_BIN_PATH_USER
     else
-        SPLADDER_MATLAB_BIN_PATH=""
         echo checking for matlab
+        SPLADDER_MATLAB_BIN_PATH="$(which matlab)"
     fi
-    if [ "$SPLADDER_MATLAB_BIN_PATH" == "" ];
-    then
-        SPLADDER_MATLAB_BIN_PATH=`which matlab`
-        if [ "$SPLADDER_MATLAB_BIN_PATH" == "" ];
-        then
-            echo matlab not found
-            echo please run interactive mode: ./configure -i
-            exit -1
-        fi
-    fi
-    if [ ! -f $SPLADDER_MATLAB_BIN_PATH ];
+    if [ "$SPLADDER_MATLAB_BIN_PATH" == "" -o ! -f $SPLADDER_MATLAB_BIN_PATH ];
     then
         echo matlab not found
         echo please run interactive mode: ./configure -i
@@ -248,41 +243,30 @@ then
     echo "=> Setting matlab\'s path to \"$SPLADDER_MATLAB_BIN_PATH\""
     echo
 
-    ### check for matlab compiles
+    ### check for matlab compiler
+    SPLADDER_MATLAB_MEX_PATH=$(dirname $SPLADDER_MATLAB_BIN_PATH)/mex 
+    [[ ! -f "$SPLADDER_MATLAB_MEX_PATH" ]] && SPLADDER_MATLAB_MEX_PATH=$(which mex)
     if [ "$1" == "-i" ];
     then
-        echo "Please enter the full path to mex binary \(currently set to \"$SPLADDER_MATLAB_MEX_PATH\", system version used if left empty\)"
-        read SPLADDER_MATLAB_MEX_PATH
-    else
-        SPLADDER_MATLAB_MEX_PATH=""
+        echo "Please enter the full path to mex binary \(currently set to \"$SPLADDER_MATLAB_MEX_PATH\", used if left empty\)"
+        read SPLADDER_MATLAB_MEX_PATH_USER
+        [[ -z "$SPLADDER_MATLAB_MEX_PATH_USER" ]] || SPLADDER_MATLAB_MEX_PATH=$SPLADDER_MATLAB_MEX_PATH_USER
     fi
-    if [ "$SPLADDER_MATLAB_MEX_PATH" == "" ];
+    if [ -z "$SPLADDER_MATLAB_MEX_PATH" -o ! -f "$SPLADDER_MATLAB_MEX_PATH" ];
     then
-        SPLADDER_MATLAB_MEX_PATH=`which mex`
-        if [ "$SPLADDER_MATLAB_MEX_PATH" == "" ];
-        then
-            echo mex not found
-            echo please run interactive mode: ./configure -i
-            exit -1
-        fi
-    fi
-    if [ ! -f "$SPLADDER_MATLAB_MEX_PATH" ];
-    then
-        echo mex not found
+        echo mex compiler not found
         echo please run interactive mode: ./configure -i
         exit -1
     fi
     echo "=> Setting mex\' path to \"$SPLADDER_MATLAB_MEX_PATH\""
     echo
 
+    SPLADDER_MATLAB_INCLUDE_DIR=$(dirname $SPLADDER_MATLAB_BIN_PATH)/../extern/include
     if [ "$1" == "-i" ];
     then
-        echo "Please enter the full path to the matlab include directory (currently set to \"$SPLADDER_MATLAB_INCLUDE_DIR\", system version used, if left empty)"
-        read SPLADDER_MATLAB_INCLUDE_DIR
-    fi
-    if [ "$SPLADDER_MATLAB_INCLUDE_DIR" == "" ];
-    then
-        SPLADDER_MATLAB_INCLUDE_DIR=$(dirname $SPLADDER_MATLAB_BIN_PATH)/../extern/include
+        echo "Please enter the full path to the matlab include directory (currently set to \"$SPLADDER_MATLAB_INCLUDE_DIR\", used if left empty)"
+        read SPLADDER_MATLAB_INCLUDE_DIR_USER
+        [[ -z "$SPLADDER_MATLAB_INCLUDE_DIR_USER" ]] || SPLADDER_MATLAB_INCLUDE_DIR=$SPLADDER_MATLAB_INCLUDE_DIR_USER
     fi
     if [ ! -d "$SPLADDER_MATLAB_INCLUDE_DIR" ];
     then
@@ -325,5 +309,5 @@ echo Done.
 echo 
 
 echo Please use \'make\' to compile the mex files before using SplAdder.
-echo To test SplAdder use \'make example\' or \'make threeexamples\'.
+#echo To test SplAdder use \'make example\' or \'make threeexamples\'.
 echo

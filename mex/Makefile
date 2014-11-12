@@ -8,7 +8,7 @@ get_reads.mexa64:	get_reads.cpp get_reads_direct.cpp mex_input.cpp read.cpp read
 	${SPLADDER_MATLAB_MEX_PATH} -g get_reads.cpp get_reads_direct.cpp mex_input.cpp read.cpp -I${SPLADDER_SAMTOOLS_INCLUDE_DIR} -L${SPLADDER_SAMTOOLS_LIB_DIR} -lbam -lz -lcurses -I$(SPLADDER_MATLAB_INCLUDE_DIR)
 
 get_header.mexa64:	get_header.cpp mex_input.cpp
-	${SPLADDER_MATLAB_MEX_PATH} -g get_header.cpp mex_input.cpp -I${SPLADDER_SAMTOOLS_INCLUE_DIR} -L${SPLADDER_SAMTOOLS_LIB_DIR} -lbam -lz -lcurses -I$(SPLADDER_MATLAB_INCLUDE_DIR)
+	${SPLADDER_MATLAB_MEX_PATH} -g get_header.cpp mex_input.cpp -I${SPLADDER_SAMTOOLS_INCLUDE_DIR} -L${SPLADDER_SAMTOOLS_LIB_DIR} -lbam -lz -lcurses -I$(SPLADDER_MATLAB_INCLUDE_DIR)
 
 get_reads.mex:	get_reads.cpp get_reads_direct.cpp mex_input.cpp read.cpp
 	${SPLADDER_OCTAVE_MKOCT} --mex get_reads.cpp get_reads_direct.cpp mex_input.cpp read.cpp -I${SPLADDER_SAMTOOLS_INCLUDE_DIR} -L${SPLADDER_SAMTOOLS_LIB_DIR} -lbam -lz -lcurses
