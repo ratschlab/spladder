@@ -27,7 +27,7 @@ for j = 1:length(regions)
 	
 	% fill the chunks on the corresponding chromosome
 	while c <= size(chunks,1),
-		if chunks(c,1) > chr || chunks(c,2)>strands(s),
+		if chunks(c,1) > chr || chunks(c,2)>strands(s), % the latter comparison is a bit ugly as the chunks are casted to int ..., but the comparison works anyway here
 			break;
 		end
 		if ~(chunks(c,1) == chr),
@@ -87,6 +87,9 @@ for j = 1:length(regions)
 		else
 			introns{chunk_idx(c), s} = double(gg.stop-[gg.segment_lists{1}(:, 2)'-1; gg.segment_lists{1}(:, 1)']+1) ; 
 		end;
+
+        %%% sort introns 
+        introns{chunk_idx(c), s} = sortrows(introns{chunk_idx(c), s}')';
 
 		c = c + 1;
 	end;
