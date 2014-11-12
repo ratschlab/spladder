@@ -140,16 +140,16 @@ for i = 1:length(genes)
 			idx1__ = find(genes(i).splicegraph{1}(1,:) - CFG.intron_edges.vicinity_region <= genes(i).introns{s}(1,j) & ...
 									genes(i).splicegraph{1}(2,:) + CFG.intron_edges.vicinity_region >= genes(i).introns{s}(1,j)) ;
 
-            %%% check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
+            %%% check, if we can find an exon after the current intron and there is continuous coverage between exon end and intron start
             if isempty(idx1__),
-                idx1__ = find(genes(i).splicegraph{1}(1, :) > genes(i).introns{s}(2, j), 1, 'first');
+                idx1__ = find(genes(i).splicegraph{1}(2, :) < genes(i).introns{s}(1, j), 1, 'last');
                 if ~isempty(idx1__),
                     gg = genes(i);
                     gg.strand = strands(s);
                     rm_strands = ~isfield(gg, 'strands');
                     gg.strands = strands(s);
-                    gg.start = genes(i).introns{s}(2, j) + 1; %%% start of presumable exon
-                    gg.stop = genes(i).splicegraph{1}(2, idx1__); %%% stop of next exon
+                    gg.start = genes(i).splicegraph{1}(2, idx1__) + 1; %%% stop of previous exon
+                    gg.stop = genes(i).introns{s}(1, j) - 1; %%% end of presumable exon
                     maxval = inf; 
                     gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware, CFG.only_primary);
                     if gg.strand == '-',
@@ -163,40 +163,42 @@ for i = 1:length(genes)
             end ;
 
 			% only take the case closest to an existing splice site
-			diff1 = abs(genes(i).splicegraph{1}(1,idx1__) - genes(i).introns{s}(1,j)) ;
-			diff2 = abs(genes(i).splicegraph{1}(2,idx1__) - genes(i).introns{s}(1,j)) ;
-			diff = min(diff1, diff2) ;
-			[tmp, idx1__min] = min(diff) ;
-			idx1__ = idx1__(idx1__min) ;
-			for idx1_ = idx1__,
-				if genes(i).introns{s}(1,j) - 1 - genes(i).splicegraph{1}(1, idx1_) >= CFG.intron_edges.min_exon_len,
-					exon_vicinity_cnt1(s) = exon_vicinity_cnt1(s)+1 ;
-					genes(i).splicegraph{1}(:,end+1) = genes(i).splicegraph{1}(:, idx1_) ;
-					genes(i).splicegraph{1}(2,end) = genes(i).introns{s}(1,j)-1 ; % set exon end to intron start - 1
-					genes(i).splicegraph{2}(end+1,end+1) = 0 ;
-					genes(i).splicegraph{2}(:,end) = genes(i).splicegraph{2}(:,idx1_) ;
-					genes(i).splicegraph{2}(end,:) = genes(i).splicegraph{2}(idx1_,:) ;
-					genes(i).splicegraph{3}(:,end+1) = genes(i).splicegraph{3}(:,idx1_) ; % copy from original exon
-					genes(i).splicegraph{3}(2,end) = 0 ; % cannot be an end
-								
-                    assert(all(genes(i).splicegraph{1}(1,:)<=genes(i).splicegraph{1}(2,:)));
+            if ~isempty(idx1__),
+                diff1 = abs(genes(i).splicegraph{1}(1,idx1__) - genes(i).introns{s}(1,j)) ;
+                diff2 = abs(genes(i).splicegraph{1}(2,idx1__) - genes(i).introns{s}(1,j)) ;
+                diff = min(diff1, diff2) ;
+                [tmp, idx1__min] = min(diff) ;
+                idx1__ = idx1__(idx1__min) ;
+                for idx1_ = idx1__,
+                    if genes(i).introns{s}(1,j) - 1 - genes(i).splicegraph{1}(1, idx1_) >= CFG.intron_edges.min_exon_len,
+                        exon_vicinity_cnt1(s) = exon_vicinity_cnt1(s)+1 ;
+                        genes(i).splicegraph{1}(:,end+1) = genes(i).splicegraph{1}(:, idx1_) ;
+                        genes(i).splicegraph{1}(2,end) = genes(i).introns{s}(1,j)-1 ; % set exon end to intron start - 1
+                        genes(i).splicegraph{2}(end+1,end+1) = 0 ;
+                        genes(i).splicegraph{2}(:,end) = genes(i).splicegraph{2}(:,idx1_) ;
+                        genes(i).splicegraph{2}(end,:) = genes(i).splicegraph{2}(idx1_,:) ;
+                        genes(i).splicegraph{3}(:,end+1) = genes(i).splicegraph{3}(:,idx1_) ; % copy from original exon
+                        genes(i).splicegraph{3}(2,end) = 0 ; % cannot be an end
+                                    
+                        assert(all(genes(i).splicegraph{1}(1,:)<=genes(i).splicegraph{1}(2,:)));
 
-					%for jj=1:size(genes(i).splicegraph{1},2)
-					%	assert(genes(i).splicegraph{1}(2,jj)-genes(i).splicegraph{1}(1,jj) >= CFG.intron_edges.min_exon_len_remove) ;
-					%end 
-								
-					% check exons whose start coincides with intron end
-					genes(i).splicegraph = add_intron(genes(i).splicegraph, size(genes(i).splicegraph{2},1), 0, idx2, 1) ;
-								
-					inserted.alt_53_prime = inserted.alt_53_prime + 1 ;
-                    if CFG.debug,
-                        for idx2_ = idx2,
-                            fprintf(CFG.fd_log, '%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(2,idx1_), genes(i).splicegraph{1}(2,end), genes(i).splicegraph{1}(1,idx2_)) ;
-                        end; 
-                    end;
-					intron_used = 1 ;
+                        %for jj=1:size(genes(i).splicegraph{1},2)
+                        %	assert(genes(i).splicegraph{1}(2,jj)-genes(i).splicegraph{1}(1,jj) >= CFG.intron_edges.min_exon_len_remove) ;
+                        %end 
+                                    
+                        % check exons whose start coincides with intron end
+                        genes(i).splicegraph = add_intron(genes(i).splicegraph, size(genes(i).splicegraph{2},1), 0, idx2, 1) ;
+                                    
+                        inserted.alt_53_prime = inserted.alt_53_prime + 1 ;
+                        if CFG.debug,
+                            for idx2_ = idx2,
+                                fprintf(CFG.fd_log, '%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(2,idx1_), genes(i).splicegraph{1}(2,end), genes(i).splicegraph{1}(1,idx2_)) ;
+                            end; 
+                        end;
+                        intron_used = 1 ;
 
-				end ;
+                    end ;
+                end ;
 			end ;
 
 			%%% if no proximal exon was found, insert new terminal exon, if wished
@@ -265,40 +267,42 @@ for i = 1:length(genes)
             end ;
 
 			% only take the case closest to an existing splice site
-			diff1 = abs(genes(i).splicegraph{1}(1,idx2__) - genes(i).introns{s}(2,j)) ;
-			diff2 = abs(genes(i).splicegraph{1}(2,idx2__) - genes(i).introns{s}(2,j)) ;
-			diff = min(diff1, diff2) ;
-			[tmp, idx2__min] = min(diff) ;
-			idx2__ = idx2__(idx2__min) ;
-			for idx2_ = idx2__,
-				if genes(i).splicegraph{1}(2, idx2_) - genes(i).introns{s}(2,j) >= CFG.intron_edges.min_exon_len,
-					exon_vicinity_cnt2(s) = exon_vicinity_cnt2(s) + 1 ;
-					genes(i).splicegraph{1}(:, end + 1) = genes(i).splicegraph{1}(:, idx2_) ;
-					genes(i).splicegraph{1}(1, end) = genes(i).introns{s}(2, j) + 1 ;
-					genes(i).splicegraph{2}(end + 1, end + 1) = 0 ;
-					genes(i).splicegraph{2}(:, end) = genes(i).splicegraph{2}(:, idx2_) ;
-					genes(i).splicegraph{2}(end, :) = genes(i).splicegraph{2}(idx2_, :) ;
-					genes(i).splicegraph{3}(:, end + 1) = genes(i).splicegraph{3}(:, idx2_) ; % copy from original exon
-					genes(i).splicegraph{3}(1, end) = 0 ; % cannot be a start
-						
-                    assert(all(genes(i).splicegraph{1}(1,:)<=genes(i).splicegraph{1}(2,:)));
+            if ~isempty(idx2__),
+                diff1 = abs(genes(i).splicegraph{1}(1,idx2__) - genes(i).introns{s}(2,j)) ;
+                diff2 = abs(genes(i).splicegraph{1}(2,idx2__) - genes(i).introns{s}(2,j)) ;
+                diff = min(diff1, diff2) ;
+                [tmp, idx2__min] = min(diff) ;
+                idx2__ = idx2__(idx2__min) ;
+                for idx2_ = idx2__,
+                    if genes(i).splicegraph{1}(2, idx2_) - genes(i).introns{s}(2,j) >= CFG.intron_edges.min_exon_len,
+                        exon_vicinity_cnt2(s) = exon_vicinity_cnt2(s) + 1 ;
+                        genes(i).splicegraph{1}(:, end + 1) = genes(i).splicegraph{1}(:, idx2_) ;
+                        genes(i).splicegraph{1}(1, end) = genes(i).introns{s}(2, j) + 1 ;
+                        genes(i).splicegraph{2}(end + 1, end + 1) = 0 ;
+                        genes(i).splicegraph{2}(:, end) = genes(i).splicegraph{2}(:, idx2_) ;
+                        genes(i).splicegraph{2}(end, :) = genes(i).splicegraph{2}(idx2_, :) ;
+                        genes(i).splicegraph{3}(:, end + 1) = genes(i).splicegraph{3}(:, idx2_) ; % copy from original exon
+                        genes(i).splicegraph{3}(1, end) = 0 ; % cannot be a start
+                            
+                        assert(all(genes(i).splicegraph{1}(1,:)<=genes(i).splicegraph{1}(2,:)));
 
-					%for jj=1:size(genes(i).splicegraph{1},2)
-					%	assert(genes(i).splicegraph{1}(2,jj)-genes(i).splicegraph{1}(1,jj) >= CFG.intron_edges.min_exon_len_remove) ;
-					%end 
-					
-					genes(i).splicegraph = add_intron(genes(i).splicegraph, idx1, 1, size(genes(i).splicegraph{2},1), 0) ;
-					
-					inserted.alt_53_prime = inserted.alt_53_prime + 1 ;
-                    if CFG.debug,
-                        for idx1_ = idx1,
-                            fprintf(CFG.fd_log, '%s\talternative_53_prime2\t%c\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(2,idx1_), genes(i).splicegraph{1}(1,end), genes(i).splicegraph{1}(1,idx2_)) ;
-                        end ;
-                    end;
-					intron_used = 1 ;
-							
-				end ;
-			end ;
+                        %for jj=1:size(genes(i).splicegraph{1},2)
+                        %	assert(genes(i).splicegraph{1}(2,jj)-genes(i).splicegraph{1}(1,jj) >= CFG.intron_edges.min_exon_len_remove) ;
+                        %end 
+                        
+                        genes(i).splicegraph = add_intron(genes(i).splicegraph, idx1, 1, size(genes(i).splicegraph{2},1), 0) ;
+                        
+                        inserted.alt_53_prime = inserted.alt_53_prime + 1 ;
+                        if CFG.debug,
+                            for idx1_ = idx1,
+                                fprintf(CFG.fd_log, '%s\talternative_53_prime2\t%c\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(2,idx1_), genes(i).splicegraph{1}(1,end), genes(i).splicegraph{1}(1,idx2_)) ;
+                            end ;
+                        end;
+                        intron_used = 1 ;
+                                
+                    end ;
+                end ;
+            end ;
 
 			%%% if no proximal exon was found, insert new terminal exon, if wished
 			if ~intron_used && CFG.intron_edges.append_new_terminal_exons,
