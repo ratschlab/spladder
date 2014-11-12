@@ -21,8 +21,8 @@ end;
 
 %%% do not compute components of merged set, if result file already exists
 fn_out_merge = '';
+prune_tag = '';
 if strcmp(CFG.merge_strategy, 'merge_graphs'),
-    prune_tag = '';
     if CFG.do_prune,
         prune_tag = '_pruned';
     end;
