@@ -37,11 +37,11 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
         if filter is not None:
             ### handle mismatches
             if var_aware:
-                mm = tags['XM'] + tags['XG']
+                if filter['mismatch'] < (tags['XM'] + tags['XG']):
+                    continue
             else:
-                mm = tags['NM']
-            if filter['mismatch'] < mm:
-                continue
+                if filter['mismatch'] < tags['NM']:
+                    continue
 
             if is_spliced:
                 ### handle min segment length
@@ -60,23 +60,31 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
             except KeyError:
                 pass
 
-        ### get introns
-        if is_spliced:
-            p = read.pos 
-            for o in read.cigar:
-                if o[0] == 3:
-                    introns.append([p, p + o[1]])
-                if o[0] in [0, 2, 3]:
-                    p += o[1]
+        ### get introns and covergae
+        p = read.pos 
+        for o in read.cigar:
+            if o[0] == 3:
+                introns.append([p, p + o[1]])
+            if o[0] in [0, 2]:
+                r = range(max(p-start, 0), min(p + o[1] - start, stop - start))
+                i.extend([read_cnt] * len(r))
+                j.extend(r)
+                #for pp in range(p, p + o[1]):
+                #    if pp - start >= 0 and pp < stop:
+                #        i.append(read_cnt)
+                #        j.append(pp - start)
+            if o[0] in [0, 2, 3]:
+                p += o[1]
 
-        ### get coverage
-        for p in read.positions:
-            if p - start >= 0:
-                if p < start or p >= stop:
-                    break
-                else:
-                    i.append(read_cnt)
-                    j.append(p - start)
+        ### the follwoing is new behavior and gonne come in the next version --> deletions are not counted towards coverage
+        #### get coverage
+        #for p in read.positions:
+        #    if p - start >= 0:
+        #        if p >= stop:
+        #            break
+        #        else:
+        #            i.append(read_cnt)
+        #            j.append(p - start)
 
         read_cnt += 1
 
