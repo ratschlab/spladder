@@ -112,9 +112,11 @@ def collect_events(CFG):
                             event = Event('intron_retention', gene.chr, gene.chr_num, gene.strand)
                             event.strain = sp.array([strain])
                             event.exons1 = sp.c_[exons[:, intron_intron_reten[k][0]], exons[:, intron_intron_reten[k][1]]].T
-                            event.exons2 = exons[:, intron_intron_reten[k][2]]
+                            event.exons2 = sp.array([exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]])
+                            #event.exons2 = exons[:, intron_intron_reten[k][2]]
                             event.exons1_col = sp.c_[exons_col[:, intron_intron_reten[k][0]], exons_col[:, intron_intron_reten[k][1]]]
-                            event.exons2_col = exons_col[:, intron_intron_reten[k][2]]
+                            event.exons2_col = sp.array([exons_col[:, intron_intron_reten[k][0]][0], exons_col[:, intron_intron_reten[k][1]][1]])
+                            #event.exons2_col = exons_col[:, intron_intron_reten[k][2]]
                             event.gene_name = sp.array([gene.name])
                             event.gene_idx = idx_intron_reten[k]
                             #event.transcript_type = sp.array([gene.transcript_type])
@@ -328,7 +330,7 @@ def collect_events(CFG):
                 ### post process event structure by sorting and making events unique
                 events_all = post_process_event_struct(exon_skip_pos_all)
 
-                ### store exons skip events
+                ### store exon skip events
                 print 'saving exon skips to %s' % fn_out_es
                 cPickle.dump(events_all, open(fn_out_es, 'w'), -1)
             else:
@@ -343,8 +345,8 @@ def collect_events(CFG):
 
                 ### post process event structure by sorting and making events unique
                 events_all = post_process_event_struct(mult_exon_skip_pos_all)
-                
-                ### store exons skip events
+
+                ### store multiple exon skip events
                 print 'saving multiple exon skips to %s' % fn_out_mes
                 cPickle.dump(events_all, open(fn_out_mes, 'w'), -1)
             else:

@@ -32,18 +32,32 @@ class Event:
 
     def get_inner_coords(self, trafo=False):
         
-        if trafo:
-            return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:-1], sp.sort(self.exons2_col.ravel())[1:-1]]))
+        if self.event_type != 'mult_exon_skip':
+            if trafo:
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:-1], sp.sort(self.exons2_col.ravel())[1:-1]]))
+            else:
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:-1], sp.sort(self.exons2.ravel())[1:-1]]))
         else:
-            return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:-1], sp.sort(self.exons2.ravel())[1:-1]]))
+            if trafo:
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:4], sp.sort(self.exons1_col.ravel())[-4:-1], sp.sort(self.exons2_col.ravel())[1:4], sp.sort(self.exons2_col.ravel())[-4:-1]]))
+            else:
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:4], sp.sort(self.exons1.ravel())[-4:-1], sp.sort(self.exons2.ravel())[1:4], sp.sort(self.exons2.ravel())[-4:-1]]))
+            
         
 
     def get_coords(self, trafo=False):
         
-        if trafo:
-            #return sp.sort(sp.unique(sp.c_[self.exons1_col.ravel(), self.exons2_col.ravel()]))
-            return sp.sort(sp.r_[self.exons1_col.ravel(), self.exons2_col.ravel()])
+        if self.event_type != 'mult_exon_skip':
+            if trafo:
+                #return sp.sort(sp.unique(sp.c_[self.exons1_col.ravel(), self.exons2_col.ravel()]))
+                return sp.sort(sp.r_[self.exons1_col.ravel(), self.exons2_col.ravel()])
+            else:
+                #return sp.sort(sp.unique(sp.c_[self.exons1.ravel(), self.exons2.ravel()]))
+                return sp.sort(sp.r_[self.exons1.ravel(), self.exons2.ravel()])
         else:
-            #return sp.sort(sp.unique(sp.c_[self.exons1.ravel(), self.exons2.ravel()]))
-            return sp.sort(sp.r_[self.exons1.ravel(), self.exons2.ravel()])
+            if trafo:
+                return sp.sort(sp.r_[self.exons1_col.ravel()[:4], self.exons2_col.ravel()[-4:]])
+            else:
+                return sp.sort(sp.r_[self.exons1.ravel()[:4], self.exons2.ravel()[-4:]])
+            
         

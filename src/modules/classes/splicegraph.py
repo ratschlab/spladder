@@ -166,6 +166,8 @@ class Splicegraph:
             for i2 in idx2:
                 self.edges[i1, i2] = 1
                 self.edges[i2, i1] = 1
+        
+        self.uniquify()
 
     def add_cassette_exon(self, new_exon, exons_pre, exons_aft):
         ### exon_pre contains the indices of preceding exons

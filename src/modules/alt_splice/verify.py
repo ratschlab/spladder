@@ -57,17 +57,21 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     ### intron score is the number of reads confirming this intron
     # exon_pre_exon_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exons[0][0]], segs.seg_edges.shape))[0]
-    info[4] = counts_edges[idx, 1]
+    if len(idx.shape) > 0 and idx.shape[0] > 0:
+        info[4] = counts_edges[idx[0], 1]
     # exon_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exons[-1][-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
-    info[5] = counts_edges[idx, 1]
+    if len(idx.shape) > 0 and idx.shape[0] > 0:
+        info[5] = counts_edges[idx[0], 1]
     # exon_pre_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
-    info[6] = counts_edges[idx, 1]
+    if len(idx.shape) > 0 and idx.shape[0] > 0:
+        info[6] = counts_edges[idx[0], 1]
     for i in range(seg_exons_u.shape[0] - 1):
         # sum_inner_exon_conf
         idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exons[i][-1], seg_exons[i+1][0]], segs.seg_edges.shape))[0]
-        info[7] += counts_edges[idx, 1]
+        if len(idx.shape) > 0 and idx.shape[0] > 0:
+            info[7] += counts_edges[idx[0], 1]
 
     # num_inner_exon
     info[8] = event.exons2.shape[0] - 2

@@ -21,8 +21,8 @@ def sort_events_full(event_list):
 def sort_events_by_event(event_list):
     # event_list = sort_events_by_event(event_list),
    
-    coord_list = sp.array([x.get_inner_coords() for x in event_list]) 
-    chr_list = sp.array([x.chr_num for x in event_list])
+    coord_list = sp.array([x.get_inner_coords() for x in event_list], dtype='double') 
+    chr_list = sp.array([x.chr_num for x in event_list], dtype='double')
     strand_list = sp.array([x.strand == '-' for x in event_list], dtype = 'double')
     sort_list = sp.c_[chr_list, strand_list, coord_list]
     tmp, idx = sort_rows(sort_list, index=True)
@@ -43,7 +43,6 @@ def post_process_event_struct(events):
         idx_valid[i] = sp.all(events[i].get_coords(trafo=True) > 0)
     events = events[sp.where(idx_valid)[0]]
    
-
     ### sort exons in events
     for e in events:
         e.exons1 = sort_rows(e.exons1) 
@@ -66,7 +65,7 @@ def post_process_event_struct(events):
     ### count detected strains
     for i in range(events.shape[0]):
         events[i].num_detected = len(events[i].strain)
-        events[i].id = i
+        events[i].id = (i + 1)
 
     return events
 
@@ -96,14 +95,14 @@ def make_unique_by_strain(event_list):
                 assert(idx.shape[0] == 1)
                 assert(sp.all(event_list[i].get_coords(trafo=True) == event_list[i-1].get_coords(trafo=True)))
                 if not event_list[i].gene_name[0] in event_list[i-1].gene_name:
-                    event_list[i-1].gene_name = sp.c_[event_list[i-1].gene_name, event_list[i].gene_name[0]]
+                    event_list[i-1].gene_name = sp.r_[event_list[i-1].gene_name, [event_list[i].gene_name[0]]]
                 event_list[i] = event_list[i-1]
             else: 
-                event_list[i].strain = sp.c_[sp.array([event_list[i-1].strain[0]]), event_list[i].strain]
+                event_list[i].strain = sp.r_[[event_list[i-1].strain[0]], event_list[i].strain]
                 assert(sp.all(sp.sort(event_list[i].strain) == sp.sort(sp.unique(event_list[i].strain))))
                 ### TODO !!!!!!!!!!!!! make sure that we keep different coordinates if the strains differ ...
                 if not event_list[i].gene_name[0] in event_list[i-1].gene_name:
-                    event_list[i].gene_name = sp.c_[sp.array([event_list[i-1].gene_name]), event_list[i].gene_name[0]]
+                    event_list[i].gene_name = sp.r_[event_list[i-1].gene_name, [event_list[i].gene_name[0]]]
             rm_idx.append(i - 1)
 
     print 'events dropped: %i' % len(rm_idx)

@@ -379,6 +379,7 @@ def insert_intron_edges(genes, CFG):
     num_unused_introns = sp.zeros((genes.shape[0],), dtype='int')
 
     for i in range(genes.shape[0]):
+    
         if CFG['verbose'] and (i+1) % 1000 == 0:
             print >> CFG['fd_log'], '%i of %i genes' % (i+1, genes.shape[0])
 
@@ -450,7 +451,7 @@ def insert_intron_edges(genes, CFG):
 
             # did not find exons in same gene sharing boundaries with intron start
             # find first end in previous gene on same strand
-            if idx1.shape[0] == 0 and i > 0 and (genes[i - 1].chr_num == genes[i].chr_num) and (genes[i - 1].strand == genes[i].strand): 
+            if idx1.shape[0] == 0 and i > 0 and len(genes) > 1 and (genes[i - 1].chr_num == genes[i].chr_num) and (genes[i - 1].strand == genes[i].strand): 
                 ### find all exon ends in previuos gene that coincide with intron start j
                 idx1_ = sp.where(sp.absolute(genes[i-1].splicegraph.vertices[1, :] - genes[i].introns[s][j, 0]) <= intron_tol)[0]
                 if idx1_.shape[0] > 0:
@@ -465,7 +466,7 @@ def insert_intron_edges(genes, CFG):
 
             # did not find exons in same gene sharing boundaries with intron end
             # find second end in next gene on same strand
-            if idx2.shape[0] == 0 and i < len(genes) and genes[i + 1].chr_num == genes[i]. chr_num and genes[i+1].strand == genes[i].strand:
+            if idx2.shape[0] == 0 and len(genes) > 1 and i < len(genes) and genes[i + 1].chr_num == genes[i]. chr_num and genes[i+1].strand == genes[i].strand:
                 ### find all exon starts in following gene that coincide with intron end j
                 idx2_ = sp.where(sp.absolute(genes[i+1].splicegraph.vertices[0, :] - genes[i].introns[s][j, 1]) <= intron_tol)[0]
                 if idx2_.shape[0] > 0:
@@ -488,17 +489,17 @@ def insert_intron_edges(genes, CFG):
                 ### check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
                 if idx1__.shape[0] == 0:
                     #idx1__ = sp.argmax(genes[i].splicegraph.vertices[0, :] >= genes[i].introns[s][j, 1])
-                    idx1__ = sp.where(genes[i].splicegraph.vertices[0, :] >= genes[i].introns[s][j, 1])[0]
+                    idx1__ = sp.where(genes[i].splicegraph.vertices[1, :] <= genes[i].introns[s][j, 0])[0]
                     if len(idx1__.shape) > 0 and idx1__.shape[0] > 0:
-                        idx1__ = idx1__.min()
+                        idx1__ = idx1__.max()[sp.newaxis]
                         gg = genes[i]
                         gg.strand = strands[s]
                         gg.strands = strands[s]
-                        gg.start = genes[i].introns[s][j, 1]  ### start of presumable exon
-                        gg.stop = genes[i].splicegraph.vertices[1, idx1__] ### stop of next exon
+                        gg.start = genes[i].splicegraph.vertices[1, idx1__] ### stop of previous exon
+                        gg.stop = genes[i].introns[s][j, 0]  ### end of presumable exon
                         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
                         ### TODO: make the following a configurable
-                        if sp.mean(sp.sum(tracks, axis = 0) > 10) < 0.9:
+                        if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
                             idx1__ = sp.array([])
                 
                 # only take the case closest to an existing splice site
@@ -553,6 +554,7 @@ def insert_intron_edges(genes, CFG):
                     assert(sp.all(genes[i].splicegraph.vertices[1, :] >= genes[i].splicegraph.vertices[0, :]))
 
                     genes[i].splicegraph.add_intron(idx2, 1, sp.array([genes[i].splicegraph.edges.shape[0] - 1]), 0)
+                    genes[i].splicegraph.uniquify()
                     intron_used = True
 
                 if intron_used:
@@ -569,7 +571,7 @@ def insert_intron_edges(genes, CFG):
                     #idx2__ = sp.argmax(genes[i].splicegraph.vertices[0, :] > genes[i].introns[s][j, 1])
                     idx2__ = sp.where(genes[i].splicegraph.vertices[0, :] > genes[i].introns[s][j, 1])[0]
                     if len(idx2__.shape) > 0 and idx2__.shape[0] > 0:
-                        idx2__ = idx2__.min()
+                        idx2__ = idx2__.min()[sp.newaxis]
                         gg = genes[i]
                         gg.strand = strands[s]
                         gg.strands = strands[s]
@@ -577,7 +579,7 @@ def insert_intron_edges(genes, CFG):
                         gg.stop = genes[i].splicegraph.vertices[1, idx2__]  ### stop of next exon
                         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
                         ### TODO: make configurable
-                        if sp.mean(sp.sum(tracks, axis=1) > 10) < 0.9:
+                        if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
                             idx2__ = sp.array([])
 
                 # only take the case closest to an existing splice site
@@ -633,7 +635,7 @@ def insert_intron_edges(genes, CFG):
                     ### adapt terminal exon ends if the new intron starts within them
                     for tmp_idx in idx1:
                         if genes[i].splicegraph.terminals[1, tmp_idx] == 1 and genes[i].introns[s][j, 0] > genes[i].splicegraph.vertices[0, tmp_idx]:
-                            genes(i).splicegraph.vertices[1, tmp_idx] = genes[i].introns[s][j, 0]
+                            genes[i].splicegraph.vertices[1, tmp_idx] = genes[i].introns[s][j, 0]
                     assert(sp.all(genes[i].splicegraph.vertices[1, :] >= genes[i].splicegraph.vertices[0, :]))
                             
                     genes[i].splicegraph.add_intron(idx1, 1, sp.array([genes[i].splicegraph.edges.shape[0] - 1]), 0)
@@ -676,6 +678,7 @@ def insert_intron_edges(genes, CFG):
             #		P(end+1,:)=[i1,i2] ;
             #		genes(i).splicegraph{2}(i1,i2)=1 ;
             #		genes(i).splicegraph{2}(i2,i1)=1 ;
+
 
         unused_introns = sp.array(unused_introns, dtype='int')
         idx_unused = sp.where((genes[i].introns[s][unused_introns, 1] >= genes[i].start) & (genes[i].introns[s][unused_introns, 0] <= genes[i].stop))[0]
