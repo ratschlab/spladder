@@ -33,7 +33,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     seg_exons = []
     for i in range(1, event.exons2.shape[0] - 1):
         tmp = sp.where((sg.vertices[0, :] == event.exons2[i, 0]) & (sg.vertices[1, :] == event.exons2[i, 1]))[0]
-        seg_exons.append(tmp)
+        seg_exons.append(sp.where(segs.seg_match[tmp, :])[1])
     
     ### find segments corresponding to exons
     seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
@@ -67,7 +67,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[6] = counts_edges[idx[0], 1]
-    for i in range(seg_exons_u.shape[0] - 1):
+    for i in range(len(seg_exons) - 1):
         # sum_inner_exon_conf
         idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exons[i][-1], seg_exons[i+1][0]], segs.seg_edges.shape))[0]
         if len(idx.shape) > 0 and idx.shape[0] > 0:

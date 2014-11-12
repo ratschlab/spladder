@@ -733,10 +733,7 @@ def insert_intron_edges(genes, CFG):
         assert(sp.all(genes[i].splicegraph.vertices[0, :] <= genes[i].splicegraph.vertices[1, :]))
 
     for ix in range(len(genes)):
-        exon_order = sp.argsort(genes[ix].splicegraph.vertices[0, :])
-        genes[ix].splicegraph.vertices = genes[ix].splicegraph.vertices[:, exon_order]
-        genes[ix].splicegraph.edges = genes[ix].splicegraph.edges[exon_order, :][:, exon_order]
-        genes[ix].splicegraph.terminals = genes[ix].splicegraph.terminals[:, exon_order]
+        genes[ix].splicegraph.sort()
     
     return (genes, inserted)
 

@@ -44,7 +44,7 @@ class Splicegraph:
 
     def sort(self):
         
-        s_idx = sp.argsort(self.vertices[0, :])
+        s_idx = sp.lexsort([self.vertices[1, :], self.vertices[0, :]])
         self.reorder(s_idx)
 
     def from_gene(self, gene):
@@ -210,6 +210,7 @@ class Splicegraph:
     def uniquify(self):
         # OUTPUT: splice graph that has been made unique on exons for each gene
 
+        self.sort()
         (s_tmp, s_idx) = sort_rows(self.vertices.T, index=True)
         self.vertices = s_tmp.T
         self.edges = self.edges[s_idx, :][:, s_idx]
