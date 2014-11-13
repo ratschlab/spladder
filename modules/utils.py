@@ -121,3 +121,13 @@ def ismember(element, array, rows=False):
 
         ### TODO I think this is not quite right yet
 
+def replace_sub_matrix(mat_in, idx, mat_put):
+    """Replaces the values in mat_in in rows and cols idx with values of mat_put"""
+    
+    assert((idx.shape[0] * idx.shape[0]) == mat_put.ravel().shape[0])
+
+    sp.put(mat_in, sp.ravel_multi_index([[x for x in idx for _ in idx], [x for _ in idx for x in idx]], (mat_in.shape[0], mat_in.shape[1])), mat_put.ravel())
+
+    return mat_in
+
+

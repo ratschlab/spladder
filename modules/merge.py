@@ -39,7 +39,7 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
-        genes = cPickle.load(open(merge_list[i], 'r'))
+        (genes, inserted) = cPickle.load(open(merge_list[i], 'r'))
         print '... done (%i / %i)' % (i, len(merge_list))
         assert(genes.splicegraph is not None)
 
@@ -160,7 +160,7 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
 
     fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print 'Store genes at: %s' % fn_out
-    cPickle.dump(genes, open(fn_out, 'w'), -1)
+    cPickle.dump((genes, inserted), open(fn_out, 'w'), -1)
 
 
 def merge_duplicate_exons(genes, CFG):
@@ -244,7 +244,7 @@ def merge_genes_by_isoform(CFG):
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
-        genes = cPickle.load(open(merge_list[i]), 'r')
+        (genes, inserted) = cPickle.load(open(merge_list[i]), 'r')
         print '... done'
 
         ### sort
@@ -312,7 +312,7 @@ def merge_genes_by_isoform(CFG):
 
     fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print 'Store genes at: %s' % fn
-    cPickle.dump(genes, open(fn, 'w'), -1)
+    cPickle.dump((genes, inserted), open(fn, 'w'), -1)
 
     ### subsample transcripts if neccessary 
     print 'Subsample genes ...'
@@ -329,7 +329,7 @@ def merge_genes_by_isoform(CFG):
 
     fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms_subsampled.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print 'Store subsampled genes at: %s' % fn
-    cPickle.dump(genes, open(fn, 'w'), -1)       
+    cPickle.dump((genes, inserted), open(fn, 'w'), -1)       
 
 
 def merge_genes_by_splicegraph(CFG, chunk_idx=None):
@@ -370,7 +370,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
-        (genes, tmp) = cPickle.load(open(merge_list[i], 'r'))
+        (genes, inserted) = cPickle.load(open(merge_list[i], 'r'))
         print '... done (%i / %i)' % (i, len(merge_list))
 
         ### sort genes by name
@@ -415,8 +415,8 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
                 tmp, s_idx = sort_rows(genes[j].splicegraph.vertices.T, index=True) 
                 genes[j].splicegraph.vertices = tmp.T
 
-                splice1 = genes[j].splicegraph.edges[s_idx, :][:, s_idx]
-                splice2 = genes2[g_idx].splicegraph.edges
+                splice1 = genes[j].splicegraph.edges[s_idx, :][:, s_idx].copy()
+                splice2 = genes2[g_idx].splicegraph.edges.copy()
 
                 s1_len = genes[j].splicegraph.vertices.shape[1]
                 s2_len = genes2[g_idx].splicegraph.vertices.shape[1]
@@ -426,7 +426,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
                     ### still count edges that can be confirmed
                     tmp, c_idx, a_idx = intersect_rows(genes2[g_idx].splicegraph.vertices.T, genes[j].splicegraph.vertices.T, index=True)
                     if c_idx.shape[0] > 0:
-                        genes2[g_idx].edge_count[c_idx, :][:, c_idx] = genes2[g_idx].edge_count[c_idx, :][:, c_idx] + splice1[a_idx, :][:, a_idx]
+                        genes2[g_idx].edge_count = replace_sub_matrix(genes2[g_idx].edge_count, c_idx, genes2[g_idx].edge_count[c_idx, :][:, c_idx] + splice1[a_idx, :][:, a_idx])
                 else:
                     m_graph = sp.r_[sp.c_[genes[j].splicegraph.vertices.T, sp.ones((s1_len, 1), dtype='int')], sp.c_[genes2[g_idx].splicegraph.vertices.T, 2 * sp.ones((s2_len, 1), dtype='int')]]
                     tmp, s_idx = sort_rows(m_graph[:, 0:3], index=True)
@@ -444,9 +444,10 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
                         edgecnt = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
                         idx1_ = sp.where(m_graph[u_f, 2] == 1)[0]
                         idx2_ = sp.where(m_graph[u_l, 2] == 2)[0]
-                        splice1_[idx1_, :][:, idx1_] = splice1
-                        splice2_[idx2_, :][:, idx2_] = splice2
-                        edgecnt[idx2_, :][:, idx2_] = genes2[g_idx].edge_count
+
+                        splice1_ = replace_sub_matrix(splice1_, idx1_, splice1)
+                        splice2_ = replace_sub_matrix(splice2_, idx2_, splice2)
+                        edgecnt = replace_sub_matrix(edgecnt, idx2_, genes2[g_idx].edge_count)
                     else:
                         splice1_ = splice1
                         splice2_ = splice2
@@ -461,6 +462,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
                     genes2[g_idx].splicegraph.terminals = sp.r_[(sp.tril(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0).T.astype('int'), 
                                                                 (sp.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0).T.astype('int')]
                     genes2[g_idx].edge_count = edgecnt + splice1_
+
             ### we did not find the gene name --> append new gene to genes2
             elif g_idx > genes2.shape[0] or genes2[g_idx].name > genes[j].name:
                 g_idx = g_idx_
@@ -477,9 +479,9 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
     if chunk_idx is not None:
         chunk_tag = '_chunk%i_%i' % (chunk_idx[0], chunk_idx[-1])
         fn_out = fn_out.replace('.pickle', '%s.pickle' % chunk_tag)
-    
+
     print 'Store genes at: %s' % fn_out
-    cPickle.dump(genes, open(fn_out, 'w'), -1)
+    cPickle.dump((genes, inserted), open(fn_out, 'w'), -1)
 
 
 def run_merge(CFG):
