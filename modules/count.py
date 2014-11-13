@@ -146,9 +146,14 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                     counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * c)
 
     for key in counts:
-        counts[key] = sp.vstack(counts[key])
-    counts['edge_idx'] = counts['edges'][:, 0]
-    counts['edges'] = counts['edges'][:, 1:]
+        if len(counts[key]) > 0:
+            counts[key] = sp.vstack(counts[key])
+    if len(counts['edges']) > 0:
+        counts['edge_idx'] = counts['edges'][:, 0]
+        counts['edges'] = counts['edges'][:, 1:]
+    else:
+        counts['edge_idx'] = sp.array([])
+        counts['edges'] = sp.array([])
     counts['seg_len'] = sp.hstack([x.segmentgraph.segments[1, :] - x.segmentgraph.segments[0, :] for x in genes]).T
 
     ### write result data to hdf5
