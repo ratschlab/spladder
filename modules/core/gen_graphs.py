@@ -1,6 +1,7 @@
 import scipy as sp
 import pdb
 import sys
+import copy
 
 from ..reads import *
 from ..helpers import *
@@ -127,7 +128,7 @@ def gen_graphs(genes, CFG=None):
         print >> CFG['fd_log'], 'Inserting new intron edges ...'
         chr_nums = sp.array([x.chr_num for x in genes])
         for chr_idx in sp.unique(chr_nums):
-            tmp_genes = genes[sp.where(chr_nums == chr_idx)[0]]
+            tmp_genes = copy.deepcopy(genes[sp.where(chr_nums == chr_idx)[0]])
             #
             ##############################################################################%%
             if not 'insert_intron_iterations' in CFG:
@@ -151,7 +152,7 @@ def gen_graphs(genes, CFG=None):
                     break
                 tmp_genes = genes_mod
             chr_nums = sp.array([x.chr_num for x in genes])
-            genes[sp.where(chr_nums == chr_idx)[0]] = genes_mod
+            genes[sp.where(chr_nums == chr_idx)[0]] = copy.deepcopy(genes_mod)
         print >> CFG['fd_log'], '... done.\n'
 
     print >> CFG['fd_log'], 'Re-labeleling new alternative genes ...'

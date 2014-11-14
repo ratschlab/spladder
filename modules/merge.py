@@ -81,7 +81,7 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
 
             # same gene
             if g_idx <= genes2.shape[0] and genes2[g_idx].name == genes[j].name:
-                
+
                 tmp, s_idx = sort_rows(genes[j].splicegraph.vertices.T, index=True) 
                 genes[j].splicegraph.vertices = tmp.T
 
@@ -175,10 +175,7 @@ def merge_duplicate_exons(genes, CFG):
         if unique_rows(genes[i].splicegraph.vertices.T).shape[0] == genes[i].splicegraph.vertices.shape[1]:
             continue
 
-        exon_order = sp.argsort(genes[i].splicegraph.vertices[0, :])
-        genes[i].splicegraph.vertices = genes[i].splicegraph.vertices[:, exon_order]
-        genes[i].splicegraph.edges = genes[i].splicegraph.edges[exon_order, :][:, exon_order]
-        genes[i].splicegraph.terminals = genes[i].splicegraph.terminals[:, exon_order]
+        genes[i].splicegraph.sort()
 
         exons = genes[i].splicegraph.vertices.copy()
         admat = genes[i].splicegraph.edges.copy()
@@ -190,7 +187,7 @@ def merge_duplicate_exons(genes, CFG):
             if remove[j]:
                 continue
             idx = sp.where((exons[0, j] == exons[0, :]) & (exons[1, j] == exons[1, :]))[0]
-            idx = sp.where(~sp.in1d(idx, j))[0]
+            idx = idx[sp.where(~sp.in1d(idx, j))[0]]
             if idx.shape[0] > 0:
                 remove[idx] = True
                 for k in idx:
@@ -382,7 +379,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
         for g in genes:
             g.splicegraph.uniquify()
 
-        ### jump over first sample - nothig to add yet 
+        ### skip first sample - nothig to add yet 
         if i == 0:
             genes2 = genes.copy()
             for j in range(genes.shape[0]):
