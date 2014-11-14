@@ -277,7 +277,7 @@ def parse_args(options):
     CFG['strains'] = sp.array(CFG['strains'])
 
     ### adapt graph validation requirement to max number of samples
-    CFG['sg_min_edge_count'] = min(CFG['sg_min_edge_count'], CFG['strains'].shape[0])
+    CFG['sg_min_edge_count'] = min(CFG['sg_min_edge_count'], CFG['samples'].shape[0])
 
     ### rproc options
     if options.parallel == 'y':
