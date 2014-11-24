@@ -12,7 +12,7 @@ P=[] ; both_missing = [0 0] ; one_missing=[0 0] ; multi=0 ; next=0; prev=0 ;
 exon_vicinity_cnt1 = [0 0] ;
 exon_vicinity_cnt2 = [0 0] ;
 merge_idx = [] ;
-intron_tol = 1 ;
+intron_tol = 0 ;
 
 inserted.intron_in_exon = 0 ;
 inserted.alt_53_prime = 0 ;
