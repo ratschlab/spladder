@@ -1,10 +1,10 @@
 class Region:
 
     def __init__(self):
-        chr = None
-        chr_num = None
-        strand = None
-        start = None
-        stop = None
-        id = None
+        self.chr = None
+        self.chr_num = None
+        self.strand = None
+        self.start = None
+        self.stop = None
+        self.id = None
 

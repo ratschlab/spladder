@@ -28,7 +28,7 @@ def get_tags_gtf(tagline):
 
 
 def init_genes_gtf(infile, CFG=None, outfile=None):
-    # genes = init_genes_gtf(infile, CFG=None, outfile=None)
+    # (genes, CFG) = init_genes_gtf(infile, CFG=None, outfile=None)
 
     """This function reads the gtf input file and returns the information in an
        internal data structure"""
@@ -60,9 +60,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
             genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=tags['gene_type'])
             chrms.append(sl[0])
 
-    chrms = sp.sort(sp.unique(chrms))
-    for gid in genes:
-        genes[gid].chr_num = sp.where(chrms == genes[gid].chr)[0]
+    CFG = append_chrms(sp.sort(sp.unique(chrms)), CFG)
 
     counter = 1
     for line in open(infile, 'r'):
@@ -117,8 +115,23 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
         if CFG is not None and CFG['verbose']:
             print >> sys.stderr, "... done"
 
-    return genes
+    return (genes, CFG)
 
+
+def append_chrms(chrms, CFG):
+    """Checks if chrm is in lookup table adds it if not"""
+
+    if CFG is None:
+        CFG = dict()
+
+    if not 'chrm_lookup' in CFG:
+        CFG['chrm_lookup'] = dict()
+
+    for chrm in chrms:
+        if not chrm in CFG['chrm_lookup']:
+            CFG['chrm_lookup'][chrm] = len(CFG['chrm_lookup'])
+
+    return CFG
 
 
 def init_genes_gff3(infile, CFG=None, outfile=None):
@@ -160,9 +173,8 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
             genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2])
             chrms.append(sl[0])
 
-    chrms = sp.sort(sp.unique(chrms))
-    for gid in genes:
-        genes[gid].chr_num = sp.where(chrms == genes[gid].chr)[0]
+
+    CFG = append_chrms(sp.sort(sp.unique(chrms)), CFG)
 
     counter = 1
     for line in open(infile, 'r'):
@@ -217,9 +229,9 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
         if CFG is not None and CFG['verbose']:
             print >> sys.stderr, "... done"
 
-    return genes
+    return (genes, CFG)
 
-def init_regions(fn_bams):
+def init_regions(fn_bams, CFG=None):
     # regions=init_regions(fn_bams)
 
     regions = []
@@ -236,13 +248,16 @@ def init_regions(fn_bams):
             ### load bamfile
             IN = pysam.Samfile(fn_bams[i], 'rb')
             header_info = IN.header['SQ']
+            
+            CFG = append_chrms([x['SN'] for x in header_info], CFG)
+
             strands = ['+', '-']
             for c in range(len(header_info)):
                 if not (header_info[c]['SN'], header_info[c]['LN']) in processed:
                     for s in strands:
                         region = Region()
                         region.chr = header_info[c]['SN']
-                        region.chr_num = c
+                        region.chr_num = CFG['chrm_lookup'][region.chr]
                         region.strand = s
                         region.start = 1
                         region.stop = header_info[c]['LN']
@@ -253,4 +268,4 @@ def init_regions(fn_bams):
             IN.close()
         break
 
-    return sp.array(regions, dtype = 'object')
+    return (sp.array(regions, dtype = 'object'), CFG)

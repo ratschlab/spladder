@@ -117,7 +117,7 @@ def detect_intronreten(genes, idx_alt):
                 is_intron_reten = False
                 for exon_idx1 in range(num_exons): # exon
                     # check that the exon covers the intron
-                    if (vertices[1, exon_idx] >= vertices[0, exon_idx1]) and (vertices[0, exon_idx2] <= vertices[1, exon_idx1]):
+                    if (vertices[1, exon_idx] > vertices[0, exon_idx1]) and (vertices[0, exon_idx2] < vertices[1, exon_idx1]):
                         is_intron_reten = True
                         long_exon = exon_idx1 
                         for l in range(len(introns)):

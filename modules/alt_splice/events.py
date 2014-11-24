@@ -2,14 +2,14 @@ import scipy as sp
 
 from ..utils import *
 
-def sort_events_full(event_list):
-    # event_list = sort_events_full(event_list),
+def sort_events_full(event_list, CFG):
+    # event_list = sort_events_full(event_list, CFG),
 
     if event_list.shape[0] == 0:
         return event_list
 
     coord_list = sp.array([x.get_coords() for x in event_list]) 
-    chr_list = sp.array([x.chr_num for x in event_list])
+    chr_list = sp.array([CFG['chrm_lookup'][x.chr] for x in event_list])
     strand_list = sp.array([x.strand == '-' for x in event_list], dtype = 'double')
     sort_list = sp.c_[chr_list, strand_list, coord_list]
     tmp, idx = sort_rows(sort_list, index=True)
@@ -18,11 +18,11 @@ def sort_events_full(event_list):
 
 
 
-def sort_events_by_event(event_list):
-    # event_list = sort_events_by_event(event_list),
+def sort_events_by_event(event_list, CFG):
+    # event_list = sort_events_by_event(event_list, CFG),
    
     coord_list = sp.array([x.get_inner_coords() for x in event_list], dtype='double') 
-    chr_list = sp.array([x.chr_num for x in event_list], dtype='double')
+    chr_list = sp.array([CFG['chrm_lookup'][x.chr] for x in event_list], dtype='double')
     strand_list = sp.array([x.strand == '-' for x in event_list], dtype = 'double')
     sort_list = sp.c_[chr_list, strand_list, coord_list]
     tmp, idx = sort_rows(sort_list, index=True)
@@ -31,7 +31,7 @@ def sort_events_by_event(event_list):
 
 
 
-def post_process_event_struct(events):
+def post_process_event_struct(events, CFG):
     # events = post_process_event_struct(events)
 
     if events.shape[0] == 0:
@@ -49,14 +49,14 @@ def post_process_event_struct(events):
         e.exons2 = sort_rows(e.exons2) 
 
     ### sort events by all coordinates
-    events = sort_events_full(events) 
+    events = sort_events_full(events, CFG) 
     
     ### make events unique by strain
     print '\nMake %s events unique by strain' % events[0].event_type
     events = make_unique_by_strain(events)
 
     ### sort events by event coordinates
-    events = sort_events_by_event(events) 
+    events = sort_events_by_event(events, CFG) 
     
     ### make events unique by event
     print '\nMake %s events unique by event' % events[0].event_type
@@ -86,7 +86,7 @@ def make_unique_by_strain(event_list):
         if old_coords.shape[0] == curr_coords.shape[0] and sp.all(old_coords == curr_coords):
 
             ### assertion that we did everything right
-            assert(event_list[i - 1].chr_num == event_list[i].chr_num)
+            assert(event_list[i - 1].chr == event_list[i].chr)
             assert(event_list[i - 1].strand == event_list[i].strand)
             assert(event_list[i].strain.shape[0] == 1)
 
@@ -132,7 +132,7 @@ def make_unique_by_event(event_list):
         if old_coords.shape[0] == curr_coords.shape[0] and sp.all(old_coords == curr_coords):
 
             ### assertion that we did everything right
-            assert(event_list[last_kept].chr_num == event_list[i].chr_num)
+            assert(event_list[last_kept].chr == event_list[i].chr)
             assert(event_list[last_kept].strand == event_list[i].strand)
             
             ### check, which event is longer -> keep longer event
@@ -183,8 +183,8 @@ def curate_alt_prime(event_list, CFG):
             continue
 
         ### check if alt exons overlap, otherwise we cannot curate (trim to shortest length)
-        if (sp.all(event_list[i].exons1[0, :] == event_list[i].exons2[0, :]) and (event_list[i].exons1[1, 1] < event_list[i].exons2[1, 0] or event_list[i].exons1[1, 0] > event_list[i].exons2[1, 1])) or \
-           (sp.all(event_list[i].exons1[1, :] == event_list[i].exons2[1, :]) and (event_list[i].exons1[0, 1] < event_list[i].exons2[0, 0] or event_list[i].exons1[0, 0] > event_list[i].exons2[0, 1])):
+        if (sp.all(event_list[i].exons1[0, :] == event_list[i].exons2[0, :]) and (event_list[i].exons1[1, 1] <= event_list[i].exons2[1, 0] or event_list[i].exons1[1, 0] >= event_list[i].exons2[1, 1])) or \
+           (sp.all(event_list[i].exons1[1, :] == event_list[i].exons2[1, :]) and (event_list[i].exons1[0, 1] <= event_list[i].exons2[0, 0] or event_list[i].exons1[0, 0] >= event_list[i].exons2[0, 1])):
             continue
          
         if sp.all(event_list[i].exons1[0, :] == event_list[i].exons2[0, :]):

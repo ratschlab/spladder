@@ -140,7 +140,7 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
             print >> fd, ':%i-%i:%i-%i:%i-%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons2[2, 0], events[i].exons2[2, 1]),
         elif event_type == 'mult_exon_skip':
             print >> fd, ':%i-%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1]),
-            for j in range(1, events.shape[0] - 1):
+            for j in range(1, events[i].exons2.shape[0] - 1):
                 print >> fd, ':%i-%i:' % (events[i].exons2[j, 0], events[i].exons2[j, 1]),
             print >> fd, ':%i-%i' % (events[i].exons2[-1, 0], events[i].exons2[-1, 1]),
         for j in range(len(strains)):

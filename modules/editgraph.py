@@ -264,13 +264,13 @@ def insert_intron_retentions(genes, CFG):
 
     ### form chunks for quick sorting
     strands = ['+', '-']
-    chunks = sp.array([[x.chr_num, strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
+    chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
     (chunks, chunk_idx) = sort_rows(chunks, index=True)
 
     ### form all possible combinations of contigs and strands --> regions
-    regions = init_regions(CFG['bam_fnames'])
+    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
     ### keep only chromosomes found in genes
-    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([x.chr_num for x in genes]))))[0]
+    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
     regions = regions[keepidx]
 
     c = 0 
@@ -367,7 +367,7 @@ def insert_intron_edges(genes, CFG):
     exon_vicinity_cnt1 = [0, 0] 
     exon_vicinity_cnt2 = [0, 0] 
     merge_idx = sp.zeros((0,))
-    intron_tol = 1 
+    intron_tol = 0 
 
     inserted = dict()
     inserted['intron_in_exon'] = 0 
@@ -451,7 +451,7 @@ def insert_intron_edges(genes, CFG):
 
             # did not find exons in same gene sharing boundaries with intron start
             # find first end in previous gene on same strand
-            if idx1.shape[0] == 0 and i > 0 and len(genes) > 1 and (genes[i - 1].chr_num == genes[i].chr_num) and (genes[i - 1].strand == genes[i].strand): 
+            if idx1.shape[0] == 0 and i > 0 and len(genes) > 1 and (genes[i - 1].chr == genes[i].chr) and (genes[i - 1].strand == genes[i].strand): 
                 ### find all exon ends in previuos gene that coincide with intron start j
                 idx1_ = sp.where(sp.absolute(genes[i-1].splicegraph.vertices[1, :] - genes[i].introns[s][j, 0]) <= intron_tol)[0]
                 if idx1_.shape[0] > 0:
@@ -466,7 +466,7 @@ def insert_intron_edges(genes, CFG):
 
             # did not find exons in same gene sharing boundaries with intron end
             # find second end in next gene on same strand
-            if idx2.shape[0] == 0 and len(genes) > 1 and i < len(genes) and genes[i + 1].chr_num == genes[i]. chr_num and genes[i+1].strand == genes[i].strand:
+            if idx2.shape[0] == 0 and len(genes) > 1 and i < len(genes) and genes[i + 1].chr == genes[i].chr and genes[i+1].strand == genes[i].strand:
                 ### find all exon starts in following gene that coincide with intron end j
                 idx2_ = sp.where(sp.absolute(genes[i+1].splicegraph.vertices[0, :] - genes[i].introns[s][j, 1]) <= intron_tol)[0]
                 if idx2_.shape[0] > 0:
@@ -484,9 +484,9 @@ def insert_intron_edges(genes, CFG):
             if idx1.shape[0] == 0: 
                 ### find all exons that overlap intron-start j +/- CFG.intron_edges.vicinity_region
                 idx1__ = sp.where((genes[i].splicegraph.vertices[0, :] - CFG['intron_edges']['vicinity_region'] <= genes[i].introns[s][j, 0]) & 
-                                  (genes[i].splicegraph.vertices[1, :] + CFG['intron_edges']['vicinity_region'] >= genes[i].introns[s][j, 0]))[0]
+                                  (genes[i].splicegraph.vertices[1, :] + CFG['intron_edges']['vicinity_region'] > genes[i].introns[s][j, 0]))[0]
 
-                ### check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
+                ### check, if we can find an exon before the current intron and there is continuous coverage between intron end and exon
                 if idx1__.shape[0] == 0:
                     #idx1__ = sp.argmax(genes[i].splicegraph.vertices[0, :] >= genes[i].introns[s][j, 1])
                     idx1__ = sp.where(genes[i].splicegraph.vertices[1, :] <= genes[i].introns[s][j, 0])[0]
@@ -548,9 +548,10 @@ def insert_intron_edges(genes, CFG):
                     genes[i].splicegraph.new_edge()
                     genes[i].splicegraph.terminals = sp.c_[genes[i].splicegraph.terminals, sp.array([1, 0])] # can be a start, but cannot be an end
 
+                    ### correct terminal exon starts
                     for tmp_idx in idx2:
-                        if genes[i].splicegraph.terminals[0, tmp_idx] == 1 and genes[i].introns[s][1, j] + 1 <= genes[i].splicegraph.vertices[1, tmp_idx]:
-                            genes[i].splicegraph.vertices[0, tmp_idx] = genes[i].introns[s][1, j] + 1
+                        if genes[i].splicegraph.terminals[0, tmp_idx] == 1 and genes[i].introns[s][j, 1] < genes[i].splicegraph.vertices[1, tmp_idx]:
+                            genes[i].splicegraph.vertices[0, tmp_idx] = genes[i].introns[s][j, 1]
                     assert(sp.all(genes[i].splicegraph.vertices[1, :] >= genes[i].splicegraph.vertices[0, :]))
 
                     genes[i].splicegraph.add_intron(idx2, 1, sp.array([genes[i].splicegraph.edges.shape[0] - 1]), 0)
@@ -563,7 +564,7 @@ def insert_intron_edges(genes, CFG):
             # did not find exons in same gene sharing boundaries with intron end
             # check whether the intron ends in the vicinity of an exon
             if idx2.shape[0] == 0: 
-                idx2__ = sp.where((genes[i].splicegraph.vertices[0, :] - CFG['intron_edges']['vicinity_region'] <= genes[i].introns[s][j, 1]) &
+                idx2__ = sp.where((genes[i].splicegraph.vertices[0, :] - CFG['intron_edges']['vicinity_region'] < genes[i].introns[s][j, 1]) &
                                   (genes[i].splicegraph.vertices[1, :] + CFG['intron_edges']['vicinity_region'] >= genes[i].introns[s][j, 1]))[0]
 
                 ### check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
@@ -747,13 +748,13 @@ def insert_cassette_exons(genes, CFG):
     strands = ['+', '-']
 
     ### form chunks for quick sorting
-    chunks = sp.array([[x.chr_num, strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
+    chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
     (chunks, chunk_idx) = sort_rows(chunks, index=True)
 
     ### form all possible combinations of contigs and strands --> regions
-    regions = init_regions(CFG['bam_fnames'])
+    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
     ### keep only chromosomes found in genes
-    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([x.chr_num for x in genes]))))[0]
+    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
     regions = regions[keepidx]
 
     c = 0

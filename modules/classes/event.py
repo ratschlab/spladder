@@ -2,11 +2,10 @@ import scipy as sp
 
 class Event:
 
-    def __init__(self, event_type, chr=None, chr_num=None, strand=None):
+    def __init__(self, event_type, chr=None, strand=None):
         
         self.event_type = event_type
         self.chr = chr
-        self.chr_num = chr_num
         self.strand = strand
         self.strain = ''
         self.exons1 = sp.zeros((0, 2), dtype = 'int')
@@ -26,9 +25,9 @@ class Event:
     def get_len(self, trafo=False):
 
         if trafo:
-            return max(self.exons1_col[-1, -1], self.exons1_col[-1, -1]) - min(self.exons1_col[0, 0], self.exons2_col[0, 0])
+            return max(self.exons1_col.max(), self.exons2_col.max()) - min(self.exons1_col.min(), self.exons2_col.min())
         else:
-            return max(self.exons1[-1, -1], self.exons1[-1, -1]) - min(self.exons1[0, 0], self.exons2[0, 0])
+            return max(self.exons1.max(), self.exons2.max()) - min(self.exons1.min(), self.exons2.min())
 
     def get_inner_coords(self, trafo=False):
         
@@ -39,9 +38,9 @@ class Event:
                 return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:-1], sp.sort(self.exons2.ravel())[1:-1]]))
         else:
             if trafo:
-                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:4], sp.sort(self.exons1_col.ravel())[-4:-1], sp.sort(self.exons2_col.ravel())[1:4], sp.sort(self.exons2_col.ravel())[-4:-1]]))
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:3], sp.sort(self.exons1_col.ravel())[-3:-1], sp.sort(self.exons2_col.ravel())[1:3], sp.sort(self.exons2_col.ravel())[-3:-1]]))
             else:
-                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:4], sp.sort(self.exons1.ravel())[-4:-1], sp.sort(self.exons2.ravel())[1:4], sp.sort(self.exons2.ravel())[-4:-1]]))
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:3], sp.sort(self.exons1.ravel())[-3:-1], sp.sort(self.exons2.ravel())[1:3], sp.sort(self.exons2.ravel())[-3:-1]]))
             
         
 

@@ -102,14 +102,14 @@ def collect_events(CFG):
                                 exons_col = exons
                                 exons_col_pos = exons
                             else:
-                                exons_col = convert_strain_pos_intervals(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                exons_col_pos = convert_strain_pos(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
                                 print 'skipping non-mappable intron retention event'
                                 continue
 
                             ### build intron retention data structure
-                            event = Event('intron_retention', gene.chr, gene.chr_num, gene.strand)
+                            event = Event('intron_retention', gene.chr, gene.strand)
                             event.strain = sp.array([strain])
                             event.exons1 = sp.c_[exons[:, intron_intron_reten[k][0]], exons[:, intron_intron_reten[k][1]]].T
                             event.exons2 = sp.array([exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]])
@@ -137,14 +137,14 @@ def collect_events(CFG):
                                 exons_col = exons
                                 exons_col_pos = exons
                             else:
-                                exons_col = convert_strain_pos_intervals(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                exons_col_pos = convert_strain_pos(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
                                 print 'skipping non-mappable exon_skip event'
                                 continue
 
                             ### build exon skip data structure
-                            event = Event('exon_skip', gene.chr, gene.chr_num, gene.strand)
+                            event = Event('exon_skip', gene.chr, gene.strand)
                             event.strain = sp.array([strain])
                             event.exons1 = sp.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][2]]].T
                             event.exons2 = sp.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][1]], exons[:, exon_exon_skip[k][2]]].T
@@ -171,8 +171,8 @@ def collect_events(CFG):
                                 exons_col = exons
                                 exons_col_pos = exons
                             else:
-                                exons_col = convert_strain_pos_intervals(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                exons_col_pos = convert_strain_pos(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
                                 print 'skipping non-mappable alt 5-prime event'
                                 continue
@@ -184,10 +184,10 @@ def collect_events(CFG):
                                     exon_alt2_col = exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]].T
 
                                     ### check if exons overlap
-                                    if (exon_alt1_col[0] > exon_alt2_col[1]) or (exon_alt1_col[1] < exon_alt2_col[0]):
+                                    if (exon_alt1_col[0] >= exon_alt2_col[1]) or (exon_alt1_col[1] <= exon_alt2_col[0]):
                                         continue
 
-                                    event = Event('alt_5prime', gene.chr, gene.chr_num, gene.strand)
+                                    event = Event('alt_5prime', gene.chr, gene.strand)
                                     event.strain = sp.array([strain])
                                     if gene.strand == '+':
                                         event.exons1 = sp.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
@@ -220,8 +220,8 @@ def collect_events(CFG):
                                 exons_col = exons
                                 exons_col_pos = exons
                             else:
-                                exons_col = convert_strain_pos_intervals(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                exons_col_pos = convert_strain_pos(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
                                 print 'skipping non-mappable alt 3-prime event'
                                 continue
@@ -233,10 +233,10 @@ def collect_events(CFG):
                                     exon_alt2_col = exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]].T
 
                                     ### check if exons overlap
-                                    if (exon_alt1_col[0] > exon_alt2_col[1]) or (exon_alt1_col[1] < exon_alt2_col[0]):
+                                    if (exon_alt1_col[0] >= exon_alt2_col[1]) or (exon_alt1_col[1] <= exon_alt2_col[0]):
                                         continue
 
-                                    event = Event('alt_3prime', gene.chr, gene.chr_num, gene.strand)
+                                    event = Event('alt_3prime', gene.chr, gene.strand)
                                     event.strain = sp.array([strain])
                                     if gene.strand == '+':
                                         event.exons1 = sp.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
@@ -278,14 +278,14 @@ def collect_events(CFG):
                                     exons_col = exons
                                     exons_col_pos = exons
                                 else:
-                                    exons_col = convert_strain_pos_intervals(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                    exons_col_pos = convert_strain_pos(gene.chr_num, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                    exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                    exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                                 if exons_col.shape != exons_col_pos.shape: 
                                     print 'skipping non-mappable multiple exon skip event'
                                     continue
 
                                 ### build multiple exon skip data structure
-                                event = Event('mult_exon_skip', gene.chr, gene.chr_num, gene.strand)
+                                event = Event('mult_exon_skip', gene.chr, gene.strand)
                                 event.strain = sp.array([strain])
                                 event.exons1 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][2]]].T
                                 event.exons2 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][1]], exons[:, exon_mult_exon_skip[k][2]]].T
@@ -312,7 +312,7 @@ def collect_events(CFG):
                 intron_reten_pos_all = sp.array([item for sublist in intron_reten_pos[ridx, :] for item in sublist])
 
                 ### post process event structure by sorting and making events unique
-                events_all = post_process_event_struct(intron_reten_pos_all)
+                events_all = post_process_event_struct(intron_reten_pos_all, CFG)
 
                 ### store intron retentions
                 print 'saving intron retentions to %s' % fn_out_ir
@@ -328,7 +328,7 @@ def collect_events(CFG):
                 exon_skip_pos_all = sp.array([item for sublist in exon_skip_pos[ridx, :] for item in sublist])
 
                 ### post process event structure by sorting and making events unique
-                events_all = post_process_event_struct(exon_skip_pos_all)
+                events_all = post_process_event_struct(exon_skip_pos_all, CFG)
 
                 ### store exon skip events
                 print 'saving exon skips to %s' % fn_out_es
@@ -344,7 +344,7 @@ def collect_events(CFG):
                 mult_exon_skip_pos_all = sp.array([item for sublist in mult_exon_skip_pos[ridx, :] for item in sublist])
 
                 ### post process event structure by sorting and making events unique
-                events_all = post_process_event_struct(mult_exon_skip_pos_all)
+                events_all = post_process_event_struct(mult_exon_skip_pos_all, CFG)
 
                 ### store multiple exon skip events
                 print 'saving multiple exon skips to %s' % fn_out_mes
@@ -360,7 +360,7 @@ def collect_events(CFG):
                 alt_end_5prime_pos_all = sp.array([item for sublist in alt_end_5prime_pos[ridx, :] for item in sublist])
               
                 ### post process event structure by sorting and making events unique
-                events_all = post_process_event_struct(alt_end_5prime_pos_all)
+                events_all = post_process_event_struct(alt_end_5prime_pos_all, CFG)
 
                 ### curate alt prime events
                 ### cut to min len, if alt exon lengths differ
@@ -380,9 +380,8 @@ def collect_events(CFG):
         if do_alt_3prime:
             if not os.path.exists(fn_out_a3):
                 alt_end_3prime_pos_all = sp.array([item for sublist in alt_end_3prime_pos[ridx, :] for item in sublist])
-               
                 ### post process event structure by sorting and making events unique
-                events_all = post_process_event_struct(alt_end_3prime_pos_all)
+                events_all = post_process_event_struct(alt_end_3prime_pos_all, CFG)
 
                 ### curate alt prime events
                 ### cut to min len, if alt exon lengths differ

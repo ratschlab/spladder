@@ -22,6 +22,7 @@ def spladder_core(CFG):
             genes = cPickle.load(open(CFG['anno_fname'], 'r'))
         else:
             genes = CFG['genes']
+
         genes = gen_graphs(genes, CFG)
 
         print 'Saving genes to %s' % (CFG['out_fname'])
@@ -64,7 +65,7 @@ def spladder_core(CFG):
         CFG['out_fame'] = re.sub(r'.pickle$', '_with_isoforms.pickle', CFG['out_fname']);
         if not os.path.exists(CFG['out_fname']):
             ### load genes if not present yet
-            if not genes_loaded == 0:
+            if not genes_loaded:
                 genes = cPickle.load(open(load_fn))
 
             ### generate isoforms

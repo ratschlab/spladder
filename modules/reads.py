@@ -323,16 +323,15 @@ def get_intron_list(genes, CFG):
 
     ### form chunks for quick sorting
     strands = ['+', '-']
-    chunks = sp.array([[x.chr_num, strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
-    #chunks = sp.c_[sp.array([x.chr_num for x in genes], dtype = 'int'), sp.array([x.strand for x in genes], dtype = 'int'), sp.array([x.start for x in genes], dtype = 'int'), sp.array([x.stop for x in genes], dtype = 'int')]
+    chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
     (chunks, chunk_idx) = sort_rows(chunks, index=True)
 
     introns = sp.zeros((chunks.shape[0], 2), dtype = 'object')
     introns[:] = None
 
     ### collect all possible combinations of contigs and strands
-    regions = init_regions(CFG['bam_fnames'])
-    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([x.chr_num for x in genes]))))[0]
+    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
+    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
     regions = regions[keepidx]
 
     c = 0
@@ -365,7 +364,7 @@ def get_intron_list(genes, CFG):
 
             intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'])
             num_introns_filtered += intron_list_tmp[0].shape[0]
-            introns[chunk_idx[c], s] = intron_list_tmp[0]
+            introns[chunk_idx[c], s] = sort_rows(intron_list_tmp[0])
 
             c += 1
 

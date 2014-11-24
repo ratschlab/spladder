@@ -14,6 +14,7 @@
 import sys
 import os
 import scipy as sp
+import cPickle
 
 
 from modules import settings
@@ -128,17 +129,28 @@ def spladder():
         if CFG['anno_fname'].split('.')[-1] != 'pickle':
             if not os.path.exists(CFG['anno_fname'] + '.pickle'):
                 if CFG['anno_fname'].split('.')[-1] in ['gff', 'gff3']:
-                    genes = init.init_genes_gff3(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
+                    (genes, CFG) = init.init_genes_gff3(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
                 elif CFG['anno_fname'].split('.')[-1] in ['gtf']:
-                    genes = init.init_genes_gtf(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
+                    (genes, CFG) = init.init_genes_gtf(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
                 else:
                     print >> sys.stderr, 'ERROR: Unknown annotation format. File needs to end in gtf or gff/gff3\nCurrent file: %s' % CFG['anno_fname']
                     sys.exit(1)
             CFG['anno_fname'] += '.pickle'
 
+        ### add anotation contigs into lookup table
+        if not 'genes' in CFG:
+            genes = cPickle.load(open(CFG['anno_fname'], 'r'))
+        else:
+            genes = CFG['genes']
+        CFG = init.append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), CFG)
+        del genes
+
+
         for idx in idxs:
-            CFG_ = CFG.copy()
+            CFG_ = dict()
             if CFG['merge_strategy'] != 'merge_bams':
+                CFG_['bam_fnames'] = CFG['bam_fnames']
+                CFG_['samples'] = CFG['samples']
                 CFG['bam_fnames'] = CFG['bam_fnames'][idx]
                 CFG['samples'] = CFG['samples'][idx]
                 CFG['out_fname'] = '%s/spladder/genes_graph_conf%i.%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'])
@@ -160,7 +172,11 @@ def spladder():
                 else:
                     spladder_core(CFG)
 
-            CFG = CFG_.copy()
+            for key in CFG_:
+                try:
+                    CFG[key] = CFG_[key].copy()
+                except AttributeError:
+                    CFG[key] = CFG_[key]
 
         ### collect results after parallelization
         if CFG['rproc']:

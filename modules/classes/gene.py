@@ -4,13 +4,12 @@ from ..utils import *
 
 class Gene:
     
-    def __init__(self, name=None, start=None, stop=None, chr=None, chr_num=None, strand=None, source=None, gene_type=None):
+    def __init__(self, name=None, start=None, stop=None, chr=None, strand=None, source=None, gene_type=None):
         self.name = name
         self.start = start
         self.stop = stop
         self.exons = []
         self.chr = chr
-        self.chr_num = chr_num
         self.strand = strand
         self.transcripts = []
         self.source = source
