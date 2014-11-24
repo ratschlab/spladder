@@ -13,8 +13,8 @@ if any([event.exon1 event.exon2 event.intron] <= 0),
     info(1) = 0 ;
     return ;
 %%% check validity of exon coordinates (start < stop && non-overlapping)
-elseif event.exon1(1)>=event.exon1(2) || event.exon2(1)>=event.exon2(2) || ...
-        event.intron(1)>=event.intron(2) || event.intron(1)<event.exon1(1) || event.intron(2)>event.exon2(2),
+elseif event.exon1(1) > event.exon1(2) || event.exon2(1) > event.exon2(2) || ...
+        event.intron(1) > event.intron(2) || event.intron(1) < event.exon1(1) || event.intron(2) > event.exon2(2),
     info(1) = 0 ;
     return ;
 end ;
