@@ -129,6 +129,9 @@ for i = 1:length(CFG.bam_fnames),
     CFG.strains{end + 1} = [ref_tag CFG.samples{end}] ; 
 end;
 
+%%% adapt graph validation step to max number of samples
+CFG.sg_min_edge_count = min(CFG.sg_min_edge_count, length(CFG.samples));
+
 %%% rproc options
 if exist('F_RPROC', 'var') == 1,
     CFG.rproc = F_RPROC;
