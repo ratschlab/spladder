@@ -65,7 +65,7 @@
     CFG.do_infer_splice_graph = 0;
 
     CFG.insert_intron_iterations = 5;
-    CFG.merge_strategy = 'merge_bams'; %% alternatives are: merge_graphs, single, merge_all
+    CFG.merge_strategy = 'merge_graphs'; %% alternatives are: merge_bams, merge_graphs, single, merge_all
     CFG.confidence_level = 3;
     CFG.validate_splicegraphs = 0;
     CFG.same_genestruct_for_all_samples = 1;
@@ -129,7 +129,7 @@
     CFG.only_primary = 0;
 
     %%% define which output files are written
-    CFG.output_txt = 0;
+    CFG.output_txt = 1;
     CFG.output_confirmed_gff3 = 1;
     CFG.output_confirmed_txt = 1;
     CFG.output_filtered_txt = 0;
