@@ -109,7 +109,7 @@ for ix = idx_alt,
   end
 end
 fprintf(1,'\nNumber of multiple exon skips:\t\t\t\t\t%d\n',...
-        length(idx_multiple_skips));
+        length(unique(id_multiple_skips)));
 
 
 

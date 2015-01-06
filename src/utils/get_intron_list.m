@@ -27,7 +27,7 @@ for j = 1:length(regions)
 	
 	% fill the chunks on the corresponding chromosome
 	while c <= size(chunks,1),
-		if chunks(c,1) > chr || chunks(c,2)>strands(s),
+		if chunks(c,1) > chr || chunks(c,2)>strands(s), % the latter comparison is a bit ugly as the chunks are casted to int ..., but the comparison works anyway here
 			break;
 		end
 		if ~(chunks(c,1) == chr),
@@ -45,12 +45,15 @@ for j = 1:length(regions)
 
 		maxval = inf; 
         if ~iscell(CFG.bam_fnames),
-            gg = add_reads_from_bam(gg, CFG.bam_fnames, 'intron_list', '', maxval, CFG.read_filter, CFG.var_aware);
+            gg = add_reads_from_bam(gg, CFG.bam_fnames, 'intron_list', '', maxval, CFG.read_filter, CFG.var_aware, CFG.only_primary);
         else
             % merge intron lists of several bam files
             segments = [] ;
+            %%% count mincount over all files! (mincount only applied to intron_list)
+            conf_filter = CFG.read_filter;
+            conf_filter.mincount = 1;
             for f = 1:length(CFG.bam_fnames),
-                gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'intron_list', '', maxval, CFG.read_filter, CFG.var_aware);
+                gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'intron_list', '', maxval, conf_filter, CFG.var_aware, CFG.only_primary);
                 if ~isempty(gg.segment_lists{end}),
                     segments = [segments; gg.segment_lists{end} gg.segment_scores{end}] ;
                 end;
@@ -71,7 +74,7 @@ for j = 1:length(regions)
                 c = c + 1;
                 continue;
             else
-                idx = find(segments(:, 3) > CFG.read_filter.mincount) ;
+                idx = find(segments(:, 3) >= CFG.read_filter.mincount) ;
                 gg.segment_lists = {segments(idx, 1:2)} ;
                 gg.segment_scores = {segments(idx, 3)} ;
             end;
@@ -84,6 +87,10 @@ for j = 1:length(regions)
 		else
 			introns{chunk_idx(c), s} = double(gg.stop-[gg.segment_lists{1}(:, 2)'-1; gg.segment_lists{1}(:, 1)']+1) ; 
 		end;
+
+        %%% sort introns 
+        introns{chunk_idx(c), s} = sortrows(introns{chunk_idx(c), s}')';
+
 		c = c + 1;
 	end;
 end;

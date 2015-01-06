@@ -13,7 +13,7 @@ function genes = splice_graph(genes, CFG)
 
 	%%% sort exons by start position in ascending order
 	for ix = 1:length(genes)
-		[dummy,exon_order] = sort(genes(ix).splicegraph{1}(1,:),2,'ascend');
+		[dummy,exon_order] = sortrows(genes(ix).splicegraph{1}', [1, 2]);
 		genes(ix).splicegraph{1} = genes(ix).splicegraph{1}(:,exon_order);
 		genes(ix).splicegraph{2} = genes(ix).splicegraph{2}(exon_order,exon_order);
 	end

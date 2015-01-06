@@ -69,6 +69,7 @@ if exist('F_INFER_SG', 'var') == 1, CFG.do_infer_splice_graph = F_INFER_SG; end;
 if exist('F_VERBOSE', 'var') == 1, CFG.verbose = F_VERBOSE; end;
 if exist('F_DEBUG', 'var') == 1, CFG.debug = F_DEBUG; end;
 if exist('F_VAR_AWARE', 'var') == 1, CFG.var_aware = F_VAR_AWARE; end;
+if exist('F_ONLY_PRIMARY', 'var') == 1, CFG.only_primary = F_ONLY_PRIMARY; end;
 
 if exist('I_INSERT_INTRON_ITER', 'var') == 1, CFG.insert_intron_iterations = I_INSERT_INTRON_ITER; end;
 if exist('I_CONFIDENCE', 'var') == 1, CFG.confidence_level = I_CONFIDENCE; end;
@@ -81,6 +82,9 @@ if exist('F_VALIDATE_SG', 'var') == 1, CFG.validate_splicegraphs = F_VALIDATE_SG
 if exist('F_SHARE_GENESTRUCT', 'var') == 1, CFG.same_genestruct_for_all_samples = F_SHARE_GENESTRUCT; end;
 if exist('S_REPLICATE_IDX', 'var') == 1, CFG.replicate_idxs = split_string(S_REPLICATE_IDX, ','); end;
 if exist('F_CURATE_ALTPRIME', 'var') == 1, CFG.curate_alt_prime_events = F_CURATE_ALTPRIME; end;
+if exist('F_HALF_OPEN', 'var') == 1, CFG.is_half_open = F_HALF_OPEN; end;
+if exist('F_DETECT_TRUNC', 'var') == 1, CFG.detect_trunc = F_DETECT_TRUNC; end;
+if exist('F_COUNT_INT_COV', 'var') == 1, CFG.count_intron_cov = F_COUNT_INT_COV; end;
 
 %%% open log file, if specified
 if exist('S_LOG_FNAME', 'var') == 1,
@@ -125,12 +129,15 @@ for i = 1:length(CFG.bam_fnames),
     CFG.strains{end + 1} = [ref_tag CFG.samples{end}] ; 
 end;
 
+%%% adapt graph validation step to max number of samples
+CFG.sg_min_edge_count = min(CFG.sg_min_edge_count, length(CFG.samples));
+
 %%% rproc options
 if exist('F_RPROC', 'var') == 1,
     CFG.rproc = F_RPROC;
     CFG.options_rproc = struct();
-    CFG.options_rproc.mem_req_resubmit  = [30000 60000 80000];
-    CFG.options_rproc.time_req_resubmit = [60*60 80*60 90*60];
+    CFG.options_rproc.mem_req_resubmit  = [40000 80000 100000];
+    CFG.options_rproc.time_req_resubmit = [24*60 48*60 96*60];
     CFG.options_rproc.resubmit = 3;
     CFG.options_rproc.priority = 100;
     CFG.options_rproc.addpaths = CFG.paths;

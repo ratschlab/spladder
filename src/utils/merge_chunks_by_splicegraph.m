@@ -49,7 +49,9 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
         if (i == 1)
             genes2 = genes;
             for j = 1:length(genes),
-                genes2(j).edge_count = genes2(j).splicegraph{2};
+                if ~isfield(genes2(j), 'edge_count') || isempty(genes2(j).edge_count),
+                    genes2(j).edge_count = genes2(j).splicegraph{2};
+                end;
             end;
             clear genes;
             continue;
@@ -85,7 +87,17 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
 
                 splice1 = genes(j).splicegraph{2}(s_idx, s_idx);
                 splice2 = genes2(g_idx).splicegraph{2};
-                edgecnt = genes2(g_idx).edge_count;
+
+                if isfield(genes(j), 'edge_count') && ~isempty(genes(j).edge_count),                        
+                    edgecnt1 = genes(j).edge_count(s_idx, s_idx);
+                else
+                    edgecnt1 = splice1;
+                end;
+                if isfield(genes2(g_idx), 'edge_count') && ~isempty(genes2(g_idx).edge_count),                        
+                    edgecnt2 = genes2(g_idx).edge_count;
+                else
+                    edgecnt2 = splice2;
+                end;
 
                 s1_len = size(genes(j).splicegraph{1}, 2);
                 s2_len = size(genes2(g_idx).splicegraph{1}, 2);
@@ -95,7 +107,7 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
                     %%% still count edges that can be confirmed
                     [~, c_idx, a_idx] = intersect(genes2(g_idx).splicegraph{1}', genes(j).splicegraph{1}',  'rows');
                     if ~isempty(c_idx),
-                        genes2(g_idx).edge_count(c_idx, c_idx) = genes2(g_idx).edge_count(c_idx, c_idx) + genes(j).splicegraph{2}(a_idx, a_idx);
+                        genes2(g_idx).edge_count(c_idx, c_idx) = edgecnt1(a_idx, a_idx) + edgecnt2(c_idx, c_idx);
                     end;
                 else
                     m_graph = [genes(j).splicegraph{1}' ones(s1_len, 1); genes2(g_idx).splicegraph{1}' 2*ones(s2_len, 1)];
@@ -111,16 +123,19 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
                     if ~isempty(f_idx),
                         splice1_ = zeros(size(u_graph, 1), size(u_graph, 1));
                         splice2_ = zeros(size(u_graph, 1), size(u_graph, 1));
-                        edgecnt = zeros(size(u_graph, 1), size(u_graph, 1));
+                        edgecnt1_ = zeros(size(u_graph, 1), size(u_graph, 1));
+                        edgecnt2_ = zeros(size(u_graph, 1), size(u_graph, 1));
                         idx1_ = find(m_graph(u_f, 3) == 1);
                         idx2_ = find(m_graph(u_l, 3) == 2);
                         splice1_(idx1_, idx1_) = splice1;
                         splice2_(idx2_, idx2_) = splice2;
-                        edgecnt(idx2_, idx2_) = genes2(g_idx).edge_count;
+                        edgecnt1_(idx1_, idx1_) = edgecnt1;
+                        edgecnt2_(idx2_, idx2_) = edgecnt2;
                     else
                         splice1_ = splice1;
                         splice2_ = splice2;
-                        edgecnt = genes2(g_idx).edge_count;
+                        edgecnt1_ = edgecnt1;
+                        edgecnt2_ = edgecnt2;
                     end;
                     if ~all(size(splice1_) == size(splice2_))
                         fprintf(1, 'splice1_ and splice2_ differ in size!\n');
@@ -129,13 +144,17 @@ function merge_chunks_by_splicegraph(CFG, chunksize)
                     genes2(g_idx).splicegraph{2} = splice1_ | splice2_;
                     genes2(g_idx).splicegraph{1} = um_graph';
                     genes2(g_idx).splicegraph{3} = [[sum(tril(genes2(g_idx).splicegraph{2}), 2) == 0]'; [sum(triu(genes2(g_idx).splicegraph{2}), 2) == 0]'];
-                    genes2(g_idx).edge_count = edgecnt + splice1_;
+                    genes2(g_idx).edge_count = edgecnt1_ + edgecnt2_;
                 end;
             %%% we did not find the gene name --> append new gene to genes2
             elseif g_idx > length(genes2) || strlexcmp(genes2(g_idx).name, genes(j).name) > 0,
                 g_idx = g_idx_;
                 genes2(end+1) = genes(j);
-                genes2(end).edge_count = genes(j).splicegraph{2};
+                if ~isfield(genes(j), 'edge_count') || isempty(genes(j).edge_count),
+                    genes2(end).edge_count = genes(j).splicegraph{2};
+                else
+                    genes2(end).edge_count = genes(j).edge_count;
+                end;
                 appended = 1;
             end;
         end;

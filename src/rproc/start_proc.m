@@ -13,7 +13,6 @@ end ;
 
 if nargin<2, rm_flag = 1 ; end ;
 
-%addpath(['/cbio/grlab/share/software/matlab_tools/rproc']) ;
 load(fname, 'ProcName', 'P1', 'dirctry', 'options') ;
 cd(dirctry) ;
 

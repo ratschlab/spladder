@@ -1,4 +1,8 @@
-function event_list = curate_alt_prime(event_list)
+function event_list = curate_alt_prime(event_list, CFG)
+
+    if isempty(event_list) || isempty([event_list.event_type]),
+        return;
+    end;
 
     rm_idx = [];
     corr_count = 0;

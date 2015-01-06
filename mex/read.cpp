@@ -13,6 +13,7 @@ CRead::CRead() {
 	left = false;
 	right = false;
 	reverse = false;
+    secondary = false;
 	is_clipped = false;
 }
 

@@ -65,7 +65,7 @@
     CFG.do_infer_splice_graph = 0;
 
     CFG.insert_intron_iterations = 5;
-    CFG.merge_strategy = 'merge_bams'; %% alternatives are: merge_graphs, single, merge_all
+    CFG.merge_strategy = 'merge_graphs'; %% alternatives are: merge_bams, merge_graphs, single, merge_all
     CFG.confidence_level = 3;
     CFG.validate_splicegraphs = 0;
     CFG.same_genestruct_for_all_samples = 1;
@@ -109,7 +109,7 @@
     CFG.debug = 0;
     CFG.fd_log = 1;
 
-    CFG.sg_min_edge_count = 1;
+    CFG.sg_min_edge_count = 10;
     CFG.no_reset_conf = 0;
 
     CFG.do_prune = 0;
@@ -120,8 +120,21 @@
 
     CFG.run_as_analysis = 1;
     CFG.event_types = {'exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip'};
+    CFG.global_gene_list = '';
 
     CFG.read_length = 36;
 
     CFG.rproc = 0;
     CFG.var_aware = 0;
+    CFG.only_primary = 0;
+
+    %%% define which output files are written
+    CFG.output_txt = 1;
+    CFG.output_confirmed_gff3 = 1;
+    CFG.output_confirmed_txt = 1;
+    CFG.output_filtered_txt = 0;
+    CFG.output_confirmed_tcga = 0;
+
+    CFG.detect_trunc = 0;
+    CFG.count_intron_cov = 0;
+    CFG.min_truncation_cov = 5;

@@ -23,6 +23,7 @@ then
 elif [ "$SPLADDER_INTERPRETER" == 'matlab' ];
 then
 	echo exit | ${SPLADDER_MATLAB_BIN_PATH} -nodisplay -r "global SHELL_INTERPRETER_INVOKE; SHELL_INTERPRETER_INVOKE=1; addpath $SPLADDER_SRC_PATH;  $1('$2'); exit;" || (echo starting Matlab failed; rm -f $MATLAB_RETURN_FILE; exit -1) ;
+	${SPLADDER_MATLAB_BIN_PATH} -nodisplay -r "addpath $SPLADDER_SRC_PATH;  $1('$2'); exit;" || (echo starting Matlab failed; rm -f $MATLAB_RETURN_FILE; exit -1) ;
 fi
 
 test -f $MATLAB_RETURN_FILE || exit 0

@@ -54,13 +54,6 @@ function alt_genes_collect(CFG)
         validate_tag = '.validated';
     end;
 
-    %%% set offset that can be used for half open intervals
-    if CFG.is_half_open,
-        ho_offset = 1;
-    else
-        ho_offset = 0;
-    end;
-
     for i = 1:length(CFG.samples),
         if CFG.same_genestruct_for_all_samples == 1 && i == 2,
             break;
@@ -137,12 +130,12 @@ function alt_genes_collect(CFG)
                                                                 exons(2,intron_intron_reten{ridx,i}(2,k))] ;
                             intron_reten_pos{ridx,i}(end).exon2_col = [exons_col(1,intron_intron_reten{ridx,i}(2,k)) ...
                                                                     exons_col(2,intron_intron_reten{ridx,i}(2,k))] ;
-                            intron_reten_pos{ridx,i}(end).intron = [exons(2,intron_intron_reten{ridx,i}(1,k)) + 1 - ho_offset ...
-                                                                 exons(1,intron_intron_reten{ridx,i}(2,k)) - 1 + ho_offset] ;
-                            intron_reten_pos{ridx,i}(end).intron_col = [exons_col(2,intron_intron_reten{ridx,i}(1,k)) + 1 - ho_offset ...
-                                                                     exons_col(1,intron_intron_reten{ridx,i}(2,k)) - 1 + ho_offset] ;
-                            intron_reten_pos{ridx,i}(end).intron_col_pos = [exons_col_pos(2,intron_intron_reten{ridx,i}(1,k)) + 1 - ho_offset ...
-                                                                         exons_col_pos(1,intron_intron_reten{ridx,i}(2,k)) - 1 + ho_offset] ;
+                            intron_reten_pos{ridx,i}(end).intron = [exons(2,intron_intron_reten{ridx,i}(1,k)) + 1 ...
+                                                                 exons(1,intron_intron_reten{ridx,i}(2,k)) - 1] ;
+                            intron_reten_pos{ridx,i}(end).intron_col = [exons_col(2,intron_intron_reten{ridx,i}(1,k)) + 1 ...
+                                                                     exons_col(1,intron_intron_reten{ridx,i}(2,k)) - 1] ;
+                            intron_reten_pos{ridx,i}(end).intron_col_pos = [exons_col_pos(2,intron_intron_reten{ridx,i}(1,k)) + 1 ...
+                                                                         exons_col_pos(1,intron_intron_reten{ridx,i}(2,k)) - 1] ;
                             intron_reten_pos{ridx,i}(end).p_values = [] ;
                             if isfield(gene, 'name')
                                 intron_reten_pos{ridx,i}(end).gene_name = {gene.name};
@@ -150,6 +143,7 @@ function alt_genes_collect(CFG)
                             if isfield(gene, 'transcript_type')
                                 intron_reten_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                             end;
+                            intron_reten_pos{ridx,i}(end).gene_idx = idx_intron_reten{ridx, i}(k);
                         end ;
                     else
                         fprintf(1, '%s already exists\n', fn_out_ir);
@@ -203,6 +197,7 @@ function alt_genes_collect(CFG)
                             if isfield(gene, 'transcript_type')
                                 exon_skip_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                             end;
+                            exon_skip_pos{ridx,i}(end).gene_idx = idx_exon_skip{ridx,i}(k);
                         end ;
                     else
                         fprintf(1, '%s already exists\n', fn_out_es);
@@ -233,7 +228,6 @@ function alt_genes_collect(CFG)
                             
                             for k1 = 1:length(exon_alt_end_5prime{ridx, i}(k).fiveprimesites) - 1,
                                 for k2 = k1 + 1:length(exon_alt_end_5prime{ridx, i}(k).fiveprimesites),
-
                                     exon_alt1_col = exons_col(:, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1))';
                                     exon_alt2_col = exons_col(:, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2))';
 
@@ -253,31 +247,51 @@ function alt_genes_collect(CFG)
                                     alt_end_5prime_pos{ridx, i}(end).exon_alt2 = exons(:, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2))'; 
                                     alt_end_5prime_pos{ridx, i}(end).exon_alt2_col = exon_alt2_col;
                                     if gene.strand == '+',
-                                        alt_end_5prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) + 1 - ho_offset, ...
-                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1 + ho_offset];
-                                        alt_end_5prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) + 1 - ho_offset, ...
-                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1 + ho_offset];
-                                        alt_end_5prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) + 1 - ho_offset, ...
-                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1 + ho_offset];
-                                        alt_end_5prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) + 1 - ho_offset, ...
-                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1 + ho_offset];
+                                        alt_end_5prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) + 1, ...
+                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1];
+                                        alt_end_5prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) + 1, ...
+                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1];
+                                        alt_end_5prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) + 1, ...
+                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1];
+                                        alt_end_5prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) + 1, ...
+                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).threeprimesite) - 1];
                                     else
-                                        alt_end_5prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1 - ho_offset, ... 
-                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) - 1 + ho_offset];
-                                        alt_end_5prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1 - ho_offset, ... 
-                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) - 1 + ho_offset];
-                                        alt_end_5prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1 - ho_offset, ... 
-                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) - 1 + ho_offset];
-                                        alt_end_5prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1 - ho_offset, ... 
-                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) - 1 + ho_offset];
+                                        alt_end_5prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1, ... 
+                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) - 1];
+                                        alt_end_5prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1, ... 
+                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k1)) - 1];
+                                        alt_end_5prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1, ... 
+                                                                                    exons(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) - 1];
+                                        alt_end_5prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_5prime{ridx, i}(k).threeprimesite) + 1, ... 
+                                                                                        exons_col(1, exon_alt_end_5prime{ridx, i}(k).fiveprimesites(k2)) - 1];
                                     end;
                                     alt_end_5prime_pos{ridx, i}(end).p_values = [];
+
+                                    %%% assert that first isoform is always the shorter one
+                                    if alt_end_5prime_pos{ridx, i}(end).exon_alt2(2) - alt_end_5prime_pos{ridx, i}(end).exon_alt2(1) < alt_end_5prime_pos{ridx, i}(end).exon_alt1(2) - alt_end_5prime_pos{ridx, i}(end).exon_alt1(1),
+                                        tmp = alt_end_5prime_pos{ridx, i}(end).exon_alt2;
+                                        alt_end_5prime_pos{ridx, i}(end).exon_alt2 = alt_end_5prime_pos{ridx, i}(end).exon_alt1;
+                                        alt_end_5prime_pos{ridx, i}(end).exon_alt1 = tmp;
+
+                                        tmp = alt_end_5prime_pos{ridx, i}(end).exon_alt2_col;
+                                        alt_end_5prime_pos{ridx, i}(end).exon_alt2_col = alt_end_5prime_pos{ridx, i}(end).exon_alt1_col;
+                                        alt_end_5prime_pos{ridx, i}(end).exon_alt1_col = tmp;
+
+                                        tmp = alt_end_5prime_pos{ridx, i}(end).intron2;
+                                        alt_end_5prime_pos{ridx, i}(end).intron2 = alt_end_5prime_pos{ridx, i}(end).intron1;
+                                        alt_end_5prime_pos{ridx, i}(end).intron1 = tmp;
+
+                                        tmp = alt_end_5prime_pos{ridx, i}(end).intron2_col;
+                                        alt_end_5prime_pos{ridx, i}(end).intron2_col = alt_end_5prime_pos{ridx, i}(end).intron1_col;
+                                        alt_end_5prime_pos{ridx, i}(end).intron1_col = tmp;
+                                    end;
                                     if isfield(gene, 'name')
                                         alt_end_5prime_pos{ridx, i}(end).gene_name = {gene.name};
                                     end;
                                     if isfield(gene, 'transcript_type')
                                         alt_end_5prime_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                                     end;
+                                    alt_end_5prime_pos{ridx,i}(end).gene_idx = idx_alt_end_5prime{ridx,i}(k);
                                 end;
                             end;
                         end;
@@ -320,31 +334,51 @@ function alt_genes_collect(CFG)
                                     alt_end_3prime_pos{ridx, i}(end).exon_alt2 = exons(:, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2))'; 
                                     alt_end_3prime_pos{ridx, i}(end).exon_alt2_col = exon_alt2_col; 
                                     if gene.strand == '+',
-                                        alt_end_3prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1 - ho_offset, ... 
-                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) - 1 + ho_offset];
-                                        alt_end_3prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1 - ho_offset, ... 
-                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) - 1 + ho_offset];
-                                        alt_end_3prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1 - ho_offset, ... 
-                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) - 1 + ho_offset];
-                                        alt_end_3prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1 - ho_offset, ... 
-                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) - 1 + ho_offset];
+                                        alt_end_3prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1, ... 
+                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) - 1];
+                                        alt_end_3prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1, ... 
+                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) - 1];
+                                        alt_end_3prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1, ... 
+                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) - 1];
+                                        alt_end_3prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) + 1, ... 
+                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) - 1];
                                     else
-                                        alt_end_3prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) + 1 - ho_offset, ...
-                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1 + ho_offset];
-                                        alt_end_3prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) + 1 - ho_offset, ...
-                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1 + ho_offset];
-                                        alt_end_3prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) + 1 - ho_offset, ...
-                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1 + ho_offset];
-                                        alt_end_3prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) + 1 - ho_offset, ...
-                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1 + ho_offset];
+                                        alt_end_3prime_pos{ridx, i}(end).intron1 = [exons(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) + 1, ...
+                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1];
+                                        alt_end_3prime_pos{ridx, i}(end).intron1_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k1)) + 1, ...
+                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1];
+                                        alt_end_3prime_pos{ridx, i}(end).intron2 = [exons(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) + 1, ...
+                                                                                    exons(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1];
+                                        alt_end_3prime_pos{ridx, i}(end).intron2_col = [exons_col(2, exon_alt_end_3prime{ridx, i}(k).threeprimesites(k2)) + 1, ...
+                                                                                        exons_col(1, exon_alt_end_3prime{ridx, i}(k).fiveprimesite) - 1];
                                     end;
                                     alt_end_3prime_pos{ridx, i}(end).p_values = [];
+                                    %%% assert that first isoform is always the shorter one
+                                    if alt_end_3prime_pos{ridx, i}(end).exon_alt2(2) - alt_end_3prime_pos{ridx, i}(end).exon_alt2(1) < alt_end_3prime_pos{ridx, i}(end).exon_alt1(2) - alt_end_3prime_pos{ridx, i}(end).exon_alt1(1),
+                                        tmp = alt_end_3prime_pos{ridx, i}(end).exon_alt2;
+                                        alt_end_3prime_pos{ridx, i}(end).exon_alt2 = alt_end_3prime_pos{ridx, i}(end).exon_alt1;
+                                        alt_end_3prime_pos{ridx, i}(end).exon_alt1 = tmp;
+
+                                        tmp = alt_end_3prime_pos{ridx, i}(end).exon_alt2_col;
+                                        alt_end_3prime_pos{ridx, i}(end).exon_alt2_col = alt_end_3prime_pos{ridx, i}(end).exon_alt1_col;
+                                        alt_end_3prime_pos{ridx, i}(end).exon_alt1_col = tmp;
+
+                                        tmp = alt_end_3prime_pos{ridx, i}(end).intron2;
+                                        alt_end_3prime_pos{ridx, i}(end).intron2 = alt_end_3prime_pos{ridx, i}(end).intron1;
+                                        alt_end_3prime_pos{ridx, i}(end).intron1 = tmp;
+
+                                        tmp = alt_end_3prime_pos{ridx, i}(end).intron2_col;
+                                        alt_end_3prime_pos{ridx, i}(end).intron2_col = alt_end_3prime_pos{ridx, i}(end).intron1_col;
+                                        alt_end_3prime_pos{ridx, i}(end).intron1_col = tmp;
+                                    end;
+
                                     if isfield(gene, 'name')
                                         alt_end_3prime_pos{ridx, i}(end).gene_name = {gene.name};
                                     end;
                                     if isfield(gene, 'transcript_type')
                                         alt_end_3prime_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                                     end;
+                                    alt_end_3prime_pos{ridx,i}(end).gene_idx = idx_alt_end_3prime{ridx,i}(k);
                                 end;
                             end;
                         end;
@@ -404,6 +438,7 @@ function alt_genes_collect(CFG)
                                 if isfield(gene, 'transcript_type')
                                     mult_exon_skip_pos{ridx,i}(end).gene_type = {gene.transcript_type};
                                 end;
+                                mult_exon_skip_pos{ridx,i}(end).gene_idx = idx_mult_exon_skip{ridx,i}(k_(1));
                             end ;
                         end ;
                     else
@@ -440,7 +475,7 @@ function alt_genes_collect(CFG)
 
                 %%% store intron retentions
                 fprintf('saving intron retentions to %s\n', fn_out_ir) ;
-                save(fn_out_ir, 'events_all') ;
+                secsave(fn_out_ir, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_ir);
             end;
@@ -460,7 +495,7 @@ function alt_genes_collect(CFG)
 
                 %%% store exons skip events
                 fprintf('saving exon skips to %s\n', fn_out_es) ;
-                save(fn_out_es, 'events_all') ;
+                secsave(fn_out_es, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_es);
             end;
@@ -481,10 +516,10 @@ function alt_genes_collect(CFG)
                 else
                     events_all = mult_exon_skip_pos_all;
                 end ;
-                
+
                 %%% store exons skip events
                 fprintf('saving multiple exon skips to %s\n', fn_out_mes) ;
-                save(fn_out_mes, 'events_all') ;
+                secsave(fn_out_mes, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_mes);
             end;
@@ -506,12 +541,12 @@ function alt_genes_collect(CFG)
                 %%% cut to min len, if alt exon lengths differ
                 %%% remove, if alt exons do not overlap
                 if CFG.curate_alt_prime_events == 1,
-                    events_all = curate_alt_prime(events_all);
+                    events_all = curate_alt_prime(events_all, CFG);
                 end
 
                 %%% store alt 5 prime events
                 fprintf('saving alt 5 prime events to %s\n', fn_out_a5) ;
-                save(fn_out_a5, 'events_all') ;
+                secsave(fn_out_a5, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_a5);
             end;
@@ -533,12 +568,12 @@ function alt_genes_collect(CFG)
                 %%% cut to min len, if alt exon lengths differ
                 %%% remove, if alt exons do not overlap
                 if CFG.curate_alt_prime_events == 1,
-                    events_all = curate_alt_prime(events_all);
+                    events_all = curate_alt_prime(events_all, CFG);
                 end
 
                 %%% store alt 3 prime events
                 fprintf('saving alt 3 prime events to %s\n', fn_out_a3) ;
-                save(fn_out_a3, 'events_all') ;
+                secsave(fn_out_a3, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_a3);
             end;

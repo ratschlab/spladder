@@ -1,5 +1,9 @@
 function events = post_process_event_struct(events)
 
+    if isempty([events.event_type]),
+        return
+    end;
+
     %%% filter out invalid coordinate projections
     idx_valid_col = zeros(1, length(events)) ;
     for i = 1:length(events),
@@ -14,7 +18,7 @@ function events = post_process_event_struct(events)
         end;
     end ;
     events = events(idx_valid_col~=0) ;
-   
+
     %%% sort exon skip events by all coordinates
     events = sort_events_full(events) ;
     

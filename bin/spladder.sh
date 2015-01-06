@@ -40,8 +40,12 @@ function usage () {
                             alignment files) [all R1 - no replicated]
     -L  STRING              label for current experiment [-]
     -S  STRING              reference strain [-]
+    -C  y|n                 truncation detection mode [n]
+    -U  y|n                 count intron coverage [n]
+    -P  y|n                 only use primary alignments from provided files [n]
     -d  y|n                 use debug mode [n]
     -p  y|n                 use rproc [n]
+    -O  y|n                 annotation is in half-open coordinates
     -V  y|n                 validate splice graph [n]
     -v  y|n                 use verbose output mode [n]
     -A  y|n                 curate alt prime events [y]
@@ -73,7 +77,7 @@ S_ANNO_FNAME=""
 S_OUT_DIRNAME=""
 
 ### parse parameters from command lines
-while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:v:A:x:i:e:E:r:s:T:t:n:F:X:h" opt
+while getopts "b:o:l:a:u:c:I:M:R:L:S:d:p:V:O:v:A:x:i:e:E:r:s:T:t:n:F:X:P:C:U:h" opt
 do
     case $opt in
     b ) S_BAM_FNAME="$OPTARG" ;;
@@ -90,6 +94,10 @@ do
     d ) F_DEBUG="$OPTARG" ;;
     p ) F_RPROC="$OPTARG" ;;
     V ) F_VALIDATE_SG="$OPTARG" ;;
+    P ) F_ONLY_PRIMARY="$OPTARG" ;;
+    C ) F_DETECT_TRUNC="$OPTARG" ;;
+    U ) F_COUNT_INT_COV="$OPTARG" ;;
+    O ) F_HALF_OPEN="$OPTARG" ;;
     v ) F_VERBOSE="$OPTARG" ;;
     A ) F_CURATE_ALTPRIME="$OPTARG" ;;
     x ) F_SHARE_GENESTRUCT="$OPTARG" ;;
@@ -113,20 +121,10 @@ done
 [[ -z "$S_OUT_DIRNAME" ]] && echo -e "\nOutput directory name is mandatory!\n" && usage && exit 1
 [[ -z "$S_INFILE" ]] && [[ -z "$S_ANNO_FNAME" ]] && echo -e "\nAnnotation file name is mandatory!\n" && usage && exit 1
 
-### assemble parameter string
-PARAMS=""
-for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC F_RUN_AS S_AS_TYPES I_READ_LEN S_INFILE
-do
-    val=$(eval "echo \$${opt}")
-    if [ ! -z "$val" ]
-    then
-        eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
-    fi
-done
-
 ### prepare annotation if not in matlab format yet
 if [ ! -z "$S_ANNO_FNAME" ]
 then
+
     if [ "${S_ANNO_FNAME##*.}" != "mat" ]
     then
         S_ANNO_FNAME_N=${S_ANNO_FNAME%.*}.mat
@@ -137,10 +135,22 @@ then
             echo Converting annotation into matlab format: $S_ANNO_FNAME --> $S_ANNO_FNAME_N 
             ${SPLADDER_PYTHON_PATH} ${DIR}/../tools/ParseGFF.py ${S_ANNO_FNAME} ${S_ANNO_FNAME_N}
             ${DIR}/../bin/genes_cell2struct ${S_ANNO_FNAME_N}
-            S_ANNO_FNAME=$S_ANNO_FNAME_N
         fi
+        S_ANNO_FNAME=$S_ANNO_FNAME_N
     fi
 fi
+
+### assemble parameter string
+PARAMS=""
+for opt in S_BAM_FNAME S_OUT_DIRNAME S_LOG_FNAME S_ANNO_FNAME S_USER_FNAME I_CONFIDENCE I_INSERT_INTRON_ITER F_DEBUG F_VERBOSE F_INSERT_IR F_INSERT_CE F_INSERT_IE F_REMOVE_SE F_INFER_SG F_VALIDATE_SG S_MERGE_STRATEGY F_SHARE_GENESTRUCT S_REPLICATE_IDX S_EXPERIMENT_LABEL S_REFERENCE_STRAIN F_CURATE_ALTPRIME F_RPROC F_RUN_AS S_AS_TYPES I_READ_LEN S_INFILE F_HALF_OPEN F_ONLY_PRIMARY F_DETECT_TRUNC F_VAR_AWARE F_COUNT_INT_COV
+do
+    val=$(eval "echo \$${opt}")
+    if [ ! -z "$val" ]
+    then
+        eval "PARAMS=\"$PARAMS${opt}:\${$opt};\""
+    fi
+done
+
 
 ### Index Bam files
 echo "Indexing BAM files"
@@ -151,7 +161,7 @@ then
         if [ ! -f ${CURR_BAMFILE}.bai ]
         then
             echo "Indexing $CURR_BAMFILE"
-            ${SPLADDER_SAMTOOLS_BIN_DIR} index $BAM_FILE
+            ${SPLADDER_SAMTOOLS_BIN_DIR}/samtools index $CURR_BAMFILE
         else
             echo "$CURR_BAMFILE already indexed"
         fi
@@ -165,7 +175,7 @@ else
         if [ ! -f ${CURR_BAMFILE}.bai ]
         then
             echo "Indexing $CURR_BAMFILE"
-            ${SPLADDER_SAMTOOLS_BIN_DIR} index $BAM_FILE
+            ${SPLADDER_SAMTOOLS_BIN_DIR}/samtools index $CURR_BAMFILE
         else
             echo "$CURR_BAMFILE already indexed"
         fi

@@ -129,7 +129,7 @@ int bam_fetch_reads(bamFile fp, const bam_index_t *idx, int tid, int beg, int en
 
 						if (strand == '0' || strand==read->strand[0] || read->strand[0]=='0')
 						{
-								reads->push_back(read);
+                            reads->push_back(read);
 						}
 						else 
 						{
@@ -164,6 +164,7 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 	read->left = (b->core.flag & left_flag_mask) >0;
 	read->right = (b->core.flag & right_flag_mask) >0;
 	read->reverse = (b->core.flag & reverse_flag_mask) >0;
+	read->secondary = (b->core.flag & secondary_flag_mask) >0;
 
 	read->start_pos = b->core.pos+1;
 	read->set_strand('0');
@@ -288,7 +289,7 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 		else if (type == 'i') { s += 4; }
 		else if (type == 'f') { s += 4;	}
 		else if (type == 'd') { s += 8;	}
-		else if (type == 'Z') { ++s; }
+		else if (type == 'Z') {while (*s) {++s; }; ++s; }
 		else if (type == 'H') { ++s; }
 	}
 }

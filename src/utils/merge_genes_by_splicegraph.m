@@ -4,6 +4,10 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
 %   This script takes several gene structures and merges them into one. 
 %   the merge is based on the splicegraphs within the genes struct
     
+    if nargin < 2,
+        chunk_idx = [];
+    end;
+
     %%% if we are running with rproc we only get one parameter struct
     if isfield(CFG, 'CFG'),
         if isfield(CFG, 'chunk_idx'),
@@ -12,6 +16,8 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
             chunk_idx = [];
         end;
         CFG = CFG.CFG
+    elseif nargin < 2,
+        chunk_idx = [];
     end;
 
     %%% generate merge list
@@ -31,7 +37,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
 
     %%% add all single bam file graphs
     for i = 1:length(samples),
-        merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, CFG.samples{i}, prune_tag);
+        merge_list{end+1} = sprintf('%s/spladder/genes_graph_conf%i.%s%s.mat', CFG.out_dirname, CFG.confidence_level, samples{i}, prune_tag);
     end;
     %%% add also graph of all bam files combined
     if CFG.do_merge_all && exist(sprintf('%s/spladder/genes_graph_conf%i.merge_bams%s.mat', CFG.out_dirname, CFG.confidence_level, prune_tag), 'file')
@@ -104,7 +110,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
                     %%% still count edges that can be confirmed
                     [~, c_idx, a_idx] = intersect(genes2(g_idx).splicegraph{1}', genes(j).splicegraph{1}',  'rows');
                     if ~isempty(c_idx),
-                        genes2(g_idx).edge_count(c_idx, c_idx) = genes2(g_idx).edge_count(c_idx, c_idx) + genes(j).splicegraph{2}(a_idx, a_idx);
+                        genes2(g_idx).edge_count(c_idx, c_idx) = genes2(g_idx).edge_count(c_idx, c_idx) + splice1(a_idx, a_idx);
                     end;
                 else
                     m_graph = [genes(j).splicegraph{1}' ones(s1_len, 1); genes2(g_idx).splicegraph{1}' 2*ones(s2_len, 1)];
@@ -124,7 +130,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
                         idx1_ = find(m_graph(u_f, 3) == 1);
                         idx2_ = find(m_graph(u_l, 3) == 2);
                         splice1_(idx1_, idx1_) = splice1;
-                        splice2(idx2_, idx2_) = splice2;
+                        splice2_(idx2_, idx2_) = splice2;
                         edgecnt(idx2_, idx2_) = genes2(g_idx).edge_count;
                     else
                         splice1_ = splice1;
@@ -138,11 +144,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
                     genes2(g_idx).splicegraph{2} = splice1_ | splice2_;
                     genes2(g_idx).splicegraph{1} = um_graph';
                     genes2(g_idx).splicegraph{3} = [[sum(tril(genes2(g_idx).splicegraph{2}), 2) == 0]'; [sum(triu(genes2(g_idx).splicegraph{2}), 2) == 0]'];
-                    try
-                        genes2(g_idx).edge_count = edgecnt + splice1_;
-                    catch
-                        keyboard;
-                    end;
+                    genes2(g_idx).edge_count = edgecnt + splice1_;
                 end;
             %%% we did not find the gene name --> append new gene to genes2
             elseif g_idx > length(genes2) || strlexcmp(genes2(g_idx).name, genes(j).name) > 0,

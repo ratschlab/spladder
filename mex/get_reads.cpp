@@ -30,9 +30,10 @@
  * [13] return maxminlen
  * [14] return pair coverage and pair index list
  * [15] only_clipped 
- * [15] switch of pair filter
- * [16] pair flag filter (0 no flag info, 1 right flag info, 2 left flag info, 3 both flag info)
- * [17] switch for variation aware alignment (use XM and XG for edit ops)
+ * [16] switch of pair filter
+ * [17] pair flag filter (0 no flag info, 1 right flag info, 2 left flag info, 3 both flag info)
+ * [18] switch for variation aware alignment (use XM and XG for edit ops)
+ * [19] filter secondary alignments out 
  *
  * output: 
  * 1 coverage
@@ -45,8 +46,8 @@
  */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	
-	if (nrhs<5 || nrhs>18 || (nlhs<1 || nlhs>4)) {
-		fprintf(stderr, "usage: [x [introns] [pair]] = get_reads(fname, chr, start, end, strand, [collapse], [subsample], [max intron length], [min exonlength], [max mismatches], [mapped], [spliced], [maxminlen], [pair], [only clipped], [all pairs], [pair flag filter] [variation aware switch]);\n");
+	if (nrhs<5 || nrhs>19 || (nlhs<1 || nlhs>4)) {
+		fprintf(stderr, "usage: [x [introns] [pair]] = get_reads(fname, chr, start, end, strand, [collapse], [subsample], [max intron length], [min exonlength], [max mismatches], [mapped], [spliced], [maxminlen], [pair], [only clipped], [all pairs], [pair flag filter] [variation aware switch] [filter secondary]);\n");
 		return; 
 	}
 	
@@ -123,6 +124,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (nrhs>=18)
         variation_aware = (get_int(prhs[17]) > 0);
 
+    bool secondary_filter = false; 
+    if (nrhs>=19)
+        secondary_filter = (get_int(prhs[18]) > 0);
+
 
 	/* call function to get reads
 	 * **************************/	
@@ -149,7 +154,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		if (all_reads[i]->right)
 			right++;
 		//if (all_reads[i]->max_intron_len()<intron_len_filter && all_reads[i]->min_exon_len()>exon_len_filter && all_reads[i]->get_mismatches()<=filter_mismatch && all_reads[i]->multiple_alignment_index==0)
-		if (all_reads[i]->max_intron_len()<intron_len_filter && all_reads[i]->min_exon_len()>exon_len_filter && all_reads[i]->get_mismatches()<=filter_mismatch && (only_clipped==0 || all_reads[i]->is_clipped) && (pair_flag_filter < 0 || (((pair_flag_filter & 2) > 0 && all_reads[i]->left) || ((pair_flag_filter & 1) > 0 && all_reads[i]->right) || (pair_flag_filter == 0 && !(all_reads[i]->right || all_reads[i]->left)) )))
+		if (all_reads[i]->max_intron_len()<intron_len_filter && all_reads[i]->min_exon_len()>exon_len_filter && all_reads[i]->get_mismatches()<=filter_mismatch && (only_clipped==0 || all_reads[i]->is_clipped) && (pair_flag_filter < 0 || (((pair_flag_filter & 2) > 0 && all_reads[i]->left) || ((pair_flag_filter & 1) > 0 && all_reads[i]->right) || (pair_flag_filter == 0 && !(all_reads[i]->right || all_reads[i]->left)) )) && (!(secondary_filter && all_reads[i]->secondary)))
 			reads.push_back(all_reads[i]);
 	}
 

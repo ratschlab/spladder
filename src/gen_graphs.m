@@ -16,11 +16,23 @@ inserted.exon_skip = 0 ;
 inserted.gene_merge = 0 ;
 inserted.new_terminal_exon = 0 ;
 
+if ~isfield(genes, 'chr_num') || isempty([genes.chr_num]),
+    chrms = unique({genes.chr});
+    for c = 1:length(chrms),
+        c_idx = strmatch(chrms{c}, {genes.chr}, 'exact');
+        [genes(c_idx).chr_num] = deal(strmatch(chrms{c}, chrms, 'exact'));
+    end;
+end;
+
 % build splice graph for all genes 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fprintf(CFG.fd_log, 'Generating splice graph ...\n');
 genes = splice_graph(genes, CFG);
 fprintf(CFG.fd_log, '...done.\n\n');
+
+for i = 1:length(genes),
+	assert(all(genes(i).splicegraph{1}(1, :) <= genes(i).splicegraph{1}(2, :)));
+end ;
 
 % append list of introns supported by RNA-seq data to 
 % the genes structure
@@ -135,6 +147,14 @@ end ;
 fprintf(CFG.fd_log, 'Re-labeleling new alternative genes ...');
 genes = label_alt_genes(genes, CFG) ;
 fprintf(CFG.fd_log, '... done.\n');
+
+%%% make sure everything is sorted
+for i = 1:length(genes),
+    [tmp, s_idx] = sortrows(genes(i).splicegraph{1}');
+    genes(i).splicegraph{1} = genes(i).splicegraph{1}(:, s_idx);
+    genes(i).splicegraph{2} = genes(i).splicegraph{2}(s_idx, s_idx);
+    genes(i).splicegraph{3} = genes(i).splicegraph{3}(:, s_idx);
+end;
 
 %%% print summary to log file
 fn = fieldnames(inserted);

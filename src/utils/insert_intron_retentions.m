@@ -50,10 +50,10 @@ for j = 1:length(regions)
 		gg.strands = strands(s);
 		maxval = inf; 
 		if ~iscell(CFG.bam_fnames)
-			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware);
+			gg = add_reads_from_bam(gg, CFG.bam_fnames, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware, CFG.only_primary);
 		else
 			for f = 1:length(CFG.bam_fnames),
-				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware);
+				gg = add_reads_from_bam(gg, CFG.bam_fnames{f}, 'exon_track', '', maxval, CFG.read_filter, CFG.var_aware, CFG.only_primary);
 			end ;
 			%%%% sum of mapped_exon_tracks (odd) and spliced exon tracks (even)
 			%gg.tracks = [sum(gg.tracks(1:2:end, :), 1); sum(gg.tracks(2:2:end, :), 1)] ;
@@ -96,6 +96,7 @@ for j = 1:length(regions)
 		end ;
 		any_added = 0 ;
 		if any(new_retention(:))
+            %%% capture transitive relations: IR btw 1 & 2 and IR btw 2 & 3 --> IR btw 1 & 3
 			new_retention = expm(new_retention) ;
 			while (1),
 				any_added=0 ;

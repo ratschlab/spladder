@@ -1,105 +1,89 @@
-function [verified, info] = verify_alt_prime(event, fn_bam, CFG)
-% [verified, info] = verify_exon_skip(event, fn_bam, CFG)
+function [verified, info] = verify_alt_prime(event, gene, counts_segments, counts_edges, CFG)
+% [verified, info] = verify_exon_skip(event, gene, counts_segments, counts_edges, CFG)
 %
 
-if ~isfield(CFG, 'is_half_open'),
-    is_half_open = 0;
-else
-    is_half_open = CFG.is_half_open;
-end;
-
-info.exon_diff_cov = 0;
-info.exon_const_cov = 0;
-info.intron1_conf = 0;
-info.intron2_conf = 0;
-info.valid = 1 ;
+% (1) valid, (2) exon_diff_cov, (3) exon_const_cov
+% (4) intron1_conf, (5) intron2_conf
+info = [1, 0, 0, 0, 0];
 
 verified = [0 0] ;
 
 %%% check validity of exon coordinates (>=0)
 if any([event.exon_alt1 event.exon_alt2] <= 0),
-    info.valid = 0 ;
+    info(1) = 0 ;
     return ;
 end ;
 
 %%% check validity of intron coordinates (only one side is differing)
 if (event.intron1(1) ~= event.intron2(1) && event.intron1(2) ~= event.intron2(2)),
-    info.valid = 0 ;
+    info(1) = 0 ;
     return ;
 end ;
 
-if is_half_open == 1 && event.strand == '-'
-    event.exon_alt1 = event.exon_alt1 + 1;
-    event.exon_alt2 = event.exon_alt2 + 1;
-    event.exon_const = event.exon_const + 1;
-end;
-
-gg.strand = event.strand ;
-gg.chr = event.chr ;
-gg.chr_num = event.chr_num ;
-gg.start = min([event.exon_alt1(1), event.exon_alt2(1), event.exon_const(1)]) ;
-gg.stop = max([event.exon_alt1(2), event.exon_alt2(2), event.exon_const(2)]) ;
-gg.tracks=[] ;
-
-%%% add RNA-seq evidence to the gene structure
-gg = add_count_tracks(gg, fn_bam, CFG);
-
-%%% set offset for half open intervals
-if is_half_open,
-    ho_offset = 1;
+%%% find exons corresponding to event
+sg = gene.splicegraph;
+segs = gene.segmentgraph;
+idx_exon_alt1  = find(sg{1}(1, :) == event.exon_alt1(1) & sg{1}(2, :) == event.exon_alt1(2));
+idx_exon_alt2  = find(sg{1}(1, :) == event.exon_alt2(1) & sg{1}(2, :) == event.exon_alt2(2));
+idx_exon_const = find(sg{1}(1, :) == event.exon_const(1) & sg{1}(2, :) == event.exon_const(2));
+if isempty(idx_exon_alt1),
+    seg_exon_alt1 = find(segs{1}(1, :) >= event.exon_alt1(1) & segs{1}(2, :) <= event.exon_alt1(2));
 else
-    ho_offset = 0;
+    seg_exon_alt1 = find(segs{2}(idx_exon_alt1, :));
 end;
-
-%%% compute exon coverages as mean of position wise coverage
-if (event.exon_alt1(1) == event.exon_alt2(1)),
-    if event.exon_alt1(2) > event.exon_alt2(2),
-        idx_diff = [event.exon_alt2(2) + 1:event.exon_alt1(2)] - gg.start + 1 - ho_offset;
-        idx_const = [event.exon_alt2(1):event.exon_alt2(2) - ho_offset] - gg.start + 1;
-    else
-        idx_diff = [event.exon_alt1(2) + 1:event.exon_alt2(2)] - gg.start + 1 - ho_offset;
-        idx_const = [event.exon_alt1(1):event.exon_alt1(2) - ho_offset] - gg.start + 1;
-    end;
-elseif (event.exon_alt1(2) == event.exon_alt2(2)),
-    if event.exon_alt1(1) < event.exon_alt2(1),
-        idx_diff = [event.exon_alt1(1):event.exon_alt2(1) - 1] - gg.start + 1;
-        idx_const = [event.exon_alt2(1):event.exon_alt2(2) - ho_offset] - gg.start + 1;
-    else
-        idx_diff = [event.exon_alt2(1):event.exon_alt1(1) - 1] - gg.start + 1;
-        idx_const = [event.exon_alt1(1):event.exon_alt1(2) - ho_offset] - gg.start + 1;
-    end;
+if isempty(idx_exon_alt2),
+    seg_exon_alt2 = find(segs{1}(1, :) >= event.exon_alt2(1) & segs{1}(2, :) <= event.exon_alt2(2));
+else
+    seg_exon_alt2 = find(segs{2}(idx_exon_alt2, :));
 end;
+if isempty(idx_exon_const),
+    seg_exon_const = find(segs{1}(1, :) >= event.exon_const(1) & segs{1}(2, :) <= event.exon_const(2));
+else
+    seg_exon_const = find(segs{2}(idx_exon_const, :));
+end;
+assert(~isempty(seg_exon_alt1));
+assert(~isempty(seg_exon_alt2));
+assert(~isempty(seg_exon_const));
 
-exon_diff_coverage = mean(sum(gg.tracks(:, idx_diff),1), 2) ;
-exon_const_coverage = mean(sum(gg.tracks(:, idx_const),1), 2) ;
+seg_diff = setdiff(seg_exon_alt1, seg_exon_alt2);
+seg_const = intersect(seg_exon_alt2, seg_exon_alt1);
+if isempty(seg_diff),
+    seg_diff = setdiff(seg_exon_alt2, seg_exon_alt1);
+end;
+seg_const = [seg_const, seg_exon_const];
 
-info.exon_diff_cov = exon_diff_coverage ;
-info.exon_const_cov = exon_const_coverage ;
+seg_lens = segs{1}(2, :) - segs{1}(1, :) + 1;
 
-if exon_diff_coverage >= CFG.alt_prime.min_diff_rel_cov * exon_const_coverage
+% exon_diff_cov
+info(2) = sum(counts_segments(seg_diff) .* seg_lens(seg_diff)) / sum(seg_lens(seg_diff));
+% exon_const_cov
+info(3) = sum(counts_segments(seg_const) .* seg_lens(seg_const)) / sum(seg_lens(seg_const)); 
+
+if info(2) >= CFG.alt_prime.min_diff_rel_cov * info(3),
     verified(1) = 1;
 end;
 
 %%% check intron confirmations as sum of valid intron scores
 %%% intron score is the number of reads confirming this intron
-intron_tol = 0 ;
-idx = find(abs(gg.introns(1,:) - (event.intron1(1))) <= intron_tol & abs(gg.introns(2,:) - (event.intron1(2) - ho_offset)) <= intron_tol) ;
-if ~isempty(idx),
-    assert(length(idx)>=1) ;
-    info.intron1_conf = sum(gg.introns(3,idx)) ;
-end ;
-idx = find(abs(gg.introns(1,:) - (event.intron2(1))) <= intron_tol & abs(gg.introns(2,:) - (event.intron2(2) - ho_offset)) <= intron_tol) ;
-if ~isempty(idx),
-    assert(length(idx)>=1) ;
-    info.intron2_conf = sum(gg.introns(3,idx)) ;
-end ;
+if seg_exon_alt1(end) < seg_exon_const(1) && seg_exon_alt2(end) < seg_exon_const(1),
+    % intron1_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_alt1(end), seg_exon_const(1)));
+    info(4) = counts_edges(idx, 2);
+    % intron2_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_alt2(end), seg_exon_const(1)));
+    info(5) = counts_edges(idx, 2);
+elseif seg_exon_alt1(1) > seg_exon_const(end) && seg_exon_alt2(1) > seg_exon_const(end),
+    % intron1_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_const(end), seg_exon_alt1(1)));
+    info(4) = counts_edges(idx, 2);
+    % intron2_conf 
+    idx = find(counts_edges(:, 1) == sub2ind(size(segs{3}), seg_exon_const(end), seg_exon_alt2(1)));
+    info(5) = counts_edges(idx, 2);
+else
+    info(1) = 0;
+    return;
+end;
 
-if min(info.intron1_conf, info.intron2_conf) >= CFG.alt_prime.min_intron_count,
+if min(info(4), info(5)) >= CFG.alt_prime.min_intron_count,
     verified(2) = 1 ;
 end ;
-
-if is_half_open == 1 && event.strand == '-'
-    event.exon_alt1 = event.exon_alt1 - 1;
-    event.exon_alt2 = event.exon_alt2 - 1;
-    event.exon_const = event.exon_const - 1;
-end;
