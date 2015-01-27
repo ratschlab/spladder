@@ -96,7 +96,7 @@ function alt_genes_analyze(CFG, event_type)
                         end ;
                     end ;
                     
-                    [jobinfo nr_crashed] = rproc_wait(jobinfo, 20, 1, -1) ;
+                    [jobinfo nr_crashed] = rproc_wait(jobinfo, 20, 1, 1) ;
                     
                     %%% open event count file to directly write counts into common hdf5
                     dims = [length(CFG.strains) length(event_features) size(events_all, 2)];

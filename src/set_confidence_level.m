@@ -17,12 +17,12 @@ function CFG = set_confidence_level(CFG),
         CFG.read_filter.intron = 350000 ; 
         CFG.read_filter.exon_len = ceil(CFG.read_length * 0.20);
         CFG.read_filter.mismatch = max(1, floor(CFG.read_length * 0.01)) ;
-        CFG.read_filter.mincount = 3 ;
+        CFG.read_filter.mincount = 2 ;
     elseif CFG.confidence_level == 3
         CFG.read_filter.intron = 350000 ; 
         CFG.read_filter.exon_len = ceil(CFG.read_length * 0.25);
         CFG.read_filter.mismatch = 0 ;
-        CFG.read_filter.mincount = 6 ;
+        CFG.read_filter.mincount = 2 ;
     end ;
 
     %%% settings for accepted cassette exons

@@ -36,7 +36,7 @@ end;
 %%% verify the events if demanded
 if CFG.verify_alt_events,
     if isfield(CFG, 'spladder_infile') && exist(CFG.spladder_infile, 'file'),
-        fn_count = strrep(CFG.spladder_infile, 'mat', 'count.mat');
+        fn_count = strrep(CFG.spladder_infile, '.mat', '.count.mat');
         fn_genes = CFG.spladder_infile;
     else
         fn_count = sprintf('%s/spladder/genes_graph_conf%i.%s%s%s.count.mat', CFG.out_dirname, CFG.confidence_level, CFG.merge_strategy, validate_tag, prune_tag);
