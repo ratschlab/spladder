@@ -1,0 +1,199 @@
+Documentation
+=============
+
+This document shall give an overview on how to use SplAdder and povide examples
+for specific use cases. The text below describes commands and parameters for the
+MATLAB version of SplAdder.
+
+0. General SplAdder Workflow
+============================
+SplAdder consists of the following more or less generic steps:
+    * transform a given annotation into a splicing graph
+    * augment splicing graph with evidence from RNA-Seq data
+    * filter / combine splicing graphs
+    * extract alternative splicing events from graphs
+    * quantify alternative splicing events based on RNA-Seq data
+
+The single steps depend on each other, but workflows can be restarted from
+intermediate files to both allow for completion of a previously aborted
+workflow as well as for the re-use of intermediate results.
+
+1. Quick Start
+==============
+To run SplAdder with default parameters and complete all the steps that are
+listed in the description of the general workflow, you can invoke the program
+with its minimum set of parameters
+    ./bin/spladder.sh -a <annotation> -b <alignments> -o <out_directory>
+
+Where <annotation> is an annotation file in standard GFF format, containing the
+gene structures that you would like to use for SplAdder. Please make sure that
+the contig names used in annotation and alignment files are consistent. The
+<alignments> file is one (or a comma separated list of) alignment file(s) in BAM
+format, containing the RNA-Seq evidence. The <out_directory> is the location in
+your system where the result files will be stored.
+
+If you invoke ./bin/spladder.sh without any parameters, you will see an overview
+of available parameters and a short explanation of each.
+
+2. Augmenting an annotation
+===========================
+As a first, preliminary step, SplAdder converts the given annotation into a
+splicing graph representation. This step is obligatory and happens
+automatically. The next step of splicing graph augmentation can be influenced by
+the used. There are three possibilities how the alignment files can be used to
+augment the annotation (merge strategy):
+
+    * merge_graphs (default) -- This will generate an augmented splicing graph
+        for each of the provided alignment files and will merge the single
+        graphs at the end to generate a common splicing graph that is further
+        used
+    * merge_bams -- In this case, SplAdder will treat all given alignment files
+        as technical replicates and combine the read information to augment the
+        splicing graph into a common augmented graph.
+    * merge_all -- This option is a combination of the previous two. It will
+        generate an augmented splicing graph for each alignment file
+        independently as well as for the combination of all files and then
+        integrate everything into a common graph. There are only very few
+        usecases where this options is preferable.
+ 
+The user can choose a merge strategy with the parameter -M. If only a single
+alignment file is provided, this choice becomes obsolete.
+
+In the case of several splicing graphs being merged, the user can influence in
+how many instances a new edge should be present to be part of the merged graph.
+The option -V (validate splicing graph) will retain a new edge, if at least
+min(10, number of alignment files) instances have this new edge added.
+
+In addition to how the graphs will be merged, experienced users can fine-tune how
+the graph will be augmented, that is which information is added to the graph.
+The following parameters define how the graph will be augmented:
+
+    * -i (insert intron retentions) -- will check existing introns in the graph
+        for sufficient coverage evidence in the RNA-Seq alignments and will add
+        a new exon explaining the retention.
+    * -e (insert cassette exons) -- will probe all local intron pairs found in 
+        the alignment file and check if an not yet annotated exon exists between 
+        them (based on coverage evidence).
+    * -E (insert new intron edges) -- will probe all introns found in the 
+        alignment file and add a new intron edge, if exons exist nearby.
+    * -I (iterations to insert new intron edges) -- as new introns can influence
+        the addition of further new introns, SplAdder adds new intron edges 
+        iteratively. The default is usually fine.
+    * -r (remove short exons) -- will remove exons shorter than 9nt from the 
+        graph
+
+3. Extracting splicing events
+=============================
+Based on the splicing graph created in the previous step, a variety of
+alternative splicing events can be detected in the graph. Per default the
+following events will be detected:
+
+    * exon skip
+    * intron retention
+    * alternative 3'/5' splice site
+    * multiple/coordinates exon skip 
+
+With the option -t (list of alternative splicing events to detect), the user can
+provide a comma separated list of event types. The option -T (detect alternative
+splicing events) will switch all event detection on or off.
+
+For alternative 3'/5' splice site events definitions of different strictness
+exist. One such difference is the requirement for the two exon alternatives to
+overlap. The stricter definition is enforced with the option -A (curate
+alternative splicing events).
+
+For advanced users, SplAdder provides the possibility to extract events from a
+graph that has been computed in a different run. The option -F will allow the
+user to define an existing SplAdder graph file to be used as input.
+
+    e.g.: -F <other_spladder_dir>/spladder/genes_graph_conf3.merge_graphs.mat
+
+4. Understanding the result files
+=================================
+SplAdder produces a whole set of result files that can be used for further
+processing. For each event type a separate set of output files is generated.
+Each set consists of the following files:
+
+    * merge_graphs_<event_type>_C<confidence>.mat -- contains the coordinates 
+        and additional information of the detected events in MATLAB format.
+    * merge_graphs_<event_type>_C<confidence>.txt -- contains the coordinates
+        and additional information of the detected events in TXT format. This
+        file also contains the quantification of the events for each sample.
+        For format information see below.
+    * merge_graphs_<event_type>_C<confidence>.confirmed.txt -- contains the 
+        coordinates and additional information of the confirmed event in TXT
+        format. This file also contains the quantification of the events for
+        each sample. For format information see below.
+    * merge_graphs_<event_type>_C<confidence>.confirmed.gff -- contains the
+        structure of each event as a mini-gene. That is, each alternative event
+        is expressed as a small genelet with two isoforms, containing the two
+        event alternatives. The files follows the GFF format standard.
+    * merge_graphs_<event_type>_C<confidence>.counts.hdf5 -- contains the
+        quantification information for all events in all samples. For format
+        information see below.
+
+Further format specifications for TXT files:
+
+    The file consists of tab separated columns. The first columns contain
+    information regarding the event location, including:
+        * contig
+        * strand
+        * event_id
+        * gene_name
+        * event_coordinates
+    Each column is defined in the first header row of the file.
+    The remaining columns contain count information and are organized in blocks,
+    where each block belongs to a sample. The blocks contain different
+    information for each event type:
+        * exon skips:
+            + exon_pre_cov -- mean coverage of the first flanking exon
+            + exon_cov -- mean coverage of the alternative exon
+            + exon_aft_cov -- mean coverage of the second flanking exon
+            + intron_pre_conf -- spliced alignments confirming the intron
+              between first flanking and alternative exon
+            + intron_conf -- spliced alignments confirming the intron between
+              first flanking and second flanking exon
+            + intron_aft_conf -- spliced alignments confirming the intron
+              between the alternative and the first flanking exon
+        * intron retentions:
+            + exon1_cov -- mean coverage of the first flanking exon
+            + intron_cov -- mean coverage of the intron region
+            + exon2_cov -- mean coverage of the second flanking exon
+            + intron_conf -- spliced alignments confirming the intron
+        * alt 3'/5' splice site:
+            + exon_diff_cov -- mean coverage of the exonic positions that
+              differ between the two alternative exons
+            + exon_const_cov -- mean coverage of the exonic positions that
+              are in common between the two alternative isiforms
+            + intron1_conf -- spliced alignments confirming the first intron
+            + intron2_conf -- spliced alignments confirming the second intron
+
+    Please note that this naming scheme has mostly historic reasons and is
+    likely to be changed in the near future.
+
+Further format specifications for HDF5 files:
+
+    The counts file is a hierarchical HDF5 file with only one level of hierarchy.
+    The following datasets are defined:
+        * conf_idx -- 1-based index of which events have been confirmed
+        * exon_counts -- 3-dimensional matrix containing the event counts
+            (events X features X samples)
+        * event_features -- description of the features that have been counted
+            for event_counts (dimension: number of features)
+        * event_pos -- position information for each event (dimension: number
+            of events)
+        * gene_chr -- chromosome for each gene (dimension: number of genes)
+        * gene_idx -- contains for each event the 1-based index of which gene it
+            belongs to (dimension: number of events)
+        * gene_names -- contains for each gene the gene name (dimension: number
+            of genes)
+        * gene_pos -- contains for each gene its position (dimension: number of
+            genes)
+        * gene_strand -- contains for each gene its strand (dimension: number of
+            genes)
+        * strains -- contains the sample names (dimension: number of samples)
+        * verified -- binary matrix with internal verification info (dimension:
+            4 X number of events)
+    Please note, that indices in the HDF5 file are 1-based (in matlab fashion).
+    This can cause problems, in case the file is processed in other languages
+    (e.g., Python) that expect 0-based indexing.

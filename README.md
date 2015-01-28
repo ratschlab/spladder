@@ -32,13 +32,13 @@ Information on how to contact the authors can be found in the AUTHORS file.
 License and Disclaimer
 ----------------------
 
-All licensing information can be found in the LICENSE file.
+All licensing information can be found in the COPYRIGHT file.
 
 Documentation
 -------------
 
 This README provides a quick walk-through of a basic SplAdder run. For further
-reading, please consider the file DOCS.
+reading, please consider the file DOCUMENTATION.
 
 The SplAdder executable *spladder.sh* can be found in the bin directory.
 Invoking the executable without any parameters will print a description of the
