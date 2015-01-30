@@ -10,17 +10,17 @@ for j = 1:length(genes)
 		end
 	end
     if genes(j).strand=='+'
-        if isfield(genes(j), 'splicegraph'),
+        if isfield(genes(j), 'splicegraph') && ~isempty(genes(j).splicegraph),
             genes(j).splicegraph{1}(2, :) = genes(j).splicegraph{1}(2, :) - 1;
         end;
-        if isfield(genes(j), 'segmentgraph'),
+        if isfield(genes(j), 'segmentgraph') && ~isempty(genes(j).segmentgraph),
             genes(j).segmentgraph{1}(2, :) = genes(j).segmentgraph{1}(2, :) - 1;
         end;
     else
-        if isfield(genes(j), 'splicegraph'),
+        if isfield(genes(j), 'splicegraph') && ~isempty(genes(j).splicegraph),
             genes(j).splicegraph{1}(1, :) = genes(j).splicegraph{1}(1, :) + 1;
         end;
-        if isfield(genes(j), 'segmentgraph'),
+        if isfield(genes(j), 'segmentgraph') && ~isempty(genes(j).segmentgraph),
             genes(j).segmentgraph{1}(1, :) = genes(j).segmentgraph{1}(1, :) + 1;
         end;
     end;
