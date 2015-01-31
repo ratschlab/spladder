@@ -116,7 +116,7 @@
     CFG.do_gen_isoforms = 0;
     CFG.do_merge_all = 0;
 
-    CFG.is_half_open = 1;
+    CFG.is_half_open = 0;
 
     CFG.run_as_analysis = 1;
     CFG.event_types = {'exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip'};
