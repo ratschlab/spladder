@@ -1,5 +1,8 @@
 import scipy as sp
 
+if __package__ is None:
+    __package__ = 'modules.alt_splice'
+
 from ..utils import *
 
 def sort_events_full(event_list, CFG):

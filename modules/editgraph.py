@@ -2,6 +2,9 @@ import scipy as sp
 import scipy.linalg as spla
 import pdb
 
+if __package__ is None:
+    __package__ = 'modules'
+
 from utils import *
 from init import *
 from reads import *

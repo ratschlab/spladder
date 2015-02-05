@@ -11,7 +11,6 @@ def default_settings():
     CFG['paths'] = []
     if 'SPLADDER_SRC_PATH' in os.environ:
         CFG['paths'].append(os.environ['SPLADDER_SRC_PATH'])
-        CFG['paths'].append('%s/rproc' % os.environ['SPLADDER_SRC_PATH'])
         CFG['paths'].append('%s/utils' % os.environ['SPLADDER_SRC_PATH'])
         CFG['paths'].append('%s/alt_splice' % os.environ['SPLADDER_SRC_PATH'])
     else:
@@ -19,7 +18,6 @@ def default_settings():
         #SPLADDER_SRC_PATH = fileparts(which('default_settings'))
         SPLADDER_SRC_PATH = os.getcwd()
         CFG['paths'].append(SPLADDER_SRC_PATH)
-        CFG['paths'].append('%s/rproc' % SPLADDER_SRC_PATH)
         CFG['paths'].append('%s/utils' % SPLADDER_SRC_PATH)
         CFG['paths'].append('%s/alt_splice' % SPLADDER_SRC_PATH)
 

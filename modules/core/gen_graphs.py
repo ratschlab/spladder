@@ -3,6 +3,9 @@ import pdb
 import sys
 import copy
 
+if __package__ is None:
+    __package__ = 'modules.core'
+
 from ..reads import *
 from ..helpers import *
 from ..editgraph import *
@@ -15,6 +18,9 @@ def gen_graphs(genes, CFG=None):
         PAR = genes
         genes  = PAR['genes']
         CFG = PAR['CFG']
+
+    if CFG['fd_log'].closed:
+         CFG['fd_log'] = sys.stdout
 
     ### init the stats for inserted elements
     inserted = dict()

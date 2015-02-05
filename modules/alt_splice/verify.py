@@ -4,6 +4,9 @@ import h5py
 import sys
 import os
 
+if __package__ is None:
+    __package__ = 'modules.alt_splice'
+
 from ..utils import *
 
 def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):

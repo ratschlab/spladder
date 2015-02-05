@@ -4,9 +4,13 @@ import scipy as sp
 import cPickle
 import h5py
 
+if __name__ == "__main__":
+    __package__ = "modules.alt_splice"
+
 ### local imports
 from verify import *
 from write import *
+from ..rproc import rproc, rproc_wait
 
 def _prepare_count_hdf5(CFG, OUT, events, event_features):
     
@@ -100,10 +104,9 @@ def analyze_events(CFG, event_type):
                     OUT.create_dataset(name='gene_idx', data=sp.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
                     _prepare_count_hdf5(CFG, OUT, events_all, event_features)
                 else:
-                    jobinfo = rproc_empty()
+                    jobinfo = []
                     chunk_size_events = 1000
                     chunk_size_strains = 500
-                    job_nr = 1
                     for i in range(0, events_all.shape[0], chunk_size_events):
                         idx_events = sp.arange(i, min(i + chunk_size_events - 1, events_all.shape[0]))
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
@@ -119,11 +122,10 @@ def analyze_events(CFG, event_type):
                             if os.path.exists(PAR['out_fn']):
                                 print 'Chunk event %i, strain %i already completed' % (i, j)
                             else:
-                                print 'Submitting job %i, event chunk %i, strain chunk %i' % (job_nr, i, j)
-                                jobinfo[job_nr] = rproc('verify_all_events', PAR, 8000, CFG['options_rproc'], 60)
-                                job_nr += 1
+                                print 'Submitting job %i, event chunk %i, strain chunk %i' % (len(jobinfo) + 1, i, j)
+                                jobinfo.append(rproc('verify_all_events', PAR, 8000, CFG['options_rproc'], 60))
                     
-                    jobinfo, nr_crashed = rproc_wait(jobinfo, 20, 1, 1)
+                    rproc_wait(jobinfo, 20, 1.0, 1)
                     
                     events_all_ = []
                     gene_idx_ = []

@@ -3,6 +3,9 @@ import os
 import sys
 import cPickle
 
+if __package__ is None:
+    __package__ = 'modules'
+
 from .utils import *
 from .count import count_graph_coverage_wrapper
 import rproc as rp

@@ -6,6 +6,9 @@ import copy
 import pdb
 import time
 
+if __package__ is None:
+    __package__ = 'modules'
+
 from utils import *
 from init import *
 

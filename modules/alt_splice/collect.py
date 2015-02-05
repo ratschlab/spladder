@@ -3,6 +3,10 @@ import scipy as sp
 import os
 import pdb
 
+
+if __package__ is None:
+    __package__ = 'modules.alt_splice'
+
 from .events import *
 from .detect import *
 

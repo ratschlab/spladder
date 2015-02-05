@@ -3,6 +3,9 @@ import math
 import h5py
 import scipy as sp
 
+if __package__ is None:
+    __package__ ='modules'
+
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
 from reads import *

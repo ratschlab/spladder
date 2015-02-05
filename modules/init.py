@@ -3,6 +3,10 @@ import cPickle
 import os
 import pysam
 import scipy as sp
+
+if __package__ is None:
+    __package__ = 'modules'
+
 from .classes.gene import Gene
 from .classes.region import Region
 from .classes.splicegraph import Splicegraph
