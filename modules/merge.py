@@ -5,6 +5,7 @@ import cPickle
 
 from .utils import *
 from .count import count_graph_coverage_wrapper
+import rproc as rp
 
 def merge_chunks_by_splicegraph(CFG, chunksize=None):
 # merge_chunks_by_splicegraph(CFG, chunksize) 
@@ -505,7 +506,7 @@ def run_merge(CFG):
         if not CFG['rproc']:
             merge_genes_by_splicegraph(CFG)
         else:
-            jobinfo =[]
+            jobinfo = []
             PAR = dict()
             PAR['CFG'] = CFG
             if chunksize > 0:
@@ -519,11 +520,11 @@ def run_merge(CFG):
                     else:
                         print 'submitting chunk %i to %i' % (c_idx, min(merge_list_len, c_idx + chunksize - 1))
                         PAR['chunk_idx'] = range(c_idx, min(merge_list_len, c_idx + chunksize - 1))
-                        jobinfo.append(rproc('merge_genes_by_splicegraph', PAR, 50000, CFG['options_rproc'], 40*60))
+                        jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 50000, CFG['options_rproc'], 40*60))
             else:
-                jobinfo.append(rproc('merge_genes_by_splicegraph', PAR, 10000, CFG['options_rproc'], 40*60))
+                jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 10000, CFG['options_rproc'], 40*60))
 
-            jobinfo = rproc_wait(jobinfo, 30, 1, 1)
+            rp.rproc_wait(jobinfo, 30, 1.0, 1)
             ### merge chunks
             if chunksize > 0:
                 PAR['chunksize'] = chunksize
@@ -550,7 +551,7 @@ def run_merge(CFG):
             if not CFG['rproc']:
                 merge_genes_by_isoform(CFG['out_dirname'], CFG['confidence_level'], merge_all, experiment)
             else:
-                jobinfo = rproc('merge_genes_by_isoform', PAR, 10000, CFG['options_rproc'], 40*60)
-                jobinfo = rproc_wait(jobinfo, 30, 1, 1)
+                jobinfo = [rp.rproc('merge_genes_by_isoform', PAR, 10000, CFG['options_rproc'], 40*60)]
+                rp.rproc_wait(jobinfo, 30, 1.0, 1)
         else:
             print 'File %s already exists!' % fn_out

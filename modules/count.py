@@ -6,6 +6,7 @@ import scipy as sp
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
 from reads import *
+import rproc as rp
 
 def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 # [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
@@ -107,7 +108,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
         ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
         chunksize = max(1, math.floor(10000 / len(CFG['strains'])));
 
-        jobinfo = rproc_empty(0)
+        jobinfo = []
 
         PAR = dict()
         PAR['CFG'] = CFG
@@ -122,9 +123,9 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                 PAR['fn_bam'] = CFG['bam_fnames']
                 PAR['fn_out'] = fn
                 PAR['CFG'] = CFG
-                jobinfo.append(rproc('count_graph_coverage', PAR, 30000, CFG['options_rproc'], 60))
+                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 30000, CFG['options_rproc'], 60))
 
-        jobinfo = rproc_wait(jobinfo, 30, 1, -1)
+        rp.rproc_wait(jobinfo, 30, 1.0, -1)
 
         ### merge results
         counts = sp.zeros((CFG['strains'].shape[0], genes.shape[0]), dtype='object')
