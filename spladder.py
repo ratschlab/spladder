@@ -23,6 +23,7 @@ from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
 from modules.count import count_graph_coverage_wrapper
 import modules.init as init
+import modules.rproc as rp
 from modules.merge import run_merge
 
 def parse_options(argv):
@@ -168,7 +169,7 @@ def spladder():
                 print >> sys.stdout, 'All result files already exist.'
             else:
                 if CFG['rproc']:
-                    jobinfo.append(rproc('spladder_core', CFG, 10000, CFG['options_rproc'], 40*60))
+                    jobinfo.append(rp.rproc('spladder_core', CFG, 10000, CFG['options_rproc'], 40*60))
                 else:
                     spladder_core(CFG)
 
@@ -180,7 +181,7 @@ def spladder():
 
         ### collect results after parallelization
         if CFG['rproc']:
-            jobinfo = rproc_wait(jobinfo, 30, 1, -1)
+            rp.rproc_wait(jobinfo, 30, 1.0, -1)
 
         ### merge parts if necessary
         if CFG['merge_strategy'] == 'merge_graphs':
