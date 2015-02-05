@@ -8,6 +8,7 @@ import math
 import pdb
 import inspect
 import types
+import imp
 
 ### define globals
 rproc_nqstat_time = None
@@ -70,11 +71,17 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         ### check if ProcName is defined in calling function
         callframe = sys._getframe(1)
         if not ProcName in callframe.f_locals:
-            print >> sys.stderr, 'ERROR: Could find no definition for %s in local context of calling function. Use kword callfile to specify file where %s is defined. Use the relative path to the location of the calling function!' % (ProcName, ProcName)
-            return 
+            if not ProcName in callframe.f_globals:
+                print >> sys.stderr, 'ERROR: Could find no definition for %s in local or global context of calling function. Use kword callfile to specify file where %s is defined. Use the relative path to the location of the calling function!' % (ProcName, ProcName)
+                return 
+            else:
+                callfile = (callframe.f_globals[ProcName].__module__, inspect.getfile(callframe.f_globals[ProcName]))
         else:
-            callfile = inspect.getfile(callframe.f_locals[ProcName]).split('/')[-1]
-            callfile = '.'.join(callfile.split('.')[:-1])
+            callfile = (callframe.f_locals[ProcName].__module__, inspect.getfile(callframe.f_locals[ProcName]))
+
+    ### detect path of this script
+    this_frame = sys._getframe(0)
+    rproc_path = os.path.abspath(inspect.getfile(this_frame))
 
     if runtime is None:
         runtime = 10000
@@ -94,11 +101,18 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         options['imports'] = dict()
     if not resubmission:
         callframe = sys._getframe(1)
-        for l in callframe.f_locals:
-            if l[:2] != '__' and isinstance(callframe.f_locals[l], types.ModuleType):
-                if not l in options['imports']:
-                    options['imports'][l] = callframe.f_locals[l].__name__
-        #            print >> sys.stderr, 'adding import %s as %s' % (callframe.f_locals[l].__name__, l)
+        #options['package'] = os.path.dirname(os.path.abspath(callframe.f_globals['__file__']))
+        for l in callframe.f_globals:
+            if (len(l) < 2 or l[:2] != '__'):
+                if isinstance(callframe.f_globals[l], types.ModuleType):
+                    if not l in options['imports']:
+                        if imp.is_builtin(callframe.f_globals[l].__name__) != 0:
+                            options['imports'][l] = (callframe.f_globals[l].__name__, 'builtin') 
+                        else:
+                            options['imports'][l] = (callframe.f_globals[l].__name__, callframe.f_globals[l].__file__) 
+
+    if not callfile[0] in options['imports']:
+        options['imports'][callfile[0]] = callfile
 
     home_str = os.environ['HOME'] 
 
@@ -261,7 +275,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     ### save the call information
     cPickle.dump((ProcName, P1, dirctry, options, callfile), open(mat_fname, 'wb'), -1)
 
-    evalstring = '%s rproc.py %s' % (bin_str, mat_fname)
+    evalstring = '%s %s %s' % (bin_str, rproc_path, mat_fname)
     evalstring = 'cd %s; %s; exit' % (dirctry, evalstring)
     fd = open(m_fname, 'w')
     print >> fd, '%s' % evalstring
@@ -832,8 +846,8 @@ def rproc_wait(jobinfo, pausetime=120, frac_finished=1.0, resub_on=1, verbosity=
                                 print 'job has been canceled because it used %1.0fs, but time limit was %1.0fs walltime.\nhence, we increase the time limit to %1.0fs.\n' % (jobwalltime, jobinfo[id].time * 60, max(jobinfo[id].time, jobwalltime) * 2)
                             jobinfo[id].time = max(jobinfo[id].time, jobwalltime / 60) * 2
                     elif resub_on == -1:
-                        jobinfo[id].time = jobinfo[id].time_req_resubmit[jobinfo[id].retries + 1]
-                        jobinfo[id].Mem = jobinfo[id].mem_req_resubmit[jobinfo[id].retries + 1] 
+                        jobinfo[id].time = jobinfo[id].time_req_resubmit[min(jobinfo[id].retries + 1, len(jobinfo[id].time_req_resubmit) - 1)]
+                        jobinfo[id].Mem = jobinfo[id].mem_req_resubmit[min(jobinfo[id].retries + 1, len(jobinfo[id].mem_req_resubmit) - 1)] 
                         jobinfo[id].start_time = []
                         if verbosity >= 1:
                             print 'resubmitting job (%i) with new time and memory limitations: %iMb and %i minutes (retry #%i)\n' % (jobinfo[id].jobid, jobinfo[id].Mem, jobinfo[id].time, jobinfo[id].retries + 1)
@@ -898,14 +912,35 @@ def start_proc(fname, rm_flag=True):
     
     ### create environment
     for mod in options['imports']:
-        exec('import %s as %s' % (options['imports'][mod], mod))
-
+        module = options['imports'][mod]
+        if module[1] == 'builtin':
+            if imp.is_builtin(module[0]) == 1:
+                exec('import %s' % module[0])
+        else:
+            mod_sl = module[0].split('.')
+            subpaths = get_subpaths(os.path.dirname(module[1]).split('/'))
+            for m in range(len(mod_sl)):
+                exec('exists = \'%s\' in globals().items()' % '.'.join(mod_sl[:m+1]))
+                if not exists:
+                    try:
+                        (f, fn, des) = imp.find_module(mod_sl[m], subpaths)
+                        try:
+                            exec('%s = imp.load_module(\'%s\', f, fn, des)' % ('.'.join(mod_sl[:m+1]), '.'.join(mod_sl[:m+1])))
+                        finally:
+                            if f is not None:
+                                f.close()
+                    except ImportError:
+                        print >> sys.stderr, 'Module %s could not be found' % '.'.join(mod_sl[:m+1])
+            if mod != module[0]:
+                exec('%s = %s' % (mod, module[0]))
+                
 
     retval1 = []
     retval2 = []
 
+    
     try:
-        exec('from %s import %s' % (callfile, ProcName))
+        exec('from %s import %s' % (callfile[0], ProcName))
 
         if len(P1) > 0:
             retval = eval('%s(P1)' % ProcName)
@@ -933,8 +968,8 @@ def start_proc(fname, rm_flag=True):
         print >> sys.stderr, 'job is marked for rerunning. exiting without finished computations'
     else:
         if rm_flag:
-            os.remove(fname) # mat file
-            os.remove('%spy' % fname.strip('pickle')) # m file
+            os.remove(fname) # data file
+            os.remove('%ssh' % fname.strip('pickle')) # script file
 
     print '### job finished %s' % time.strftime('%Y-%m-%d %H:%S')
 
@@ -950,6 +985,10 @@ def split_walltime(time_str):
             print >> sys.stderr, 'WARNING: walltime computation exceeds max value'
     return seconds
 
+
+def get_subpaths(sl):
+
+    return ['/'.join(sl[:len(sl)-i]) for i in range(len(sl) - 1)]
 
 if __name__ == "__main__":
     
