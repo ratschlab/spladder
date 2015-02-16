@@ -21,43 +21,50 @@ function usage () {
     Options (default values in [...]):
 
     MANDATORY:
-
     -b  FILE1,FILE2,...     alignment files in BAM format (comma separated list)
     -o  DIR                 output directory
-    -a  FILE                annotation file name (annotation in *.mat format)
+    -a  FILE                annotation file name (annotation in *.mat|*.gff format)
 
-    OPTIONAL:
+    GENERAL:
     -l  FILE                log file name [stdout]
-    -u  FILE                file with user settings [-]
-    -F  FILE                use existing SplAdder output file as input (advanced) [-]
+    -v  y|n                 use verbose output mode [n]
+    -d  y|n                 use debug mode [n]
+    -p  y|n                 use parallel engine [n]
+
+    INPUT FILTERING:
     -c  INT                 confidence level (0 lowest to 3 highest) [3]
-    -I  INT                 number of iterations to insert new introns
-                            into the graph [5]
+    -O  y|n                 annotation is in half-open coordinates [n]
+    -P  y|n                 only use primary alignments from provided files [n]
+    -X  y|n                 alignment files are variation aware (presence of XM and XG tags) [n]
+    -n  INT                 read length (used for automatic confidence levele settings) [36]
+
+    GRAPH AUGMENTATION:
     -M  <STRAT>             merge strategy, where <STRAT> is one on:
                             merge_bams, merge_graphs, merge_all [merge_graphs]
-    -n  INT                 read length (used for automatic confidence levele settings) [36]
-    -R  R1,R2,...           replicate structure of files (same number as
-                            alignment files) [all R1 - no replicated]
-    -L  STRING              label for current experiment [-]
-    -S  STRING              reference strain [-]
-    -C  y|n                 truncation detection mode [n]
-    -U  y|n                 count intron coverage [n]
-    -P  y|n                 only use primary alignments from provided files [n]
-    -d  y|n                 use debug mode [n]
-    -p  y|n                 use rproc [n]
-    -O  y|n                 annotation is in half-open coordinates
-    -V  y|n                 validate splice graph [n]
-    -v  y|n                 use verbose output mode [n]
-    -A  y|n                 curate alt prime events [y]
     -x  y|n                 input alignments share the same genome [y]
     -i  y|n                 insert intron retentions [y]
     -e  y|n                 insert cassette exons [y]
     -E  y|n                 insert new intron edges [y]
+    -I  INT                 number of iterations to insert new introns
+                            into the graph [5]
     -r  y|n                 remove short exons [n]
-    -s  y|n                 re-infer splice graph [n]
+    -V  y|n                 validate splice graph [n]
+
+    EVENT EXTRACTION:
     -T  y|n                 extract alternative splicing events [y]
-    -X  y|n                 alignment files are variation aware (presence of XM and XG tags) [n]
-    -t  STRING,STRING,...   list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]
+    -t  STRING,STRING,...   list of alternative splicing events to extract 
+                            [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]
+    -A  y|n                 curate alt prime events [y]
+    -F  FILE                use existing SplAdder output file as input (advanced) [-]
+
+    ADVANCED/EXPERIMENTAL:
+    -C  y|n                 truncation detection mode [n] (experimental)
+    -U  y|n                 count intron coverage [n] (experimental)
+    -R  R1,R2,...           replicate structure of files (same number as
+                            alignment files) [all R1 - no replicated] (experimental)
+    -s  y|n                 re-infer splice graph [n]
+    -L  STRING              label for current experiment [-]
+    -S  STRING              reference strain [-]
     "
 
     exit 0
