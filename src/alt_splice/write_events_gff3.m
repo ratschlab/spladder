@@ -34,6 +34,9 @@ function write_events_gff3(fn_out_gff3, events, idx)
         elseif strcmp(ev.event_type, 'mult_exon_skip'),
             exons{1} = [ev.exon_pre; reshape(ev.exons, length(ev.exons) / 2, 2); ev.exon_aft];
             exons{2} = [ev.exon_pre; ev.exon_aft];
+        elseif strcmp(ev.event_type, 'mutex_exons'),
+            exons{1} = [ev.exon_pre; ev.exon1; ev.exon_aft];
+            exons{2} = [ev.exon_pre; ev.exon2; ev.exon_aft];
         end;
 
         start_pos = exons{1}(1, 1);
@@ -57,7 +60,7 @@ function write_events_gff3(fn_out_gff3, events, idx)
             fprintf(fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1\n', ev.chr, ev.event_type, ...
                     exons{o_idx(1)}(2, 1), exons{o_idx(1)}(2, 2), ev.strand, name) ;
         end;
-        if strcmp(ev.event_type, 'exon_skip'),
+        if strcmp(ev.event_type, 'exon_skip') || strcmp(ev.event_type, 'mutex_exons'),
             fprintf(fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1\n', ev.chr, ev.event_type, ...
                     exons{o_idx(1)}(3, 1), exons{o_idx(1)}(3, 2), events(1, i).strand, name) ;
         end;
@@ -67,5 +70,9 @@ function write_events_gff3(fn_out_gff3, events, idx)
                 exons{o_idx(2)}(1, 1), exons{o_idx(2)}(1, 2), ev.strand, name) ;
         fprintf(fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2\n', ev.chr, ev.event_type, ...
                 exons{o_idx(2)}(2, 1), exons{o_idx(2)}(2, 2), ev.strand, name) ;
+        if strcmp(ev.event_type, 'mutex_exons'),
+            fprintf(fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2\n', ev.chr, ev.event_type, ...
+                    exons{o_idx(2)}(3, 1), exons{o_idx(2)}(3, 2), ev.strand, name) ;
+        end;
     end ;
     fclose(fd_out) ;

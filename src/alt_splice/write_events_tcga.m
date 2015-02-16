@@ -54,6 +54,12 @@ function write_events_tcga(fn_out, strains, events, fn_counts, event_idx)
                 fprintf(fd, ':%i-%i:', events(i).exons_col(j), events(i).exons_col(j+1));
             end;
             fprintf(fd, ':%i-%i', events(i).exon_aft_col(1), events(i).exon_aft_col(2)) ;
+        elseif strcmp(event_type, 'mutex_exons'),
+            fprintf(fd, ':%i-%i:%i-%i:%i-%i:%i-%i', ...
+            events(i).exon_pre_col(1), events(i).exon_pre_col(2), ...
+            events(i).exon1_col(1), events(i).exon1_col(2), ...
+            events(i).exon2_col(1), events(i).exon2_col(2), ...
+            events(i).exon_aft_col(1), events(i).exon_aft_col(2)) ;
         end;
         %%% TODO compute Splice Index !!!!
         for j = 1:length(strains),
@@ -78,6 +84,10 @@ function write_events_tcga(fn_out, strains, events, fn_counts, event_idx)
                     num = counts(j, 5);
                     denom = 1;
                     confirmation = num;
+                elseif strcmp(events(i).event_type, 'mutex_exons'),
+                    num = counts(j, 6) + counts(j, 7);
+                    denom = counts(j, 6) + counts(j, 7) + counts(j, 8) + counts(j, 9);
+                    confirmation = denom;
                 else
                     error(sprintf('Unknown event type: %s\n', events(i).event_type));
                 end;

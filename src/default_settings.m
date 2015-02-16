@@ -82,6 +82,10 @@
     %CFG.exon_skip.max_skip_rel_cov = 1.5;
     CFG.exon_skip.intron_tolerance = 0;
 
+    %%% settings for verifying mutually exclusive exons
+    CFG.mutex_exons.min_skip_rel_cov = 0.05;
+    CFG.mutex_exons.min_conf_count = 2;
+
     %%% settings for verifying multiple exon skips
     CFG.mult_exon_skip = struct();
     CFG.mult_exon_skip.min_non_skip_count = 3;

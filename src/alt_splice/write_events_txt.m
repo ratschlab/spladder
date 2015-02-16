@@ -32,25 +32,26 @@ function write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, ann
         fprintf(fd, 'contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_start\texon_end\texon_aft_start\texon_aft_end', gene_header) ;
         tmp = reshape(repmat(strains, 6, 1), 1, length(strains) * 6);
         fprintf(fd, '\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_aft_conf\t%s:intron_skip_conf', tmp{:}) ;
-        fprintf(fd, '\n') ;
     elseif strcmp(events(1).event_type, 'alt_3prime') || strcmp(events(1).event_type, 'alt_5prime'),
         fprintf(fd, 'contig\tstrand\tevent_id\tgene_name%s\texon_const_start\texon_const_end\texon_alt1_start\texon_alt1_end\texon_alt2_start\texon_alt2_end', gene_header) ;
         tmp = reshape(repmat(strains, 4, 1), 1, length(strains) * 4);
         fprintf(fd, '\t%s:exon_diff_cov\t%s:exon_const_cov\t%s:intron1_conf\t%s:intron2_conf', tmp{:}) ;
-        fprintf(fd, '\n') ;
     elseif strcmp(events(1).event_type, 'intron_retention'),
         fprintf(fd, 'contig\tstrand\tevent_id\tgene_name%s\texon1_start\texon1_end\tintron_start\tintron_end\texon2_start\texon2_end', gene_header) ;
         tmp = reshape(repmat(strains, 4, 1), 1, length(strains) * 4);
         fprintf(fd, '\t%s:exon1_cov\t%s:intron_cov\t%s:exon2_cov\t%s:intron_conf', tmp{:}) ;
-        fprintf(fd, '\n') ;
     elseif strcmp(events(1).event_type, 'mult_exon_skip'),
         fprintf(fd, 'contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_starts\texon_ends\texon_aft_start\texon_aft_end', gene_header) ;
         tmp = reshape(repmat(strains, 8, 1), 1, length(strains) * 8);
         fprintf(fd, '\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_inner_conf\t%s:exon_inner_count\t%s:intron_aft_conf\t%s:intron_skip_conf', tmp{:}) ;
-        fprintf(fd, '\n') ;
+    elseif strcmp(events(1).event_type, 'mutex_exons'),
+        fprintf(fd, 'contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon1_start\texon1_end\texon2_start\texon2_end\texon_aft_start\texon_aft_end', gene_header) ;
+        tmp = reshape(repmat(strains, 8, 1), 1, length(strains) * 8);
+        fprintf(fd, '\t%s:exon_pre_cov\t%s:exon1_cov\t%s:exon2_cov\t%s:exon_aft_cov\t%s:pre_exon1_conf\t%s:pre_exon2_conf\t%s:exon1_aft_conf\t%s:exon2_aft_conf', tmp{:}) ;
     else
         error(sprintf('Unknown event type: %s\n', events(1).event_type));
     end;
+    fprintf(fd, '\n') ;
 
     %%% prepare chunked loading of count hdf5
     size_info = h5info(fn_counts, '/event_counts');
@@ -118,6 +119,16 @@ function write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, ann
                             counts(j, 8), counts(j, 9), counts(j, 6), counts(j, 7)) ;
                 else
                     fprintf(fd, '\t-1\t-1\t-1\t-1\t-1\t-1\t-1') ;
+                end ;
+            end ;
+        elseif strcmp(events(i).event_type, 'mutex_exons'),
+            fprintf(fd, '\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i', ev.exon_pre_col(1), ev.exon_pre_col(2), ev.exon1_col(1), ev.exon1_col(2), ...
+                    ev.exon2_col(1), ev.exon2_col(2), ev.exon_aft_col(1), ev.exon_aft_col(2)) ;
+            for j = 1:length(strains),
+                if counts(j, 1),
+                    fprintf(fd, '\t%.1f\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i', counts(j, 2), counts(j, 3), counts(j, 4), counts(j, 5), counts(j, 6), counts(j, 7), counts(j, 8), counts(j, 9)) ;
+                else
+                    fprintf(fd, '\t-1\t-1\t-1\t-1\t-1\t-1\t-1\t-1') ;
                 end ;
             end ;
         end;

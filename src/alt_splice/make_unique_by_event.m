@@ -26,7 +26,10 @@ function event_list = make_unique_by_event(event_list)
             isequal(event_list(last_kept).intron_col, event_list(i).intron_col)) || ...
            ((strcmp(event_list(i).event_type, 'alt_5prime') || strcmp(event_list(i).event_type, 'alt_3prime')) && ...
             isequal(sort(unique([event_list(last_kept).intron1_col event_list(last_kept).intron2_col])), ...
-                    sort(unique([event_list(i).intron1_col event_list(i).intron2_col])))),
+                    sort(unique([event_list(i).intron1_col event_list(i).intron2_col])))) || ...
+           (strcmp(event_list(i).event_type, 'mutex_exons') && ...
+            isequal([event_list(last_kept).exon_pre_col(2) event_list(last_kept).exon1_col event_list(last_kept).exon2_col event_list(last_kept).exon_aft_col(1)], ...
+                    [event_list(i).exon_pre_col(2) event_list(i).exon1_col event_list(i).exon2_col event_list(i).exon_aft_col(1)])),
 
             %%% assertion that we did everything right
             assert(event_list(last_kept).chr_num == event_list(i).chr_num) ;
@@ -45,7 +48,7 @@ function event_list = make_unique_by_event(event_list)
             idx = setdiff(event_list(i).strain, event_list(last_kept).strain);
             
             %%% check, which event is longer -> keep longer event
-            if strcmp(event_list(i).event_type, 'exon_skip') || strcmp(event_list(i).event_type, 'mult_exon_skip'),
+            if strcmp(event_list(i).event_type, 'exon_skip') || strcmp(event_list(i).event_type, 'mult_exon_skip') || strcmp(event_list(i).event_type, 'mutex_exons'),
                 len1 = event_list(last_kept).exon_aft(2) - event_list(last_kept).exon_pre(1) + 1;   
                 len2 = event_list(i).exon_aft(2) - event_list(i).exon_pre(1) + 1;   
             elseif strcmp(event_list(i).event_type, 'intron_retention'),

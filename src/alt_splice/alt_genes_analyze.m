@@ -40,6 +40,8 @@ function alt_genes_analyze(CFG, event_type)
             event_features = {'valid', 'intron_cov', 'exon1_cov', 'exon2_cov', 'intron_conf', 'intron_cov_region'}; 
         elseif strcmp(event_type, 'mult_exon_skip'),
             event_features = {'valid', 'exon_pre_cov', 'exons_cov', 'exon_aft_cov', 'exon_pre_exon_conf', 'exon_exon_aft_conf', 'exon_pre_exon_aft_conf', 'sum_inner_exon_conf', 'num_inner_exon'}; 
+        elseif strcmp(event_type, 'mutex_exons'),
+            event_features = {'valid', 'exon_pre_cov', 'exon1_cov', 'exon2_cov', 'exon_aft_cov', 'exon_pre_exon1_conf', 'exon_pre_exon2_conf', 'exon1_exon_aft_conf', 'exon2_exon_aft_conf'};
         end;
 
         %%% check, if confirmed version exists
@@ -161,6 +163,8 @@ function alt_genes_analyze(CFG, event_type)
                         tmp(tt, 2) = events_all(tt).exons(end, end);
                     end;
                     event_pos = [vertcat(events_all.exon_pre), tmp, vertcat(events_all.exon_aft)];
+                elseif strcmp(event_type, 'mutex_exons'),
+                    event_pos = [vertcat(events_all.exon_pre), vertcat(events_all.exon1), vertcat(events_all.exon2), vertcat(events_all.exon_aft)];
                 end;
                 h5create(fn_out_count, '/event_pos', size(event_pos));
                 h5write(fn_out_count, '/event_pos', event_pos);

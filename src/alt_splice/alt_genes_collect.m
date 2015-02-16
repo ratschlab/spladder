@@ -7,6 +7,7 @@ function alt_genes_collect(CFG)
     do_mult_exon_skip = 0;
     do_alt_3prime = 0;
     do_alt_5prime = 0;
+    do_mutex_exons = 0;
     for e_idx = 1:length(CFG.event_types),
         if strcmp('exon_skip', CFG.event_types{e_idx}),
             do_exon_skip = 1;
@@ -18,8 +19,10 @@ function alt_genes_collect(CFG)
             do_alt_5prime = 1;
         elseif strcmp('mult_exon_skip', CFG.event_types{e_idx}),
             do_mult_exon_skip = 1;
+        elseif strcmp('mutex_exons', CFG.event_types{e_idx}),
+            do_mutex_exons = 1;
         else
-            error(sprint('Unknown event type: %s\n', CFG.event_types{e_idx}));
+            error(sprintf('Unknown event type: %s\n', CFG.event_types{e_idx}));
         end;
     end;
 
@@ -47,6 +50,11 @@ function alt_genes_collect(CFG)
         exon_mult_exon_skip = {} ;
         id_mult_exon_skip = {} ;
         mult_exon_skip_pos = {};
+    end;
+    if do_mutex_exons,
+        idx_mutex_exons = {} ;
+        exon_mutex_exons = {} ;
+        mutex_exons_pos = {};
     end;
 
     validate_tag = '';
@@ -80,6 +88,7 @@ function alt_genes_collect(CFG)
             fn_out_ir = sprintf('%s/%s_intron_retention%s_C%i.mat', CFG.out_dirname, CFG.merge_strategy, rep_tag, CFG.confidence_level) ;
             fn_out_es = sprintf('%s/%s_exon_skip%s_C%i.mat', CFG.out_dirname, CFG.merge_strategy, rep_tag, CFG.confidence_level) ;
             fn_out_mes = sprintf('%s/%s_mult_exon_skip%s_C%i.mat', CFG.out_dirname, CFG.merge_strategy, rep_tag, CFG.confidence_level) ;
+            fn_out_mex = sprintf('%s/%s_mutex_exons%s_C%i.mat', CFG.out_dirname, CFG.merge_strategy, rep_tag, CFG.confidence_level) ;
             fn_out_a5 = sprintf('%s/%s_alt_5prime%s_C%i.mat', CFG.out_dirname, CFG.merge_strategy, rep_tag, CFG.confidence_level) ;
             fn_out_a3 = sprintf('%s/%s_alt_3prime%s_C%i.mat', CFG.out_dirname, CFG.merge_strategy, rep_tag, CFG.confidence_level) ;
 
@@ -88,6 +97,7 @@ function alt_genes_collect(CFG)
             mult_exon_skip_pos{ridx, i} = [] ;
             alt_end_5prime_pos{ridx, i} = [] ;
             alt_end_3prime_pos{ridx, i} = [] ;
+            mutex_exons_pos{ridx, i} = [] ;
 
             fprintf('\nconfidence %i / sample %i / replicate %i\n', CFG.confidence_level, i, ridx);
 
@@ -406,7 +416,7 @@ function alt_genes_collect(CFG)
                                     exons_col_pos = convert_strain_pos(gene.chr_num, gene.splicegraph{1}', strain, CFG.reference_strain)' ;
                                 end;
                                 if ~isequal(size(exons_col), size(exons_col_pos)), 
-                                    fprintf('skipping non-mappable exon skip event\n') ;
+                                    fprintf('skipping non-mappable multiple exon skip event\n') ;
                                     continue ;
                                 end 
 
@@ -443,6 +453,64 @@ function alt_genes_collect(CFG)
                         end ;
                     else
                         fprintf(1, '%s already exists\n', fn_out_mes);
+                    end;
+                end;
+
+                %%% detect mutually exclusive exons from splicegraph
+                if do_mutex_exons,
+                    if ~exist(fn_out_mex, 'file'),
+                        [idx_mutex_exons{ridx,i}, exon_mutex_exons{ridx,i}] = detect_xorexons(L.genes, find([L.genes.is_alt])) ;
+                        if ~isempty(idx_mutex_exons{ridx, i}), % necessary for Octave
+                            for k = 1:size(exon_mutex_exons{ridx,i}, 2),
+                                gene = L.genes(idx_mutex_exons{ridx,i}(k)) ;
+
+                                %%% perform liftover between strains if necessary
+                                exons = gene.splicegraph{1} ;
+                                if ~isfield(CFG, 'reference_strain'),
+                                    exons_col = exons;
+                                    exons_col_pos = exons;
+                                else
+                                    exons_col = convert_strain_pos_intervals(gene.chr_num, gene.splicegraph{1}', strain, CFG.reference_strain)' ;
+                                    exons_col_pos = convert_strain_pos(gene.chr_num, gene.splicegraph{1}', strain, CFG.reference_strain)' ;
+                                end;
+                                if ~isequal(size(exons_col), size(exons_col_pos)), 
+                                    fprintf('skipping non-mappable mutex exons event\n') ;
+                                    continue ;
+                                end 
+
+                                %%% build data structure for mutually exclusive exons
+                                mutex_exons_pos{ridx,i}(end+1).chr = gene.chr ;
+                                mutex_exons_pos{ridx,i}(end).chr_num = gene.chr_num ;
+                                mutex_exons_pos{ridx,i}(end).strand = gene.strand ;
+                                mutex_exons_pos{ridx,i}(end).strain = {strain} ;
+                                mutex_exons_pos{ridx,i}(end).exon_pre = [exons(1,exon_mutex_exons{ridx,i}(1, k)) ...
+                                                                         exons(2,exon_mutex_exons{ridx,i}(1, k))] ;
+                                mutex_exons_pos{ridx,i}(end).exon_pre_col = [exons_col(1,exon_mutex_exons{ridx,i}(1, k)) ...
+                                                                             exons_col(2,exon_mutex_exons{ridx,i}(1, k))] ;
+                                mutex_exons_pos{ridx,i}(end).exon1 = [exons(1,exon_mutex_exons{ridx,i}(2, k)) ...
+                                                                      exons(2,exon_mutex_exons{ridx,i}(2, k))] ;
+                                mutex_exons_pos{ridx,i}(end).exon1_col = [exons_col(1,exon_mutex_exons{ridx,i}(2, k)) ...
+                                                                          exons_col(2,exon_mutex_exons{ridx,i}(2, k))] ;
+                                mutex_exons_pos{ridx,i}(end).exon2 = [exons(1,exon_mutex_exons{ridx,i}(3, k)) ...
+                                                                      exons(2,exon_mutex_exons{ridx,i}(3, k))] ;
+                                mutex_exons_pos{ridx,i}(end).exon2_col = [exons_col(1,exon_mutex_exons{ridx,i}(3, k)) ...
+                                                                          exons_col(2,exon_mutex_exons{ridx,i}(3, k))] ;
+                                mutex_exons_pos{ridx,i}(end).exon_aft = [exons(1,exon_mutex_exons{ridx,i}(4, k)) ...
+                                                                         exons(2,exon_mutex_exons{ridx,i}(4, k))] ;
+                                mutex_exons_pos{ridx,i}(end).exon_aft_col = [exons_col(1,exon_mutex_exons{ridx,i}(4, k)) ...
+                                                                             exons_col(2,exon_mutex_exons{ridx,i}(4, k))] ;
+                                mutex_exons_pos{ridx,i}(end).p_values=[] ;
+                                if isfield(gene, 'name')
+                                    mutex_exons_pos{ridx,i}(end).gene_name = {gene.name};
+                                end;
+                                if isfield(gene, 'transcript_type')
+                                    mutex_exons_pos{ridx,i}(end).gene_type = {gene.transcript_type};
+                                end;
+                                mutex_exons_pos{ridx,i}(end).gene_idx = idx_mutex_exons{ridx,i}(k);
+                            end ;
+                        end ;
+                    else
+                        fprintf(1, '%s already exists\n', fn_out_mex);
                     end;
                 end;
             %%% genes file does not exist
@@ -522,6 +590,30 @@ function alt_genes_collect(CFG)
                 secsave(fn_out_mes, events_all, 'events_all') ;
             else
                 fprintf(1, '%s already exists\n', fn_out_mes);
+            end;
+        end;
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%% COMBINE MUTUALLY EXCLUSIVE EXONS
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        if do_mutex_exons,
+            if ~exist(fn_out_mex, 'file'),
+                mutex_exons_pos_all = mutex_exons_pos(ridx,:) ;
+                mutex_exons_pos_all = [mutex_exons_pos_all{:}] ;
+                [mutex_exons_pos_all(:).event_type] = deal('mutex_exons');
+
+                if ~isempty([mutex_exons_pos_all.event_type]),
+                    %%% post process event structure by sorting and making events unique
+                    events_all = post_process_event_struct(mutex_exons_pos_all);
+                else
+                    events_all = mutex_exons_pos_all;
+                end ;
+
+                %%% store exons skip events
+                fprintf('saving mutually exclusive exons to %s\n', fn_out_mex) ;
+                secsave(fn_out_mex, events_all, 'events_all') ;
+            else
+                fprintf(1, '%s already exists\n', fn_out_mex);
             end;
         end;
 

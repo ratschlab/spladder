@@ -4,20 +4,20 @@ function event_list = sort_events_full(event_list),
         return;
     end;
 
-    %%% TODO switch by event type not by presence of certain fields
-   
-    if isfield(event_list, 'exon_col') && isfield(event_list, 'exon_pre_col') && isfield(event_list, 'exon_aft_col'),
+    if strcmp(event_list(1).event_type, 'exon_skip'), 
         sort_list = [vertcat(event_list.exon_pre_col) vertcat(event_list.exon_col) vertcat(event_list.exon_aft_col)];
-    elseif isfield(event_list, 'exons_col') && isfield(event_list, 'exon_pre_col') && isfield(event_list, 'exon_aft_col'),
+    elseif strcmp(event_list(1).event_type, 'mult_exon_skip'), 
         tmp =[];
         for i = 1:length(event_list),
             tmp(end + 1, :) = [event_list(i).exons_col(1, 1) event_list(i).exons_col(end, end)];
         end;
         sort_list = [vertcat(event_list.exon_pre_col) tmp vertcat(event_list.exon_aft_col)];
-    elseif isfield(event_list, 'intron_col') && isfield(event_list, 'exon1_col') && isfield(event_list, 'exon2_col'),
+    elseif strcmp(event_list(1).event_type, 'intron_retention'), 
         sort_list = [vertcat(event_list.exon1_col) vertcat(event_list.intron_col) vertcat(event_list.exon2_col)];
-    elseif isfield(event_list, 'intron1_col') && isfield(event_list, 'intron2_col') && isfield(event_list, 'exon_alt1_col') && isfield(event_list, 'exon_alt2_col') && isfield(event_list, 'exon_const_col'),
+    elseif strcmp(event_list(1).event_type, 'alt_5prime') || strcmp(event_list(1).event_type, 'alt_3prime'), 
         sort_list = [vertcat(event_list.exon_const_col) vertcat(event_list.intron1_col) vertcat(event_list.exon_alt1_col) vertcat(event_list.intron2_col) vertcat(event_list.exon_alt2_col)];
+    elseif strcmp(event_list(1).event_type, 'mutex_exons'),
+        sort_list = [vertcat(event_list.exon_pre_col) vertcat(event_list.exon1_col) vertcat(event_list.exon2_col) vertcat(event_list.exon_aft_col)];
     end;
     
     chr_list = [event_list.chr_num] ;

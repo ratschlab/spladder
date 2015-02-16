@@ -135,6 +135,8 @@ if CFG.verify_alt_events,
                 [ev(i).verified(s_idx,:), ev(i).info(s_idx, :)] = verify_intron_retention(ev_tmp, genes(g_idx), segments(:, s_idx)', [edge_idx edges(:, s_idx)], seg_pos(:, s_idx)', CFG) ;
             elseif strcmp(event_type, 'mult_exon_skip'),
                 [ev(i).verified(s_idx,:), ev(i).info(s_idx, :)] = verify_mult_exon_skip(ev_tmp, genes(g_idx), segments(:, s_idx)', [edge_idx edges(:, s_idx)], CFG) ;
+            elseif strcmp(event_type, 'mutex_exons'),
+                [ev(i).verified(s_idx,:), ev(i).info(s_idx, :)] = verify_mutex_exons(ev_tmp, genes(g_idx), segments(:, s_idx)', [edge_idx edges(:, s_idx)], CFG) ;
             end;
         end ;
     end ;
