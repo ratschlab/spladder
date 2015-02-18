@@ -10,6 +10,7 @@ if __package__ is None:
 from .events import *
 from .detect import *
 
+from ..init import append_chrms
 from ..classes.event import Event
 
 
@@ -21,6 +22,7 @@ def collect_events(CFG):
     do_mult_exon_skip = ('mult_exon_skip' in CFG['event_types'])
     do_alt_3prime = ('alt_3prime' in CFG['event_types'])
     do_alt_5prime = ('alt_5prime' in CFG['event_types'])
+    do_mutex_exons = ('mutex_exons' in CFG['event_types'])
 
     ### init empty event fields
     if do_intron_retention:
@@ -32,16 +34,12 @@ def collect_events(CFG):
         alt_end_3prime_pos = sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')
     if do_mult_exon_skip:
         mult_exon_skip_pos = sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')
+    if do_mutex_exons:
+        mutex_exons_pos = sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')
 
     validate_tag = ''
     if 'validate_splicegraphs' in CFG and CFG['validate_splicegraphs']:
         validate_tag = '.validated'
-
-    ### set offset that can be used for half open intervals
-    if CFG['is_half_open']:
-        ho_offset = 1
-    else:
-        ho_offset = 0
 
     for i in range(len(CFG['samples'])):
         if CFG['same_genestruct_for_all_samples'] == 1 and i == 1:
@@ -57,6 +55,8 @@ def collect_events(CFG):
                 alt_end_3prime_pos = sp.c_[alt_end_3prime_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
             if do_mult_exon_skip:
                 mult_exon_skip_pos = sp.c_[mult_exon_skip_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
+            if do_mutex_exons:
+                mutex_exons_pos = sp.c_[mutex_exons_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
 
         strain = CFG['strains'][i]
 
@@ -79,12 +79,20 @@ def collect_events(CFG):
             fn_out_mes = '%s/%s_mult_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level']) 
             fn_out_a5 = '%s/%s_alt_5prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
             fn_out_a3 = '%s/%s_alt_3prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+            fn_out_mex = '%s/%s_mutex_exons%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
 
-            intron_reten_pos[ridx, i] = []
-            exon_skip_pos[ridx, i] = []
-            mult_exon_skip_pos[ridx, i] = []
-            alt_end_5prime_pos[ridx, i] = []
-            alt_end_3prime_pos[ridx, i] = []
+            if do_intron_retention:
+                intron_reten_pos[ridx, i] = []
+            if do_exon_skip:
+                exon_skip_pos[ridx, i] = []
+            if do_mult_exon_skip:
+                mult_exon_skip_pos[ridx, i] = []
+            if do_alt_5prime:
+                alt_end_5prime_pos[ridx, i] = []
+            if do_alt_3prime:
+                alt_end_3prime_pos[ridx, i] = []
+            if do_mutex_exons:
+                mutex_exons_pos[ridx, i] = []
 
             print '\nconfidence %i / sample %i / replicate %i' % (CFG['confidence_level'], i, ridx)
 
@@ -92,6 +100,9 @@ def collect_events(CFG):
                 print 'Loading gene structure from %s ...' % genes_fnames
                 (genes, inserted) = cPickle.load(open(genes_fnames, 'r'))
                 print '... done.'
+                
+                if not 'chrm_lookup' in CFG:
+                    CFG = append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), CFG)
 
                 ### detect intron retentions from splicegraph
                 if do_intron_retention:
@@ -301,6 +312,42 @@ def collect_events(CFG):
                                 mult_exon_skip_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_mes
+
+                ### detect mutually exclusive exons from splicegraph
+                if do_mutex_exons:
+                    if not os.path.exists(fn_out_mex):
+                        idx_mutex_exons, exon_mutex_exons = detect_xorexons(genes, sp.where([x.is_alt for x in genes])[0])
+                        if len(idx_mutex_exons) > 0:
+                            for k in range(len(exon_mutex_exons)):
+                                gene = genes[idx_mutex_exons[k]]
+
+                                ### perform liftover between strains if necessary
+                                exons = gene.splicegraph.vertices
+                                if not 'reference_strain' in CFG:
+                                    exons_col = exons
+                                    exons_col_pos = exons
+                                else:
+                                    exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                    exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+
+                                if exons_col.shape != exons_col_pos.shape: 
+                                    print 'skipping non-mappable mutex exons event'
+                                    continue
+
+                                ### build data structure for mutually exclusive exons
+                                event = Event('mutex_exons', gene.chr, gene.strand)
+                                event.strain = sp.array([strain])
+                                event.exons1 = sp.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][1]], exons[:, exon_mutex_exons[k][3]]].T
+                                event.exons2 = sp.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][2]], exons[:, exon_mutex_exons[k][3]]].T
+                                event.exons1_col = sp.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][1]], exons_col[:, exon_mutex_exons[k][3]]].T
+                                event.exons2_col = sp.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][2]], exons_col[:, exon_mutex_exons[k][3]]].T
+                                event.gene_name = sp.array([gene.name])
+                                event.gene_idx = idx_mutex_exons[k]
+                                #event.transcript_type = sp.array([gene.transcript_type])
+                                mutex_exons_pos[ridx, i].append(event)
+                    else:
+                        print '%s already exists' % fn_out_mex
+
             ### genes file does not exist
             else:
                 print 'result file not found: %s' % genes_fnames
@@ -398,3 +445,21 @@ def collect_events(CFG):
                 cPickle.dump(events_all, open(fn_out_a3, 'w'), -1)
             else:
                 print '%s already exists' % fn_out_a3
+
+        ################################################%
+        ### COMBINE MUTUALLY EXCLUSIVE EXONS
+        ################################################%
+        if do_mutex_exons:
+            if not os.path.exists(fn_out_mex):
+                mutex_exons_pos_all = sp.array([item for sublist in mutex_exons_pos[ridx, :] for item in sublist])
+
+                ### post process event structure by sorting and making events unique
+                events_all = post_process_event_struct(mutex_exons_pos_all, CFG)
+
+                ### store multiple exon skip events
+                print 'saving mutually exclusive exons to %s' % fn_out_mex
+                cPickle.dump(events_all, open(fn_out_mex, 'w'), -1)
+            else:
+                print '%s already exists' % fn_out_mex
+
+

@@ -13,7 +13,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # [verified, info] = verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG) 
 
     verified = [0, 0, 0, 0, 0]
-    info = [1, 0, 0, 0, 0, 0, 0, 0, 0];
+    info = [1, 0, 0, 0, 0, 0, 0, 0, 0]
     # (0) valid, (1) exon_pre_cov, (2) exons_cov, (3) exon_aft_cov
     # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
     # (7) sum_inner_exon_conf, (8) num_inner_exon
@@ -310,6 +310,86 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
 
     return (verified, info)
 
+def verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
+    # [verified, info] = verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG)
+    #
+
+    verified = [0, 0, 0, 0]
+
+    # (0) valid, (1) exon_pre_cov, (2) exon1_cov, (3) exon1_cov, (4) exon_aft_cov, 
+    # (5) exon_pre_exon1_conf, (6) exon_pre_exon2_conf, (7) exon1_exon_aft_conf, (8) exon2_exon_aft_conf
+    info = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    ### check validity of exon coordinates (>=0)
+    if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
+        info[0] = 0
+        return (verified, info)
+    ### check validity of exon coordinates (start < stop && non-overlapping)
+    elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any(event.exons2[:, 1] - event.exons2[:, 0] < 1) or \
+         (event.exons1[1, 1] >= event.exons2[1, 0] and event.exons1[1, 0] < event.exons2[1, 0]) or \
+         (event.exons2[1, 1] >= event.exons1[1, 0] and event.exons2[1, 0] < event.exons1[1, 0]):
+        info[0] = 0
+        return (verified, info)
+
+    sg = gene.splicegraph
+    segs = gene.segmentgraph
+
+    ### find exons corresponding to event
+    idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons1[-1, 0]) & (sg.vertices[1, :] == event.exons1[-1, 1]))[0]
+    idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
+    idx_exon2  = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    
+    ### find segments corresponding to exons
+    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
+    seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
+    seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
+
+    seg_lens = segs.segments[1, :] - segs.segments[0, :]
+
+    # exon pre cov
+    info[1] = sp.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) / sp.sum(seg_lens[seg_exon_pre])
+    # exon1 cov
+    info[2] = sp.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / sp.sum(seg_lens[seg_exon1])
+    # exon2 cov
+    info[3] = sp.sum(counts_segments[seg_exon2] * seg_lens[seg_exon2]) / sp.sum(seg_lens[seg_exon2])
+    # exon aft cov
+    info[4] = sp.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) / sp.sum(seg_lens[seg_exon_aft])
+
+    ### check if coverage of first exon is >= than FACTOR times average of pre and after
+    if info[2] >= CFG['mutex_exons']['min_skip_rel_cov'] * (info[1] + info[4])/2:
+        verified[0] = 1
+    if info[3] >= CFG['mutex_exons']['min_skip_rel_cov'] * (info[1] + info[4])/2:
+        verified[1] = 1
+
+    ### check intron confirmation as sum of valid intron scores
+    ### intron score is the number of reads confirming this intron
+    # exon_pre_exon1_conf
+    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon1[0]], segs.seg_edges.shape))[0]
+    if len(idx.shape) > 0 and idx.shape[0] > 0:
+        info[5] = counts_edges[idx[0], 1]
+    # exon_pre_exon2_conf
+    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
+    if len(idx.shape) > 0 and idx.shape[0] > 0:
+        info[6] = counts_edges[idx[0], 1]
+    # exon1_exon_aft_conf
+    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon1[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    if len(idx.shape) > 0 and idx.shape[0] > 0:
+        info[7] = counts_edges[idx[0], 1]
+    # exon2_exon_aft_conf
+    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon2[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    if len(idx.shape) > 0 and idx.shape[0] > 0:
+        info[8] = counts_edges[idx[0], 1]
+
+    # set verification flags for intron confirmation
+    if min(info[5], info[6]) >= CFG['mutex_exons']['min_conf_count']:
+        verified[2] = 1
+    if min(info[7], info[8]) >= CFG['mutex_exons']['min_conf_count']:
+        verified[3] = 1
+
+    return (verified, info)
+
 
 def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=None, out_fn=None):
     # (ev, counts) = verify_all_events(ev, strain_idx, list_bam, event_type, CFG) ;
@@ -392,6 +472,8 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                     ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
                 elif event_type == 'mult_exon_skip':
                     ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                elif event_type == 'mutex_exons':
+                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
 
                 ev[i].verified.append(ver)
                 if j == 0:

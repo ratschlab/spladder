@@ -258,3 +258,32 @@ def detect_altprime(genes, idx_alt):
     print 'Number of alternative 3 prime sites:\t\t\t\t%d' % len(idx_alt_3prime)
 
     return (idx_alt_5prime, exon_alt_5prime, idx_alt_3prime, exon_alt_3prime)
+
+def detect_xorexons(genes, idx_alt):
+    #[idx_xor_exons, exon_xor_exons] = detect_xorexons(genes, idx_alt);
+
+    idx_xor_exons = []
+    exon_xor_exons = [] ### 5primesite of first exon, the 2 skipped
+                        ### exons, 3primesite of last exon %%%
+    for ix in idx_alt:
+
+        if ix % 50 == 0:
+            print '.',
+
+        num_exons = genes[ix].splicegraph.get_len()
+        edges = genes[ix].splicegraph.edges
+        vertices = genes[ix].splicegraph.vertices
+
+        for exon_idx1 in range(num_exons - 3):
+            for exon_idx2 in range(exon_idx1 + 1, num_exons - 2):
+                if edges[exon_idx1, exon_idx2] == 1:
+                    for exon_idx3 in range(exon_idx2 + 1, num_exons - 1):
+                        if (edges[exon_idx1, exon_idx3] == 1) and (edges[exon_idx2, exon_idx3] == 0) and (vertices[0, exon_idx3] > vertices[1, exon_idx2]):
+                            for exon_idx4 in range(exon_idx3 + 1, num_exons):
+                                if (edges[exon_idx2, exon_idx4] == 1) and (edges[exon_idx3, exon_idx4] == 1):
+                                    idx_xor_exons.append(ix)
+                                    exon_xor_exons.append([exon_idx1, exon_idx2, exon_idx3, exon_idx4])
+
+    print '\n\nNumber of XOR exons:\t\t\t\t\t\t%i\n' % len(idx_xor_exons)
+
+    return (idx_xor_exons, exon_xor_exons)

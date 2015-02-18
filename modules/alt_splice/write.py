@@ -43,6 +43,10 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_starts\texon_ends\texon_aft_start\texon_aft_end' % gene_header)
         for i in range(len(strains)):
             fd.write('\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_inner_conf\t%s:exon_inner_count\t%s:intron_aft_conf\t%s:intron_skip_conf' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+    elif events[0].event_type == 'mutex_exons':
+        fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon1_start\texon1_end\texon2_start\texon2_end\texon_aft_start\texon_aft_end' % gene_header)
+        for i in range(len(strains)):
+            fd.write('\t%s:exon_pre_cov\t%s:exon1_cov\t%s:exon2_cov\t%s:exon_aft_cov\t%s:pre_exon1_conf\t%s:pre_exon2_conf\t%s:exon1_aft_conf\t%s:exon2_aft_conf' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     else:
         print >> sys.stderr, 'Unknown event type: %s' % events[0].event_type
     fd.write('\n')
@@ -96,6 +100,13 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
                     fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i\t%i' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 7], counts[j, 8], counts[j, 5], counts[j, 6]))
                 else:
                     fd.write('\t-1\t-1\t-1\t-1\t-1\t-1\t-1')
+        elif ev.event_type == 'mutex_exons':
+            fd.write('\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1], ev.exons2[2, 0] + 1, ev.exons2[2, 1]))
+            for j in range(len(strains)):
+                if counts[j, 0] == 1:
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 5], counts[j, 6], counts[j, 7], counts[j, 8]))
+                else:
+                    fd.write('\t-1\t-1\t-1\t-1\t-1\t-1\t-1\t-1')
         fd.write('\n')
         fd.flush()
     fd.close()
@@ -143,6 +154,8 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
             for j in range(1, events[i].exons2.shape[0] - 1):
                 print >> fd, ':%i-%i:' % (events[i].exons2[j, 0], events[i].exons2[j, 1]),
             print >> fd, ':%i-%i' % (events[i].exons2[-1, 0], events[i].exons2[-1, 1]),
+        elif event_type == 'mutex_exons':
+            print >> fd, ':%i-%i:%i-%i:%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons1[2, 0], events[i].exons1[2, 1]),
         for j in range(len(strains)):
             if counts[j, 0] == 1:
                 if events[i].event_type in ['alt_3prime', 'alt_5prime']:
@@ -164,6 +177,10 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
                     num = counts[j, 4]
                     denom = 1
                     confirmation = num
+                elif events[i].event_type == 'mutex_exons':
+                    num = counts[j, 5] + counts[j, 6]
+                    denom = counts[j, 5] + counts[j, 6] + counts[j, 7] + counts[j, 8]
+                    confirmation = denom
                 else:
                     print >> sys.stderr, 'Unknown event type: %s' % (events[i].event_type)
                     sys.exit(1)

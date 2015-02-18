@@ -69,6 +69,7 @@ def analyze_events(CFG, event_type):
         event_features = {'mult_exon_skip': ['valid', 'exon_pre_cov', 'exons_cov', 'exon_aft_cov', 'exon_pre_exon_conf', 'exon_exon_aft_conf', 'exon_pre_exon_aft_conf', 'sum_inner_exon_conf', 'num_inner_exon'],
                           'intron_retention': ['valid', 'intron_cov', 'exon1_cov', 'exon2_cov', 'intron_conf', 'intron_cov_region'],
                           'exon_skip': ['valid', 'exon_cov', 'exon_pre_cov', 'exon_aft_cov', 'exon_pre_exon_conf', 'exon_exon_aft_conf', 'exon_pre_exon_aft_conf'],
+                          'mutex_exons': ['valid', 'exon_pre_cov', 'exon1_cov', 'exon2_cov', 'exon_aft_cov', 'exon_pre_exon1_conf', 'exon_pre_exon2_conf', 'exon1_exon_aft_conf', 'exon2_exon_aft_conf'],
                           'alt_3prime': ['valid', 'exon_diff_cov', 'exon_const_cov', 'intron1_conf', 'intron2_conf'],
                           'alt_5prime': ['valid', 'exon_diff_cov', 'exon_const_cov', 'intron1_conf', 'intron2_conf']}
 
@@ -170,6 +171,8 @@ def analyze_events(CFG, event_type):
                     event_pos = sp.array([unique_rows(sp.c_[x.exons1, x.exons2]).ravel() for x in events_all])
                 elif event_type == 'mult_exon_skip':
                     event_pos = sp.array([x.exons2[[0, 1, -2, -1], :].ravel() for x in events_all])
+                elif event_type == 'mutex_exons':
+                    event_pos = sp.array([sp.c_[x.exons1[0, :], x.exons1[1, :], x.exons2[1, :], x.exons2[2, :]] for x in events_all])
 
                 OUT.create_dataset(name='event_pos', data=event_pos)
 
