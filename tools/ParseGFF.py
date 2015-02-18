@@ -398,7 +398,7 @@ def GFFParse(gff_file):
     genes, utr5, exons=dict(), dict(), dict()
     transcripts, utr3, cds=dict(), dict(), dict()
     # TODO Include growing key words of different non-coding/coding transcripts 
-    features=['mrna', 'transcript', 'ncRNA', 'mirna', 'pseudogenic_transcript', 'rrna', 'snorna', 'snrna', 'trna', 'scrna']
+    features=['mrna', 'transcript', 'ncrna', 'mirna', 'pseudogenic_transcript', 'rrna', 'snorna', 'snrna', 'trna', 'scrna', 'mrna_te_gene']
     gff_handle=open(gff_file, "rU")
     for gff_line in gff_handle:
         gff_line=gff_line.strip('\n\r').split('\t')
@@ -412,7 +412,7 @@ def GFFParse(gff_file):
             continue
         if gff_line[-1][-1]==';': # trim the last ';' character 
             gff_line[-1]=gff_line[-1].strip(';')
-        if gff_line[2].lower() in ['gene', 'pseudogene']:
+        if gff_line[2].lower() in ['gene', 'pseudogene', 'transposable_element_gene']:
             gid, gene_info=None, dict()
             gene_info['start']=int(gff_line[3])
             gene_info['stop']=int(gff_line[4])
@@ -443,7 +443,7 @@ def GFFParse(gff_file):
                     transcripts[(gff_line[0], fid)].append(mrna_info)
                 else:
                     transcripts[(gff_line[0], fid)]=[mrna_info]
-        elif gff_line[2].lower() in ['exon']:
+        elif gff_line[2].lower() in ['exon', 'pseudogenic_exon']:
             tids, exon_info=None, dict()
             exon_info['start']=int(gff_line[3])
             exon_info['stop']=int(gff_line[4])
