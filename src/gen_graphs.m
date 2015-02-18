@@ -24,6 +24,10 @@ if ~isfield(genes, 'chr_num') || isempty([genes.chr_num]),
     end;
 end;
 
+% sort genes by position
+[tmp, s_idx] = sortrows([vertcat(genes.chr_num) vertcat(genes.start) vertcat(genes.stop)]);
+genes = genes(s_idx);
+
 % build splice graph for all genes 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fprintf(CFG.fd_log, 'Generating splice graph ...\n');
