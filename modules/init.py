@@ -15,7 +15,7 @@ def get_tags_gff3(tagline):
     """Extract tags from given tagline"""
 
     tags = dict()
-    for t in tagline.split(';'):
+    for t in tagline.strip(';').split(';'):
         tt = t.split('=')
         tags[tt[0]] = tt[1]
     return tags
@@ -152,7 +152,6 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
         print >> sys.stderr, "... init structure"
 
     trans2gene = dict() ### dict with: keys = transcript IDs, values = gene IDs
-    exon2trans = dict() ### dict with: keys = exon IDs, values = transcript IDs
     genes = dict()
     chrms = []
 
@@ -161,11 +160,9 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
             continue
         sl = line.strip().split('\t')
         tags = get_tags_gff3(sl[8])
-        if sl[2] in ['mRNA', 'transcript', 'mrna', 'miRNA', 'tRNA', 'snRNA', 'snoRNA', 'ncRNA', 'mRNA_TE_gene', 'rRNA', 'pseudogenic_transcript', 'transposon_fragment']:
+        if sl[2] in ['mRNA', 'transcript', 'mrna', 'miRNA', 'tRNA', 'snRNA', 'snoRNA', 'ncRNA', 'rRNA', 'pseudogenic_transcript', 'transposon_fragment', 'mRNA_TE_gene']:
             trans2gene[tags['ID']] = tags['Parent']
-        elif sl[2] in ['exon', 'Exon']:
-            exon2trans[tags['ID']] = tags['Parent']
-        elif not 'Parent' in tags:
+        elif sl[2] in ['gene', 'transposable_element_gene', 'pseudogene']:
             try:
                 start = int(sl[3]) - 1
             except ValueError:
@@ -204,7 +201,7 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
         tags = get_tags_gff3(sl[8])
 
         ### add exons
-        if sl[2] == 'exon':
+        if sl[2] in ['exon', 'pseudogenic_exon']:
             trans_id = tags['Parent']
             gene_id = trans2gene[trans_id]
             try:
