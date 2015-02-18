@@ -83,6 +83,11 @@ def default_settings():
    #CFG['exon_skip']['max_skip_rel_cov'] = 1.5
     CFG['exon_skip']['intron_tolerance'] = 0
 
+    ### settings for verifying mutually exclusive exons
+    CFG['mutex_exons'] = dict()
+    CFG['mutex_exons']['min_skip_rel_cov'] = 0.05
+    CFG['mutex_exons']['min_conf_count'] = 2
+
     ### settings for verifying multiple exon skips
     CFG['mult_exon_skip'] = dict()
     CFG['mult_exon_skip']['min_non_skip_count'] = 3
@@ -309,12 +314,12 @@ def set_confidence_level(CFG):
         CFG['read_filter']['intron'] = 350000 
         CFG['read_filter']['exon_len'] = math.ceil(CFG['read_length'] * 0.20)
         CFG['read_filter']['mismatch'] = max(1, math.floor(CFG['read_length'] * 0.01)) 
-        CFG['read_filter']['mincount'] = 3
+        CFG['read_filter']['mincount'] = 2
     elif CFG['confidence_level'] == 3:
         CFG['read_filter']['intron'] = 350000 
         CFG['read_filter']['exon_len'] = math.ceil(CFG['read_length'] * 0.25)
         CFG['read_filter']['mismatch'] = 0
-        CFG['read_filter']['mincount'] = 6
+        CFG['read_filter']['mincount'] = 2
 
     ### settings for accepted cassette exons
     CFG['cassette_exon'] = dict()
