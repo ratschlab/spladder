@@ -64,10 +64,16 @@ def gen_graphs(genes, CFG=None):
         genes[i].stop = max([x.max() for x in genes[i].exons])
     print >> CFG['fd_log'], '...done.\n'
 
-    # debug #
-    # sort  by gene ID #
-    s_idx = sp.argsort([x.name for x in genes])
+    ### sort genes by positions
+    s_idx = sp.argsort([x.stop for x in genes])
+    genes =genes[s_idx]
+    s_idx = sp.argsort([x.start for x in genes], kind='mergesort')
     genes = genes[s_idx]
+    s_idx = sp.argsort([x.chr for x in genes], kind='mergesort')
+    genes = genes[s_idx]
+
+    #s_idx = sp.argsort([x.name for x in genes])
+    #genes = genes[s_idx]
 
     # append list of introns supported by RNA-seq data to 
     # the genes structure
