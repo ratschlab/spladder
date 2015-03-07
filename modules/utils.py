@@ -18,30 +18,30 @@ def issubset(A, B):
     return sp.all(sp.where(A)[0] == sp.in1d(sp.where(A)[0], sp.where(B)[0]))
 
 
-def intersect_rows(array1, array2, index = None):
-    """Return intersection of rows"""
-
-    if (array1.shape[0] == 0):
-        if index == True:
-            return (array1, sp.zeros((0,)), sp.zeros((0,)))
-        else:
-            return array1
-    if (array2.shape[0] == 0):
-        if index == True:
-            return (array2, sp.zeros((0,)), sp.zeros((0,)))
-        else:
-            return array2
-
-    array1_v = array1.view([('', array1.dtype)] * array1.shape[1])
-    array2_v = array2.view([('', array2.dtype)] * array2.shape[1])
-    array_i = sp.intersect1d(array1_v, array2_v)
-
-    if index == True:
-        a1_i = sp.where(sp.in1d(array1_v, array_i))[0]
-        a2_i = sp.where(sp.in1d(array2_v, array_i))[0]
-        return (array_i.view(array1.dtype).reshape(array_i.shape[0], array1.shape[1]), a1_i, a2_i)
-    else:
-        return array_i.view(array1.dtype).reshape(array_i.shape[0], array1.shape[1])
+#def intersect_rows(array1, array2, index = None):
+#    """Return intersection of rows"""
+#
+#    if (array1.shape[0] == 0):
+#        if index == True:
+#            return (array1, sp.zeros((0,)), sp.zeros((0,)))
+#        else:
+#            return array1
+#    if (array2.shape[0] == 0):
+#        if index == True:
+#            return (array2, sp.zeros((0,)), sp.zeros((0,)))
+#        else:
+#            return array2
+#
+#    array1_v = array1.view([('', array1.dtype)] * array1.shape[1])
+#    array2_v = array2.view([('', array2.dtype)] * array2.shape[1])
+#    array_i = sp.intersect1d(array1_v, array2_v)
+#
+#    if index == True:
+#        a1_i = sp.where(sp.in1d(array1_v, array_i))[0]
+#        a2_i = sp.where(sp.in1d(array2_v, array_i))[0]
+#        return (array_i.view(array1.dtype).reshape(array_i.shape[0], array1.shape[1]), a1_i, a2_i)
+#    else:
+#        return array_i.view(array1.dtype).reshape(array_i.shape[0], array1.shape[1])
 
 
 def unique_rows(array, index = None):
@@ -73,15 +73,15 @@ def unique_rows(array, index = None):
 def intersect_rows(array1, array2, index=None):
     """Return array with rows that intersect between array1 and array2"""
 
-    tmp1 = sp.array(['-'.join(array1[i, :]) for i in array1.shape[0]])
-    tmp2 = sp.array(['-'.join(array2[i, :]) for i in array2.shape[0]])
+    tmp1 = sp.array(['-'.join(array1[i, :].astype('str')) for i in range(array1.shape[0])])
+    tmp2 = sp.array(['-'.join(array2[i, :].astype('str')) for i in range(array2.shape[0])])
     
     idx = sp.where(sp.in1d(tmp1, tmp2))
     if index is not None:
         idx2 = sp.where(sp.in1d(tmp2, tmp1))
 
     if index is None:
-        return array1[idx, :]
+        return (array1[idx, :], None, None)
     else:
         return (array1[idx, :], idx, idx2)
 

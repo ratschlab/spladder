@@ -278,7 +278,7 @@ def detect_xorexons(genes, idx_alt):
             for exon_idx2 in range(exon_idx1 + 1, num_exons - 2):
                 if edges[exon_idx1, exon_idx2] == 1:
                     for exon_idx3 in range(exon_idx2 + 1, num_exons - 1):
-                        if (edges[exon_idx1, exon_idx3] == 1) and (edges[exon_idx2, exon_idx3] == 0) and (vertices[0, exon_idx3] > vertices[1, exon_idx2]):
+                        if (edges[exon_idx1, exon_idx3] == 1) and (edges[exon_idx2, exon_idx3] == 0) and (vertices[0, exon_idx3] >= vertices[1, exon_idx2]):
                             for exon_idx4 in range(exon_idx3 + 1, num_exons):
                                 if (edges[exon_idx2, exon_idx4] == 1) and (edges[exon_idx3, exon_idx4] == 1):
                                     idx_xor_exons.append(ix)

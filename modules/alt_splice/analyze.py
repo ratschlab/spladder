@@ -39,7 +39,7 @@ def _prepare_count_hdf5(CFG, OUT, events, event_features):
 
 def analyze_events(CFG, event_type):
 
-    if CFG['rproc']:
+    if CFG['rproc'] and not os.path.exists('%s/event_count_chunks' % CFG['out_dirname']):
         os.makedirs('%s/event_count_chunks' % CFG['out_dirname'])
 
     for replicate in CFG['replicate_idxs']:
@@ -96,8 +96,8 @@ def analyze_events(CFG, event_type):
                 OUT.close()
                 confirmed_idx = sp.array([], dtype='int')
             else:
+                OUT = h5py.File(fn_out_count, 'w')
                 if not CFG['rproc']:
-                    OUT = h5py.File(fn_out_count, 'w')
                     #events_all = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'][replicate, :], event_type, CFG)
                     # TODO handle replicate setting
                     (events_all, counts) = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
@@ -106,12 +106,13 @@ def analyze_events(CFG, event_type):
                     _prepare_count_hdf5(CFG, OUT, events_all, event_features)
                 else:
                     jobinfo = []
+                    PAR = dict()
                     chunk_size_events = 1000
                     chunk_size_strains = 500
                     for i in range(0, events_all.shape[0], chunk_size_events):
-                        idx_events = sp.arange(i, min(i + chunk_size_events - 1, events_all.shape[0]))
+                        idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
-                            idx_strains = sp.arang(j, min(j + chunk_size_strains - 1, len(CFG['strains'])))
+                            idx_strains = sp.arange(j, min(j + chunk_size_strains, len(CFG['strains'])))
                             PAR['ev'] = events_all[idx_events]
                             PAR['strain_idx'] = idx_strains
                             #PAR['list_bam'] = CFG['bam_fnames'][replicate, :]
@@ -132,10 +133,10 @@ def analyze_events(CFG, event_type):
                     gene_idx_ = []
                     print 'Collecting results from chunks ...'
                     for i in range(0, events_all.shape[0], chunk_size_events):
-                        idx_events = sp.arange(i, min(i + chunk_size_events - 1, events_all.shape[0]))
+                        idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
                         ev_ = []
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
-                            idx_strains = sp.arange(j, min(j + chunk_size_strains - 1, len(CFG['strains'])))
+                            idx_strains = sp.arange(j, min(j + chunk_size_strains, len(CFG['strains'])))
                             print '\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(CFG['strains']))
                             out_fn = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.pickle' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
                             if not os.path.exists(out_fn):
@@ -149,7 +150,7 @@ def analyze_events(CFG, event_type):
                                     ev_[jj].verified[idx_strains, :] = ev[jj].verified
                                     
                         if i == 0:
-                            OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(CFG['strains']), len(event_features), None))
+                            OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(CFG['strains']), len(event_features[event_type]), None), compression='gzip')
                         else:
                             tmp = OUT['event_counts'].shape
                             OUT['event_counts'].resize((tmp[0], tmp[1], tmp[2] + len(ev_)))
@@ -158,9 +159,10 @@ def analyze_events(CFG, event_type):
                         gene_idx_ = sp.r_[gene_idx_, [x.gene_idx for x in ev_]]
 
                     assert(events_all.shape[0] == events_all_.shape[0])
-                    assert(sp.all([sp.all(events_all[e].exons1 == events_all_[e].exons1) for e in events_all.shape[0]]))
+                    assert(sp.all([sp.all(events_all[e].exons1 == events_all_[e].exons1) for e in range(events_all.shape[0])]))
                     OUT.create_dataset(name='gene_idx', data=gene_idx_)
                     events_all = events_all_
+                    _prepare_count_hdf5(CFG, OUT, events_all, event_features)
                 
                 ### write more event infos to hdf5
                 if event_type == 'exon_skip':

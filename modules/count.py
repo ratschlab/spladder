@@ -14,7 +14,7 @@ import rproc as rp
 def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 # [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
 
-    if fn_bam is None and instanceof(genes, dict):
+    if fn_bam is None and isinstance(genes, dict):
         PAR = genes
         genes = PAR['genes']
         fn_bam = PAR['fn_bam']
@@ -33,9 +33,9 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
         ### the segments in the segment graph
         ### and the splice junctions in the splice graph
         for i in range(genes.shape[0]):
-            print '.',
+            sys.stdout.write('.')
             if i > 0 and i % 50 == 0:
-                print '%i' % i
+                sys.stdout.write('%i\n' % i)
             gg = genes[i]
             if gg.segmentgraph is None:
                 gg.segmentgraph = Segmentgraph(gg)
@@ -43,7 +43,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
             gg.stop = gg.segmentgraph.segments.ravel().max()
 
             ### add RNA-seq evidence to the gene structure
-            (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware']);
+            (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
             intron_list = intron_list[0] ### TODO
 
             ### extract mean exon coverage for all segments
@@ -109,15 +109,15 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                 counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * c)
     else:
         ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
-        chunksize = max(1, math.floor(10000 / len(CFG['strains'])));
+        chunksize = int(max(1, math.floor(10000 / len(CFG['strains']))))
 
         jobinfo = []
 
         PAR = dict()
         PAR['CFG'] = CFG
         for c_idx in range(0, genes.shape[0], chunksize):
-            cc_idx = min(genes.shape[0], c_idx + chunksize - 1)
-            fn = fname_out.replace('.mat', '.chunk_%i_%i.mat' % (c_idx, cc_idx))
+            cc_idx = min(genes.shape[0], c_idx + chunksize)
+            fn = fname_out.replace('.pickle', '.chunk_%i_%i.pickle' % (c_idx, cc_idx))
             if os.path.exists(fn):
                 continue
             else:
@@ -131,10 +131,9 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
         rp.rproc_wait(jobinfo, 30, 1.0, -1)
 
         ### merge results
-        counts = sp.zeros((CFG['strains'].shape[0], genes.shape[0]), dtype='object')
         for c_idx in range(0, genes.shape[0], chunksize):
-            cc_idx = min(genes.shape[0], c_idx + chunksize - 1)
-            fn = fname_out.replace('.mat', '.chunk_%i_%i.mat' % (c_idx, cc_idx))
+            cc_idx = min(genes.shape[0], c_idx + chunksize)
+            fn = fname_out.replace('.pickle', '.chunk_%i_%i.pickle' % (c_idx, cc_idx))
             if not os.path.exists(fn):
                 print >> sys.stderr, 'ERROR: Not all chunks in counting graph coverage completed!'
                 sys.exit(1)
@@ -143,11 +142,11 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                 for c in range(counts_tmp.shape[1]):
                     counts['segments'].append(sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
                     counts['seg_pos'].append(sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]))
-                    counts['gene_ids_segs'].append(sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * c)
+                    counts['gene_ids_segs'].append(sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (c_idx + c))
                     tmp = sp.hstack([sp.atleast_2d(x.edges) for x in counts_tmp[:, c]])
                     if tmp.shape[0] > 0:
                         counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
-                    counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * c)
+                        counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c))
 
     for key in counts:
         if len(counts[key]) > 0:

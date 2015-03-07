@@ -31,16 +31,21 @@ class Event:
 
     def get_inner_coords(self, trafo=False):
         
-        if self.event_type != 'mult_exon_skip':
-            if trafo:
-                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:-1], sp.sort(self.exons2_col.ravel())[1:-1]]))
-            else:
-                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:-1], sp.sort(self.exons2.ravel())[1:-1]]))
-        else:
+        if self.event_type == 'mult_exon_skip':
             if trafo:
                 return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:3], sp.sort(self.exons1_col.ravel())[-3:-1], sp.sort(self.exons2_col.ravel())[1:3], sp.sort(self.exons2_col.ravel())[-3:-1]]))
             else:
                 return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:3], sp.sort(self.exons1.ravel())[-3:-1], sp.sort(self.exons2.ravel())[1:3], sp.sort(self.exons2.ravel())[-3:-1]]))
+        elif self.event_type == 'mutex_exons':
+            if trafo:
+                return sp.sort(sp.r_[self.exons1_col.ravel()[1:4], self.exons2_col[1, :], self.exons1_col[2, 0]])
+            else:
+                return sp.sort(sp.r_[self.exons1.ravel()[1:4], self.exons2[1, :], self.exons1[2, 0]])
+        else:
+            if trafo:
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:-1], sp.sort(self.exons2_col.ravel())[1:-1]]))
+            else:
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:-1], sp.sort(self.exons2.ravel())[1:-1]]))
             
         
 

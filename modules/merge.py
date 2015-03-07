@@ -8,6 +8,7 @@ if __package__ is None:
 
 from .utils import *
 from .count import count_graph_coverage_wrapper
+from .editgraph import filter_by_edgecount
 import rproc as rp
 
 def merge_chunks_by_splicegraph(CFG, chunksize=None):
@@ -17,9 +18,9 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
 #   the merge is based on the splicegraphs within the genes struct
     
     ### if we are running with rproc we only get one parameter struct
-    if chunk_idx is None and isinstance(CFG, dict):
-        if 'chunk_idx' in CFG:
-            chunk_idx = CFG['chunk_idx']
+    if chunksize is None and isinstance(CFG, dict):
+        if 'chunksize' in CFG:
+            chunksize = CFG['chunksize']
         CFG = CFG['CFG']
 
     appended = True
@@ -37,15 +38,14 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
 
     ### add all single bam file graphs
     for c_idx in range(0, merge_list_len, chunksize):
-        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(c_idx + chunksize - 1, merge_list_len)))
+        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(c_idx + chunksize, merge_list_len)))
 
     ### iterate over merge list
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
         (genes, inserted) = cPickle.load(open(merge_list[i], 'r'))
-        print '... done (%i / %i)' % (i, len(merge_list))
-        assert(genes.splicegraph is not None)
+        print '... done (%i / %i)' % (i + 1, len(merge_list))
 
         ### sort genes by name
         name_list = sp.array([x.name for x in genes])
@@ -53,7 +53,8 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
         genes = genes[s_idx]
 
         ### make sure, that splicegraph is unique
-        genes.splicegraph.uniquify()
+        for g in genes:
+            g.splicegraph.uniquify()
 
         ### jump over first sample - nothig to add yet 
         if i == 0:
@@ -89,8 +90,8 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
                 tmp, s_idx = sort_rows(genes[j].splicegraph.vertices.T, index=True) 
                 genes[j].splicegraph.vertices = tmp.T
 
-                splice1 = genes[j].splicegraph.edges[s_idx, :][:, s_idx]
-                splice2 = genes2[g_idx].splicegraph.edges
+                splice1 = genes[j].splicegraph.edges[s_idx, :][:, s_idx].copy()
+                splice2 = genes2[g_idx].splicegraph.edges.copy()
 
                 if genes[j].edge_count is not None and genes[j].edge_count.shape[0] > 0:                        
                     edgecnt1 = genes[j].edge_count[s_idx, :][:, s_idx].copy()
@@ -275,7 +276,7 @@ def merge_genes_by_isoform(CFG):
             if j % 100 == 0:
                 print '.',
                 if j % 1000 == 0:
-                    print '%i/%i' % (j, genes.shape[0])
+                    print '%i/%i' % (j + 1, genes.shape[0])
             g_idx_ = g_idx
 
             while genes2[g_idx].name < genes[j].name:
@@ -354,7 +355,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
 
     ### subset samples in case of chunked computation
     if chunk_idx is not None:
-        samples = CFG['samples'][chunk_idx]
+        samples = sp.array(CFG['samples'])[chunk_idx]
     else:
         samples = CFG['samples']
 
@@ -372,7 +373,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
         (genes, inserted) = cPickle.load(open(merge_list[i], 'r'))
-        print '... done (%i / %i)' % (i, len(merge_list))
+        print '... done (%i / %i)' % (i + 1, len(merge_list))
 
         ### sort genes by name
         name_list = sp.array([x.name for x in genes])
@@ -517,17 +518,17 @@ def run_merge(CFG):
                 if merge_all:
                     merge_list_len += 1
                 for c_idx in range(0, merge_list_len, chunksize):
-                    fn = '%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(merge_list_len, c_idx + chunksize - 1))
+                    fn = '%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(merge_list_len - 1, c_idx + chunksize - 1))
                     if os.path.exists(fn):
                         continue
                     else:
-                        print 'submitting chunk %i to %i' % (c_idx, min(merge_list_len, c_idx + chunksize - 1))
-                        PAR['chunk_idx'] = range(c_idx, min(merge_list_len, c_idx + chunksize - 1))
+                        print 'submitting chunk %i to %i' % (c_idx, min(merge_list_len, c_idx + chunksize))
+                        PAR['chunk_idx'] = range(c_idx, min(merge_list_len, c_idx + chunksize))
                         jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 50000, CFG['options_rproc'], 40*60))
             else:
                 jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 10000, CFG['options_rproc'], 40*60))
 
-            rp.rproc_wait(jobinfo, 30, 1.0, 1)
+            rp.rproc_wait(jobinfo, 30, 1.0, -1)
             ### merge chunks
             if chunksize > 0:
                 PAR['chunksize'] = chunksize
@@ -537,9 +538,9 @@ def run_merge(CFG):
 
     ### generate validated version of splice graph
     if CFG['validate_splicegraphs'] and not os.path.exists(fn_out_val):
-        genes = cPickle.load(open(fn_out, 'r'))
+        (genes, inserted) = cPickle.load(open(fn_out, 'r'))
         genes = filter_by_edgecount(genes, CFG)
-        cPickle.dump(genes, open(fn_out_val, 'w'), -1)
+        cPickle.dump((genes, inserted), open(fn_out_val, 'w'), -1)
         del genes
 
     ### count segment graph

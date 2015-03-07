@@ -242,8 +242,8 @@ def reduce_splice_graph(genes):
 def filter_by_edgecount(genes, CFG):
 
     ### filter splicegraphs by support count over samples
-    for i in len(genes):
-        u_exons = unique_rows(sp.vstack([x.exons for x in genes]))
+    for i in range(len(genes)):
+        u_exons = unique_rows(sp.vstack(genes[i].exons))
         (tmp, tmp, k_idx) = intersect_rows(u_exons, genes[i].splicegraph.vertices.T)
         k_idx = sp.where(genes[i].splicegraph.edges.sum(axis = 1) == 0)[0]
         genes[i].splicegraph.edges = (genes[i].edge_count >= CFG['sg_min_edge_count'])
@@ -252,7 +252,7 @@ def filter_by_edgecount(genes, CFG):
         rm_idx = sp.where(~sp.in1d(k_idx2, k_idx))[0]
         keep_idx = sp.where(~sp.in1d(sp.array(range(genes[i].splicegraph.edges.shape[0])), rm_idx))[0]
         if keep_idx.shape[0] > 0:
-            genes[i].subset(keep_idx)
+            genes[i].splicegraph.subset(keep_idx)
         else:
             genes = []
 
@@ -275,6 +275,8 @@ def insert_intron_retentions(genes, CFG):
     ### keep only chromosomes found in genes
     keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
     regions = regions[keepidx]
+    s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
+    regions = regions[s_idx]
 
     c = 0 
     num_introns_added = 0
@@ -296,12 +298,12 @@ def insert_intron_retentions(genes, CFG):
 
             gg = genes[chunk_idx[c]]
             gg.strand = strands[s]
-            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
+            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
 
-            exon_coverage = sp.zeros((gg.splicegraph.vertices.shape[1],), dtype='int')
+            exon_coverage = sp.zeros((gg.splicegraph.vertices.shape[1],), dtype='float')
             for k in range(gg.splicegraph.vertices.shape[1]):
                 idx = sp.arange(gg.splicegraph.vertices[0, k], gg.splicegraph.vertices[1, k]) - gg.start
-                exon_coverage[k] = sp.median(sp.sum(tracks[:, idx], axis=0)) # median coverage for exon k
+                exon_coverage[k] = sp.median(sp.sum(tracks[:, idx], axis=0).astype('float')) # median coverage for exon k
 
             ### check for all vertex-pairs, if respective intron can be retained
             new_retention = sp.zeros(gg.splicegraph.edges.shape, dtype='int') 
@@ -314,8 +316,8 @@ def insert_intron_retentions(genes, CFG):
                         if sp.median(icov) > CFG['intron_retention']['min_retention_cov'] and \
                             sp.mean(icov > (0.5 * sp.mean(icov))) > CFG['intron_retention']['min_retention_region'] and  \
                             max(exon_coverage[k], exon_coverage[l]) / (1e-6 + min(exon_coverage[k], exon_coverage[l])) <= CFG['intron_retention']['min_retention_max_exon_fold_diff'] and \
-                            sp.mean(icov) >= CFG['intron_retention']['min_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2 and \
-                            sp.mean(icov) <= CFG['intron_retention']['max_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2:
+                            sp.mean(icov) >= CFG['intron_retention']['min_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0 and \
+                            sp.mean(icov) <= CFG['intron_retention']['max_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0:
 
                             new_retention[k, l] = 1
                         #	fprintf(log_fd, '%s\tintron_retention\t%c\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%2.1f\n', gg.chr, gg.strand, gg.splicegraph{1}(1,k), gg.splicegraph{1}(2,k), gg.splicegraph{1}(1,l), gg.splicegraph{1}(2,l), ...
@@ -454,7 +456,7 @@ def insert_intron_edges(genes, CFG):
 
             # did not find exons in same gene sharing boundaries with intron start
             # find first end in previous gene on same strand
-            if idx1.shape[0] == 0 and i > 0 and len(genes) > 1 and (genes[i - 1].chr == genes[i].chr) and (genes[i - 1].strand == genes[i].strand): 
+            if idx1.shape[0] == 0 and i > 0 and len(genes) > 1  and (genes[i - 1].chr == genes[i].chr) and (genes[i - 1].strand == genes[i].strand): 
                 ### find all exon ends in previuos gene that coincide with intron start j
                 idx1_ = sp.where(sp.absolute(genes[i-1].splicegraph.vertices[1, :] - genes[i].introns[s][j, 0]) <= intron_tol)[0]
                 if idx1_.shape[0] > 0:
@@ -469,7 +471,7 @@ def insert_intron_edges(genes, CFG):
 
             # did not find exons in same gene sharing boundaries with intron end
             # find second end in next gene on same strand
-            if idx2.shape[0] == 0 and len(genes) > 1 and i < len(genes) and genes[i + 1].chr == genes[i].chr and genes[i+1].strand == genes[i].strand:
+            if idx2.shape[0] == 0 and len(genes) > 1 and i + 1 < len(genes) and genes[i + 1].chr == genes[i].chr and genes[i+1].strand == genes[i].strand:
                 ### find all exon starts in following gene that coincide with intron end j
                 idx2_ = sp.where(sp.absolute(genes[i+1].splicegraph.vertices[0, :] - genes[i].introns[s][j, 1]) <= intron_tol)[0]
                 if idx2_.shape[0] > 0:
@@ -500,7 +502,7 @@ def insert_intron_edges(genes, CFG):
                         gg.strands = strands[s]
                         gg.start = genes[i].splicegraph.vertices[1, idx1__] ### stop of previous exon
                         gg.stop = genes[i].introns[s][j, 0]  ### end of presumable exon
-                        tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
+                        tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
                         ### TODO: make the following a configurable
                         if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
                             idx1__ = sp.array([])
@@ -508,7 +510,7 @@ def insert_intron_edges(genes, CFG):
                 # only take the case closest to an existing splice site
                 if len(idx1__.shape) > 0 and idx1__.shape[0] > 0:
                     diff1 = sp.absolute(genes[i].splicegraph.vertices[0, idx1__] - genes[i].introns[s][j, 0])
-                    diff2 = sp.absolute(genes[i].splicegraph.vertices[1, idx1__] - genes[i].introns[s][j, 0])
+                    diff2 = sp.absolute(genes[i].splicegraph.vertices[1, idx1__] - genes[i].introns[s][j, 0] - 1)
                     diff = sp.minimum(diff1, diff2)
                     if diff.shape[0] > 0:
                         idx1__ = sp.array([idx1__[sp.argmin(diff)]])
@@ -581,14 +583,14 @@ def insert_intron_edges(genes, CFG):
                         gg.strands = strands[s]
                         gg.start = genes[i].introns[s][j, 1]  ### start of presumable exon
                         gg.stop = genes[i].splicegraph.vertices[1, idx2__]  ### stop of next exon
-                        tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
+                        tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
                         ### TODO: make configurable
                         if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
                             idx2__ = sp.array([])
 
                 # only take the case closest to an existing splice site
                 if len(idx2__.shape) > 0 and idx2__.shape[0] > 0:
-                    diff1 = sp.absolute(genes[i].splicegraph.vertices[0, idx2__] - genes[i].introns[s][j, 1])
+                    diff1 = sp.absolute(genes[i].splicegraph.vertices[0, idx2__] - genes[i].introns[s][j, 1] + 1)
                     diff2 = sp.absolute(genes[i].splicegraph.vertices[1, idx2__] - genes[i].introns[s][j, 1])
                     diff = sp.minimum(diff1, diff2)
                     if diff.shape[0] > 0:
@@ -683,7 +685,6 @@ def insert_intron_edges(genes, CFG):
             #		genes(i).splicegraph{2}(i1,i2)=1 ;
             #		genes(i).splicegraph{2}(i2,i1)=1 ;
 
-
         unused_introns = sp.array(unused_introns, dtype='int')
         idx_unused = sp.where((genes[i].introns[s][unused_introns, 1] >= genes[i].start) & (genes[i].introns[s][unused_introns, 0] <= genes[i].stop))[0]
         unused_introns = unused_introns[idx_unused]
@@ -759,6 +760,8 @@ def insert_cassette_exons(genes, CFG):
     ### keep only chromosomes found in genes
     keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
     regions = regions[keepidx]
+    s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
+    regions = regions[s_idx]
 
     c = 0
     num_exons_added = 0
@@ -782,7 +785,7 @@ def insert_cassette_exons(genes, CFG):
 
             gg = genes[chunk_idx[c]]
             gg.strand = strands[s]
-            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'])
+            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
 
             ### add introns implied by splicegraph to the list
             all_introns = gg.introns[s][:, :2]

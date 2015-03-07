@@ -203,8 +203,12 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # exon_pre_exon_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
-    if info[4] >= CFG['exon_skip']['min_non_skip_count']:
-        verified[1] = 1
+    try:
+        if info[4] >= CFG['exon_skip']['min_non_skip_count']:
+            verified[1] = 1
+    except:
+        import pdb
+        pdb.set_trace()
     # exon_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[5] = counts_edges[idx, 1]
@@ -326,8 +330,8 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
         return (verified, info)
     ### check validity of exon coordinates (start < stop && non-overlapping)
     elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any(event.exons2[:, 1] - event.exons2[:, 0] < 1) or \
-         (event.exons1[1, 1] >= event.exons2[1, 0] and event.exons1[1, 0] < event.exons2[1, 0]) or \
-         (event.exons2[1, 1] >= event.exons1[1, 0] and event.exons2[1, 0] < event.exons1[1, 0]):
+         (event.exons1[1, 1] > event.exons2[1, 0] and event.exons1[1, 0] < event.exons2[1, 0]) or \
+         (event.exons2[1, 1] > event.exons1[1, 0] and event.exons2[1, 0] < event.exons1[1, 0]):
         info[0] = 0
         return (verified, info)
 
@@ -452,17 +456,14 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                 gr_idx_edges += 1
             assert(gene_ids_edges[genes_f_idx_edges[gr_idx_edges]] == g_idx)
 
-            span_segs = genes_l_idx_segs[gr_idx_segs] - genes_f_idx_segs[gr_idx_segs] + 1
-            span_edges = genes_l_idx_edges[gr_idx_edges] - genes_f_idx_edges[gr_idx_edges] + 1
- 
             ### laod relevant count data from HDF5
             segments = IN['segments'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
             seg_pos = IN['seg_pos'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
             edges = IN['edges'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1, strain_idx]
             edge_idx = IN['edge_idx'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1]
 
-            for j, s_idx in enumerate(strain_idx):
-                print '%i/%i\r' % (j, len(strain_idx))
+            for s_idx in range(len(strain_idx)):
+                print '%i/%i\r' % (s_idx, len(strain_idx))
                # ev_tmp.subset_strain(s_idx) ### TODO 
                 if event_type == 'exon_skip':
                     ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
@@ -476,7 +477,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                     ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
 
                 ev[i].verified.append(ver)
-                if j == 0:
+                if s_idx == 0:
                     counts.append(sp.array([info]))
                 else:
                     counts[-1] = sp.r_[counts[-1], sp.array([info])]

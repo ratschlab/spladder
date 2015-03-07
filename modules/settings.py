@@ -128,9 +128,10 @@ def default_settings():
     CFG['event_types'] = ['exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip']
 
     CFG['read_length'] = 36
+    CFG['var_aware'] = 0
+    CFG['primary_only'] = False
 
     CFG['rproc'] = 0
-    CFG['var_aware'] = 0
 
     ### define which output files are written
     CFG['output_txt'] = 0
@@ -202,6 +203,12 @@ def parse_args(options):
         print >> sys.stderr, 'ERROR: option var_aware should have value y or n, but has %s' % options.var_aware
         sys.exit(1)
 
+    if options.primary_only in ['n', 'y']:
+        CFG['primary_only'] = (options.primary_only == 'y')
+    else:
+        print >> sys.stderr, 'ERROR: option primary_only should have value y or n, but has %s' % options.primary_only
+        sys.exit(1)
+
     if options.intron_cov in ['n', 'y']:
         CFG['count_intron_cov'] = (options.intron_cov == 'y')
     else:
@@ -251,7 +258,7 @@ def parse_args(options):
     else:
         CFG['anno_fname'] = options.annotation
     if options.outdir == '-':
-        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: out directore\n\n'
+        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: out directory\n\n'
         options.parser.print_help()
         sys.exit(2)
     else:

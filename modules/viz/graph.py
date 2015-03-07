@@ -6,11 +6,12 @@ import sys
 import scipy as sp
 import pdb
 
-def plot_graph(splicegraph, ax, xlim=None, highlight=None, highlight_color='magenta'):
-    """Takes a splicing graph and visualizes its structure"""
+def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='magenta', node_color='b',
+               edge_color='#999999'):
+    """Takes a graph given as vertices and edges and visualizes its structure"""
 
-    start = splicegraph.vertices.ravel().min()
-    stop = splicegraph.vertices.ravel().max()
+    start = vertices.ravel().min()
+    stop = vertices.ravel().max()
 
     ### draw grid
     ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
@@ -20,9 +21,9 @@ def plot_graph(splicegraph, ax, xlim=None, highlight=None, highlight_color='mage
     nodes = []
     exon_num = sp.zeros((stop - start,))
     exon_loc = sp.zeros((1, stop - start))
-    exon_level = sp.zeros((splicegraph.vertices.shape[1], splicegraph.vertices.shape[1]))
-    for i in range(splicegraph.vertices.shape[1]):
-        cur_vertex = splicegraph.vertices[:, i] - start
+    exon_level = sp.zeros((vertices.shape[1], vertices.shape[1]))
+    for i in range(vertices.shape[1]):
+        cur_vertex = vertices[:, i] - start
         exon_num[cur_vertex[0]:cur_vertex[1]] += 1
         if sp.all(exon_num < 2):
             exon_loc[0, :] = exon_num
@@ -38,32 +39,31 @@ def plot_graph(splicegraph, ax, xlim=None, highlight=None, highlight_color='mage
        
         exon_level[i] = level
         
-        nodes.append(matplotlib.patches.Rectangle([cur_vertex[0] + start, 20 + (level * 20)], cur_vertex[1] - cur_vertex[0], 10, facecolor='b', edgecolor='none', alpha=0.7))
+        nodes.append(matplotlib.patches.Rectangle([cur_vertex[0] + start, 20 + (level * 20)], cur_vertex[1] - cur_vertex[0], 10, facecolor=node_color, edgecolor='none', alpha=0.7))
 
 
     ### edges
     intron_loc = sp.zeros((1, stop - start))
-    if splicegraph.edges.shape[0] > 1:
-        for i in range(splicegraph.vertices.shape[1]):
-            for j in range(i + 1, splicegraph.vertices.shape[1]):
-                if splicegraph.edges[i ,j] > 0:
-                    if splicegraph.vertices[0,i] < splicegraph.vertices[0,j]:
-                        istart = splicegraph.vertices[1, i]
-                        istop = splicegraph.vertices[0, j]
+    if edges.shape[0] > 1:
+        for i in range(vertices.shape[1]):
+            for j in range(i + 1, vertices.shape[1]):
+                if edges[i ,j] > 0:
+                    if vertices[0,i] < vertices[0,j]:
+                        istart = vertices[1, i]
+                        istop = vertices[0, j]
                         level1 = exon_level[i]
                         level2 = exon_level[j]
                     else:
-                        istart = splicegraph.vertices[1, j]
-                        istop = splicegraph.vertices[0, i]
+                        istart = vertices[1, j]
+                        istop = vertices[0, i]
                         level1 = exon_level[j]
                         level2 = exon_level[i]
               
                     cur_intron = [istart - start, istop - start]
                     intron_loc[cur_intron[0]:cur_intron[1]] += 1
                     leveli = [(istart + istop) * 0.5, (level1 + level2) * 0.5]
-                    ax.plot([istart, leveli[0]], [25 + (level1 * 20), 32 + (leveli[1] * 20)], '-', color='#999999', linewidth=0.5)
-                    ax.plot([leveli[0], istop], [32 + (leveli[1] * 20), 25 + (level2 * 20)], '-', color='#999999', linewidth=0.5)
-                    #ax.plot([istart, istop], [20 + (level1 * 20) + 5, 20 + (level2 * 20) + 5], 'b-')
+                    ax.plot([istart, leveli[0]], [25 + (level1 * 20), 32 + (leveli[1] * 20)], '-', color=edge_color, linewidth=0.5)
+                    ax.plot([leveli[0], istop], [32 + (leveli[1] * 20), 25 + (level2 * 20)], '-', color=edge_color, linewidth=0.5)
 
     ### draw nodes 
     for node in nodes:

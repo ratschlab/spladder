@@ -12,7 +12,7 @@ if __package__ is None:
 from utils import *
 from init import *
 
-def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped = True, spliced = True, var_aware = None, collapse = False):
+def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped = True, spliced = True, var_aware = None, collapse = False, primary_only=False):
     
     infile = pysam.Samfile(fname, 'rb')
 
@@ -22,86 +22,102 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
 
     read_cnt = 0
     introns = []
+    read_matrix = sp.zeros((0, stop - start))
 
-    ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
-    for read in infile.fetch(chr_name, start, stop, until_eof=True):
+    #t0 = time.time()
+    reads = 0
+    reads2 = 0
 
-        if read.is_unmapped:
-            continue
-        is_spliced = ('N' in read.cigarstring)
-        if is_spliced:
-            if not spliced:
+    #print >> sys.stderr, 'querying %s:%i-%i' % (chr_name, start, stop)
+
+    if infile.gettid(chr_name) > -1:
+        ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
+        for read in infile.fetch(chr_name, start, stop, until_eof=True):
+
+            if read.is_unmapped:
                 continue
-        elif not mapped:
-            continue
+            if primary_only and read.is_secondary:
+                reads += 1
+                continue
 
-        tags = dict(read.tags)
-
-        if filter is not None:
-            ### handle mismatches
-            if var_aware:
-                if filter['mismatch'] < (tags['XM'] + tags['XG']):
-                    continue
-            else:
-                if filter['mismatch'] < tags['NM']:
-                    continue
-
+            is_spliced = ('N' in read.cigarstring)
             if is_spliced:
-                ### handle min segment length
-                ### remove all elements from CIGAR sting that do not 
-                ### contribute to the segments (hard- and softclips and insertions)
-                cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
-                ### split the string at the introns and sum the remaining segment elements, compare to filter
-                if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) <= filter['exon_len']:
+                if not spliced:
                     continue
-        
-        ### check strand information
-        if strand is not None:
-            try:
-                if tags['XS'] != strand:
-                    continue
-            except KeyError:
-                pass
+            elif not mapped:
+                reads2 += 1
+                continue
 
-        ### get introns and covergae
-        p = read.pos 
-        for o in read.cigar:
-            if o[0] == 3:
-                introns.append([p, p + o[1]])
-            if o[0] in [0, 2]:
-                r = range(max(p-start, 0), min(p + o[1] - start, stop - start))
-                i.extend([read_cnt] * len(r))
-                j.extend(r)
-                #for pp in range(p, p + o[1]):
-                #    if pp - start >= 0 and pp < stop:
-                #        i.append(read_cnt)
-                #        j.append(pp - start)
-            if o[0] in [0, 2, 3]:
-                p += o[1]
+            tags = dict(read.tags)
 
-        ### the follwoing is new behavior and gonne come in the next version --> deletions are not counted towards coverage
-        #### get coverage
-        #for p in read.positions:
-        #    if p - start >= 0:
-        #        if p >= stop:
-        #            break
-        #        else:
-        #            i.append(read_cnt)
-        #            j.append(p - start)
+            if filter is not None:
+                ### handle mismatches
+                if var_aware:
+                    if filter['mismatch'] < (tags['XM'] + tags['XG']):
+                        continue
+                else:
+                    if filter['mismatch'] < tags['NM']:
+                        continue
 
-        read_cnt += 1
+                if is_spliced:
+                    ### handle min segment length
+                    ### remove all elements from CIGAR sting that do not 
+                    ### contribute to the segments (hard- and softclips and insertions)
+                    cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
+                    ### split the string at the introns and sum the remaining segment elements, compare to filter
+                    if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) <= filter['exon_len']:
+                        continue
+            
+            ### check strand information
+            if strand is not None:
+                try:
+                    if tags['XS'] != strand:
+                        continue
+                except KeyError:
+                    pass
 
-    i = sp.array(i)
-    j = sp.array(j)
+            ### get introns and covergae
+            p = read.pos 
+            for o in read.cigar:
+                if o[0] == 3:
+                    introns.append([p, p + o[1]])
+                if o[0] in [0, 2]:
+                    r = range(max(p-start, 0), min(p + o[1] - start, stop - start))
+                    i.extend([read_cnt] * len(r))
+                    j.extend(r)
+                    #for pp in range(p, p + o[1]):
+                    #    if pp - start >= 0 and pp < stop:
+                    #        i.append(read_cnt)
+                    #        j.append(pp - start)
+                if o[0] in [0, 2, 3]:
+                    p += o[1]
 
-    ### construct sparse matrix
-    read_matrix = scipy.sparse.coo_matrix((sp.ones(i.shape), (i, j)), shape = (read_cnt, stop - start), dtype = 'int')
+            ### the follwoing is new behavior and gonne come in the next version --> deletions are not counted towards coverage
+            #### get coverage
+            #for p in read.positions:
+            #    if p - start >= 0:
+            #        if p >= stop:
+            #            break
+            #        else:
+            #            i.append(read_cnt)
+            #            j.append(p - start)
+
+            read_cnt += 1
+
+        i = sp.array(i, dtype='int')
+        j = sp.array(j, dtype='int')
+
+        ### construct sparse matrix
+        read_matrix = scipy.sparse.coo_matrix((sp.ones(i.shape), (i, j)), shape = (read_cnt, stop - start), dtype='bool')
 
     ### construct introns
     if len(introns) > 0:
-        introns = sp.array(introns, dtype = 'int')
+        introns = sp.array(introns, dtype='int')
     else:
         introns = sp.zeros((0, 2), dtype='int')
+
+    #t1 = time.time()
+    #print >> sys.stderr, 'This call took %i secs (took %i reads, %i were secondary, %i were unspliced)' % (t1 - t0, read_matrix.shape[0], reads, reads2)
 
     if collapse:
         return (read_matrix.sum(axis = 0), introns)
@@ -109,7 +125,7 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
         return (read_matrix, introns)
 
 
-def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = False):
+def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, primary_only=False):
     # blocks coordinates are assumed to be in closed intervals
 
     if filter is None:
@@ -141,19 +157,19 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
 
         ## get data from bam
         if 'exon_track' in types:
-            (introns, coverage) = get_all_data(blocks[b], filenames, filter=filter, var_aware=var_aware) 
+            (introns, coverage) = get_all_data(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only) 
         if 'mapped_exon_track' in types:
-            (introns, mapped_coverage) = get_all_data(blocks[b], filenames, spliced=False, filter=filter, var_aware=var_aware) 
+            (introns, mapped_coverage) = get_all_data(blocks[b], filenames, spliced=False, filter=filter, var_aware=var_aware, primary_only=primary_only) 
         if 'spliced_exon_track' in types:
-            (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware) 
+            (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only) 
         if 'polya_signal_track' in types:
-            (introns, polya_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, clipped=True, var_aware=var_aware)
+            (introns, polya_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, clipped=True, var_aware=var_aware, primary_only=primary_only)
         if 'end_signal_track' in types:
-            (introns, read_end_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, var_aware=var_aware)
+            (introns, read_end_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only)
 
         if introns is None:
             # no exon coverage needed at all
-            (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware)
+            (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only)
 
         introns = sort_rows(introns)
 
@@ -238,7 +254,7 @@ def add_reads_from_bam(blocks, filenames, types, filter = None, var_aware = Fals
         return tracks
 
 #function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, filenames, filter, clipped, var_aware) 
-def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipped=False, var_aware=False):
+def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipped=False, var_aware=False, primary_only=False):
 
     block_len = block.stop - block.start
     # get all data from bam file
@@ -263,7 +279,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
         else:
             collapse = True
         ### get reads from bam file
-        (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse)
+        (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only)
 
         ### compute total coverages
         if 'maps' in filter:
@@ -295,7 +311,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
     return (introns, coverage)
 
 #function [introns, coverage, pair_cov] = get_all_data_uncollapsed(block, mapped, spliced, filenames, filter, var_aware) 
-def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=None, var_aware=False):
+def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=None, var_aware=False, primary_only=False):
 
     block_len = block.stop - block.start
     # get all data from bam file
@@ -312,7 +328,7 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
         contig_name = block.chr
         strand = block.strand
         collapse = False
-        (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse)
+        (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only)
         coverage = sp.r_[coverage, coverage_tmp]
 
     return (introns, coverage)
@@ -336,6 +352,8 @@ def get_intron_list(genes, CFG):
     (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
     keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
     regions = regions[keepidx]
+    s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
+    regions = regions[s_idx]
 
     c = 0
     num_introns_filtered = 0
@@ -365,7 +383,7 @@ def get_intron_list(genes, CFG):
             gg[0].stop = gg[0].stop + 5000
             assert(gg[0].chr == chr)
 
-            intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'])
+            intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
             num_introns_filtered += intron_list_tmp[0].shape[0]
             introns[chunk_idx[c], s] = sort_rows(intron_list_tmp[0])
 

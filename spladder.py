@@ -63,6 +63,7 @@ def parse_options(argv):
     optional.add_option('-s', '--re-infer_sg', dest='infer_sg', metavar='y|n', help='re-infer splice graph [n]', default='n')
     optional.add_option('-T', '--extract_as', dest='extract_as', metavar='y|n', help='extract alternative splicing events [y]', default='y')
     optional.add_option('-X', '--var_aware', dest='var_aware', metavar='y|n', help='alignment files are variation aware (presence of XM and XG tags) [n]', default='n')
+    optional.add_option('-P', '--primary_only', dest='primary_only', metavar='y|n', help='only use primary alignments [n]', default='n')
     optional.add_option('-t', '--event_types', dest='event_types', metavar='y|n', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip')
     optional.add_option('-C', '--truncations', dest='truncations', metavar='y|n', help='truncation detection mode [n]', default='n')
     optional.add_option('-U', '--intron_cov', dest='intron_cov', metavar='y|n', help='count intron coverage [n]', default='n')
@@ -169,7 +170,7 @@ def spladder():
                 print >> sys.stdout, 'All result files already exist.'
             else:
                 if CFG['rproc']:
-                    jobinfo.append(rp.rproc('spladder_core', CFG, 10000, CFG['options_rproc'], 40*60))
+                    jobinfo.append(rp.rproc('spladder_core', CFG, 15000, CFG['options_rproc'], 40*60))
                 else:
                     spladder_core(CFG)
 
