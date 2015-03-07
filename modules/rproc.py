@@ -29,6 +29,7 @@ class Jobinfo():
         self.time = None
         self.prefix = []
         self.mat_fname = ''
+        self.data_fname = ''
         self.result_fname = ''
         self.m_fname = ''
         self.log_fname = ''
@@ -249,12 +250,14 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     prefix = '%s%i-%1.10f' % (identifier, cc, time.time())
     rproc_dir = '%s/tmp/.sge' % os.environ['HOME']
     mat_fname = os.path.join(rproc_dir, '%s.pickle' % prefix) 
+    data_fname = os.path.join(rproc_dir, '%s_data.pickle' % prefix) 
     result_fname = os.path.join(rproc_dir, '%s_result.pickle' % prefix)
     m_fname = os.path.join(rproc_dir, '%s.sh' % prefix)
     while os.path.exists(mat_fname) or os.path.exists(result_fname) or os.path.exists(m_fname):
         cc = random.randint(0, 100000)
         prefix = '%s%i-%1.10f' % (identifier, cc, time.time())
         mat_fname = os.path.join(rproc_dir, '%s.pickle' % prefix) 
+        data_fname = os.path.join(rproc_dir, '%s_data.pickle' % prefix) 
         result_fname = os.path.join(rproc_dir, '%s_result.pickle' % prefix)
         m_fname = os.path.join(rproc_dir, '%s.sh' % prefix)
 
@@ -266,6 +269,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
 
     jobinfo.prefix = prefix 
     jobinfo.mat_fname = mat_fname 
+    jobinfo.data_fname = data_fname
     jobinfo.result_fname = result_fname 
     jobinfo.m_fname = m_fname 
     jobinfo.log_fname = log_fname 
@@ -273,9 +277,10 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     jobinfo.callfile = callfile
 
     ### save the call information
-    cPickle.dump((ProcName, P1, dirctry, options, callfile), open(mat_fname, 'wb'), -1)
+    cPickle.dump((ProcName, dirctry, options, callfile), open(mat_fname, 'wb'), -1)
+    cPickle.dump(P1, open(data_fname, 'wb'), -1)
 
-    evalstring = '%s %s %s' % (bin_str, rproc_path, mat_fname)
+    evalstring = '%s %s %s %s' % (bin_str, rproc_path, mat_fname, data_fname)
     evalstring = 'cd %s; %s; exit' % (dirctry, evalstring)
     fd = open(m_fname, 'w')
     print >> fd, '%s' % evalstring
@@ -295,6 +300,9 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     else:
       #str = 'echo \'%s hostname; bash %s >> %s\' | qsub -o %s -j y -r y %s -N %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, option_str, prefix, log_fname)
       str = 'echo \'%s hostname; bash %s >> %s\' | qsub -o %s -j oe -r y %s -N %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, option_str, prefix, log_fname)
+      #print >> sys.stderr, str
+      #import pdb
+      #pdb.set_trace()
 
     ### too verbose
     #if options['submit_now'] and options['verbosity']:
@@ -426,9 +434,9 @@ def rproc_clean_register():
 def rproc_cleanup(jobinfo):
   
     for ix in  range(len(jobinfo)):
-        command = 'rm -f %s %s %s %s %s' % (jobinfo[ix].mat_fname, jobinfo[ix].result_fname,
+        command = 'rm -f %s %s %s %s %s %s' % (jobinfo[ix].mat_fname, jobinfo[ix].result_fname,
                                             jobinfo[ix].m_fname, jobinfo[ix].log_fname, 
-                                            jobinfo[ix].qsublog_fname)
+                                            jobinfo[ix].qsublog_fname, jobinfo[ix].data_fname)
         subprocess.call(command.split(' '))
 
         rproc_register('cleanup', jobinfo[ix])
@@ -636,13 +644,14 @@ def rproc_still_running(jobinfo):
             text = subprocess.check_output(['qstat', '-u', os.environ['USER']])
             rproc_nqstat_output = text
             rproc_nqstat_time = curtime
-        except CalledProcessError as e:
+        except subprocess.CalledProcessError as e:
             if e.returncode == 130:
                 print >> sys.stderr, 'rproc_still_running interupted by user'
                 status = -1
                 line = ''
                 start_time = ''
             print >> sys.stderr, 'WARNING: qstat failed'
+            text = ''
     else:
         text = rproc_nqstat_output
     
@@ -770,7 +779,7 @@ def rproc_submit_batch_helper(parameters):
         print 'starting job %i in file %s'  %(i, parameters[i].mat_fname)
         print '========================================='
         try:
-            start_proc(parameters[i].mat_fname, 0)
+            start_proc(parameters[i].mat_fname, parameters[i].data_fname, 0)
         except:
             print >> sys.stderr, 'execution of start_proc failed'
 
@@ -779,6 +788,8 @@ def rproc_submit_batch_helper(parameters):
         fname = parameters[i].mat_fname
         os.remove(fname) # mat file
         os.remove('%spy' % fname.strip('pickle')) # m file
+        fname = parameters[i].data_fname
+        os.remove(fname) # data file
 
     return 0
 
@@ -881,16 +892,17 @@ def rproc_wait(jobinfo, pausetime=120, frac_finished=1.0, resub_on=1, verbosity=
 
     time.sleep(1)
 
-def start_proc(fname, rm_flag=True):
-    # start_proc(fname, rm_flag)
+def start_proc(fname, data_fname, rm_flag=True):
+    # start_proc(fname, data_fname, rm_flag)
       
     global THIS_IS_A_RPROC_PROCESS  
     THIS_IS_A_RPROC_PROCESS = True
 
-    (ProcName, P1, dirctry, options, callfile) = cPickle.load(open(fname, 'r'))
+    ### load and create environment
+    (ProcName, dirctry, options, callfile) = cPickle.load(open(fname, 'r'))
     os.chdir(dirctry)
 
-    print '%s on %s started (in %s; from %s)' % (ProcName, os.environ['HOSTNAME'], dirctry, fname)
+    print '%s on %s started (in %s; from %s %s)' % (ProcName, os.environ['HOSTNAME'], dirctry, fname, data_fname)
     print '### job started %s' % time.strftime('%Y-%m-%d %H:%S')
 
     if 'rmpaths' in options:
@@ -935,10 +947,12 @@ def start_proc(fname, rm_flag=True):
                 exec('%s = %s' % (mod, module[0]))
                 
 
+    ### load data into environment
+    P1 = cPickle.load(open(data_fname, 'r'))
+
     retval1 = []
     retval2 = []
 
-    
     try:
         exec('from %s import %s' % (callfile[0], ProcName))
 
@@ -992,4 +1006,4 @@ def get_subpaths(sl):
 
 if __name__ == "__main__":
     
-    start_proc(sys.argv[1])
+    start_proc(sys.argv[1], sys.argv[2])
