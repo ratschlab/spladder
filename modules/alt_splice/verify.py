@@ -203,12 +203,8 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # exon_pre_exon_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
-    try:
-        if info[4] >= CFG['exon_skip']['min_non_skip_count']:
-            verified[1] = 1
-    except:
-        import pdb
-        pdb.set_trace()
+    if info[4] >= CFG['exon_skip']['min_non_skip_count']:
+        verified[1] = 1
     # exon_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[5] = counts_edges[idx, 1]
