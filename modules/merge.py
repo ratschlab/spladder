@@ -422,7 +422,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
 
                 s1_len = genes[j].splicegraph.vertices.shape[1]
                 s2_len = genes2[g_idx].splicegraph.vertices.shape[1]
-          
+
                 if s2_len > 10000:
                     print 'Do not further merge into gene %i, has more than 10000 vertices!' % g_idx
                     ### still count edges that can be confirmed
@@ -465,6 +465,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
                                                                 (sp.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0).T.astype('int')]
                     genes2[g_idx].edge_count = edgecnt + splice1_
 
+
             ### we did not find the gene name --> append new gene to genes2
             elif g_idx > genes2.shape[0] or genes2[g_idx].name > genes[j].name:
                 g_idx = g_idx_
@@ -479,7 +480,7 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
 
     fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     if chunk_idx is not None:
-        chunk_tag = '_chunk%i_%i' % (chunk_idx[0], chunk_idx[-1])
+        chunk_tag = '_chunk%i_%i' % (chunk_idx[0], chunk_idx[-1] + 1)
         fn_out = fn_out.replace('.pickle', '%s.pickle' % chunk_tag)
 
     print 'Store genes at: %s' % fn_out
@@ -518,7 +519,7 @@ def run_merge(CFG):
                 if merge_all:
                     merge_list_len += 1
                 for c_idx in range(0, merge_list_len, chunksize):
-                    fn = '%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(merge_list_len - 1, c_idx + chunksize - 1))
+                    fn = '%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(merge_list_len, c_idx + chunksize))
                     if os.path.exists(fn):
                         continue
                     else:
