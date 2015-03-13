@@ -792,11 +792,7 @@ def insert_cassette_exons(genes, CFG):
             for k in range(gg.splicegraph.edges.shape[0]):
                 for l in range(k+1, gg.splicegraph.edges.shape[0]):
                     if gg.splicegraph.edges[k, l] == 1:
-                        try:
-                            all_introns = sp.r_[all_introns, sp.array([[gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]]])] # introns are half open
-                        except:
-                            import pdb
-                            pdb.set_trace()
+                        all_introns = sp.r_[all_introns, sp.array([[gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]]])] # introns are half open
             all_introns = unique_rows(all_introns)
        
             ### use only relevant introns (inside gene boundaries)
@@ -843,8 +839,10 @@ def insert_cassette_exons(genes, CFG):
 
                         if sp.mean(exon_cov > (0.2 * sp.mean(exon_cov))) > CFG['cassette_exon']['min_cassette_region'] and \
                            sp.median(exon_cov) > CFG['cassette_exon']['min_cassette_cov'] and \
-                           max(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) / min(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
-                           max(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) / min(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
+                           (sp.median(exon_cov[-min_len_aft:]) / sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
+                           (sp.median(exon_cov[:min_len_pre]) / sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
+                           #max(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) / min(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
+                           #max(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) / min(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
                             new_cassette[k, l] = 1
                             inserted += 1 
             any_added = False
