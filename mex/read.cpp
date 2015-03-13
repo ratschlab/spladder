@@ -114,9 +114,10 @@ void CRead::get_don_splice_sites(vector<int>* don_pos)
 int CRead::min_exon_len()
 {
 	int min = 1e8;
-	for (uint32_t k=0;k<block_starts.size(); k++)
+	for (uint32_t k=0;k<block_starts.size(); k++) {
 		if (block_lengths[k]<min)
 			min = block_lengths[k];
+    }
 	return min;
 }
 

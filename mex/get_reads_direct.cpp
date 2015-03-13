@@ -172,6 +172,9 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 	//sprintf(read->read_id, "%s\0", bam1_qname(b));
 	sprintf(read->read_id, "%s", bam1_qname(b));
 
+    bool saw_intron = false;
+    int intron_len;
+    int del_offset = 0; // offset to carry over deletions over introns if necessary
 	for (int k = 0; k < b->core.n_cigar; ++k) 
 	{
 		int op = bam1_cigar(b)[k] & BAM_CIGAR_MASK; // operation
@@ -188,16 +191,17 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 			}
 			else
 			{
-				int op_prev = bam1_cigar(b)[k-1] & BAM_CIGAR_MASK; 
-				int l_prev = bam1_cigar(b)[k-1] >> BAM_CIGAR_SHIFT;
-				if (op_prev==BAM_CREF_SKIP)// intron before
+				//int op_prev = bam1_cigar(b)[k-1] & BAM_CIGAR_MASK; 
+				//int l_prev = bam1_cigar(b)[k-1] >> BAM_CIGAR_SHIFT;
+				if (saw_intron) //(op_prev==BAM_CREF_SKIP)// intron before
 				{
 					if (read->block_lengths.size()>=1)
 					{
 						int last_block_start = (*(read->block_starts.end()-1));
 						int intron_start = last_block_start+(*(read->block_lengths.end()-1));
-						read->block_lengths.push_back(l);
-						read->block_starts.push_back(intron_start+l_prev);
+						read->block_lengths.push_back(l + del_offset);
+						//read->block_starts.push_back(intron_start+l_prev);
+						read->block_starts.push_back(intron_start+intron_len-del_offset);
 					}
 					else
 					{
@@ -205,6 +209,8 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 						read->block_lengths.push_back(l);
 						read->block_starts.push_back(0);
 					}
+                    saw_intron = false;
+                    del_offset = 0;
 				}
 				else
 				{
@@ -220,11 +226,17 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 		}
 		else if (op == BAM_CDEL) 
 		{
-			if (k>0 && read->block_lengths.size()>=1)
-				(*(read->block_lengths.end()-1))+=l;
+            if (saw_intron) {
+                del_offset = l;
+            } else {
+                if (k>0 && read->block_lengths.size()>=1)
+                    (*(read->block_lengths.end()-1))+=l;
+            }
 		} 
-		else if (op == BAM_CREF_SKIP)//intron
-		{}
+		else if (op == BAM_CREF_SKIP) {//intron
+            saw_intron = true;
+            intron_len = l;
+		}
 		else if (op == BAM_CINS)
 		{}
 		else if (op == BAM_CSOFT_CLIP || op == BAM_CHARD_CLIP)
@@ -232,6 +244,7 @@ void parse_cigar(bam1_t* b, CRead* read, bam_header_t* header, bool var_aware)
 			read->is_clipped = true;
 		}
 	}
+
 	// parse auxiliary data
     uint8_t* s = bam1_aux(b);
 	uint8_t* end = b->data + b->data_len; 
