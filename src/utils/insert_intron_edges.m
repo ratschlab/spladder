@@ -138,7 +138,7 @@ for i = 1:length(genes)
 		if isempty(idx1) 
 			%%% find all exons that overlap intron-start j +/- CFG.intron_edges.vicinity_region
 			idx1__ = find(genes(i).splicegraph{1}(1,:) - CFG.intron_edges.vicinity_region <= genes(i).introns{s}(1,j) & ...
-									genes(i).splicegraph{1}(2,:) + CFG.intron_edges.vicinity_region >= genes(i).introns{s}(1,j)) ;
+					      genes(i).splicegraph{1}(2,:) + CFG.intron_edges.vicinity_region >= genes(i).introns{s}(1,j)) ;
 
             %%% check, if we can find an exon after the current intron and there is continuous coverage between exon end and intron start
             if isempty(idx1__),
@@ -456,7 +456,8 @@ for i = 1:length(genes),
 end ;
 
 for ix = 1:length(genes)
-	[dummy,exon_order] = sort(genes(ix).splicegraph{1}(1,:),2,'ascend');
+	%[dummy,exon_order] = sort(genes(ix).splicegraph{1}(1,:),2,'ascend');
+    [dummy, exon_order] = sortrows(genes(ix).splicegraph{1}');
 	genes(ix).splicegraph{1} = genes(ix).splicegraph{1}(:, exon_order);
 	genes(ix).splicegraph{2} = genes(ix).splicegraph{2}(exon_order, exon_order);
 	genes(ix).splicegraph{3} = genes(ix).splicegraph{3}(:, exon_order);
