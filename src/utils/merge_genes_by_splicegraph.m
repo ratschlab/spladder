@@ -78,7 +78,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
             genes2 = genes2(s_idx);
             appended = 0;
         end
-
+        
         %%% iterate over current genes
         g_idx = 1;
         fprintf(1, 'Processing ...\n');
@@ -104,7 +104,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
 
                 s1_len = size(genes(j).splicegraph{1}, 2);
                 s2_len = size(genes2(g_idx).splicegraph{1}, 2);
-          
+
                 if s2_len > 10000,
                     fprintf('Do not further merge into gene %i, has more than 10000 vertices!\n', g_idx);
                     %%% still count edges that can be confirmed
@@ -146,6 +146,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
                     genes2(g_idx).splicegraph{3} = [[sum(tril(genes2(g_idx).splicegraph{2}), 2) == 0]'; [sum(triu(genes2(g_idx).splicegraph{2}), 2) == 0]'];
                     genes2(g_idx).edge_count = edgecnt + splice1_;
                 end;
+
             %%% we did not find the gene name --> append new gene to genes2
             elseif g_idx > length(genes2) || strlexcmp(genes2(g_idx).name, genes(j).name) > 0,
                 g_idx = g_idx_;
