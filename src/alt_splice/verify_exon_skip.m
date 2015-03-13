@@ -14,7 +14,7 @@ if any([event.exon event.exon_pre event.exon_aft] <= 0),
     return ;
 %%% check validity of exon coordinates (start < stop && non-overlapping)
 elseif event.exon_pre(1) >= event.exon_pre(2) || event.exon_aft(1) >= event.exon_aft(2) || ...
-        event.exon(1) >= event.exon(2) || event.exon_pre(2) >= event.exon(1) || event.exon(2) >= event.exon_aft(1),
+        event.exon(1) > event.exon(2) || event.exon_pre(2) >= event.exon(1) || event.exon(2) >= event.exon_aft(1),
     info(1) = 0;
     return ;
 end ;
