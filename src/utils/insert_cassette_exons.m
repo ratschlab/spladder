@@ -76,7 +76,8 @@ for j = 1:length(regions),
             clear rm_idx;
         end;
 
-        segment_bounds = sort(unique(all_introns(:)));
+        segment_starts = sort(unique(all_introns(1, :)));
+        segment_ends = sort(unique(all_introns(2, :)));
 
 		%%% check for all intron-pairs, if exon could exist between them
 		new_cassette = zeros(length(all_introns)) ;
@@ -100,25 +101,27 @@ for j = 1:length(regions),
                 if ~ismember(curr_exon, gg.splicegraph{1}', 'rows'),
                     idx = [curr_exon(1):curr_exon(2)] - gg.start + 1;
                     exon_cov = sum(gg.tracks(:, idx), 1);
-                    pre_segment_end = find(segment_bounds < curr_exon(1) - 1, 1, 'last');
+                    pre_segment_end = find(segment_ends < curr_exon(1), 1, 'last');
                     if ~isempty(pre_segment_end),
-                        pre_segment_cov = sum(gg.tracks(:, [segment_bounds(pre_segment_end) : curr_exon(1) - 1] - gg.start + 1), 1);
+                        pre_segment_cov = sum(gg.tracks(:, [segment_ends(pre_segment_end) : curr_exon(1) - 1] - gg.start + 1), 1);
                     else
                         pre_segment_cov = sum(gg.tracks(:, 1 : curr_exon(1) - gg.start), 1);
                     end;
                     min_len_pre = min(length(pre_segment_cov), length(exon_cov));
 
-                    aft_segment_start = find(segment_bounds > curr_exon(2) + 1, 1, 'first');
+                    aft_segment_start = find(segment_starts > curr_exon(2), 1, 'first');
                     if ~isempty(aft_segment_start),
-                        aft_segment_cov = sum(gg.tracks(:, [curr_exon(2) + 1 : segment_bounds(aft_segment_start) ] - gg.start + 1), 1);
+                        aft_segment_cov = sum(gg.tracks(:, [curr_exon(2) + 1 : segment_starts(aft_segment_start) ] - gg.start + 1), 1);
                     else
                         aft_segment_cov = sum(gg.tracks(:, curr_exon(2) + 1 - gg.start + 1 : end), 1);
                     end;
                     min_len_aft = min(length(aft_segment_cov), length(exon_cov));
                     if mean(exon_cov > 0.2*mean(exon_cov)) > CFG.cassette_exon.min_cassette_region && ...
                        median(exon_cov) > CFG.cassette_exon.min_cassette_cov && ...
-                       max(median(exon_cov(end-min_len_aft+1:end)), median(aft_segment_cov(1:min_len_aft))) / min(median(exon_cov(end-min_len_aft+1:end)), median(aft_segment_cov(1:min_len_aft))) - 1 >= CFG.cassette_exon.min_cassette_rel_diff && ...
-                       max(median(exon_cov(1:min_len_pre)), median(pre_segment_cov(end-min_len_pre+1:end))) / min(median(exon_cov(1:min_len_pre)), median(pre_segment_cov(end-min_len_pre+1:end))) - 1 >= CFG.cassette_exon.min_cassette_rel_diff,
+                       (median(exon_cov(end-min_len_aft+1:end)) / median(aft_segment_cov(1:min_len_aft))) - 1 >= CFG.cassette_exon.min_cassette_rel_diff && ...
+                       (median(exon_cov(1:min_len_pre)) / median(pre_segment_cov(end-min_len_pre+1:end))) - 1 >= CFG.cassette_exon.min_cassette_rel_diff,
+                       %max(median(exon_cov(end-min_len_aft+1:end)), median(aft_segment_cov(1:min_len_aft))) / min(median(exon_cov(end-min_len_aft+1:end)), median(aft_segment_cov(1:min_len_aft))) - 1 >= CFG.cassette_exon.min_cassette_rel_diff && ...
+                       %max(median(exon_cov(1:min_len_pre)), median(pre_segment_cov(end-min_len_pre+1:end))) / min(median(exon_cov(1:min_len_pre)), median(pre_segment_cov(end-min_len_pre+1:end))) - 1 >= CFG.cassette_exon.min_cassette_rel_diff,
                         new_cassette(k, l) = 1;
                         inserted.cassette_exon = inserted.cassette_exon + 1;
                     end;
