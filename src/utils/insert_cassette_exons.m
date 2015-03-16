@@ -76,8 +76,13 @@ for j = 1:length(regions),
             clear rm_idx;
         end;
 
-        segment_starts = sort(unique(all_introns(1, :)));
-        segment_ends = sort(unique(all_introns(2, :)));
+        if ~isempty(all_introns),
+            segment_starts = sort(unique(all_introns(1, :)));
+            segment_ends = sort(unique(all_introns(2, :)));
+        else
+            segment_starts = [];
+            segment_ends = [];
+        end;
 
 		%%% check for all intron-pairs, if exon could exist between them
 		new_cassette = zeros(length(all_introns)) ;
