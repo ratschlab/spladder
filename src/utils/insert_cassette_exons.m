@@ -106,7 +106,7 @@ for j = 1:length(regions),
                 if ~ismember(curr_exon, gg.splicegraph{1}', 'rows'),
                     idx = [curr_exon(1):curr_exon(2)] - gg.start + 1;
                     exon_cov = sum(gg.tracks(:, idx), 1);
-                    pre_segment_end = find(segment_ends < curr_exon(1), 1, 'last');
+                    pre_segment_end = find(segment_ends < curr_exon(1) - 1, 1, 'last');
                     if ~isempty(pre_segment_end),
                         pre_segment_cov = sum(gg.tracks(:, [segment_ends(pre_segment_end) : curr_exon(1) - 1] - gg.start + 1), 1);
                     else
@@ -114,7 +114,7 @@ for j = 1:length(regions),
                     end;
                     min_len_pre = min(length(pre_segment_cov), length(exon_cov));
 
-                    aft_segment_start = find(segment_starts > curr_exon(2), 1, 'first');
+                    aft_segment_start = find(segment_starts > curr_exon(2) + 1, 1, 'first');
                     if ~isempty(aft_segment_start),
                         aft_segment_cov = sum(gg.tracks(:, [curr_exon(2) + 1 : segment_starts(aft_segment_start) ] - gg.start + 1), 1);
                     else
