@@ -232,6 +232,19 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
 
     return (genes, CFG)
 
+def parse_header(header_string):
+
+    hd = dict()
+
+    for line in header_string.strip('\n').split('\n'):
+        sl = line.strip().split('\t')
+        td = dict([x.split(':', 1) for x in sl[1:]])    
+        try:
+            hd[sl[0].strip('@')].append(td)
+        except KeyError:
+            hd[sl[0].strip('@')] = [td]
+    return hd
+
 def init_regions(fn_bams, CFG=None):
     # regions=init_regions(fn_bams)
 
@@ -248,7 +261,8 @@ def init_regions(fn_bams, CFG=None):
         else:
             ### load bamfile
             IN = pysam.Samfile(fn_bams[i], 'rb')
-            header_info = IN.header['SQ']
+            #header_info = IN.header['SQ']
+            header_info = parse_header(IN.text)['SQ']
             
             CFG = append_chrms([x['SN'] for x in header_info], CFG)
 
