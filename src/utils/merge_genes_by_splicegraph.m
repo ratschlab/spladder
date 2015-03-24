@@ -78,7 +78,7 @@ function merge_genes_by_splicegraph(CFG, chunk_idx)
             genes2 = genes2(s_idx);
             appended = 0;
         end
-        
+
         %%% iterate over current genes
         g_idx = 1;
         fprintf(1, 'Processing ...\n');
