@@ -662,7 +662,7 @@ def rproc_still_running(jobinfo):
                 continue
             for j in range(len(items)): #assume that first non-empty item is the jobid
                 if len(items[j]) > 0:
-                    p = int(items[j].split('.')[0])
+                    p = int(items[j].split('.')[0].strip('[]'))
                     if p == jobinfo.jobid:
                         still_running = 1 
                         status = get_status(items)
@@ -849,7 +849,7 @@ def rproc_wait(jobinfo, pausetime=120, frac_finished=1.0, resub_on=1, verbosity=
                 crashed_files = '%s\n%s' % (crashed_files, jobinfo[id].log_fname)
                 if jobinfo[id].crashed_time is None:
                     jobinfo[id].crashed_time = time.time()
-                elif 24 * 60 * (time.time() - jobinfo[id].crashed_time) > max(3 * (pausetime/60), 0.1)  and (resub_on == 1 or (resub_on == -1 and jobinfo[id].resubmit >= jobinfo[id].retries + 1)):
+                elif 24 * 60 * (time.time() - jobinfo[id].crashed_time) > max(3 * (pausetime/60.0), 0.1)  and (resub_on == 1 or (resub_on == -1 and jobinfo[id].resubmit >= jobinfo[id].retries + 1)):
                     if resub_on == 1:
                         (reachedlimit, jobwalltime) = rproc_reached_timelimit(jobinfo[id])
                         if reachedlimit: # check whether the job has been killed because it reached the time limit
