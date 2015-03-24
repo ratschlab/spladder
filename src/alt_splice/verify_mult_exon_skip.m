@@ -13,8 +13,8 @@ if any([[event.exons(:)]' event.exon_pre event.exon_aft] <= 0),
     info(1) = 0 ;
     return ;
 %%% check validity of exon coordinates (start < stop && non-overlapping)
-elseif event.exon_pre(1) >= event.exon_pre(2) || event.exon_aft(1) >= event.exon_aft(2) || ...
-        any(event.exons(1:2:end) >= event.exons(2:2:end)) || event.exon_pre(2) >= min(event.exons(:)) || max(event.exons(:) >= event.exon_aft(1)),
+elseif event.exon_pre(1) > event.exon_pre(2) || event.exon_aft(1) > event.exon_aft(2) || ...
+        any(event.exons(1:2:end) > event.exons(2:2:end)) || event.exon_pre(2) > min(event.exons(:)) || max(event.exons(:) > event.exon_aft(1)),
     info(1) = 0 ;
     return ;
 end ;
