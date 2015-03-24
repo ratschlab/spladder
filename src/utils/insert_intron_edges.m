@@ -170,7 +170,7 @@ for i = 1:length(genes)
                 [tmp, idx1__min] = min(diff) ;
                 idx1__ = idx1__(idx1__min) ;
                 for idx1_ = idx1__,
-                    if genes(i).introns{s}(1,j) - 1 - genes(i).splicegraph{1}(1, idx1_) >= CFG.intron_edges.min_exon_len,
+                    if genes(i).introns{s}(1,j) - genes(i).splicegraph{1}(1, idx1_) >= CFG.intron_edges.min_exon_len,
                         exon_vicinity_cnt1(s) = exon_vicinity_cnt1(s)+1 ;
                         genes(i).splicegraph{1}(:,end+1) = genes(i).splicegraph{1}(:, idx1_) ;
                         genes(i).splicegraph{1}(2,end) = genes(i).introns{s}(1,j)-1 ; % set exon end to intron start - 1
@@ -206,14 +206,14 @@ for i = 1:length(genes)
 				inserted.new_terminal_exon = inserted.new_terminal_exon + 1 ;
 
 				iregion = [genes(i).introns{s}(1,j) - CFG.intron_edges.append_new_terminal_exons_len; genes(i).introns{s}(1,j) - 1] ; 
-				idx_iregion = find(genes(i).introns{s}(2, :) >= iregion(1) & genes(i).introns{s}(2, :) < iregion(2) - 1) ;
+				idx_iregion = find(genes(i).introns{s}(2, :) >= iregion(1) & genes(i).introns{s}(2, :) < iregion(2)) ;
 				if ~isempty(idx_iregion),
 					if ~(length(idx_iregion) == 1), 
 						[tmp,idx_iregion_] = max(genes(i).introns{s}(2, idx_iregion)) ;
 						idx_iregion = idx_iregion(idx_iregion_) ;
 					end ;
 					iregion(1) = genes(i).introns{s}(2, idx_iregion) + 1 ;
-					assert(iregion(1) < iregion(2)) ;
+					assert(iregion(1) <= iregion(2)) ;
 				end ;
 
 				genes(i).splicegraph{1}(:, end + 1) = iregion ;
@@ -310,7 +310,7 @@ for i = 1:length(genes)
                 %%% define range of new exon
 				iregion = [genes(i).introns{s}(2,j)+1; genes(i).introns{s}(2,j) + CFG.intron_edges.append_new_terminal_exons_len] ;
                 %%% find introns starting within new exon
-				idx_iregion = find(genes(i).introns{s}(1, :) > iregion(1) + 1 & genes(i).introns{s}(1, :) <= iregion(2)) ;
+				idx_iregion = find(genes(i).introns{s}(1, :) > iregion(1) & genes(i).introns{s}(1, :) <= iregion(2)) ;
 				if ~isempty(idx_iregion),
 					if ~(length(idx_iregion) == 1), 
 						[tmp, idx_iregion_] = min(genes(i).introns{s}(1, idx_iregion)) ;
@@ -318,7 +318,7 @@ for i = 1:length(genes)
 					end ;
                     %%% let new exon end at position before next intron starts
 					iregion(2) = genes(i).introns{s}(1, idx_iregion) - 1 ; 
-					assert(iregion(1) < iregion(2)) ;
+					assert(iregion(1) <= iregion(2)) ;
 				end ;
 				inserted.new_terminal_exon = inserted.new_terminal_exon + 1 ;
 				genes(i).splicegraph{1}(:, end + 1) = iregion ;
