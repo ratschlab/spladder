@@ -408,7 +408,7 @@ def insert_intron_edges(genes, CFG):
             idx1 = sp.where(sp.absolute(genes[i].splicegraph.vertices[1, :] - genes[i].introns[s][j, 0]) <= intron_tol)[0]
             ### find exons within same gene whose start coincides with intron end
             idx2 = sp.where(sp.absolute(genes[i].splicegraph.vertices[0, :] - genes[i].introns[s][j, 1]) <= intron_tol)[0]
-
+            
             ### intron boundaries do not coincide with any exon boundaries
             if idx1.shape[0] == 0 and idx2.shape[0] == 0:
                 both_missing[s] += 1
@@ -624,7 +624,7 @@ def insert_intron_edges(genes, CFG):
                     ### define range of new exon
                     iregion = sp.array([[genes[i].introns[s][j, 1]], [genes[i].introns[s][j, 1] + CFG['intron_edges']['append_new_terminal_exons_len']]])
                     ### find introns starting within new exon
-                    idx_iregion = sp.where((genes[i].introns[s][:, 0] > iregion[0] + 1) & (genes[i].introns[s][:, 0] <= iregion[1]))[0]
+                    idx_iregion = sp.where((genes[i].introns[s][:, 0] > iregion[0]) & (genes[i].introns[s][:, 0] <= iregion[1]))[0]
 
                     if idx_iregion.shape[0] > 0:
                         if not idx_iregion.shape[0] == 1: 
