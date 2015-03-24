@@ -33,9 +33,11 @@ class Event:
         
         if self.event_type == 'mult_exon_skip':
             if trafo:
-                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1_col.ravel())[1:3], sp.sort(self.exons1_col.ravel())[-3:-1], sp.sort(self.exons2_col.ravel())[1:3], sp.sort(self.exons2_col.ravel())[-3:-1]]))
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons2_col.ravel())[1:4], sp.sort(self.exons2_col.ravel())[-4:-1]]))
+                #return sp.unique(self.exons2_col.ravel())[1:-1]
             else:
-                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons1.ravel())[1:3], sp.sort(self.exons1.ravel())[-3:-1], sp.sort(self.exons2.ravel())[1:3], sp.sort(self.exons2.ravel())[-3:-1]]))
+                return sp.sort(sp.unique(sp.r_[sp.sort(self.exons2.ravel())[1:4], sp.sort(self.exons2.ravel())[-4:-1]]))
+                #return sp.unique(self.exons2.ravel())[1:-1]
         elif self.event_type == 'mutex_exons':
             if trafo:
                 return sp.sort(sp.r_[self.exons1_col.ravel()[1:4], self.exons2_col[1, :], self.exons1_col[2, 0]])
