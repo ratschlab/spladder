@@ -24,10 +24,10 @@ def parse_options(argv):
     optional = OptionGroup(parser, 'OPTIONAL')
     optional.add_option('-b', '--bams', dest='bams', metavar='FILE1,FILE2,...', help='alignment files in BAM format (comma separated list)', default='-')
     optional.add_option('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
-    optional.add_option('-l', '--logfile', dest='logfile', metavar='FILE', help='log file name [stdout]', default='-')
+    optional.add_option('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
     optional.add_option('-g', '--gene_name', dest='gene_name', metavar='STR', help='gene_name to be plotted', default=None)
     optional.add_option('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf]', default='pdf')
-    optional.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
+    optional.add_option('-v', '--verbose', dest='verbose', action='store_true', help='verbosity', default=False)
     parser.add_option_group(required)
     parser.add_option_group(optional)
 
@@ -68,14 +68,14 @@ def spladder_viz():
     (genes, events) = cPickle.load(open(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.pickle' % options.confidence), 'r'))
 
     rows = get_plot_len(options)
-    fig = plt.figure(figsize = (20, 4*rows), dpi=200)
+    fig = plt.figure(figsize = (20, 3*rows), dpi=200)
     gs = gridspec.GridSpec(rows, 1)
     axes = []
     xlim = None
 
     ### get coloring
     cmap_cov = plt.get_cmap('jet')
-    cmap_edg = plt.get_cmap('coolwarm')
+    cmap_edg = plt.get_cmap('jet')
 
     ### plot splicing graph
     if options.gene_name is not None:
@@ -94,7 +94,7 @@ def spladder_viz():
             for s, sample in enumerate(samples):
                 bams = sample.split(',')
                 axes.append(fig.add_subplot(gs[len(axes), 0]))
-                cov_from_bam(genes[i[0]].chr, start, stop, bams, subsample=20, ax=axes[-1], intron_cnt=True, log=True, title='Expression (Sample %i)' % (s+1), xlim=xlim, color_cov='#d7191c', color_intron_edge='#1a9641', grid=True)
+                cov_from_bam(genes[i[0]].chr, start, stop, bams, subsample=20, ax=axes[-1], intron_cnt=True, log=options.log, title='Expression (Sample %i)' % (s+1), xlim=xlim, color_cov='#d7191c', color_intron_edge='#1a9641', grid=True)
                 xlim = axes[-1].get_xlim()
                 axes[-1].set_xlabel('')
             
@@ -104,7 +104,7 @@ def spladder_viz():
                 norm = plt.Normalize(0, len(samples))
                 for s, sample in enumerate(samples):
                     bams = sample.split(',')
-                    cov_from_bam(genes[i[0]].chr, start, stop, bams, subsample=20, ax=axes[-1], intron_cnt=True, log=True, title='Expression all Samples', xlim=xlim, color_cov=cmap_cov(norm(s)), color_intron_edge=cmap_edg(norm(s)), grid=True)
+                    cov_from_bam(genes[i[0]].chr, start, stop, bams, subsample=20, ax=axes[-1], intron_cnt=True, log=options.log, title='Expression all Samples', xlim=xlim, color_cov=cmap_cov(norm(s)), color_intron_edge=cmap_edg(norm(s)), grid=True)
                 axes[-1].set_xlabel('')
 
         ### plot the identified events for this gene
