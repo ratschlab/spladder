@@ -134,11 +134,11 @@ def default_settings():
     CFG['rproc'] = 0
 
     ### define which output files are written
-    CFG['output_txt'] = 0
-    CFG['output_confirmed_gff3'] = 1
-    CFG['output_confirmed_txt'] = 1
-    CFG['output_filtered_txt'] = 0
-    CFG['output_confirmed_tcga'] = 0
+    CFG['output_txt'] = False
+    CFG['output_confirmed_gff3'] = True
+    CFG['output_confirmed_txt'] = True
+    CFG['output_filtered_txt'] = False
+    CFG['output_confirmed_tcga'] = False
 
     ### settings for truncation detection mode
     CFG['detect_trunc'] = False

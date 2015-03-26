@@ -210,10 +210,11 @@ def analyze_events(CFG, event_type):
         else:
             print '\nReporting complete %s events:' % event_type
 
-        if os.path.exists(fn_out_txt):
-            print '%s already exists' % fn_out_txt
-        else:
-            write_events_txt(fn_out_txt, CFG['strains'], events_all, fn_out_count)
+        if CFG['output_txt']:
+            if os.path.exists(fn_out_txt):
+                print '%s already exists' % fn_out_txt
+            else:
+                write_events_txt(fn_out_txt, CFG['strains'], events_all, fn_out_count)
 
         if confirmed_idx.shape[0] == 0:
             print '\nNo %s event could be confirmed. - Nothing to report.' % event_type
@@ -221,33 +222,37 @@ def analyze_events(CFG, event_type):
         else:
             print '\nReporting confirmed %s events:' % event_type
 
-        if os.path.exists(fn_out_conf_gff3):
-            print '%s already exists' % fn_out_conf_gff3
-        else:
-            write_events_gff3(fn_out_conf_gff3, events_all, confirmed_idx)
+        if CFG['output_confirmed_gff3']:
+            if os.path.exists(fn_out_conf_gff3):
+                print '%s already exists' % fn_out_conf_gff3
+            else:
+                write_events_gff3(fn_out_conf_gff3, events_all, confirmed_idx)
 
-        if os.path.exists(fn_out_conf_txt):
-            print '%s already exists' % fn_out_conf_txt
-        else:
-            write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+        if CFG['output_confirmed_txt']:
+            if os.path.exists(fn_out_conf_txt):
+                print '%s already exists' % fn_out_conf_txt
+            else:
+                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
 
-        if os.path.exists(fn_out_conf_tcga):
-            print '%s already exists' % fn_out_conf_tcga
-        else:
-            write_events_tcga(fn_out_conf_tcga, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+        if CFG['output_confirmed_tcga']:
+            if os.path.exists(fn_out_conf_tcga):
+                print '%s already exists' % fn_out_conf_tcga
+            else:
+                write_events_tcga(fn_out_conf_tcga, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
 
-        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
-        if os.path.exists(fn_out_conf_txt):
-            print '%s already exists' % fn_out_conf_txt
-        else:
-            print '\nWriting filtered events (sample freq 0.05):'
-            cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * CFG['strains'].shape[0]))[0]
-            write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+        if CFG['output_filtered_txt']:
+            fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
+            if os.path.exists(fn_out_conf_txt):
+                print '%s already exists' % fn_out_conf_txt
+            else:
+                print '\nWriting filtered events (sample freq 0.05):'
+                cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * CFG['strains'].shape[0]))[0]
+                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
 
-        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
-        if os.path.exists(fn_out_conf_txt):
-            print '%s already exists' %  fn_out_conf_txt
-        else:
-            print '\nWriting filtered events (sample freq 0.01):'
-            cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * CFG['strains'].shape[0]))[0]
-            write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+            fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
+            if os.path.exists(fn_out_conf_txt):
+                print '%s already exists' %  fn_out_conf_txt
+            else:
+                print '\nWriting filtered events (sample freq 0.01):'
+                cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * CFG['strains'].shape[0]))[0]
+                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
