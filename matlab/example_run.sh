@@ -37,3 +37,6 @@ mkdir -p $outdir
 
 ### run SplAdder.
 ./bin/spladder.sh -b $bams -o $outdir -a $anno -v y -M merge_graphs -t exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip -c 3 -p n
+
+### check if the test run was successful
+md5sum --quiet -c examples/result_tiny.md5 && echo -e "\n\nALL RESULT FILES ARE CORRECT." || echo -e "\n\nTEST FAILED. - Please check your installation."
