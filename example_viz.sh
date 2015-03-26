@@ -14,5 +14,5 @@ then
 fi
 
 ### run visualization
-python spladder_viz.py -o ${basedir}/result_tiny -b $bams -c 3 -g AT1G21690
+python spladder_viz.py -o ${basedir}/result_tiny -b $bams -c 3 -g AT1G21690 -t
 

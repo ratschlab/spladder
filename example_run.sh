@@ -16,14 +16,14 @@ then
     if [ "$DNLD" == yes ]
     then
         cd ${basedir}
-        [[ ! -f NMD_WT1.tiny.bam ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_WT1.tiny.bam
-        [[ ! -f NMD_WT1.tiny.bam.bai ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_WT1.tiny.bam.bai
-        [[ ! -f NMD_WT2.tiny.bam ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_WT2.tiny.bam
-        [[ ! -f NMD_WT2.tiny.bam.bai ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_WT2.tiny.bam.bai
-        [[ ! -f NMD_DBL1.tiny.bam ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_DBL1.tiny.bam
-        [[ ! -f NMD_DBL1.tiny.bam.bai ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_DBL1.tiny.bam.bai
-        [[ ! -f NMD_DBL2.tiny.bam ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_DBL2.tiny.bam
-        [[ ! -f NMD_DBL2.tiny.bam.bai ]] && wget http://cbio.mskcc.org/public/raetschlab/user/akahles/data/spladder/examples_small/NMD_DBL2.tiny.bam.bai
+        [[ ! -f NMD_WT1.tiny.bam ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_WT1.tiny.bam
+        [[ ! -f NMD_WT1.tiny.bam.bai ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_WT1.tiny.bam.bai
+        [[ ! -f NMD_WT2.tiny.bam ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_WT2.tiny.bam
+        [[ ! -f NMD_WT2.tiny.bam.bai ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_WT2.tiny.bam.bai
+        [[ ! -f NMD_DBL1.tiny.bam ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_DBL1.tiny.bam
+        [[ ! -f NMD_DBL1.tiny.bam.bai ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_DBL1.tiny.bam.bai
+        [[ ! -f NMD_DBL2.tiny.bam ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_DBL2.tiny.bam
+        [[ ! -f NMD_DBL2.tiny.bam.bai ]] && wget http://ftp.ratschlab.org/user/akahles/data/spladder/examples_small/NMD_DBL2.tiny.bam.bai
         cd ..
     else
         echo "Nothing to process. Exiting."
