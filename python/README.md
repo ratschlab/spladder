@@ -1,4 +1,4 @@
-Welcome to the Matlab implementation of SplAdder
+Welcome to the Python implementation of SplAdder
 ------------------------------------------------
 
 This README describes the Matlab version of the software SplAdder. Briefly, the
@@ -9,19 +9,15 @@ extracts alternative splicing events from the graph and quantifies the events
 based on the alignment data, The quantified events can then be used for
 differential analysis.
 
-Dependencies
-------------
+Dependencies and Installation
+-----------------------------
 
-SplAdder is written in Matlab code and requires Matlab to run. As it makes use
-of the HDF5 storage format, currently difficulties arise from the usage of
-Octave. In case the compatibility issues between Matlab and Octave regarding
-HDF5 should get resolved, SplAdder might be able to run also under Octave.
-
-Installation
-------------
-
-Please see the file INSTALL for details on how to install SplAdder on your
-system.
+The Python version of SplAdder requires only few standard packages that are part
+of most Python package managers (e.g., [conda](http://conda.pydata.org/)):
+* scipy
+* pysam
+* h5py
+SplAdder will not run without these packages installed. 
 
 Authors
 -------
@@ -39,7 +35,7 @@ Documentation
 This README provides a quick walk-through of a basic SplAdder run. For further
 reading, please consider the file DOCUMENTATION.
 
-The SplAdder executable *spladder.sh* can be found in the bin directory.
+The main SplAdder script *spladder.py* can be found at top level of this directory.
 Invoking the executable without any parameters will print a description of the
 command line interface to the screen.
 
