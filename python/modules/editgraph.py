@@ -698,7 +698,7 @@ def insert_intron_edges(genes, CFG):
         print 'num_unused_introns: $i' % sp.sum(num_unused_introns)
 
     merge_idx = unique_rows(merge_idx)
-    rm_map = sp.zeros((1, len(genes)))
+    rm_map = sp.zeros_like(genes, dtype='int')
 
     for i in range(merge_idx.shape[0]):
         
