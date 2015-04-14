@@ -408,7 +408,7 @@ def insert_intron_edges(genes, CFG):
             idx1 = sp.where(sp.absolute(genes[i].splicegraph.vertices[1, :] - genes[i].introns[s][j, 0]) <= intron_tol)[0]
             ### find exons within same gene whose start coincides with intron end
             idx2 = sp.where(sp.absolute(genes[i].splicegraph.vertices[0, :] - genes[i].introns[s][j, 1]) <= intron_tol)[0]
-            
+
             ### intron boundaries do not coincide with any exon boundaries
             if idx1.shape[0] == 0 and idx2.shape[0] == 0:
                 both_missing[s] += 1
@@ -500,7 +500,7 @@ def insert_intron_edges(genes, CFG):
                         gg = genes[i]
                         gg.strand = strands[s]
                         gg.strands = strands[s]
-                        gg.start = genes[i].splicegraph.vertices[1, idx1__] ### stop of previous exon
+                        gg.start = genes[i].splicegraph.vertices[1, idx1__][0] ### stop of previous exon
                         gg.stop = genes[i].introns[s][j, 0]  ### end of presumable exon
                         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
                         ### TODO: make the following a configurable
@@ -582,7 +582,7 @@ def insert_intron_edges(genes, CFG):
                         gg.strand = strands[s]
                         gg.strands = strands[s]
                         gg.start = genes[i].introns[s][j, 1]  ### start of presumable exon
-                        gg.stop = genes[i].splicegraph.vertices[1, idx2__]  ### stop of next exon
+                        gg.stop = genes[i].splicegraph.vertices[1, idx2__][0]  ### stop of next exon
                         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
                         ### TODO: make configurable
                         if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
