@@ -112,11 +112,11 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
                     if c_idx.shape[0] > 0:
                         genes2[g_idx].edge_count[c_idx, :][:, c_idx] = genes2[g_idx].edge_count[c_idx, :][:, c_idx] + genes[j].splicegraph.edges[a_idx, :][:, a_idx]
                 else:
-                    m_graph = sp.r_[sp.c_[genes[j].splicegraph.vertices.T, sp.ones((s1_len, 1))], sp.c_[genes2[g_idx].splicegraph.vertices.T, 2 * sp.ones((s2_len, 1))]]
+                    m_graph = sp.r_[sp.c_[genes[j].splicegraph.vertices.T, sp.ones((s1_len, 1), dtype='int')], sp.c_[genes2[g_idx].splicegraph.vertices.T, 2 * sp.ones((s2_len, 1), dtype='int')]]
                     tmp, s_idx = sort_rows(m_graph[:, 0:3], index=True)
                     m_graph = m_graph[s_idx, :]
 
-                    um_graph, u_f = unique(m_graph[:, 0:2], index=True)
+                    um_graph, u_f = unique_rows(m_graph[:, 0:2], index=True)
                     u_l = sp.r_[u_f[1:] - 1, m_graph.shape[0] - 1]
                     u_graph = u_l - u_f
                     
