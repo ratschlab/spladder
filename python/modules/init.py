@@ -98,6 +98,17 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
             except ValueError:
                 t_idx = len(genes[gene_id].transcripts)
                 genes[gene_id].transcripts.append(trans_id)
+            except KeyError:
+                if 'gene_type' in tags:
+                    gene_type = tags['gene_type']
+                elif 'gene_biotype' in tags:
+                    gene_type = tags['gene_biotype']
+                else:
+                    gene_type = None
+                print >> sys.stderr, 'WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (infile, trans_id)
+                genes[gene_id] = Gene(name=gene_id, start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
+                t_idx = len(genes[gene_id].transcripts)
+                genes[gene_id].transcripts.append(trans_id)
             genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
 
     ### add splicegraphs
