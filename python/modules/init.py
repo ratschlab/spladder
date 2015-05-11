@@ -67,6 +67,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
     CFG = append_chrms(sp.sort(sp.unique(chrms)), CFG)
 
     counter = 1
+    inferred_genes = False
     for line in open(infile, 'r'):
         if CFG is not None and CFG['verbose'] and counter % 10000 == 0:
             print >> sys.stderr, '.',
@@ -109,7 +110,14 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
                 genes[gene_id] = Gene(name=gene_id, start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
                 t_idx = len(genes[gene_id].transcripts)
                 genes[gene_id].transcripts.append(trans_id)
+                inferred_genes = True
             genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
+
+    ### post-process in case we have inferred genes
+    if inferred_genes:
+        for gene in genes:
+            genes[gene].start = min([x.min() for x in genes[gene].exons])
+            genes[gene].stop = max([x.max() for x in genes[gene].exons])
 
     ### add splicegraphs
     for gene in genes:
