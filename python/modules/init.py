@@ -52,7 +52,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
             continue
         sl = line.strip().split('\t')
         tags = get_tags_gtf(sl[8])
-        if sl[2] in ['gene', 'Gene']:
+        if sl[2].lower() in ['gene', 'pseudogene', 'unprocessed_pseudogene', 'transposable_element_gene']:
             try:
                 start = int(sl[3]) - 1
             except ValueError:
