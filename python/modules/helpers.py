@@ -1,5 +1,10 @@
 import scipy as sp
 
+if __package__ is None:
+    __package__ = 'modules'
+
+from .reads import *
+
 def make_introns_feasible(introns, genes, CFG):
 # introns = make_introns_feasible(introns, genes, CFG)
 
