@@ -14,9 +14,9 @@ Dependencies and Installation
 
 The Python version of SplAdder requires only few standard packages that are part
 of most Python package managers (e.g., [conda](http://conda.pydata.org/)):
-* scipy
-* pysam
-* h5py
+* scipy (version >= 0.12 tested)
+* pysam (version >= 0.7 required)
+* h5py (version >= 2.2.0 tested)
 SplAdder will not run without these packages installed. 
 
 Authors
