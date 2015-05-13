@@ -29,10 +29,10 @@ be able to run also under Octave.
 However, future development is planned to focus on the Python branch. The Python
 version of the code has been developed in python 2.7 and requires the following
 packages:
-* h5py
-* pysam
-* scipy
-* matplotlib (for the visualization code)
+* scipy (version >= 0.12 tested)
+* pysam (version >= 0.7 required)
+* h5py (version >= 2.2.0 tested)
+* matplotlib (for the visualization code only; version >= 1.4.0 tested)
 
 Installation
 ------------
