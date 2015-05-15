@@ -235,8 +235,8 @@ def parse_args(options):
         CFG['log_fname'] = 'stdout'
         CFG['fd_log'] = sys.stdout
 
-    if options.user != '-':
-        CFG['user_settings'] = options.user
+    #if options.user != '-':
+    #    CFG['user_settings'] = options.user
 
     CFG['read_length'] = options.readlen
 
