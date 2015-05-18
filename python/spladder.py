@@ -71,7 +71,7 @@ def parse_options(argv):
     #optional.add_option('-', '--', dest='', metavar='y|n', help='', default=False)
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
     experimental.add_option('-p', '--parallel', dest='parallel', metavar='y|n', help='use parallel implementation [n]', default='n')
-    experimental.add_option('-R', '--replicates', dest='replicates', metavar='R1,R2,...', help='replicate structure of files (same number as alignment files) [all R1 - no replicated]', default='-')
+    experimental.add_option('-R', '--replicates', dest='replicates', metavar='1,1,2,2,...', help='replicate structure of files (same number as alignment files) [all 1 - no replicated]', default='-')
     experimental.add_option('-U', '--intron_cov', dest='intron_cov', metavar='y|n', help='count intron coverage [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
