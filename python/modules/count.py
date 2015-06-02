@@ -28,7 +28,9 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
     intron_tol = 0 
 
+    sys.stdout.write('genes: %i\n' % genes.shape[0])
     for f in range(counts.shape[0]):
+        sys.stdout.write('sample %i/%i\n' % (f, counts.shape[0])) 
         ### iterate over all genes and generate counts for
         ### the segments in the segment graph
         ### and the splice junctions in the splice graph
