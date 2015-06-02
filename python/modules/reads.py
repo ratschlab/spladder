@@ -82,7 +82,9 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
                 if o[0] == 3:
                     introns.append([p, p + o[1]])
                 if o[0] in [0, 2]:
-                    r = range(max(p-start, 0), min(p + o[1] - start, stop - start))
+                    r = range(int(max(p-start, 0)), int(min(p + o[1] - start, stop - start)))
+                    if len(r) > 1000:
+                        assert False
                     i.extend([read_cnt] * len(r))
                     j.extend(r)
                     #for pp in range(p, p + o[1]):
@@ -104,11 +106,20 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
 
             read_cnt += 1
 
-        i = sp.array(i, dtype='int')
-        j = sp.array(j, dtype='int')
-
         ### construct sparse matrix
-        read_matrix = scipy.sparse.coo_matrix((sp.ones(i.shape), (i, j)), shape = (read_cnt, stop - start), dtype='bool')
+        try:
+            i = sp.array(i, dtype='int')
+            j = sp.array(j, dtype='int')
+            read_matrix = scipy.sparse.coo_matrix((sp.ones(i.shape[0]), (i, j)), shape = (read_cnt, stop - start), dtype='bool')
+        except ValueError:
+            step = 1000000
+            _k = step
+            assert len(i) > _k
+            read_matrix = scipy.sparse.coo_matrix((sp.ones(_k), (i[:_k], j[:_k])), shape = (read_cnt, stop - start), dtype='bool')
+            while _k < len(i):
+                _l = min(len(i), _k + step)
+                read_matrix += scipy.sparse.coo_matrix((sp.ones(_l - _k), (i[_k:_l], j[_k:_l])), shape = (read_cnt, stop - start), dtype='bool')                
+                _k = _l
 
     ### construct introns
     if len(introns) > 0:
@@ -153,7 +164,7 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
 
         if verbose and  b % 10 == 0:
             print '\radd_exon_track_from_bam: %i(%i)' % (b, blocks.shape[0])
-        block_len = blocks[b].stop - blocks[b].start
+        block_len = int(blocks[b].stop - blocks[b].start)
 
         ## get data from bam
         if 'exon_track' in types:
