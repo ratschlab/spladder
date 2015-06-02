@@ -946,7 +946,6 @@ def start_proc(fname, data_fname, rm_flag=True):
             if mod != module[0]:
                 exec('%s = %s' % (mod, module[0]))
                 
-
     ### load data into environment
     P1 = cPickle.load(open(data_fname, 'r'))
 
