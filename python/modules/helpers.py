@@ -45,6 +45,9 @@ def get_filename(which, CFG):
     prune_tag = ''
     if CFG['do_prune']:
         prune_tag = '_pruned'
+    validate_tag = ''
+    if CFG['validate_splicegraphs']:
+        validate_tag = '.validated'
 
     ### iterate over return file types    
     if which in ['fn_count_in', 'fn_count_out']:
@@ -65,3 +68,5 @@ def get_filename(which, CFG):
             return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
         else:
             return ''
+    elif which == 'fn_out_merge_val':
+        return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], validate, prune_tag))
