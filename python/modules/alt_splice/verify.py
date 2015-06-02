@@ -13,10 +13,10 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # [verified, info] = verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG) 
 
     verified = [0, 0, 0, 0, 0]
-    info = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+    info = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # (0) valid, (1) exon_pre_cov, (2) exons_cov, (3) exon_aft_cov
     # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
-    # (7) sum_inner_exon_conf, (8) num_inner_exon
+    # (7) sum_inner_exon_conf, (8) num_inner_exon, (9) len_inner_exon
 
     ### check validity of exon coordinates (>=0)
     if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
@@ -78,6 +78,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
 
     # num_inner_exon
     info[8] = event.exons2.shape[0] - 2
+    info[9] = sp.sum(event.exons2[1:-1, 1] - event.exons2[1:-1, 0])
     if info[4] >= CFG['mult_exon_skip']['min_non_skip_count']:
         verified[1] = 1
     if info[5] >= CFG['mult_exon_skip']['min_non_skip_count']:
