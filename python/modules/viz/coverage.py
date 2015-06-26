@@ -11,7 +11,7 @@ import pdb
 
 from .highlight import *
 
-def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verbose=False, collapsed=True):
+def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verbose=False, collapsed=True, bins=0):
     """Internal function that queries the bam files and produces the counts"""
 
     ### PYSAM CIGAR ENCODING
@@ -89,6 +89,7 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
 
     ### subsampling
     if subsample > 0 and len(files) > subsample:
+        npr.seed(23)
         files = sp.array(files)
         files = npr.choice(files, subsample)
 
@@ -122,17 +123,19 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
         plt.savefig(outfile, dpi=300, format=frm)
 
 
-def cov_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
-                 bins = None, log = False, ax = None, ymax = 0, outfile = None,
-                 frm = 'pdf', xlim = None, title = None, xoff = None, yoff = None,
-                 intron_cov = False, intron_cnt = False, marker_pos = None, col_idx=None,
+def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
+                 bins=None, log=False, ax=None, ymax=0, outfile=None,
+                 frm='pdf', xlim=None, title=None, xoff=None, yoff=None,
+                 intron_cov=False, intron_cnt=False, marker_pos=None, col_idx=None,
                  color_cov='blue', color_intron_cov='red', color_intron_edge='green', 
-                 grid=False, strand=None, highlight=None, highlight_color='magenta', highlight_label=None):
+                 grid=False, strand=None, highlight=None, highlight_color='magenta', highlight_label=None,
+                 min_intron_cnt=0, return_legend_handle=False, label=None):
     """This function takes a list of bam files and a set of coordinates (chrm, start, stop), to 
        plot a coverage overview of that files in that region."""
 
     ### subsampling
     if subsample > 0 and len(files) > subsample:
+        npr.seed(23)
         files = sp.array(files)
         files = npr.choice(files, subsample)
 
@@ -149,6 +152,8 @@ def cov_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
     if intron_cnt: 
         for intron in intron_list:
             intron_list[intron] = math.ceil(intron_list[intron] / float(len(files)))
+        if min_intron_cnt > 0:
+            intron_list = dict([(x, intron_list[x]) for x in intron_list if intron_list[x] >= min_intron_cnt])
     if col_idx is not None:
         counts = counts[col_idx]
         if intron_cov:
@@ -194,8 +199,9 @@ def cov_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
         fig = plt.figure(figsize = (10, 4))
         ax = fig.add_subplot(111)
     if intron_cov:
-        ax.fill_between(counts_x, bin_intron_counts, facecolor=color_intron_cov, edgecolor='none', alpha = 0.5)
-    ax.fill_between(counts_x, bin_counts, facecolor=color_cov, edgecolor='none', alpha = 0.5)
+        ax.fill_between(counts_x, bin_intron_counts, facecolor=color_intron_cov, edgecolor='none', alpha=0.5)
+
+    ax.fill_between(counts_x, bin_counts, facecolor=color_cov, edgecolor='none', alpha=0.5)
     #ax.set_xticklabels([str(int(x)) for x in sp.linspace(start, stop, num = len(ax.get_xticklabels()))])
     ax.set_xlabel('Position on contig %s' % chrm)
 
@@ -246,10 +252,15 @@ def cov_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
     if outfile is not None:
         plt.savefig(outfile, dpi = 1200, format = frm)
 
+    if return_legend_handle:
+        if label is not None:
+            return patches.Patch(color=color_cov, alpha=0.5, label=label)
+        else:
+            return patches.Patch(color=color_cov, alpha=0.5, label='Expression')
+
 def add_intron_patch(ax, start, stop, cnt):
 
     import matplotlib.path as mpath
-    import matplotlib.patches as mpatches
 
     Path = mpath.Path
     pdata = [(Path.MOVETO, (start, 0)), \
@@ -262,7 +273,7 @@ def add_intron_patch(ax, start, stop, cnt):
 
     codes, verts = zip(*pdata)
     path = mpath.Path(verts, codes)
-    patch = mpatches.PathPatch(path, facecolor='g', alpha=0.5)
+    patch = patches.PathPatch(path, facecolor='g', alpha=0.5)
     ax.add_patch(patch)
 
 def add_intron_patch2(ax, start, stop, cnt, color='green'):
