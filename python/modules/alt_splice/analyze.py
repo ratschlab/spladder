@@ -134,7 +134,6 @@ def analyze_events(CFG, event_type):
                     print 'Collecting results from chunks ...'
                     for i in range(0, events_all.shape[0], chunk_size_events):
                         idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
-                        ev_ = []
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
                             idx_strains = sp.arange(j, min(j + chunk_size_strains, len(CFG['strains'])))
                             print '\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(CFG['strains']))
@@ -142,21 +141,23 @@ def analyze_events(CFG, event_type):
                             if not os.path.exists(out_fn):
                                 print >> sys.stderr, 'ERROR: not finished %s' % out_fn
                                 sys.exit(1)
-                            ev, counts = cPickle.load(open(out_fn, 'r'))
+                            ev_, counts_ = cPickle.load(open(out_fn, 'r'))
                             if j == 0:
-                                ev_ = ev
+                                ev = ev_
+                                counts = counts_
                             else:
+                                counts = sp.r_[counts, counts_]
                                 for jj in range(len(ev_)):
-                                    ev_[jj].verified[idx_strains, :] = ev[jj].verified
+                                    ev[jj].verified = sp.r_[ev[jj].verified, ev_[jj].verified]
                                     
                         if i == 0:
                             OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(CFG['strains']), len(event_features[event_type]), None), compression='gzip')
                         else:
                             tmp = OUT['event_counts'].shape
-                            OUT['event_counts'].resize((tmp[0], tmp[1], tmp[2] + len(ev_)))
+                            OUT['event_counts'].resize((tmp[0], tmp[1], tmp[2] + len(ev)))
                             OUT['event_counts'][:, :, tmp[2]:] = counts
-                        events_all_ = sp.r_[events_all_, ev_]
-                        gene_idx_ = sp.r_[gene_idx_, [x.gene_idx for x in ev_]]
+                        events_all_ = sp.r_[events_all_, ev]
+                        gene_idx_ = sp.r_[gene_idx_, [x.gene_idx for x in ev]]
 
                     assert(events_all.shape[0] == events_all_.shape[0])
                     assert(sp.all([sp.all(events_all[e].exons1 == events_all_[e].exons1) for e in range(events_all.shape[0])]))
