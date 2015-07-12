@@ -22,13 +22,20 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
 
     read_cnt = 0
     introns = []
-    read_matrix = sp.zeros((0, stop - start))
+    if collapse:
+        read_matrix = sp.zeros((1, stop - start), dtype='int')
+    else:
+        read_matrix = scipy.sparse.coo_matrix((sp.ones(0), ([], [])), shape = (0, stop - start), dtype='bool')
+
+    reads_sec = 0
+    reads_map = 0
 
     #t0 = time.time()
-    reads = 0
-    reads2 = 0
 
     #print >> sys.stderr, 'querying %s:%i-%i' % (chr_name, start, stop)
+    ### TODO THIS IS A HACK
+    if chr_name == 'MT':
+        return (read_matrix, sp.zeros((0, 2), dtype='int'))
 
     if infile.gettid(chr_name) > -1:
         ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
@@ -37,7 +44,7 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
             if read.is_unmapped:
                 continue
             if primary_only and read.is_secondary:
-                reads += 1
+                reads_sec += 1
                 continue
 
             is_spliced = ('N' in read.cigarstring)
@@ -45,7 +52,7 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
                 if not spliced:
                     continue
             elif not mapped:
-                reads2 += 1
+                reads_map += 1
                 continue
 
             tags = dict(read.tags)
@@ -82,15 +89,18 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
                 if o[0] == 3:
                     introns.append([p, p + o[1]])
                 if o[0] in [0, 2]:
-                    r = range(int(max(p-start, 0)), int(min(p + o[1] - start, stop - start)))
-                    if len(r) > 1000:
-                        assert False
-                    i.extend([read_cnt] * len(r))
-                    j.extend(r)
-                    #for pp in range(p, p + o[1]):
-                    #    if pp - start >= 0 and pp < stop:
-                    #        i.append(read_cnt)
-                    #        j.append(pp - start)
+                    if collapse:
+                        read_matrix[0, int(max(p-start, 0)):int(min(p + o[1] - start, stop - start))] += 1
+                    else:
+                        r = range(int(max(p-start, 0)), int(min(p + o[1] - start, stop - start)))
+                        #if len(r) > 1000:
+                        #    assert False
+                        i.extend([read_cnt] * len(r))
+                        j.extend(r)
+                        #for pp in range(p, p + o[1]):
+                        #    if pp - start >= 0 and pp < stop:
+                        #        i.append(read_cnt)
+                        #        j.append(pp - start)
                 if o[0] in [0, 2, 3]:
                     p += o[1]
 
@@ -107,19 +117,20 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
             read_cnt += 1
 
         ### construct sparse matrix
-        try:
-            i = sp.array(i, dtype='int')
-            j = sp.array(j, dtype='int')
-            read_matrix = scipy.sparse.coo_matrix((sp.ones(i.shape[0]), (i, j)), shape = (read_cnt, stop - start), dtype='bool')
-        except ValueError:
-            step = 1000000
-            _k = step
-            assert len(i) > _k
-            read_matrix = scipy.sparse.coo_matrix((sp.ones(_k), (i[:_k], j[:_k])), shape = (read_cnt, stop - start), dtype='bool')
-            while _k < len(i):
-                _l = min(len(i), _k + step)
-                read_matrix += scipy.sparse.coo_matrix((sp.ones(_l - _k), (i[_k:_l], j[_k:_l])), shape = (read_cnt, stop - start), dtype='bool')                
-                _k = _l
+        if not collapse:
+            try:
+                i = sp.array(i, dtype='int')
+                j = sp.array(j, dtype='int')
+                read_matrix = scipy.sparse.coo_matrix((sp.ones(i.shape[0]), (i, j)), shape = (read_cnt, stop - start), dtype='bool')
+            except ValueError:
+                step = 1000000
+                _k = step
+                assert len(i) > _k
+                read_matrix = scipy.sparse.coo_matrix((sp.ones(_k), (i[:_k], j[:_k])), shape = (read_cnt, stop - start), dtype='bool')
+                while _k < len(i):
+                    _l = min(len(i), _k + step)
+                    read_matrix += scipy.sparse.coo_matrix((sp.ones(_l - _k), (i[_k:_l], j[_k:_l])), shape = (read_cnt, stop - start), dtype='bool')                
+                    _k = _l
 
     ### construct introns
     if len(introns) > 0:
@@ -128,22 +139,22 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
         introns = sp.zeros((0, 2), dtype='int')
 
     #t1 = time.time()
-    #print >> sys.stderr, 'This call took %i secs (took %i reads, %i were secondary, %i were unspliced)' % (t1 - t0, read_matrix.shape[0], reads, reads2)
+    #print >> sys.stderr, 'This call took %i secs (took %i reads, %i were secondary, %i were filtered for being unspliced)' % (t1 - t0, read_cnt, reads_sec, reads_map)
 
-    if collapse:
-        return (read_matrix.sum(axis = 0), introns)
-    else:
-        return (read_matrix, introns)
+    #if collapse:
+    #    return (read_matrix.sum(axis = 0), introns)
+    #else:
+    return (read_matrix, introns)
 
 
 def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, primary_only=False):
     # blocks coordinates are assumed to be in closed intervals
 
-    if filter is None:
-        filter = dict()
-        filter['intron'] = 20000
-        filter['exon_len'] = 8
-        filter['mismatch']= 1
+    #if filter is None:
+    #    filter = dict()
+    #    filter['intron'] = 20000
+    #    filter['exon_len'] = 8
+    #    filter['mismatch']= 1
 
     if not types: 
         print 'add_reads_from_bam: nothing to do'
@@ -230,12 +241,15 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
                         s_idx = sp.argsort(introns[:, 0])
                         introns = introns[s_idx, :]
                     
-                    if 'mincount' in filter:
+                    #if not filter is None and 'mincount' in filter:
+                    if filter is not None and 'mincount' in filter:
                         take_idx = sp.where(introns[:, 2] >= filter['mincount'])[0]
                         if take_idx.shape[0] > 0:
                             intron_list.append(introns[take_idx, :])
                         else:
                             intron_list.append(sp.zeros((0, 3), dtype='int'))
+                    else:
+                        intron_list.append(introns)
                 else:
                     intron_list.append(sp.zeros((0, 3), dtype='int'))
             ## add polya signal track
@@ -285,7 +299,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
         contig_name = block.chr
         strand = block.strand
         ### check for filter maps -> requires uncollapsed reads
-        if 'maps'in filter:
+        if not filter is None and 'maps'in filter:
             collapse = False
         else:
             collapse = True
@@ -293,7 +307,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
         (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only)
 
         ### compute total coverages
-        if 'maps' in filter:
+        if not filter is None and 'maps' in filter:
             ### TODO re-implement these filters !!!
             ### apply filters
             if 'repeat_map' in filter['maps']:
