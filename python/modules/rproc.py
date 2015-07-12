@@ -923,6 +923,7 @@ def start_proc(fname, data_fname, rm_flag=True):
 
     
     ### create environment
+    import_list = []
     for mod in options['imports']:
         module = options['imports'][mod]
         if module[1] == 'builtin':
@@ -931,19 +932,32 @@ def start_proc(fname, data_fname, rm_flag=True):
         else:
             mod_sl = module[0].split('.')
             subpaths = get_subpaths(os.path.dirname(module[1]).split('/'))
+            imported = True
             for m in range(len(mod_sl)):
-                exec('exists = \'%s\' in globals().items()' % '.'.join(mod_sl[:m+1]))
-                if not exists:
+                exec('exists = \'%s\' in globals().keys()' % '.'.join(mod_sl[:m+1]))
+                if not exists and not '.'.join(mod_sl[:m+1]) in import_list and not 'rproc' in mod_sl[:m+1]:
                     try:
                         (f, fn, des) = imp.find_module(mod_sl[m], subpaths)
                         try:
+                            ### TODO: This is a bit hacky, but the only way that linalg can be loaded right now
+                            if fn.endswith('scipy'):
+                                import scipy
+                                import_list.append('scipy')
+                                continue
+                            #print '%s = imp.load_module(\'%s\', f, fn, des)' % ('.'.join(mod_sl[:m+1]), '.'.join(mod_sl[:m+1]))
                             exec('%s = imp.load_module(\'%s\', f, fn, des)' % ('.'.join(mod_sl[:m+1]), '.'.join(mod_sl[:m+1])))
+                            import_list.append('.'.join(mod_sl[:m+1]))
+                        except:
+                            imported = False
                         finally:
                             if f is not None:
                                 f.close()
                     except ImportError:
                         print >> sys.stderr, 'Module %s could not be found' % '.'.join(mod_sl[:m+1])
-            if mod != module[0]:
+                        imported = False
+                else:
+                    imported = False
+            if mod != module[0] and imported:
                 exec('%s = %s' % (mod, module[0]))
                 
     ### load data into environment
