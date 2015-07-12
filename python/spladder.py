@@ -172,7 +172,7 @@ def spladder():
                 print >> sys.stdout, 'All result files already exist.'
             else:
                 if CFG['rproc']:
-                    jobinfo.append(rp.rproc('spladder_core', CFG, 65000, CFG['options_rproc'], 60*60))
+                    jobinfo.append(rp.rproc('spladder_core', CFG, 35000, CFG['options_rproc'], 60*60))
                 else:
                     spladder_core(CFG)
 
