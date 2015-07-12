@@ -1,10 +1,10 @@
+if __package__ is None:
+    __package__ ='modules'
+
 import cPickle
 import math
 import h5py
 import scipy as sp
-
-if __package__ is None:
-    __package__ ='modules'
 
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
@@ -45,7 +45,8 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
             gg.stop = gg.segmentgraph.segments.ravel().max()
 
             ### add RNA-seq evidence to the gene structure
-            (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
+            #(tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
+            (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);
             intron_list = intron_list[0] ### TODO
 
             ### extract mean exon coverage for all segments
@@ -128,13 +129,18 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                 PAR['fn_bam'] = CFG['bam_fnames']
                 PAR['fn_out'] = fn
                 PAR['CFG'] = CFG
-                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 30000, CFG['options_rproc'], 60))
+                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 6000, CFG['options_rproc'], 60*48))
 
         rp.rproc_wait(jobinfo, 30, 1.0, -1)
 
-        ### merge results
+        ### merge results from count chunks
+        if 'verbose' in CFG and CFG['verbose']:
+            print '\nCollecting count data from chunks ...\n'
+
         for c_idx in range(0, genes.shape[0], chunksize):
             cc_idx = min(genes.shape[0], c_idx + chunksize)
+            if 'verbose' in CFG and CFG['verbose']:
+                print 'collecting chunk %i-%i (%i)' % (c_idx, cc_idx, genes.shape[0])
             fn = fname_out.replace('.pickle', '.chunk_%i_%i.pickle' % (c_idx, cc_idx))
             if not os.path.exists(fn):
                 print >> sys.stderr, 'ERROR: Not all chunks in counting graph coverage completed!'
