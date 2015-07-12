@@ -1,6 +1,7 @@
 from scipy.sparse import lil_matrix
 from numpy.matlib import repmat
 import scipy as sp
+import sys
 
 def detect_multipleskips(genes, idx_alt):
     # [idx_multiple_skips, exon_multiple_skips, id_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
@@ -9,9 +10,12 @@ def detect_multipleskips(genes, idx_alt):
     idx_multiple_skips = []
     id_multiple_skips = []
     exon_multiple_skips = []
-    for ix in idx_alt:
-        if ix % 50 == 0:
-            print '.',
+    for iix, ix in enumerate(idx_alt):
+
+        sys.stdout.write('.')
+        if (iix + 1) % 50 == 0:
+            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_multiple_skips)))
+        sys.stdout.flush()
         num_exons = genes[ix].splicegraph.get_len()
         edges = genes[ix].splicegraph.edges
         labels = repmat(sp.arange(num_exons), num_exons, 1).T
@@ -101,9 +105,11 @@ def detect_intronreten(genes, idx_alt):
 
     idx_intron_reten = []
     intron_intron_reten = []
-    for ix in idx_alt:
-        if ix % 50 == 0:
-            print '.',
+    for iix, ix in enumerate(idx_alt):
+        sys.stdout.write('.')
+        if (iix + 1) % 50 == 0:
+            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_intron_reten)))
+        sys.stdout.flush()
         num_exons = genes[ix].splicegraph.get_len()
         vertices = genes[ix].splicegraph.vertices
         edges = genes[ix].splicegraph.edges
@@ -137,9 +143,11 @@ def detect_exonskips(genes, idx_alt):
 
     idx_exon_skips = []
     exon_exon_skips = []
-    for ix in idx_alt:
-        if ix % 50 == 0:
-            print '.',
+    for iix, ix in enumerate(idx_alt):
+        sys.stdout.write('.')
+        if (iix + 1) % 50 == 0:
+            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_exon_skips)))
+        sys.stdout.flush()
         num_exons = genes[ix].splicegraph.get_len()
         edges = genes[ix].splicegraph.edges
         for exon_idx in range(num_exons - 2): #first exon
@@ -167,9 +175,11 @@ def detect_altprime(genes, idx_alt):
     exon_alt_5prime = []
     exon_alt_3prime = []
 
-    for ix in idx_alt:
-        if ix % 50 == 0:
-            print '.',
+    for iix, ix in enumerate(idx_alt):
+        sys.stdout.write('.')
+        if (iix + 1) % 50 == 0:
+            sys.stdout.write(' - %i/%i, found %i + %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_alt_3prime), len(idx_alt_5prime)))
+        sys.stdout.flush()
         num_exons = genes[ix].splicegraph.get_len()
         vertices = genes[ix].splicegraph.vertices
         edges = genes[ix].splicegraph.edges
@@ -265,10 +275,12 @@ def detect_xorexons(genes, idx_alt):
     idx_xor_exons = []
     exon_xor_exons = [] ### 5primesite of first exon, the 2 skipped
                         ### exons, 3primesite of last exon %%%
-    for ix in idx_alt:
+    for iix, ix in enumerate(idx_alt):
 
-        if ix % 50 == 0:
-            print '.',
+        sys.stdout.write('.')
+        if (iix + 1) % 50 == 0:
+            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_xor_exons)))
+        sys.stdout.flush()
 
         num_exons = genes[ix].splicegraph.get_len()
         edges = genes[ix].splicegraph.edges
