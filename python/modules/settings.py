@@ -242,7 +242,7 @@ def parse_args(options):
 
     ### alt splice analysis
     CFG['run_as_analysis'] = (options.extract_as == 'y')
-    CFG['event_types'] = options.event_types.split(',')
+    CFG['event_types'] = options.event_types.strip(',').split(',')
 
     ### mandatory parameters
     if options.bams == '-':
@@ -250,7 +250,7 @@ def parse_args(options):
         options.parser.print_help()
         sys.exit(2)
     else:
-        CFG['bam_fnames'] = options.bams.split(',')
+        CFG['bam_fnames'] = options.bams.strip(',').split(',')
     if options.annotation == '-':
         print >> sys.stderr, 'ERROR: please provide the mandatory parameter: annotation\n\n'
         options.parser.print_help()
