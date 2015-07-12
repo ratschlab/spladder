@@ -23,8 +23,6 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
             chunksize = CFG['chunksize']
         CFG = CFG['CFG']
 
-    appended = True
-
     ### generate merge list
     merge_list = []
     if CFG['do_prune']:
@@ -41,6 +39,7 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
         merge_list.append('%s/spladder/genes_graph_conf%i.%s%s_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, c_idx, min(c_idx + chunksize, merge_list_len)))
 
     ### iterate over merge list
+    appended = True
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
@@ -93,11 +92,11 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
                 splice1 = genes[j].splicegraph.edges[s_idx, :][:, s_idx].copy()
                 splice2 = genes2[g_idx].splicegraph.edges.copy()
 
-                if genes[j].edge_count is not None and genes[j].edge_count.shape[0] > 0:                        
+                if genes[j].edge_count is not None and genes[j].edge_count.shape[0] > 0: 
                     edgecnt1 = genes[j].edge_count[s_idx, :][:, s_idx].copy()
                 else:
                     edgecnt1 = splice1.copy()
-                if genes2[g_idx].edge_count is not None and genes2[g_idx].edge_count.shape[0] > 0:                        
+                if genes2[g_idx].edge_count is not None and genes2[g_idx].edge_count.shape[0] > 0: 
                     edgecnt2 = genes2[g_idx].edge_count.copy()
                 else:
                     edgecnt2 = splice2.copy()
@@ -110,7 +109,7 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
                     ### still count edges that can be confirmed
                     tmp, c_idx, a_idx = intersect_rows(genes2[g_idx].splicegraph.vertices.T, genes[j].splicegraph.vertices.T, index=True)
                     if c_idx.shape[0] > 0:
-                        genes2[g_idx].edge_count[c_idx, :][:, c_idx] = genes2[g_idx].edge_count[c_idx, :][:, c_idx] + genes[j].splicegraph.edges[a_idx, :][:, a_idx]
+                        genes2[g_idx].edge_count = replace_sub_matrix(genes2[g_idx].edge_count, c_idx, genes2[g_idx].edge_count[c_idx, :][:, c_idx] + splice1[a_idx, :][:, a_idx])
                 else:
                     m_graph = sp.r_[sp.c_[genes[j].splicegraph.vertices.T, sp.ones((s1_len, 1), dtype='int')], sp.c_[genes2[g_idx].splicegraph.vertices.T, 2 * sp.ones((s2_len, 1), dtype='int')]]
                     tmp, s_idx = sort_rows(m_graph[:, 0:3], index=True)
@@ -129,10 +128,11 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
                         edgecnt2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
                         idx1_ = sp.where(m_graph[u_f, 2] == 1)[0]
                         idx2_ = sp.where(m_graph[u_l, 2] == 2)[0]
-                        splice1_[idx1_, :][:, idx1_] = splice1
-                        splice2_[idx2_, :][:, idx2_] = splice2
-                        edgecnt1_[idx1_, :][:, idx1_] = edgecnt1
-                        edgecnt2_[idx2_, :][:, idx2_] = edgecnt2
+
+                        splice1_ = replace_sub_matrix(splice1_, idx1_, splice1)
+                        splice2_ = replace_sub_matrix(splice2_, idx2_, splice2)
+                        edgecnt1_ = replace_sub_matrix(edgecnt1_, idx1_, edgecnt1)
+                        edgecnt2_ = replace_sub_matrix(edgecnt2_, idx2_, edgecnt2)
                     else:
                         splice1_ = splice1
                         splice2_ = splice2
@@ -145,8 +145,8 @@ def merge_chunks_by_splicegraph(CFG, chunksize=None):
 
                     genes2[g_idx].splicegraph.edges = (splice1_ | splice2_)
                     genes2[g_idx].splicegraph.vertices = um_graph.T
-                    genes2[g_idx].splicegraph.terminals = sp.r_[(sp.tril(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0).T.astype('int'), 
-                                                                (sp.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0).T.astype('int')]
+                    genes2[g_idx].splicegraph.terminals = sp.vstack([(sp.tril(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0),
+                                                                     (sp.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0)]).astype('int')
                     genes2[g_idx].edge_count = edgecnt1_ + edgecnt2_
             ### we did not find the gene name --> append new gene to genes2
             elif g_idx > genes2.shape[0] or genes2[g_idx].name > genes[j].name:
@@ -461,8 +461,8 @@ def merge_genes_by_splicegraph(CFG, chunk_idx=None):
 
                     genes2[g_idx].splicegraph.edges = (splice1_ | splice2_)
                     genes2[g_idx].splicegraph.vertices = um_graph.T
-                    genes2[g_idx].splicegraph.terminals = sp.r_[(sp.tril(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0).T.astype('int'), 
-                                                                (sp.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0).T.astype('int')]
+                    genes2[g_idx].splicegraph.terminals = sp.vstack([(sp.tril(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0),
+                                                                     (sp.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0)]).astype('int')
                     genes2[g_idx].edge_count = edgecnt + splice1_
 
 
