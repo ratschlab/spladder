@@ -1,5 +1,6 @@
 import scipy as sp
-import scipy.linalg as spla
+import scipy.linalg
+import scipy.sparse.linalg
 import pdb
 
 if __package__ is None:
@@ -325,7 +326,7 @@ def insert_intron_retentions(genes, CFG):
                             inserted += 1
             any_added = False
             if sp.sum(new_retention.ravel()) > 0:
-                new_retention = spla.expm(new_retention)
+                new_retention = scipy.sparse.linalg.expm(new_retention)
                 while True:
                     any_added = False
                     for k in range(new_retention.shape[1]):
@@ -984,8 +985,7 @@ def infer_splice_graph_caller(genes):
       
             while (internal_idx <= exon_take_idx.shape[0]) and not changed:
                 test_exon_idx = exon_take_idx[internal_idx]
-                if (test_exon_idx < exon_idx):
-                    pdb.set_trace()
+                assert (test_exon_idx < exon_idx)
                 cur_edge_left = sp.sum(edges[:exon_idx + 1, exon_idx]) > 0
                 test_edge_left = sp.sum(edges[:test_exon_idx + 1, test_exon_idx]) > 0
                 cur_edge_right = sp.sum(edges[exon_idx:, exon_idx]) > 0
@@ -1529,8 +1529,7 @@ def infer_splice_graph_caller(genes):
                     
                         changed = True
                 else:
-                    print >> sys.stderr, 'Unknown case!!'
-                    pdb.set_trace()
+                    raise Exception('Unknown case!')
                 #test_exon_idx = test_exon_idx+1
                 internal_idx = internal_idx + 1
             exon_idx += 1
