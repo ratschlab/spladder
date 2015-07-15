@@ -191,7 +191,8 @@ def analyze_events(CFG, event_type):
                 
                 confirmed_idx = sp.where([x.confirmed >= 1 for x in events_all])[0]
                 
-                OUT.create_dataset(name='conf_idx', data=confirmed_idx)
+                if confirmed_idx.shape[0] > 0:
+                    OUT.create_dataset(name='conf_idx', data=confirmed_idx)
                 OUT.create_dataset(name='verified', data=num_verified)
 
                 ### close HDF5
