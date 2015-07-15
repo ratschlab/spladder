@@ -6,7 +6,7 @@ software takes a given annotation and RNA-Seq read alignments in standardized
 formats, transforms the annotation into a splicing graph representation,
 augments the splicing graph with additional information extracted from the read data,
 extracts alternative splicing events from the graph and quantifies the events
-based on the alignment data, The quantified events can then be used for
+based on the alignment data. The quantified events can then be used for
 differential analysis.
 
 Dependencies and Installation
@@ -33,7 +33,7 @@ Documentation
 -------------
 
 This README provides a quick walk-through of a basic SplAdder run. For further
-reading, please consider the file DOCUMENTATION.
+reading, please consider the [SplAdder Wiki](https://github.com/ratschlab/spladder/wiki).
 
 The main SplAdder script *spladder.py* can be found at top level of this directory.
 Invoking the executable without any parameters will print a description of the
