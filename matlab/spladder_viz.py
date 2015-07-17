@@ -9,13 +9,12 @@ import matplotlib.patches as patches
 import h5py
 import cPickle
 import pdb
-import copy
-import scipy.io as scio
 
-from modules.gene import Gene
+from modules.classes.gene import Gene
 from modules.viz.graph import *
 from modules.viz.coverage import *
 from modules.viz.genelets import *
+from modules.identity import *
 
 def parse_options(argv):
 
@@ -68,6 +67,9 @@ def get_plot_len(options):
 
     return rows
 
+
+
+
 def spladder_viz():
 
     """Main visualization code"""
@@ -80,10 +82,7 @@ def spladder_viz():
         os.mkdir(os.path.join(options.outdir, 'plots'))
 
     ### load gene information
-    if options.validate_sg:
-        genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.validated.mat' % options.confidence), struct_as_record=False)['genes'][0, :]
-    else:
-        genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.mat' % options.confidence), struct_as_record=False)['genes'][0, :]
+    genes = load_genes(options)
 
     rows = get_plot_len(options)
     fig = plt.figure(figsize = (18, 3*rows), dpi=200)
@@ -112,20 +111,20 @@ def spladder_viz():
         gid = sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0]
         min_sample_size = min(20, min([len(x.split(',')) for x in options.bams.strip(':').split(':')]))
         if gid.shape[0] > 0:
-            gene = copy.deepcopy(genes[gid[0]])
+            gene = get_gene(genes[gid[0]])
             del gid
             del genes
-            plot_graph(gene.splicegraph[0, 0], gene.splicegraph[0, 1], axes[-1])
+            plot_graph(gene.splicegraph.vertices, gene.splicegraph.edges, axes[-1])
             xlim = axes[-1].get_xlim()
-            start = gene.splicegraph[0, 0].min()
-            stop = gene.splicegraph[0, 0].max()
+            start = gene.splicegraph.vertices.min()
+            stop = gene.splicegraph.vertices.max()
             axes[-1].set_title('Splicing graph for %s' % options.gene_name)
 
             if options.transcripts:
                 ### plot annotated transcripts
                 axes.append(fig.add_subplot(gs[len(axes), 0]))
 
-                multiple([gene.exons[0, x] for x in range(gene.exons.shape[1])], ax=axes[-1], x_range=xlim)
+                multiple(gene.exons, ax=axes[-1], x_range=xlim)
                 axes[-1].set_title('Annotated Transcripts')
 
             ### plot coverage information for a set of samples
@@ -138,7 +137,7 @@ def spladder_viz():
                         title = 'Expression (%s)' % options.labels[s]
                     else:
                         title = 'Expression (sample %i)' % (s + 1)
-                    cov_from_bam(str(gene.chr[0]), start, stop, bams, subsample=min_sample_size, ax=axes[-1], intron_cnt=True, log=options.log, title=title, xlim=xlim, color_cov='#d7191c', color_intron_edge='#1a9641', grid=True, min_intron_cnt=options.mincount)
+                    cov_from_bam(gene.chr, start, stop, bams, subsample=min_sample_size, ax=axes[-1], intron_cnt=True, log=options.log, title=title, xlim=xlim, color_cov='#d7191c', color_intron_edge='#1a9641', grid=True, min_intron_cnt=options.mincount)
                     xlim = axes[-1].get_xlim()
                     axes[-1].set_xlabel('')
                 
@@ -151,11 +150,11 @@ def spladder_viz():
                     for s, sample in enumerate(samples):
                         bams = sample.split(',')
                         if options.labels != '-':
-                            caxes.append(cov_from_bam(str(gene.chr[0]), start, stop, bams, subsample=min_sample_size, ax=axes[-1], intron_cnt=True, log=options.log, title='Expression all Samples', xlim=xlim, color_cov=cmap_cov(norm(s)), color_intron_edge=cmap_edg(norm(s)), grid=True, min_intron_cnt=options.mincount, return_legend_handle=True, label=options.labels[s]))
+                            caxes.append(cov_from_bam(gene.chr, start, stop, bams, subsample=min_sample_size, ax=axes[-1], intron_cnt=True, log=options.log, title='Expression all Samples', xlim=xlim, color_cov=cmap_cov(norm(s)), color_intron_edge=cmap_edg(norm(s)), grid=True, min_intron_cnt=options.mincount, return_legend_handle=True, label=options.labels[s]))
                             labels.append(options.labels[s])
                             #tuxes.append(patches.Patch(color=cmap_cov(norm(s)), label=options.labels[s]))
                         else:
-                            caxes.append(cov_from_bam(str(gene.chr[0]), start, stop, bams, subsample=min_sample_size, ax=axes[-1], intron_cnt=True, log=options.log, title='Expression all Samples', xlim=xlim, color_cov=cmap_cov(norm(s)), color_intron_edge=cmap_edg(norm(s)), grid=True, min_intron_cnt=options.mincount, return_legend_handle=True, label='sample %i' % (s + 1)))
+                            caxes.append(cov_from_bam(gene.chr, start, stop, bams, subsample=min_sample_size, ax=axes[-1], intron_cnt=True, log=options.log, title='Expression all Samples', xlim=xlim, color_cov=cmap_cov(norm(s)), color_intron_edge=cmap_edg(norm(s)), grid=True, min_intron_cnt=options.mincount, return_legend_handle=True, label='sample %i' % (s + 1)))
                             labels.append('sample %i' % (s + 1))
                             #tuxes.append(patches.Patch(color=cmap_cov(norm(s)), label='sample %i' % (s + 1)))
                     plt.legend(caxes, labels)
@@ -165,21 +164,8 @@ def spladder_viz():
             if options.event_id is not None:
                 axes.append(fig.add_subplot(gs[len(axes), 0]))
                 event_info = [x[::-1] for x in re.split(r'[._]', options.event_id[::-1], maxsplit=1)[::-1]]
-                event = scio.loadmat(os.path.join(options.outdir, 'merge_graphs_%s_C%s.mat' % (event_info[0], options.confidence)), struct_as_record=False)['events_all'][0, int(event_info[1]) - 1]
-                if event.event_type[0] == 'exon_skip':
-                    exons = [sp.r_[event.exon_pre, event.exon_aft], sp.r_[event.exon_pre, event.exon, event.exon_aft]]
-                elif event.event_type[0] == 'intron_retention':
-                    exons = [sp.r_[event.exon1, event.exon2], sp.array([event.exon1[0, 0], event.exon2[0, 1]])]
-                elif event.event_type[0] in ['alt_3prime', 'alt_5prime']:
-                    exons = [sp.r_[event.exon_const, event.exon_alt1], sp.r_[event.exon_const, event.exon_alt2]]
-                    for e, ex in enumerate(exons):
-                        s_idx = sp.argsort(ex[:, 0])
-                        exons[e] = ex[s_idx, :]
-                elif event.event_type[0] == 'mutex_exons':
-                    exons = [sp.r_[event.exon_pre, event.exon1, event.exon_aft], sp.r_[event.exon_pre, event.exon2, event.exon_aft]]
-                elif event.event_type[0] == 'mult_exon_skip':
-                    exons = [sp.r_[event.exon_pre, event.exon_aft], sp.r_[event.exon_pre, event.exons.reshape(event.exons.shape[1] / 2, 2), event.exon_aft]]
-                multiple(exons, ax=axes[-1], x_range=xlim, color='green') 
+                event = load_event(options, event_info)
+                multiple([event.exons1, event.exons2], ax=axes[-1], x_range=xlim, color='green') 
                 axes[-1].set_title('Event structure of %s' % options.event_id)
                 event_tag = '.%s' % options.event_id
 

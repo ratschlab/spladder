@@ -1,6 +1,8 @@
 import scipy as sp
 
-from .utils import *
+from ..utils import *
+from .segmentgraph import Segmentgraph
+from .splicegraph import Splicegraph
 
 class Gene:
     
@@ -13,9 +15,9 @@ class Gene:
         self.strand = strand
         self.transcripts = []
         self.source = source
-        self.splicegraph = None
-        self.segmentgraph = None
-        self.gene_type=gene_type
+        self.splicegraph = Splicegraph()
+        self.segmentgraph = Segmentgraph()
+        self.gene_type = gene_type
         self.is_alt = None
         self.is_alt_spliced = None
 
