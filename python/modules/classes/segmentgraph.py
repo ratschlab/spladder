@@ -11,6 +11,10 @@ class Segmentgraph:
         if gene is not None:
             self.from_gene(gene)
 
+    def is_empty(self):
+        
+        return (self.segments.shape[1] == 0) and (self.seg_match.shape[0] == 0) and (self.seg_edges.shape[0] == 0)
+
     def from_gene(self, gene): 
 
         sg = gene.splicegraph.vertices

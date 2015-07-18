@@ -39,7 +39,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
             if i > 0 and i % 50 == 0:
                 sys.stdout.write('%i\n' % i)
             gg = genes[i]
-            if gg.segmentgraph is None:
+            if gg.segmentgraph.is_empty():
                 gg.segmentgraph = Segmentgraph(gg)
             gg.start = gg.segmentgraph.segments.ravel().min()
             gg.stop = gg.segmentgraph.segments.ravel().max()
@@ -83,7 +83,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
 
     (genes, inserted) = cPickle.load(open(fname_in, 'r'))
     
-    if genes[0].segmentgraph is None:
+    if genes[0].segmentgraph.is_empty():
         for g in genes:
             g.segmentgraph = Segmentgraph(g)
         cPickle.dump((genes, inserted), open(fname_in, 'w'), -1)
