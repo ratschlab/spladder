@@ -251,9 +251,18 @@ def parse_args(options):
         sys.exit(2)
     else:
         CFG['bam_fnames'] = options.bams.strip(',').split(',')
+        ### check existence of files
+        for fname in CFG['bam_fnames']:
+            if not os.path.isfile(fname):
+                print >> sys.stderr, 'ERROR: Input file %s can not be found\n\n' % fname
+                sys.exit(2)
+
     if options.annotation == '-':
         print >> sys.stderr, 'ERROR: please provide the mandatory parameter: annotation\n\n'
         options.parser.print_help()
+        sys.exit(2)
+    elif not os.path.isfile(options.annotation):
+        print >> sys.stderr, 'ERROR: Annotation file %s can not be found\n\n' % options.annotation
         sys.exit(2)
     else:
         CFG['anno_fname'] = options.annotation
@@ -262,6 +271,13 @@ def parse_args(options):
         options.parser.print_help()
         sys.exit(2)
     else:
+        if not os.path.exists(options.outdir):
+            print >> sys.stderr, 'WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir
+            try:
+                os.makedirs(options.outdir)
+            except OSError:
+                print >> sys.stderr, 'ERROR: Output directory %s can not be created.\n\n' % options.outdir
+                sys.exit(2)
         CFG['out_dirname'] = options.outdir
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
