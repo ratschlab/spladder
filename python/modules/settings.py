@@ -135,8 +135,10 @@ def default_settings():
 
     ### define which output files are written
     CFG['output_txt'] = False
+    CFG['output_struc'] = False
     CFG['output_confirmed_gff3'] = True
     CFG['output_confirmed_txt'] = True
+    CFG['output_confirmed_struc'] = True
     CFG['output_filtered_txt'] = False
     CFG['output_confirmed_tcga'] = False
 

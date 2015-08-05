@@ -252,3 +252,92 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
                 for i in range(ev.exons2.shape[0]):
                     print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[i, 0], ev.exons2[i, 1], ev.strand, name)
     fd_out.close()
+
+
+def write_events_structured(fn_out_struc, events, idx=None):
+    
+    if events.shape[0] == 0:
+        print >> sys.stderr, 'WARNING: No events present.'
+        return
+
+    if idx is None:
+        idx = sp.arange(events.shape[0])
+
+    print 'writing %s events in generic structured format to %s' % (events[0].event_type, fn_out_struc)
+
+    fd_out = open(fn_out_struc, 'w+') 
+
+    ### load gene structure
+    for i in idx:
+
+        ev = events[i]
+        gene_name = events[i].gene_name[0] ### TODO - why only first?
+        start_pos = ev.exons1[0, 0]
+        stop_pos = ev.exons1[-1, -1]
+
+        name = '%s.%i' % (ev.event_type, ev.id)
+
+        print >> fd_out, '%s\tundefined\t%s\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s"; gene_name "%s";' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, gene_name),
+        ### handle + strand
+        if ev.strand == '+':
+            if ev.event_type == 'exon_skip':
+                struc = '0,1-2^'
+                flanks = '%i^,%i-' % (ev.exons1[0, 1], ev.exons1[-1, 0] + 1)
+                schain = ',%i-%i^' % (ev.exons2[1, 0] + 1, ev.exons2[1, 1])
+            elif ev.event_type in ['alt_3prime', 'alt_5prime']:
+                if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                    struc = '1-,2-'
+                    flanks = '%i^,%i^' % (ev.exons1[0, 1], min(ev.exons1[-1, 1], ev.exons2[-1, 1]))
+                    schain = '%i-,%i-' % (min(ev.exons1[-1, 0] + 1, ev.exons2[-1, 0]) + 1, max(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1)
+                elif sp.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
+                    struc = '1^,2^'
+                    flanks = '%i-,%i-' % (max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1, ex.exons1[-1, 0] + 1)
+                    schain = '%i^,%i^' % (min(ev.exons1[0, 1], ev.exons2[0, 1]), max(ev.exons1[0, 1], ev.exons2[0, 1]))
+                else:
+                    raise Exception("Misconfigured alt-prime event detected")
+            elif ev.event_type == 'intron_retention':
+                struc = '0,1^2-'
+                flanks = '%i-,%i^' % (ev.exons2[0] + 1, ev.exons2[1])
+                schain = ',%i^%i-' % (ev.exons1[0, 1], ev.exons1[1, 0] + 1)
+            elif ev.event_type == 'mutex_exon':
+                struc = '1-2^,3-4^'
+                flanks = '%i^,%i-' % (ev.exons1[0, 1], ev.exons1[-1, 0] + 1) 
+                schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1])
+            elif ev.event_type == 'mult_exon_skip':
+                raise Exception('Event type mult_exon_skip not implemented yet for structured output')
+            else:
+                raise Exception("Unknown event type: %s" % ev.event_type)
+        ### - strand - revert donor/acceptor
+        else:
+            if ev.event_type == 'exon_skip':
+                struc = '0,1-2^'
+                flanks = '%i^,%i-' % (ev.exons1[-1, 0] + 1, ev.exons1[0, 1])
+                schain = ',%i-%i^' % (ev.exons2[1, 1], ev.exons2[1, 0] + 1)
+            elif ev.event_type in ['alt_3prime', 'alt_5prime']:
+                if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                    struc = '1-,2-'
+                    flanks = '%i-,%i-' % (min(ev.exons1[-1, 1], ev.exons2[-1, 1]), ev.exons1[0, 1])
+                    schain = '%i^,%i^' % (max(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1, min(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1)
+                elif sp.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
+                    struc = '1^,2^'
+                    flanks = '%i^,%i^' % (ev.exons1[-1, 0] + 1, max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1)
+                    schain = '%i-,%i-' % (max(ev.exons1[0, 1], ev.exons2[0, 1]), min(ev.exons1[0, 1], ev.exons2[0, 1]))
+                else:
+                    raise Exception("Misconfigured alt-prime event detected")
+            elif ev.event_type == 'intron_retention':
+                struc = '0,1^2-'
+                flanks = '%i-,%i^' % (ev.exons2[1], ev.exons2[0] + 1)
+                schain = ',%i^%i-' % (ev.exons1[1, 0] + 1, ev.exons1[0, 1])
+            elif ev.event_type == 'mutex_exon':
+                struc = '1-2^,3-4^'
+                flanks = '%i^,%i-' % (ev.exons1[-1, 0] + 1, ev.exons1[0, 1]) 
+                schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 1], ev.exons1[1, 0] + 1, ev.exons2[1, 1], ev.exons2[1, 0] + 1)
+            elif ev.event_type == 'mult_exon_skip':
+                raise Exception('Event type mult_exon_skip not implemented yet for structured output')
+            else:
+                raise Exception("Unknown event type: %s" % ev.event_type)
+        print >> fd_out, 'flanks "%s"; structure "%s"; splice_chain "%s";'  % (flanks, struc, schain)
+
+    fd_out.close()
+
+

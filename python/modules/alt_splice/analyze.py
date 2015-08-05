@@ -57,7 +57,9 @@ def analyze_events(CFG, event_type):
 
         ### define result files
         fn_out_txt = fn_out.replace('.pickle', '.txt')
+        fn_out_struc = fn_out.replace('.pickle', '.struc.txt')
         fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt')
+        fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt')
         fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt')
         fn_out_conf_gff3 = fn_out_conf.replace('.pickle', '.gff3')
 
@@ -216,7 +218,13 @@ def analyze_events(CFG, event_type):
             if os.path.exists(fn_out_txt):
                 print '%s already exists' % fn_out_txt
             else:
-                write_events_txt(fn_out_txt, CFG['strains'], events_all, fn_out_count)
+                write_events_txt(fn_out_txt, events_all, fn_out_count)
+
+        if CFG['output_struc']:
+            if os.path.exists(fn_out_struc):
+                print '%s already exists' % fn_out_struc
+            else:
+                write_events_structured(fn_out_struc, CFG['strains'], events_all)
 
         if confirmed_idx.shape[0] == 0:
             print '\nNo %s event could be confirmed. - Nothing to report.' % event_type
@@ -235,6 +243,12 @@ def analyze_events(CFG, event_type):
                 print '%s already exists' % fn_out_conf_txt
             else:
                 write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+
+        if CFG['output_confirmed_struc']:
+            if os.path.exists(fn_out_conf_struc):
+                print '%s already exists' % fn_out_conf_struc
+            else:
+                write_events_structured(fn_out_conf_struc, events_all, confirmed_idx)
 
         if CFG['output_confirmed_tcga']:
             if os.path.exists(fn_out_conf_tcga):
