@@ -26,100 +26,9 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
     # X   BAM_CDIFF   8
 
     ### init counts
-    if bins == 0:
-        size = stop - start + 1
-        binsize = 0
-    else:
-        size = bins
-        binsize = int(math.ceil(stop - start  + 1 / float(bins)))
-    if collapsed:
-        counts = sp.zeros((size, ), dtype='uint32')
-        intron_counts = sp.zeros((size, ), dtype='uint32')
-        intron_list = dict()
-    else:
-        counts = sp.zeros((len(files), size), dtype='uint32')
-        intron_counts = sp.zeros((len(files), size), dtype='uint32')
-        intron_list = [dict() for i in range(len(files))]
-
-    for f_i, fn in enumerate(files):
-        if verbose:
-            print >> sys.stdout, "reading bam %i of %i" % (f_i + 1, len(files))  
-        try:
-            infile = pysam.Samfile(str(fn), "rb")
-        except ValueError:
-            print >> sys.stderr, 'Could not load file %s - skipping' % fn
-            continue
-        c_len = stop - start + 1
-
-        for line in infile.fetch(chr_name, start, stop):
-            if line.is_secondary:
-                continue
-            pos = line.pos
-            for o in line.cigar:
-                if o[0] in [0, 2, 3]:
-                    ### get segment overlap to current region
-                    seg_offset = max(0, start - pos)
-                    seg_len = o[1] - seg_offset
-                    if seg_len > 0:
-                        seg_start = max(pos - start, 0)
-                        if o[0] in [0, 2, 3]:
-                            idx = sp.arange(seg_start, min(seg_start + seg_len, c_len), dtype='uint32')
-                            if binsize > 0:
-                                idx = sp.unique(idx / binsize)
-                        if o[0] in [0, 2]:
-                            if collapsed:
-                                counts[idx] += 1
-                            else:
-                                counts[f_i, idx] += 1
-                        elif (intron_cov or intron_cnt) and o[0] == 3:
-                            if pos >= start and (pos + o[1]) <= stop:
-                                if intron_cov:
-                                    if collapsed:
-                                        intron_counts[idx] += 1
-                                    else:
-                                        intron_counts[f_i, idx] += 1
-                                if intron_cnt and (seg_start + seg_len < c_len):
-                                    if collapsed:
-                                        try:
-                                            intron_list[(seg_start, seg_len)] += 1
-                                        except KeyError:
-                                            intron_list[(seg_start, seg_len)] = 1
-                                    else:
-                                        try:
-                                            intron_list[f_i][(seg_start, seg_len)] += 1
-                                        except KeyError:
-                                            intron_list[f_i][(seg_start, seg_len)] = 1
-                                        
-                if not o[0] in [1, 4, 5]:
-                    pos += o[1]
-    
-    return (counts, intron_counts, intron_list)
-
-
-
-def _get_counts_old(chr_name, start, stop, files, intron_cov, intron_cnt=False, verbose=False, collapsed=True):
-    """Internal function that queries the bam files and produces the counts"""
-
-    ### PYSAM CIGAR ENCODING
-    # M   BAM_CMATCH  0
-    # I   BAM_CINS    1
-    # D   BAM_CDEL    2
-    # N   BAM_CREF_SKIP   3
-    # S   BAM_CSOFT_CLIP  4
-    # H   BAM_CHARD_CLIP  5
-    # P   BAM_CPAD    6
-    # =   BAM_CEQUAL  7
-    # X   BAM_CDIFF   8
-
-    ### init counts
-    if collapsed:
-        counts = sp.zeros((stop - start + 1, ), dtype='uint32')
-        intron_counts = sp.zeros((stop - start + 1, ), dtype='uint32')
-        intron_list = dict()
-    else:
-        counts = sp.zeros((len(files), stop - start + 1), dtype='uint32')
-        intron_counts = sp.zeros((len(files), stop - start + 1), dtype='uint32')
-        intron_list = [dict() for i in range(len(files))]
+    counts = sp.zeros((len(files), stop - start + 1))
+    intron_counts = sp.zeros((len(files), stop - start + 1))
+    intron_list = [dict() for i in range(len(files))]
 
     for f_i, fn in enumerate(files):
         if verbose:
@@ -143,43 +52,31 @@ def _get_counts_old(chr_name, start, stop, files, intron_cov, intron_cnt=False, 
                     if seg_len > 0:
                         seg_start = max(pos - start, 0)
                         if o[0] in [0, 2]:
-                            if collapsed:
-                                counts[seg_start : min(seg_start + seg_len, c_len)] += 1 
-                            else:
-                                counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1 
+                            counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1 
                         elif (intron_cov or intron_cnt) and o[0] == 3:
                             if pos >= start and (pos + o[1]) <= stop:
                                 if intron_cov:
-                                    if collapsed:
-                                        intron_counts[seg_start : min(seg_start + seg_len, c_len)] += 1
-                                    else:
-                                        intron_counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1
+                                    intron_counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1
                                 if intron_cnt and (seg_start + seg_len < c_len):
-                                    if collapsed:
-                                        try:
-                                            intron_list[(seg_start, seg_len)] += 1
-                                        except KeyError:
-                                            intron_list[(seg_start, seg_len)] = 1
-                                    else:
-                                        try:
-                                            intron_list[f_i][(seg_start, seg_len)] += 1
-                                        except KeyError:
-                                            intron_list[f_i][(seg_start, seg_len)] = 1
+                                    try:
+                                        intron_list[f_i][(seg_start, seg_len)] += 1
+                                    except KeyError:
+                                        intron_list[f_i][(seg_start, seg_len)] = 1
                                         
                 if not o[0] in [1, 4, 5]:
                     pos += o[1]
     
-    #if collapsed:
-    #    counts = sp.sum(counts, axis=0)
-    #    intron_counts = sp.sum(intron_counts, axis=0)
-    #    if intron_cnt:
-    #        for f in range(1, len(files)):
-    #            for intron in intron_list[f]:
-    #                try:
-    #                    intron_list[0][intron] += intron_list[f][intron]
-    #                except KeyError:
-    #                    intron_list[0][intron] = intron_list[f][intron]
-    #        intron_list = intron_list[0]
+    if collapsed:
+        counts = sp.sum(counts, axis=0)
+        intron_counts = sp.sum(intron_counts, axis=0)
+        if intron_cnt:
+            for f in range(1, len(files)):
+                for intron in intron_list[f]:
+                    try:
+                        intron_list[0][intron] += intron_list[f][intron]
+                    except KeyError:
+                        intron_list[0][intron] = intron_list[f][intron]
+            intron_list = intron_list[0]
                     
     return (counts, intron_counts, intron_list)
 
@@ -225,6 +122,52 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
     if outfile is not None:
         plt.savefig(outfile, dpi=300, format=frm)
 
+
+def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=None,
+                      log=False, cmap_seg=None, cmap_edg=None, xlim=None, grid=False,
+                      order='C'):
+    """This function takes a gene and its corresponding segment and edge counts to
+    produce a coverage overview plot."""
+
+    if sample_idx is None:
+        sample_idx = sp.arange(seg_counts.shape[1])
+
+    norm = plt.Normalize(0, sample_idx.shape[0])
+
+    if cmap_seg is None:
+        cmap_seg = plt.get_cmap('jet')
+    if cmap_edg is None:
+        cmap_edg = plt.get_cmap('jet')
+
+    ### iterate over samples
+    for ii,i in enumerate(sample_idx):
+        ### collect count information and add segment patches
+        for j in range(gene.segmentgraph.segments.shape[1]):
+            s = gene.segmentgraph.segments[:, j]
+            if log:
+                counts = sp.log10(seg_counts[j, i] + 1)
+            else:
+                counts = seg_counts[j, i]
+            ax.add_patch(patches.Rectangle((s[0], 0), s[1] - s[0], counts, fill=cmap_seg(norm(ii)),
+                         edgecolor='none', alpha=0.5))
+
+        for j in range(edge_idx.shape[0]):
+            [s, t] = sp.unravel_index(edge_idx[j], gene.segmentgraph.seg_edges.shape, order=order) 
+            if log:
+                counts = sp.log10(edge_counts[j, i] + 1)
+            else:
+                counts = edge_counts[j, i]
+            add_intron_patch2(ax, gene.segmentgraph.segments[1, s], gene.segmentgraph.segments[0, t], counts, color=cmap_edg(norm(ii)))
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    ### draw grid
+    if grid:
+        ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
+        ax.xaxis.grid(False)
+
+    ax.set_ylim([0, ax.get_ylim()[1]])
 
 def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
                  bins=None, log=False, ax=None, ymax=0, outfile=None,
@@ -404,4 +347,5 @@ def add_intron_patch2(ax, start, stop, cnt, color='green'):
     #y = (a*x*x) + (b*x) + c
     y = (a*x*x) + (b*x)
     ax.plot(sp.linspace(start, stop, 100), y, '-', color=color)
+
 

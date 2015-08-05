@@ -123,6 +123,51 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
         plt.savefig(outfile, dpi=300, format=frm)
 
 
+def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=None,
+                      log=False, cmap_seg=None, cmap_edg=None, xlim=None, grid=False):
+    """This function takes a gene and its corresponding segment and edge counts to
+    produce a coverage overview plot."""
+
+    if sample_idx is None:
+        sample_idx = sp.arange(seg_counts.shape[1])
+
+    norm = plt.Normalize(0, sample_idx.shape[0])
+
+    if cmap_seg is None:
+        cmap_seg = plt.get_cmap('jet')
+    if cmap_edg is None:
+        cmap_edg = plt.get_cmap('jet')
+
+    ### iterate over samples
+    for ii,i in enumerate(sample_idx):
+        ### collect count information and add segment patches
+        for j in range(gene.segmentgraph.segments.shape[1]):
+            s = gene.segmentgraph.segments[:, j]
+            if log:
+                counts = sp.log10(seg_counts[j, i] + 1)
+            else:
+                counts = seg_counts[j, i]
+            ax.add_patch(patches.Rectangle((s[0], 0), s[1] - s[0], counts, fill=cmap_seg(norm(ii)),
+                         edgecolor='none', alpha=0.5))
+
+        for j in range(edge_idx.shape[0]):
+            [s, t] = sp.unravel_index(edge_idx[j], gene.segmentgraph.seg_edges.shape) 
+            if log:
+                counts = sp.log10(edge_counts[j, i] + 1)
+            else:
+                counts = edge_counts[j, i]
+            add_intron_patch2(ax, gene.segmentgraph.segments[1, s], gene.segmentgraph.segments[0, t], counts, color=cmap_edg(norm(ii)))
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    ### draw grid
+    if grid:
+        ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
+        ax.xaxis.grid(False)
+
+    ax.set_ylim([0, ax.get_ylim()[1]])
+
 def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
                  bins=None, log=False, ax=None, ymax=0, outfile=None,
                  frm='pdf', xlim=None, title=None, xoff=None, yoff=None,
@@ -301,4 +346,5 @@ def add_intron_patch2(ax, start, stop, cnt, color='green'):
     #y = (a*x*x) + (b*x) + c
     y = (a*x*x) + (b*x)
     ax.plot(sp.linspace(start, stop, 100), y, '-', color=color)
+
 
