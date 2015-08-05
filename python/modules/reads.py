@@ -30,6 +30,8 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
     reads_sec = 0
     reads_map = 0
 
+    length = stop - start
+
     #t0 = time.time()
 
     #print >> sys.stderr, 'querying %s:%i-%i' % (chr_name, start, stop)
@@ -89,12 +91,14 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
                 if o[0] == 3:
                     introns.append([p, p + o[1]])
                 if o[0] in [0, 2]:
+                    _start = int(max(p-start, 0))
+                    _stop = int(min(p + o[1] - start, stop - start))
+                    if _stop < 0 or _start > length:
+                        continue
                     if collapse:
-                        read_matrix[0, int(max(p-start, 0)):int(min(p + o[1] - start, stop - start))] += 1
+                        read_matrix[0, _start:_stop] += 1
                     else:
-                        r = range(int(max(p-start, 0)), int(min(p + o[1] - start, stop - start)))
-                        #if len(r) > 1000:
-                        #    assert False
+                        r = range(_start, _stop)
                         i.extend([read_cnt] * len(r))
                         j.extend(r)
                         #for pp in range(p, p + o[1]):
