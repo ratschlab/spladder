@@ -1,6 +1,7 @@
 import scipy as sp
 
 from ..utils import *
+from ..init import * 
 
 import pdb
 
@@ -119,6 +120,59 @@ class Splicegraph:
         self.terminals[0, sp.where(sp.tril(self.edges).sum(axis=1) == 0)[0]] = 1
         self.terminals[1, sp.where(sp.triu(self.edges).sum(axis=1) == 0)[0]] = 1
 
+    def from_sg_gtf(self, fname):
+        """generate a splicing graph from a Splicegrapher GTF"""
+
+        ### prepare containers to collect graph structure from file
+        exon_ids = dict()
+        exon_coords = []
+        parent_pairs = []
+        child_pairs = []
+        exon_cnt = 0
+        start_terminals = []
+        end_terminals = []
+
+        for line in open(fname, 'r'):
+            sl = line.strip().split('\t')
+            if not sl[2] in ['parent', 'child']:
+                continue
+
+            ### SplAdder coords are 0-based and half open
+            start = int(sl[3]) - 1
+            stop = int(sl[4])
+
+            tags = get_tags_gtf(sl[8])
+
+            ### collect node information
+            exon_ids[tags['ID']] = exon_cnt
+            exon_cnt += 1
+            exon_coords.append([start, stop])
+
+            ### collect edge information
+            if len(tags['putative_children']) == 0:
+                end_terminals.append(c)
+            else:
+                for c in tags['putative_children'].strip(',').split(','):
+                    child_pairs.append(tags['ID'], c)
+            if len(tags['putative_parents']) == 0:
+                start_terminals.append(c)
+            else:
+                for c in tags['putative_parents'].strip(',').split(','):
+                    parent_pairs.append(tags['ID'], c)
+
+        ### use information to build up graph data structure
+        self.vertices = sp.array(exon_coords, dtype='int')
+        self.edges = sp.zeros((self.vertices.shape[1], self.vertices.shape[1]), dtype='int')
+        self.terminals = sp.zeros_like(self.vertices, dtype='int')
+        for pair in child_pairs:
+            self.edges[exon_ids[pair[0]], exon_ids[pair[1]]] = 1
+            self.edges[exon_ids[pair[1]], exon_ids[pair[0]]] = 1
+        for t in start_terminals:
+            self.terminals[0, t] = 1
+        for t in end_terminals:
+            self.terminals[1, t] = 1
+            
+        
 
     def from_matfile(self, mat_struct):
         """generates a splicing graph structure from a matfile structure"""
