@@ -70,9 +70,12 @@ def parse_options(argv):
     #optional.add_option('-C', '--truncations', dest='truncations', metavar='y|n', help='truncation detection mode [n]', default='n')
     #optional.add_option('-', '--', dest='', metavar='y|n', help='', default=False)
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
-    experimental.add_option('-p', '--parallel', dest='parallel', metavar='y|n', help='use parallel implementation [n]', default='n')
+    experimental.add_option('-p', '--pyproc', dest='pyproc', metavar='y|n', help='use parallel implementation [n]', default='n')
     experimental.add_option('-R', '--replicates', dest='replicates', metavar='1,1,2,2,...', help='replicate structure of files (same number as alignment files) [all 1 - no replicated]', default='-')
     experimental.add_option('-U', '--intron_cov', dest='intron_cov', metavar='y|n', help='count intron coverage [n]', default='n')
+    experimental.add_option('', '--sparse_bam', dest='sparse_bam', metavar='y|n', help='store BAM content as sparse representation for later use [n]', default='n')
+    experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
+    experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicilty set then -T is set [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
     parser.add_option_group(output)
@@ -194,9 +197,46 @@ def spladder():
     fn_in_count = get_filename('fn_count_in', CFG)
     fn_out_count = get_filename('fn_count_out', CFG)
 
+    ### convert input BAMs to sparse arrays
+    if CFG['bam_to_sparse']:
+        for bfn in CFG['bam_fnames']:
+            if not os.path.exists(re.sub(r'.bam$', '', bfn) + '.npz'):
+                cnts = dict()
+
+                if not 'chrm_lookup' in CFG:
+                    IN = pysam.Samfile(bfn, 'rb')
+                    CFG = append_chrms([x['SN'] for x in parse_header(IN.text)['SQ']], CFG)
+                    IN.close()
+
+                if CFG['parallel'] > 1:
+                    import multiprocessing as mp
+                    pool = mp.Pool(processes=CFG['parallel'])
+                    result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), CFG,)) for chrm in sorted(CFG['chrm_lookup'])]
+                    while result:
+                        tmp = result.pop(0).get()
+                        cnts[tmp[0] + '_reads_row'] = tmp[1].row.astype('uint8')
+                        cnts[tmp[0] + '_reads_col'] = tmp[1].col
+                        cnts[tmp[0] + '_reads_dat'] = tmp[1].data
+                        cnts[tmp[0] + '_reads_shp'] = tmp[1].shape
+                        cnts[tmp[0] + '_introns_m'] = tmp[2]
+                        cnts[tmp[0] + '_introns_p'] = tmp[3]
+                else:
+                    for chrm in CFG['chrm_lookup']:
+                        tmp = summarize_chr(bfn, str(chrm), CFG)
+                        cnts[chrm + '_reads_row'] = tmp[1].row.astype('uint8')
+                        cnts[chrm + '_reads_col'] = tmp[1].col
+                        cnts[chrm + '_reads_dat'] = tmp[1].data
+                        cnts[chrm + '_reads_shp'] = tmp[1].shape
+                        cnts[chrm + '_introns_m'] = tmp[2]
+                        cnts[chrm + '_introns_p'] = tmp[3]
+                sp.savez_compressed(re.sub(r'.bam$', '', bfn), **cnts)
+            elif CFG['verbose']:
+                print >> sys.stdout, 'Sparse BAM representation for %s already exists.' % bfn
+
     ### count segment graph
-    if not os.path.exists(fn_out_count):
-        count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
+    if CFG['run_as_analysis'] or CFG['count_segment_graph']:
+        if not os.path.exists(fn_out_count):
+            count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
 
     ### count intron coverage phenotype
     if CFG['count_intron_cov']:

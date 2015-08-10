@@ -545,10 +545,10 @@ def run_merge(CFG):
         del genes
 
     ### count segment graph
-    if CFG['validate_splicegraphs']:
-       count_graph_coverage_wrapper(fn_out_val, fn_out_count, CFG)
-    else:
-       count_graph_coverage_wrapper(fn_out, fn_out_count, CFG)
+    #if CFG['validate_splicegraphs']:
+    #   count_graph_coverage_wrapper(fn_out_val, fn_out_count, CFG)
+    #else:
+    #   count_graph_coverage_wrapper(fn_out, fn_out_count, CFG)
 
     if CFG['do_gen_isoforms']:
         fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)

@@ -110,6 +110,8 @@ def default_settings():
    #CFG['intron_retention']['max_retention_rel_cov'] = 1.5
     CFG['intron_retention']['min_retention_max_exon_fold_diff']  = 4
 
+    CFG['count_segment_graph'] = 0
+
     ### set I/O and verbosity
     CFG['verbose'] = 1
     CFG['debug'] = 0
@@ -132,6 +134,9 @@ def default_settings():
     CFG['primary_only'] = False
 
     CFG['rproc'] = 0
+    CFG['parallel'] = 1
+
+    CFG['bam_to_sparse'] = 0
 
     ### define which output files are written
     CFG['output_txt'] = False
@@ -215,6 +220,17 @@ def parse_args(options):
         CFG['count_intron_cov'] = (options.intron_cov == 'y')
     else:
         print >> sys.stderr, 'ERROR: option intron_cov should have value y or n, but has %s' % options.intron_cov
+
+    if options.quantify_graph in ['n', 'y']:
+        CFG['count_segment_graph'] = (options.quantify_graph == 'y')
+    else:
+        print >> sys.stderr, 'ERROR: option quantify_graph should have value y or n, but has %s' % options.quantify_graph
+
+    ### option to store sparse BAM representation
+    if options.sparse_bam in ['n', 'y']:
+        CFG['bam_to_sparse'] = (options.sparse_bam == 'y')
+    else:
+        print >> sys.stderr, 'ERROR: option sparse_bam should have value y or n, but has %s' % options.sparse_bam
 
     CFG['insert_intron_iterations'] = options.iterations
     CFG['confidence_level'] = options.confidence
@@ -308,14 +324,17 @@ def parse_args(options):
     CFG['sg_min_edge_count'] = min(CFG['sg_min_edge_count'], len(CFG['samples']))
 
     ### rproc options
-    if options.parallel == 'y':
-        CFG['rproc'] = (options.parallel == 'y')
+    if options.pyproc == 'y':
+        CFG['rproc'] = (options.pyproc == 'y')
         CFG['options_rproc'] = dict()
         CFG['options_rproc']['mem_req_resubmit']  = [30000, 60000, 80000]
         CFG['options_rproc']['time_req_resubmit'] = [60*60, 80*60, 90*60]
         CFG['options_rproc']['resubmit'] = 3
         CFG['options_rproc']['priority'] = 100
         CFG['options_rproc']['addpaths'] = CFG['paths']
+
+    ### parallel processing
+    CFG['parallel'] = options.parallel
 
     return CFG
 

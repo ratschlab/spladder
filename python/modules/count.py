@@ -31,6 +31,9 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
     sys.stdout.write('genes: %i\n' % genes.shape[0])
     for f in range(counts.shape[0]):
         sys.stdout.write('sample %i/%i\n' % (f, counts.shape[0])) 
+
+        bam_cache = None
+
         ### iterate over all genes and generate counts for
         ### the segments in the segment graph
         ### and the splice junctions in the splice graph
@@ -44,14 +47,42 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
             gg.start = gg.segmentgraph.segments.ravel().min()
             gg.stop = gg.segmentgraph.segments.ravel().max()
 
-            ### add RNA-seq evidence to the gene structure
-            #(tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
-            (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);
-            intron_list = intron_list[0] ### TODO
-
-            ### extract mean exon coverage for all segments
             counts[f, i] = Counts(gg.segmentgraph.segments.shape[1])
 
+            if CFG['bam_to_sparse'] and (fn_bam[f].endswith('npz') or os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz')):
+                ### load counts from summary file
+                if bam_cache == None:
+                    bam_cache = dict()
+                    if fn_bam[f].endswith('npz'):
+                        tmp = sp.load(fn_bam[f])
+                    else:
+                        tmp = sp.load(re.sub(r'bam$', '', fn_bam[f]) + 'npz')
+                    ### re-built sparse matrix
+                    for c in sp.unique([re.sub(r'_reads_dat$', '', x) for x in tmp if x.endswith('_reads_dat')]):
+                        bam_cache[c + '_reads'] = scipy.sparse.coo_matrix((tmp[c + '_reads_dat'], (tmp[c + '_reads_row'], tmp[c + '_reads_col'])), shape=tmp[c + '_reads_shp'], dtype='uint32').tocsc()
+                        bam_cache[c + '_introns_m'] = tmp[c + '_introns_m']
+                        bam_cache[c + '_introns_p'] = tmp[c + '_introns_p']
+                    del tmp
+
+                if bam_cache[gg.chr + '_reads'].shape[0] > 1:
+                    tracks = bam_cache[gg.chr + '_reads'][[0, 1 + int(gg.strand == '-')], gg.start:gg.stop].todense() 
+                else:
+                    tracks = bam_cache[gg.chr + '_reads'][:, gg.start:gg.stop].todense() 
+
+                if bam_cache[c + '_introns_m'].shape[0] > 0:
+                    if gg.strand == '-':
+                        intron_list = get_intron_range(bam_cache[gg.chr + '_introns_m'], gg.start, gg.stop)
+                    else:
+                        intron_list = get_intron_range(bam_cache[gg.chr + '_introns_p'], gg.start, gg.stop)
+                else:
+                    intron_list = get_intron_range(bam_cache[gg.chr + '_introns_p'], gg.start, gg.stop)
+            else:
+                ### add RNA-seq evidence to the gene structure
+                #(tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
+                (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);
+                intron_list = intron_list[0] ### TODO
+
+            ### extract mean exon coverage for all segments
             for j in range(gg.segmentgraph.segments.shape[1]):
                 idx = sp.arange(gg.segmentgraph.segments[0, j], gg.segmentgraph.segments[1, j]) - gg.start
                 counts[f, i].segments[j] = sp.mean(sp.sum(tracks[:, idx], axis=0))
@@ -174,4 +205,16 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
     for key in counts:
         h5fid.create_dataset(name=key, data=counts[key])
     h5fid.close()
+
+def get_intron_range(introns, start, stop):
+    """Given a sorted list of introns, return the subset of introns that
+       overlaps that start stop interval"""
+
+    if introns.shape[0] == 0:
+        return introns
+
+    idx = sp.where(((introns[:, 0] < stop) & (introns[:, 1] > start)) |
+                   ((introns[:, 0] < start) & (introns[:, 1] > stop)))[0]
+
+    return introns[idx, :]
 

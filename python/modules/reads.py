@@ -27,12 +27,7 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
     else:
         read_matrix = scipy.sparse.coo_matrix((sp.ones(0), ([], [])), shape = (0, stop - start), dtype='bool')
 
-    reads_sec = 0
-    reads_map = 0
-
     length = stop - start
-
-    #t0 = time.time()
 
     #print >> sys.stderr, 'querying %s:%i-%i' % (chr_name, start, stop)
     ### TODO THIS IS A HACK
@@ -43,47 +38,9 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
         ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
         for read in infile.fetch(chr_name, start, stop, until_eof=True):
 
-            if read.is_unmapped:
+            ### check if we skip this reads
+            if filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware):
                 continue
-            if primary_only and read.is_secondary:
-                reads_sec += 1
-                continue
-
-            is_spliced = ('N' in read.cigarstring)
-            if is_spliced:
-                if not spliced:
-                    continue
-            elif not mapped:
-                reads_map += 1
-                continue
-
-            tags = dict(read.tags)
-
-            if filter is not None:
-                ### handle mismatches
-                if var_aware:
-                    if filter['mismatch'] < (tags['XM'] + tags['XG']):
-                        continue
-                else:
-                    if filter['mismatch'] < tags['NM']:
-                        continue
-
-                if is_spliced:
-                    ### handle min segment length
-                    ### remove all elements from CIGAR sting that do not 
-                    ### contribute to the segments (hard- and softclips and insertions)
-                    cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
-                    ### split the string at the introns and sum the remaining segment elements, compare to filter
-                    if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) <= filter['exon_len']:
-                        continue
-            
-            ### check strand information
-            if strand is not None:
-                try:
-                    if tags['XS'] != strand:
-                        continue
-                except KeyError:
-                    pass
 
             ### get introns and covergae
             p = read.pos 
@@ -141,9 +98,6 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
         introns = sp.array(introns, dtype='int')
     else:
         introns = sp.zeros((0, 2), dtype='int')
-
-    #t1 = time.time()
-    #print >> sys.stderr, 'This call took %i secs (took %i reads, %i were secondary, %i were filtered for being unspliced)' % (t1 - t0, read_cnt, reads_sec, reads_map)
 
     #if collapse:
     #    return (read_matrix.sum(axis = 0), introns)
@@ -425,3 +379,111 @@ def get_intron_list(genes, CFG):
             introns[j, 1] = sp.zeros((0, 3), dtype='int')
 
     return introns
+
+
+def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware):
+
+    if read.is_unmapped:
+        return True
+    if primary_only and read.is_secondary:
+        return True
+
+    is_spliced = ('N' in read.cigarstring)
+    if is_spliced:
+        if not spliced:
+            return True
+    elif not mapped:
+        return True
+
+    tags = dict(read.tags)
+
+    if filter is not None:
+        ### handle mismatches
+        if var_aware:
+            if filter['mismatch'] < (tags['XM'] + tags['XG']):
+                return True
+        else:
+            if filter['mismatch'] < tags['NM']:
+                return True
+
+        if is_spliced:
+            ### handle min segment length
+            ### remove all elements from CIGAR sting that do not 
+            ### contribute to the segments (hard- and softclips and insertions)
+            cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
+            ### split the string at the introns and sum the remaining segment elements, compare to filter
+            if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) <= filter['exon_len']:
+                return True
+    
+    ### check strand information
+    if strand is not None:
+        try:
+            if tags['XS'] != strand:
+                return True
+        except KeyError:
+            pass
+
+    return False
+
+
+def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, spliced=True, var_aware=None):
+
+    infile = pysam.Samfile(fname, 'rb')
+    introns_p = dict()
+    introns_m = dict()
+    chr_len = [int(x['LN']) for x in parse_header(infile.text)['SQ'] if x['SN'] == chr_name][0]
+    ### read matrix has three rows: 0 - no strand info, 1 - plus strand info, 2 - minus strand info
+    read_matrix = sp.zeros((3, chr_len), dtype='uint32') 
+    stranded = False
+
+    if CFG['verbose']:
+        print >> sys.stdout, 'Summarizing contig %s of file %s' % (chr_name, fname)
+
+    if infile.gettid(chr_name) > -1:
+        ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
+        for read in infile.fetch(chr_name, until_eof=True):
+
+            ### check if we skip this reads
+            if filter_read(read, filter, spliced, mapped, strand, CFG['primary_only'], CFG['var_aware']):
+                continue
+            
+            tags = dict(read.tags)
+            curr_read_stranded = ('XS' in tags)
+            is_minus = False
+            if curr_read_stranded:
+                stranded = True
+                is_minus = (tags['XS'] == '-')
+                    
+            ### get introns and covergae
+            p = read.pos 
+            for o in read.cigar:
+                if o[0] == 3:
+                    if is_minus:
+                        try:
+                            introns_m[(p, p + o[1])] += 1
+                        except KeyError:
+                            introns_m[(p, p + o[1])] = 1
+                    else:
+                        try:
+                            introns_p[(p, p + o[1])] += 1
+                        except KeyError:
+                            introns_p[(p, p + o[1])] = 1
+                if o[0] in [0, 2]:
+                    read_matrix[0 + int(curr_read_stranded) + int(is_minus), p:(p + o[1])] += 1
+                if o[0] in [0, 2, 3]:
+                    p += o[1]
+
+    ### convert introns into scipy array
+    introns_p = sp.array([[k[0], k[1], v] for k, v in introns_p.iteritems()], dtype='uint32')
+    introns_p = sort_rows(introns_p)
+    introns_m = sp.array([[k[0], k[1], v] for k, v in introns_m.iteritems()], dtype='uint32')
+    introns_m = sort_rows(introns_m)
+    ### make read matrix sparse
+    if not stranded:
+        read_matrix = scipy.sparse.coo_matrix(read_matrix[[0], :], dtype='uint32')
+    else:
+        read_matrix = scipy.sparse.coo_matrix(read_matrix, dtype='uint32')
+
+    return (chr_name, read_matrix, introns_m, introns_p)
+
+
