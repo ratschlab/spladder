@@ -1,9 +1,7 @@
 import scipy as sp
 
 from ..utils import *
-from ..init import * 
-
-import pdb
+from ..init import get_tags_gtf
 
 class Splicegraph:
 

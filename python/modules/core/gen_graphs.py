@@ -66,7 +66,7 @@ def gen_graphs(genes, CFG=None):
 
     ### sort genes by positions
     s_idx = sp.argsort([x.stop for x in genes])
-    genes =genes[s_idx]
+    genes = genes[s_idx]
     s_idx = sp.argsort([x.start for x in genes], kind='mergesort')
     genes = genes[s_idx]
     s_idx = sp.argsort([x.chr for x in genes], kind='mergesort')

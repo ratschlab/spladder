@@ -7,9 +7,7 @@ import scipy as sp
 if __package__ is None:
     __package__ = 'modules'
 
-from .classes.gene import Gene
 from .classes.region import Region
-from .classes.splicegraph import Splicegraph
 
 def get_tags_gff3(tagline):
     """Extract tags from given tagline"""
@@ -36,6 +34,9 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
 
     """This function reads the gtf input file and returns the information in an
        internal data structure"""
+
+    from .classes.gene import Gene
+    from .classes.splicegraph import Splicegraph
 
     if CFG is not None and CFG['verbose']:
         print >> sys.stderr, "Parsing annotation from %s ..." % infile
@@ -162,6 +163,9 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
 
     """This function reads the gff3 input file and returns the information in an
        internal data structure"""
+
+    from .classes.gene import Gene
+    from .classes.splicegraph import Splicegraph
 
     if CFG is not None and CFG['verbose']:
         print >> sys.stderr, "Parsing annotation from %s ..." % infile

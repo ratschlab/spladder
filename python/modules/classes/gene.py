@@ -1,5 +1,8 @@
 import scipy as sp
 
+if __package__ is None:
+    __package__ = 'modules.classes'
+
 from ..utils import *
 from .segmentgraph import Segmentgraph
 from .splicegraph import Splicegraph
