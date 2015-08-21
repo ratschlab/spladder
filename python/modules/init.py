@@ -62,7 +62,13 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
                 stop = int(sl[4])
             except ValueError:
                 stop = -1
-            genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=tags['gene_type'])
+            if 'gene_type' in tags:
+                gene_type = tags['gene_type']
+            elif 'gene_biotype' in tags:
+                gene_type = tags['gene_biotype']
+            else:
+                gene_type = None
+            genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
             chrms.append(sl[0])
 
     CFG = append_chrms(sp.sort(sp.unique(chrms)), CFG)
