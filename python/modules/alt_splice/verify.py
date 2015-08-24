@@ -445,12 +445,24 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         for i in range(ev.shape[0]):
             g_idx = ev[i].gene_idx
 
+            ### there are no edges present in the event
+            if gene_ids_edges.shape[0] == 0:
+                ver, info = verify_empty(event_type)
+                counts.append(sp.array([info]))
+                ev[i].verified = sp.array(ev[i].verified)
+                continue
+
             while gene_ids_segs[genes_f_idx_segs[gr_idx_segs]] < g_idx:
                 gr_idx_segs += 1
             assert(gene_ids_segs[genes_f_idx_segs[gr_idx_segs]] == g_idx)
 
             while gene_ids_edges[genes_f_idx_edges[gr_idx_edges]] < g_idx:
                 gr_idx_edges += 1
+            if gr_idx_edges > g_idx:
+                ver, info = verify_empty(event_type)
+                counts.append(sp.array([info]))
+                ev[i].verified = sp.array(ev[i].verified)
+                continue
             assert(gene_ids_edges[genes_f_idx_edges[gr_idx_edges]] == g_idx)
 
             ### laod relevant count data from HDF5
@@ -489,3 +501,23 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         cPickle.dump((ev, counts), open(out_fn, 'w'))
 
     return (ev, counts)
+
+def verify_empty(event_type):
+    
+    if event_type == 'exon_skip':
+        verified = [0, 0, 0, 0]
+        info = [1, 0, 0, 0, 0, 0, 0]
+    elif event_type in ['alt_3prime', 'alt_5prime']:
+        verified = [0, 0]
+        info = [1, 0, 0, 0, 0]
+    elif event_type == 'intron_retention':
+        verified = [0, 0]
+        info = [1, 0, 0, 0, 0, 0]
+    elif event_type == 'mult_exon_skip':
+        verified = [0, 0, 0, 0, 0]
+        info = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    elif event_type == 'mutex_exons':
+        verified = [0, 0, 0, 0]
+        info = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    return (verified, info)

@@ -88,6 +88,10 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
                 counts[f, i].segments[j] = sp.mean(sp.sum(tracks[:, idx], axis=0))
                 counts[f, i].seg_pos[j] = sp.sum(sp.sum(tracks[:, idx], axis=0) > 0)
 
+            ### there are no introns to count
+            if intron_list.shape[0] == 0:
+                continue
+
             ### extract intron counts 
             k, l = sp.where(gg.segmentgraph.seg_edges == 1)
             for m in range(k.shape[0]):
