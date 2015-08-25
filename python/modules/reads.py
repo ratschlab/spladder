@@ -318,10 +318,14 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
 
 def get_intron_list(genes, CFG):
 
-    # (author) Georg Zeller & Gunnar Raetsch, Mpi Tuebingen, Germany, 2009
-    # (author) Andre Kahles, MSKCC NYC, USA, 2013 
-
     #function introns = get_intron_list(genes, CFG)
+
+    ### collect all possible combinations of contigs and strands
+    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
+    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
+    regions = regions[keepidx]
+    s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
+    regions = regions[s_idx]
 
     ### form chunks for quick sorting
     strands = ['+', '-']
@@ -330,13 +334,6 @@ def get_intron_list(genes, CFG):
 
     introns = sp.zeros((chunks.shape[0], 2), dtype = 'object')
     introns[:] = None
-
-    ### collect all possible combinations of contigs and strands
-    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
-    keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
-    regions = regions[keepidx]
-    s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
-    regions = regions[s_idx]
 
     c = 0
     num_introns_filtered = 0
@@ -431,13 +428,19 @@ def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, s
     infile = pysam.Samfile(fname, 'rb')
     introns_p = dict()
     introns_m = dict()
-    chr_len = [int(x['LN']) for x in parse_header(infile.text)['SQ'] if x['SN'] == chr_name][0]
-    ### read matrix has three rows: 0 - no strand info, 1 - plus strand info, 2 - minus strand info
-    read_matrix = sp.zeros((3, chr_len), dtype='uint32') 
     stranded = False
 
     if CFG['verbose']:
         print >> sys.stdout, 'Summarizing contig %s of file %s' % (chr_name, fname)
+
+    chr_len = [int(x['LN']) for x in parse_header(infile.text)['SQ'] if x['SN'] == chr_name]
+    if len(chr_len) == 0:
+        print >> sys.stdout, 'No information found for contig %s' % (chr_name)
+        return (chr_name, scipy.sparse.coo_matrix(sp.zeros((0, 1)), dtype='uint32'), sp.zeros((0, 3), dtype='uint32'), sp.zeros((0, 3), dtype='uint32'))
+    chr_len = chr_len[0]
+
+    ### read matrix has three rows: 0 - no strand info, 1 - plus strand info, 2 - minus strand info
+    read_matrix = sp.zeros((3, chr_len), dtype='uint32') 
 
     if infile.gettid(chr_name) > -1:
         ### pysam query is zero based in position (results are as well), all intervals are pythonic half open

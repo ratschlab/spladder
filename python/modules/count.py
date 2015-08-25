@@ -64,7 +64,9 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
                         bam_cache[c + '_introns_p'] = tmp[c + '_introns_p']
                     del tmp
 
-                if bam_cache[gg.chr + '_reads'].shape[0] > 1:
+                if bam_cache[gg.chr + '_reads'].shape[0] == 0:
+                    tracks = sp.zeros((1, gg.stop - gg.start), dtype='int')
+                elif bam_cache[gg.chr + '_reads'].shape[0] > 1:
                     tracks = bam_cache[gg.chr + '_reads'][[0, 1 + int(gg.strand == '-')], gg.start:gg.stop].todense() 
                 else:
                     tracks = bam_cache[gg.chr + '_reads'][:, gg.start:gg.stop].todense() 
