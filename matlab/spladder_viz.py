@@ -53,18 +53,13 @@ def parse_options(argv):
 def get_plot_len(options):
     """Identifies the number of rows we need in our plot"""
 
-    rows = 3
-    #if options.gene_name is not None:
-    #    rows += 1
+    rows = 3 # splicing graph + events + segments
     if options.bams != '-':
         samples = options.bams.strip(':').split(':')
         rows += len(samples)
         if len(samples) > 1:
             rows += 1
-    if options.transcripts:
-        rows += 1
-    if options.event_id is not None:
-        rows += 1
+    rows += int(options.transcripts)
 
     return rows
 
@@ -210,7 +205,7 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
         if options.labels != '-':
             label = options.labels[s]
         else:
-            label = 'sample %i' % (s + 1)
+            label = 'group %i' % (s + 1)
             
         if single:
             axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
@@ -218,7 +213,9 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
             color_cov = cmap_cov(norm(0)) # '#d7191c'
             color_edg = cmap_edg(norm(0)) # '#1a9641'
         else:
-            title = 'Expression all Samples'
+            if s == 0:
+                axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
+            title = 'Expression all Sample Groups'
             color_cov = cmap_cov(norm(s))
             color_edg = cmap_edg(norm(s))
 

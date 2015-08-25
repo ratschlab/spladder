@@ -148,8 +148,9 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
                 counts = sp.log10(seg_counts[j, i] + 1)
             else:
                 counts = seg_counts[j, i]
-            ax.add_patch(patches.Rectangle((s[0], 0), s[1] - s[0], counts, fill=cmap_seg(norm(ii)),
-                         edgecolor='none', alpha=0.5))
+            #ax.add_patch(patches.Rectangle((s[0], 0), s[1] - s[0], counts, fill=cmap_seg(norm(ii)),
+            #             edgecolor='none', alpha=0.5))
+            ax.plot(s, [counts, counts], '-', color=cmap_seg(norm(ii)), linewidth=2)
 
         for j in range(edge_idx.shape[0]):
             [s, t] = sp.unravel_index(edge_idx[j], gene.segmentgraph.seg_edges.shape, order=order) 
