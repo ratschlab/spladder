@@ -45,7 +45,7 @@ function alt_genes_analyze(CFG, event_type)
         end;
 
         %%% check, if confirmed version exists
-        if ~exist(fn_out_count, 'file'),
+        if ~exist(fn_out_count, 'file') || ~exist(fn_out_conf, 'file'),
 
             load(fn_out);
 
