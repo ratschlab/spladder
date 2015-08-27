@@ -2,6 +2,7 @@ import sys
 import os
 import scipy as sp
 import h5py
+import warnings
 
 def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, anno_fn=None):
     # write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, anno_fn)
@@ -264,9 +265,10 @@ def write_events_structured(fn_out_struc, events, idx=None):
         idx = sp.arange(events.shape[0])
 
     print 'writing %s events in generic structured format to %s' % (events[0].event_type, fn_out_struc)
+    mult_exon_skip_bool = True
 
     fd_out = open(fn_out_struc, 'w+') 
-
+    
     ### load gene structure
     for i in idx:
 
@@ -304,7 +306,10 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 flanks = '%i^,%i-' % (ev.exons1[0, 1], ev.exons1[-1, 0] + 1) 
                 schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1])
             elif ev.event_type == 'mult_exon_skip':
-                raise Exception('Event type mult_exon_skip not implemented yet for structured output')
+		if mult_exon_skip_bool:
+		    mult_exon_skip_bool = False
+	            warnings.warn('WARNING: Event type mult_exon_skip not implemented yet for structured output')
+		#raise Exception('Event type mult_exon_skip not implemented yet for structured output')
             else:
                 raise Exception("Unknown event type: %s" % ev.event_type)
         ### - strand - revert donor/acceptor
@@ -333,7 +338,10 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 flanks = '%i^,%i-' % (ev.exons1[-1, 0] + 1, ev.exons1[0, 1]) 
                 schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 1], ev.exons1[1, 0] + 1, ev.exons2[1, 1], ev.exons2[1, 0] + 1)
             elif ev.event_type == 'mult_exon_skip':
-                raise Exception('Event type mult_exon_skip not implemented yet for structured output')
+		if mult_exon_skip_bool:
+		    mult_exon_skip_bool = False
+	            warnings.warn('WARNING: Event type mult_exon_skip not implemented yet for structured output')
+                #raise Exception('Event type mult_exon_skip not implemented yet for structured output')
             else:
                 raise Exception("Unknown event type: %s" % ev.event_type)
         print >> fd_out, 'flanks "%s"; structure "%s"; splice_chain "%s";'  % (flanks, struc, schain)
