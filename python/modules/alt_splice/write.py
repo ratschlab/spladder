@@ -2,7 +2,6 @@ import sys
 import os
 import scipy as sp
 import h5py
-import warnings
 
 def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, anno_fn=None):
     # write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, anno_fn)
@@ -308,7 +307,8 @@ def write_events_structured(fn_out_struc, events, idx=None):
             elif ev.event_type == 'mult_exon_skip':
 		if mult_exon_skip_bool:
 		    mult_exon_skip_bool = False
-	            warnings.warn('WARNING: Event type mult_exon_skip not implemented yet for structured output')
+	            print >> sys.stderr, 'WARNING: Event type mult_exon_skip not implemented yet for structured output'
+		break
 		#raise Exception('Event type mult_exon_skip not implemented yet for structured output')
             else:
                 raise Exception("Unknown event type: %s" % ev.event_type)
@@ -340,7 +340,8 @@ def write_events_structured(fn_out_struc, events, idx=None):
             elif ev.event_type == 'mult_exon_skip':
 		if mult_exon_skip_bool:
 		    mult_exon_skip_bool = False
-	            warnings.warn('WARNING: Event type mult_exon_skip not implemented yet for structured output')
+	            print >> sys.stderr, 'WARNING: Event type mult_exon_skip not implemented yet for structured output'
+		break
                 #raise Exception('Event type mult_exon_skip not implemented yet for structured output')
             else:
                 raise Exception("Unknown event type: %s" % ev.event_type)
