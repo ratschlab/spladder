@@ -291,7 +291,7 @@ def write_events_structured(fn_out_struc, events, idx=None):
                     schain = '%i-,%i-' % (min(ev.exons1[-1, 0] + 1, ev.exons2[-1, 0]) + 1, max(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1)
                 elif sp.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
                     struc = '1^,2^'
-                    flanks = '%i-,%i-' % (max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1, ex.exons1[-1, 0] + 1)
+                    flanks = '%i-,%i-' % (max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1, ev.exons1[-1, 0] + 1)
                     schain = '%i^,%i^' % (min(ev.exons1[0, 1], ev.exons2[0, 1]), max(ev.exons1[0, 1], ev.exons2[0, 1]))
                 else:
                     raise Exception("Misconfigured alt-prime event detected")
@@ -299,7 +299,7 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 struc = '0,1^2-'
                 flanks = '%i-,%i^' % (ev.exons2[0] + 1, ev.exons2[1])
                 schain = ',%i^%i-' % (ev.exons1[0, 1], ev.exons1[1, 0] + 1)
-            elif ev.event_type == 'mutex_exon':
+            elif ev.event_type == 'mutex_exons':
                 struc = '1-2^,3-4^'
                 flanks = '%i^,%i-' % (ev.exons1[0, 1], ev.exons1[-1, 0] + 1) 
                 schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1])
@@ -328,7 +328,7 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 struc = '0,1^2-'
                 flanks = '%i-,%i^' % (ev.exons2[1], ev.exons2[0] + 1)
                 schain = ',%i^%i-' % (ev.exons1[1, 0] + 1, ev.exons1[0, 1])
-            elif ev.event_type == 'mutex_exon':
+            elif ev.event_type == 'mutex_exons':
                 struc = '1-2^,3-4^'
                 flanks = '%i^,%i-' % (ev.exons1[-1, 0] + 1, ev.exons1[0, 1]) 
                 schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 1], ev.exons1[1, 0] + 1, ev.exons2[1, 1], ev.exons2[1, 0] + 1)
