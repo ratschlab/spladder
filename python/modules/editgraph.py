@@ -266,11 +266,6 @@ def insert_intron_retentions(genes, CFG):
 
     inserted = 0
 
-    ### form chunks for quick sorting
-    strands = ['+', '-']
-    chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
-    (chunks, chunk_idx) = sort_rows(chunks, index=True)
-
     ### form all possible combinations of contigs and strands --> regions
     (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
     ### keep only chromosomes found in genes
@@ -278,6 +273,16 @@ def insert_intron_retentions(genes, CFG):
     regions = regions[keepidx]
     s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
     regions = regions[s_idx]
+
+    ### form chunks for quick sorting
+    strands = ['+', '-']
+    chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
+    (chunks, chunk_idx) = sort_rows(chunks, index=True)
+
+    ### ignore contigs not present in bam files 
+    keepidx = sp.where(sp.in1d(sp.array([CFG['chrm_lookup'][x.chr] for x in genes[chunk_idx]]), sp.array([x.chr_num for x in regions])))[0]
+    chunks = chunks[keepidx]
+    chunk_idx = chunk_idx[keepidx]
 
     c = 0 
     num_introns_added = 0
@@ -291,8 +296,7 @@ def insert_intron_retentions(genes, CFG):
             if chunks[c, 0] > chr_num or chunks[c, 1] > s:
                 break
             if chunks[c, 0] != chr_num:
-                print >> sys.stderr, 'ERROR: c logic seems wrong'
-                sys.exit(1)
+                raise Exception('ERROR: c logic seems wrong')
 
             if CFG['verbose'] and (c+1) % 100 == 0:
                 print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested introns, %2.1f%%)' % (c+1, chunks.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
@@ -752,10 +756,6 @@ def insert_cassette_exons(genes, CFG):
 
     strands = ['+', '-']
 
-    ### form chunks for quick sorting
-    chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
-    (chunks, chunk_idx) = sort_rows(chunks, index=True)
-
     ### form all possible combinations of contigs and strands --> regions
     (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
     ### keep only chromosomes found in genes
@@ -763,6 +763,15 @@ def insert_cassette_exons(genes, CFG):
     regions = regions[keepidx]
     s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
     regions = regions[s_idx]
+
+    ### form chunks for quick sorting
+    chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
+    (chunks, chunk_idx) = sort_rows(chunks, index=True)
+
+    ### ignore contigs not present in bam files 
+    keepidx = sp.where(sp.in1d(sp.array([CFG['chrm_lookup'][x.chr] for x in genes[chunk_idx]]), sp.array([x.chr_num for x in regions])))[0]
+    chunks = chunks[keepidx]
+    chunk_idx = chunk_idx[keepidx]
 
     c = 0
     num_exons_added = 0
@@ -778,8 +787,7 @@ def insert_cassette_exons(genes, CFG):
             if chunks[c, 0] > chr_num or chunks[c, 1] > s:
                 break
             if chunks[c, 0] != chr_num:
-                print >> sys.stderr, 'ERROR: c logic seems wrong'
-                sys.exit(1)
+                raise Exception('ERROR: c logic seems wrong')
 
             if CFG['verbose'] and (c+1) % 100 == 0:
                 print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))

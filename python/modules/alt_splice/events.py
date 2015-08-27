@@ -89,9 +89,11 @@ def make_unique_by_strain(event_list):
         if old_coords.shape[0] == curr_coords.shape[0] and sp.all(old_coords == curr_coords):
 
             ### assertion that we did everything right
-            assert(event_list[i - 1].chr == event_list[i].chr)
-            assert(event_list[i - 1].strand == event_list[i].strand)
-            assert(event_list[i].strain.shape[0] == 1)
+            if event_list[i - 1].chr == event_list[i].chr:
+                assert(event_list[i - 1].strand == event_list[i].strand)
+                assert(event_list[i].strain.shape[0] == 1)
+            else:
+                assert(event_list[i - 1].gene_name != event_list[i].gene_name)
 
             idx = sp.where(event_list[i-1].strain == event_list[i].strain[0])[0]
             if idx.shape[0] > 0:

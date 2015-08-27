@@ -316,12 +316,16 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
 
     return (introns, coverage)
 
+
 def get_intron_list(genes, CFG):
 
     #function introns = get_intron_list(genes, CFG)
+    introns = sp.zeros((genes.shape[0], 2), dtype = 'object')
+    introns[:] = None
 
     ### collect all possible combinations of contigs and strands
     (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
+    ### keep only chromosomes found in genes
     keepidx = sp.where(sp.in1d(sp.array([x.chr_num for x in regions]), sp.unique(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]))))[0]
     regions = regions[keepidx]
     s_idx = sp.argsort([x.chr_num for x in regions], kind='mergesort')
@@ -332,8 +336,10 @@ def get_intron_list(genes, CFG):
     chunks = sp.array([[CFG['chrm_lookup'][x.chr], strands.index(x.strand), x.start, x.stop] for x in genes], dtype = 'int')
     (chunks, chunk_idx) = sort_rows(chunks, index=True)
 
-    introns = sp.zeros((chunks.shape[0], 2), dtype = 'object')
-    introns[:] = None
+    ### ignore contigs not present in bam files 
+    keepidx = sp.where(sp.in1d(sp.array([CFG['chrm_lookup'][x.chr] for x in genes[chunk_idx]]), sp.array([x.chr_num for x in regions])))[0]
+    chunks = chunks[keepidx]
+    chunk_idx = chunk_idx[keepidx]
 
     c = 0
     num_introns_filtered = 0
@@ -349,8 +355,7 @@ def get_intron_list(genes, CFG):
             if chunks[c, 0] > chr_num or chunks[c, 1] > s:
                 break
             if chunks[c, 0] != chr_num:
-                print >> sys.stderr, 'ERROR: c logic seems wrong' 
-                sys.exit(1)
+                raise Exception('ERROR: c logic seems wrong')
 
             if CFG['verbose'] and (c+1) % 100 == 0:
                 t1 = time.time()
