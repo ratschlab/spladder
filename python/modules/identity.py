@@ -57,6 +57,8 @@ def get_conf_events(options, gid):
     event_info = []
 
     for event_type in options.event_types:
+	if event_type not in ["exon_skip","intron_retention","alt_3prime","alt_5prime","mult_exon_skip","mutex_exons"]:
+		raise Exception('Unknown event type: %s' % event_type)
         IN = h5py.File(os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence)), 'r')
         if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
             conf_idx = IN['conf_idx'][:]
