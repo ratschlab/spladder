@@ -28,6 +28,7 @@ def default_settings():
         SPLADDER_SRC_PATH = os.getcwd()
         CFG['paths'].append('%s/../mex' % SPLADDER_SRC_PATH)
     
+    CFG['bam_fnames'] = []
     # TODO
     #if len(CFG['paths']) > 0:
     #    for p in CFG['paths']:
@@ -156,42 +157,12 @@ def default_settings():
 
 
 
-def parse_args(options):
+def parse_args(options, identity='main'):
 
     ### load all default settings
     CFG = default_settings()
 
-    ### get switches
-    if options.insert_ir in ['n', 'y']:
-        CFG['do_insert_intron_retentions'] = (options.insert_ir == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option insert_ir should have value y or n, but has %s' % options.insert_ir
-        sys.exit(1)
-
-    if options.insert_es in ['n', 'y']:
-        CFG['do_insert_cassette_exons'] = (options.insert_es == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option insert_es should have value y or n, but has %s' % options.insert_es
-        sys.exit(1)
-
-    if options.insert_ni in ['n', 'y']:
-        CFG['do_insert_intron_edges'] = (options.insert_ni == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option insert_ni should have value y or n, but has %s' % options.insert_ni
-        sys.exit(1)
-
-    if options.remove_se in ['n', 'y']:
-        CFG['do_remove_short_exons'] = (options.remove_se == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option remove_se should have value y or n, but has %s' % options.remove_se
-        sys.exit(1)
-
-    if options.infer_sg in ['n', 'y']:
-        CFG['do_infer_splice_graph'] = (options.infer_sg == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option infer_sg should have value y or n, but has %s' % options.infer_sg
-        sys.exit(1)
-
+    ### general options
     if options.verbose in ['n', 'y']:
         CFG['verbose'] = (options.verbose == 'y')
     else:
@@ -204,86 +175,8 @@ def parse_args(options):
         print >> sys.stderr, 'ERROR: option debug should have value y or n, but has %s' % options.debug
         sys.exit(1)
 
-    if options.var_aware in ['n', 'y']:
-        CFG['var_aware'] = (options.var_aware == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option var_aware should have value y or n, but has %s' % options.var_aware
-        sys.exit(1)
-
-    if options.primary_only in ['n', 'y']:
-        CFG['primary_only'] = (options.primary_only == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option primary_only should have value y or n, but has %s' % options.primary_only
-        sys.exit(1)
-
-    if options.intron_cov in ['n', 'y']:
-        CFG['count_intron_cov'] = (options.intron_cov == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option intron_cov should have value y or n, but has %s' % options.intron_cov
-
-    if options.quantify_graph in ['n', 'y']:
-        CFG['count_segment_graph'] = (options.quantify_graph == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option quantify_graph should have value y or n, but has %s' % options.quantify_graph
-
-    ### option to store sparse BAM representation
-    if options.sparse_bam in ['n', 'y']:
-        CFG['bam_to_sparse'] = (options.sparse_bam == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option sparse_bam should have value y or n, but has %s' % options.sparse_bam
-
-    CFG['insert_intron_iterations'] = options.iterations
-    CFG['confidence_level'] = options.confidence
-    if options.spladderfile != '-':
-        CFG['spladder_infile'] = options.spladderfile
-
-    ### settings for the alt splice part
-    CFG['merge_strategy'] = options.merge
-    CFG['validate_splicegraphs'] = (options.validate_sg == 'y')
-    CFG['same_genestruct_for_all_samples'] = (options.same_genome == 'y')
-    if options.replicates != '-':
-        CFG['replicate_idxs'] = [int(x) for x in options.replicates.split(',')]
-    CFG['curate_alt_prime_events'] = (options.curate_alt_prime == 'y')
-
-    ### open log file, if specified
-    if options.logfile != '-':
-        CFG['log_fname'] = options.logfile
-        CFG['fd_log'] = open(options.logfile, 'w')
-    else:
-        CFG['log_fname'] = 'stdout'
-        CFG['fd_log'] = sys.stdout
-
-    #if options.user != '-':
-    #    CFG['user_settings'] = options.user
-
-    CFG['read_length'] = options.readlen
-
-    ### alt splice analysis
-    CFG['run_as_analysis'] = (options.extract_as == 'y')
     CFG['event_types'] = options.event_types.strip(',').split(',')
 
-    ### mandatory parameters
-    if options.bams == '-':
-        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: bam files\n\n'
-        options.parser.print_help()
-        sys.exit(2)
-    else:
-        CFG['bam_fnames'] = options.bams.strip(',').split(',')
-        ### check existence of files
-        for fname in CFG['bam_fnames']:
-            if not os.path.isfile(fname):
-                print >> sys.stderr, 'ERROR: Input file %s can not be found\n\n' % fname
-                sys.exit(2)
-
-    if options.annotation == '-':
-        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: annotation\n\n'
-        options.parser.print_help()
-        sys.exit(2)
-    elif not os.path.isfile(options.annotation):
-        print >> sys.stderr, 'ERROR: Annotation file %s can not be found\n\n' % options.annotation
-        sys.exit(2)
-    else:
-        CFG['anno_fname'] = options.annotation
     if options.outdir == '-':
         print >> sys.stderr, 'ERROR: please provide the mandatory parameter: out directory\n\n'
         options.parser.print_help()
@@ -298,18 +191,170 @@ def parse_args(options):
                 sys.exit(2)
         CFG['out_dirname'] = options.outdir
 
+    ### options specific for main program
+    if identity == 'main':
+        if options.insert_ir in ['n', 'y']:
+            CFG['do_insert_intron_retentions'] = (options.insert_ir == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option insert_ir should have value y or n, but has %s' % options.insert_ir
+            sys.exit(1)
+
+        if options.insert_es in ['n', 'y']:
+            CFG['do_insert_cassette_exons'] = (options.insert_es == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option insert_es should have value y or n, but has %s' % options.insert_es
+            sys.exit(1)
+
+        if options.insert_ni in ['n', 'y']:
+            CFG['do_insert_intron_edges'] = (options.insert_ni == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option insert_ni should have value y or n, but has %s' % options.insert_ni
+            sys.exit(1)
+
+        if options.remove_se in ['n', 'y']:
+            CFG['do_remove_short_exons'] = (options.remove_se == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option remove_se should have value y or n, but has %s' % options.remove_se
+            sys.exit(1)
+
+        if options.infer_sg in ['n', 'y']:
+            CFG['do_infer_splice_graph'] = (options.infer_sg == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option infer_sg should have value y or n, but has %s' % options.infer_sg
+            sys.exit(1)
+
+        if options.var_aware in ['n', 'y']:
+            CFG['var_aware'] = (options.var_aware == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option var_aware should have value y or n, but has %s' % options.var_aware
+            sys.exit(1)
+
+        if options.primary_only in ['n', 'y']:
+            CFG['primary_only'] = (options.primary_only == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option primary_only should have value y or n, but has %s' % options.primary_only
+            sys.exit(1)
+
+        if options.intron_cov in ['n', 'y']:
+            CFG['count_intron_cov'] = (options.intron_cov == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option intron_cov should have value y or n, but has %s' % options.intron_cov
+
+        if options.quantify_graph in ['n', 'y']:
+            CFG['count_segment_graph'] = (options.quantify_graph == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option quantify_graph should have value y or n, but has %s' % options.quantify_graph
+
+        ### option to store sparse BAM representation
+        if options.sparse_bam in ['n', 'y']:
+            CFG['bam_to_sparse'] = (options.sparse_bam == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option sparse_bam should have value y or n, but has %s' % options.sparse_bam
+
+        CFG['insert_intron_iterations'] = options.iterations
+        if options.spladderfile != '-':
+            CFG['spladder_infile'] = options.spladderfile
+
+        ### settings for the alt splice part
+        CFG['same_genestruct_for_all_samples'] = (options.same_genome == 'y')
+        if options.replicates != '-':
+            CFG['replicate_idxs'] = [int(x) for x in options.replicates.split(',')]
+        CFG['curate_alt_prime_events'] = (options.curate_alt_prime == 'y')
+
+        ### open log file, if specified
+        if options.logfile != '-':
+            CFG['log_fname'] = options.logfile
+            CFG['fd_log'] = open(options.logfile, 'w')
+        else:
+            CFG['log_fname'] = 'stdout'
+            CFG['fd_log'] = sys.stdout
+
+        #if options.user != '-':
+        #    CFG['user_settings'] = options.user
+
+        ### alt splice analysis
+        CFG['run_as_analysis'] = (options.extract_as == 'y')
+        
+        ### mandatory parameters for main spladder
+        if options.bams == '-':
+            print >> sys.stderr, 'ERROR: please provide the mandatory parameter: bam files\n\n'
+            options.parser.print_help()
+            sys.exit(2)
+        else:
+            CFG['bam_fnames'] = options.bams.strip(',').split(',')
+            ### check existence of files
+            for fname in CFG['bam_fnames']:
+                if not os.path.isfile(fname):
+                    print >> sys.stderr, 'ERROR: Input file %s can not be found\n\n' % fname
+                    sys.exit(2)
+
+        if options.annotation == '-':
+            print >> sys.stderr, 'ERROR: please provide the mandatory parameter: annotation\n\n'
+            options.parser.print_help()
+            sys.exit(2)
+        elif not os.path.isfile(options.annotation):
+            print >> sys.stderr, 'ERROR: Annotation file %s can not be found\n\n' % options.annotation
+            sys.exit(2)
+        else:
+            CFG['anno_fname'] = options.annotation
+        
+        if options.refstrain != '-':
+            CFG['reference_strain'] = options.refstrain
+            ref_tag = '%s:' % options.refstrain
+        else:
+            ref_tag = ''
+
+        ### rproc options
+        if options.pyproc == 'y':
+            CFG['rproc'] = (options.pyproc == 'y')
+            CFG['options_rproc'] = dict()
+            CFG['options_rproc']['mem_req_resubmit']  = [30000, 60000, 80000]
+            CFG['options_rproc']['time_req_resubmit'] = [60*60, 80*60, 90*60]
+            CFG['options_rproc']['resubmit'] = 3
+            CFG['options_rproc']['priority'] = 100
+            CFG['options_rproc']['addpaths'] = CFG['paths']
+
+
+    if identity in ['main', 'test']:
+        ### parallel processing
+        CFG['parallel'] = options.parallel
+
+        CFG['merge_strategy'] = options.merge
+        CFG['read_length'] = options.readlen
+        CFG['confidence_level'] = options.confidence
+
+        if options.validate_sg in ['n', 'y']:
+            CFG['validate_splicegraphs'] = (options.validate_sg == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: validate_sg matlab should have value y or n, but has %s' % options.validate_sg
+            sys.exit(1)
+    
+    if identity == 'test':
+        CFG['multiTest'] = options.correction
+        CFG['max_0_frac'] = options.max_0_frac
+        CFG['min_count'] = options.min_count
+        
+        if options.matlab in ['n', 'y']:
+            CFG['is_matlab'] = (options.matlab == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option matlab should have value y or n, but has %s' % options.matlab
+            sys.exit(1)
+
+        if options.conditionA == '-':
+            print >> sys.stderr, 'ERROR: At least one sample for condition A required'
+            sys.exit(1)
+        if options.conditionB == '-':
+            print >> sys.stderr, 'ERROR: At least one sample for condition B required'
+            sys.exit(1)
+
+        CFG['conditionA'] = [os.path.basename(x).replace('.bam', '') for x in options.conditionA.strip(',').split(',')]
+        CFG['conditionB'] = [os.path.basename(x).replace('.bam', '') for x in options.conditionB.strip(',').split(',')]
+
     ### check if we got a list of bam files in a text file instead of a comma separated list
-    if CFG['bam_fnames'][0].split('.')[-1] == 'txt':
+    if len(CFG['bam_fnames']) > 0 and CFG['bam_fnames'][0].split('.')[-1] == 'txt':
         CFG['bam_fnames'] = list(sp.loadtxt(CFG.bam_fnames[0], dtype='str'))
 
-    if options.refstrain != '-':
-        CFG['reference_strain'] = options.refstrain
-        ref_tag = '%s:' % options.refstrain
-    else:
-        ref_tag = ''
-
     ### assemble strain list
-    CFG['list_config'] = []
     CFG['samples'] = []
     CFG['strains'] = []
     for i in range(len(CFG['bam_fnames'])):
@@ -322,19 +367,6 @@ def parse_args(options):
 
     ### adapt graph validation requirement to max number of samples
     CFG['sg_min_edge_count'] = min(CFG['sg_min_edge_count'], len(CFG['samples']))
-
-    ### rproc options
-    if options.pyproc == 'y':
-        CFG['rproc'] = (options.pyproc == 'y')
-        CFG['options_rproc'] = dict()
-        CFG['options_rproc']['mem_req_resubmit']  = [30000, 60000, 80000]
-        CFG['options_rproc']['time_req_resubmit'] = [60*60, 80*60, 90*60]
-        CFG['options_rproc']['resubmit'] = 3
-        CFG['options_rproc']['priority'] = 100
-        CFG['options_rproc']['addpaths'] = CFG['paths']
-
-    ### parallel processing
-    CFG['parallel'] = options.parallel
 
     return CFG
 
