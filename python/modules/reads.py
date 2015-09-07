@@ -412,40 +412,17 @@ def get_intron_list(genes, CFG):
 		sys.exit(1)
 
 	else:
-<<<<<<< HEAD
-<<<<<<< HEAD
 	    for i in __chunk_generator(chunks, chr_num, s, c):
-=======
-	    while c[0] < chunks.shape[0]:
-		# fill the chunks on the corresponding chromosome
-        	i = c[0]
-        	if chunks[i, 0] > chr_num or chunks[i, 1] > s:
-            	    break
-        	if chunks[i, 0] != chr_num:
-            	    raise Exception('ERROR: c logic seems wrong')
-
->>>>>>> reconfigured get_intron_list to process chunks in parallel; added a generator function and a process_chunk function to accomplish this
-=======
-	    for i in __chunk_generator(chunks, chr_num, s, c):
->>>>>>> rewrote the single core part of the processing chunks to use the generator and separate function to reduce redundancy
         	if CFG['verbose'] and (i+1) % 100 == 0:
          	    t1 = time.time()
          	    print >> sys.stdout, '%i (%i) genes done (%i introns taken) ... took %i secs' % (i+1, chunks.shape[0], num_introns_filtered, t1 - t0)
             	    t0 = t1
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 	        args = [ chunks[i], chunk_idx[i], i, s, strand, chr, chr_num, bam_args, genes[chunk_idx[i]] ]
-=======
-	        args = [ chunks[i] chunk_idx[i], i, s, strand, chr, chr_num, bam_args, genes[chunk_idx[i]] ]
->>>>>>> rewrote the single core part of the processing chunks to use the generator and separate function to reduce redundancy
 		result = __process_chunk(args)
 		idx = result[0]
 		num_introns_filtered += result[2]
 		introns[idx, s] = result[3]
-<<<<<<< HEAD
-    
-=======
 	        gg = sp.array([copy.copy(genes[chunk_idx[i]])], dtype='object')
         	gg[0].strand = strands[s]
         	gg[0].start = max(gg[0].start - 5000, 1)
@@ -457,11 +434,7 @@ def get_intron_list(genes, CFG):
         	introns[chunk_idx[i], s] = sort_rows(intron_list_tmp[0])
 
 		c[0] += 1
-=======
->>>>>>> rewrote the single core part of the processing chunks to use the generator and separate function to reduce redundancy
     
-
->>>>>>> reconfigured get_intron_list to process chunks in parallel; added a generator function and a process_chunk function to accomplish this
     for j in range(introns.shape[0]):
         if introns[j, 0] is None:
             introns[j, 0] = sp.zeros((0, 3), dtype='int')
