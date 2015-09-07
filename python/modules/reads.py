@@ -378,7 +378,6 @@ def get_intron_list(genes, CFG):
     c = [0]
     num_introns_filtered = 0
     t0 = time.time()
-    print CFG['bam_fnames']
     bam_args = CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']
 
     print >> sys.stdout, "starting to process chunks"
@@ -388,30 +387,58 @@ def get_intron_list(genes, CFG):
         strand = regions[j].strand
         s = strands.index(regions[j].strand)
         
-        # fill the chunks on the corresponding chromosome
-        while c < chunks.shape[0]:
-            if chunks[c, 0] > chr_num or chunks[c, 1] > s:
-                break
-            if chunks[c, 0] != chr_num:
-                raise Exception('ERROR: c logic seems wrong')
+    	if CFG['parallel'] > 1:
+	    import multiprocessing as mp
+	    import signal as sig
+	    pool = mp.Pool(processes=CFG['parallel'], 
+				initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
+	    
+	    try:
+	        result = [pool.apply_async(__process_chunk, args=(
+				[chunks[i], chunk_idx[i], i, s, strand, chr, chr_num, bam_args, genes[chunk_idx[i]] ]) ) \
+				for i in __chunk_generator(chunks, chr_num, s, c)]
+	    	while result:
+	            tmp = result.pop(0).get()
+		    idx = tmp[0]
+		    tmp_c = tmp[1]
+		    num_introns_filtered += tmp[2]
+		    introns[idx, s] = tmp[3]
+		    if CFG['verbose'] and (tmp_c+1) % 100 == 0:
+            	        t1 = time.time()
+            	        print >> sys.stdout, '%i (%i) genes done (%i introns taken) ... took %i secs' % (tmp_c+1, chunks.shape[0], num_introns_filtered, t1 - t0)
+                        t0 = t1
+            except KeyboardInterrupt:
+		print >> sys.stdout, 'Program exiting due to Keyboard Interruption'
+		pool.terminate()
+		pool.join()
+		sys.exit(1)
 
-            if CFG['verbose'] and (c+1) % 100 == 0:
-                t1 = time.time()
-                print >> sys.stdout, '%i (%i) genes done (%i introns taken) ... took %i secs' % (c+1, chunks.shape[0], num_introns_filtered, t1 - t0)
-                t0 = t1
+	else:
+	    while c[0] < chunks.shape[0]:
+		# fill the chunks on the corresponding chromosome
+        	i = c[0]
+        	if chunks[i, 0] > chr_num or chunks[i, 1] > s:
+            	    break
+        	if chunks[i, 0] != chr_num:
+            	    raise Exception('ERROR: c logic seems wrong')
 
-            gg = sp.array([copy.copy(genes[chunk_idx[c]])], dtype='object')
-            gg[0].strand = strands[s]
-            gg[0].start = max(gg[0].start - 5000, 1)
-            gg[0].stop = gg[0].stop + 5000
-            assert(gg[0].chr == chr)
+        	if CFG['verbose'] and (i+1) % 100 == 0:
+         	    t1 = time.time()
+         	    print >> sys.stdout, '%i (%i) genes done (%i introns taken) ... took %i secs' % (i+1, chunks.shape[0], num_introns_filtered, t1 - t0)
+            	    t0 = t1
 
-            intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'])
-            num_introns_filtered += intron_list_tmp[0].shape[0]
-            introns[chunk_idx[c], s] = sort_rows(intron_list_tmp[0])
+	        gg = sp.array([copy.copy(genes[chunk_idx[i]])], dtype='object')
+        	gg[0].strand = strands[s]
+        	gg[0].start = max(gg[0].start - 5000, 1)
+      		gg[0].stop = gg[0].stop + 5000
+        	assert(gg[0].chr == chr)
 
-            c += 1
+        	intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
+        	num_introns_filtered += intron_list_tmp[0].shape[0]
+        	introns[chunk_idx[i], s] = sort_rows(intron_list_tmp[0])
 
+		c[0] += 1
+    
     for j in range(introns.shape[0]):
         if introns[j, 0] is None:
             introns[j, 0] = sp.zeros((0, 3), dtype='int')
