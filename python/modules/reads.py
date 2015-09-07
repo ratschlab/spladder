@@ -316,6 +316,30 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
 
     return (introns, coverage)
 
+def __process_chunk(*args):
+    chunk, chunk_idx, c, s, strand, chr, chr_num, bam_args, gene = args
+	
+    gg = sp.array([copy.copy(gene)], dtype='object')
+    gg[0].strand = strand
+    gg[0].start = max(gg[0].start - 5000, 1)
+    gg[0].stop = gg[0].stop + 5000
+    assert(gg[0].chr == chr)
+
+    intron_list_tmp = add_reads_from_bam(gg, bam_args[0], bam_args[1], bam_args[2], bam_args[3], bam_args[4])
+    introns = sort_rows(intron_list_tmp[0])
+    num_introns_filtered = intron_list_tmp[0].shape[0]
+    return [chunk_idx, c, num_introns_filtered, introns]
+
+def __chunk_generator(chunks, chr_num, s, c):
+	while c[0] < chunks.shape[0]:
+	    i = c[0]
+	    if chunks[i, 0] > chr_num or chunks[i, 1] > s:
+                break
+            elif chunks[i, 0] != chr_num:
+                raise Exception('ERROR: c logic seems wrong')
+	    else:
+		yield c[0]
+	    c[0] += 1
 
 def get_intron_list(genes, CFG):
 
@@ -341,13 +365,15 @@ def get_intron_list(genes, CFG):
     chunks = chunks[keepidx]
     chunk_idx = chunk_idx[keepidx]
 
-    c = 0
+    c = [0]
     num_introns_filtered = 0
     t0 = time.time()
+    bam_args = CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']
 
     for j in range(regions.shape[0]):
         chr = regions[j].chr
         chr_num = regions[j].chr_num
+        strand = regions[j].strand
         s = strands.index(regions[j].strand)
         
         # fill the chunks on the corresponding chromosome
@@ -495,5 +521,6 @@ def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, s
         read_matrix = scipy.sparse.coo_matrix(read_matrix, dtype='uint32')
 
     return (chr_name, read_matrix, introns_m, introns_p)
+
 
 
