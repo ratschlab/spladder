@@ -403,30 +403,17 @@ def get_intron_list(genes, CFG):
 		sys.exit(1)
 
 	else:
-	    while c[0] < chunks.shape[0]:
-		# fill the chunks on the corresponding chromosome
-        	i = c[0]
-        	if chunks[i, 0] > chr_num or chunks[i, 1] > s:
-            	    break
-        	if chunks[i, 0] != chr_num:
-            	    raise Exception('ERROR: c logic seems wrong')
-
+	    for i in __chunk_generator(chunks, chr_num, s, c):
         	if CFG['verbose'] and (i+1) % 100 == 0:
          	    t1 = time.time()
          	    print >> sys.stdout, '%i (%i) genes done (%i introns taken) ... took %i secs' % (i+1, chunks.shape[0], num_introns_filtered, t1 - t0)
             	    t0 = t1
 
-	        gg = sp.array([copy.copy(genes[chunk_idx[i]])], dtype='object')
-        	gg[0].strand = strands[s]
-        	gg[0].start = max(gg[0].start - 5000, 1)
-      		gg[0].stop = gg[0].stop + 5000
-        	assert(gg[0].chr == chr)
-
-        	intron_list_tmp = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
-        	num_introns_filtered += intron_list_tmp[0].shape[0]
-        	introns[chunk_idx[i], s] = sort_rows(intron_list_tmp[0])
-
-		c[0] += 1
+	        args = [ chunks[i] chunk_idx[i], i, s, strand, chr, chr_num, bam_args, genes[chunk_idx[i]] ]
+		result = __process_chunk(args)
+		idx = result[0]
+		num_introns_filtered += result[2]
+		introns[idx, s] = result[3]
     
     for j in range(introns.shape[0]):
         if introns[j, 0] is None:
