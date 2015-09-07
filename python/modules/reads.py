@@ -370,6 +370,7 @@ def get_intron_list(genes, CFG):
     t0 = time.time()
     bam_args = CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']
 
+    print >> sys.stdout, "starting to process chunks"
     for j in range(regions.shape[0]):
         chr = regions[j].chr
         chr_num = regions[j].chr_num
@@ -409,7 +410,7 @@ def get_intron_list(genes, CFG):
          	    print >> sys.stdout, '%i (%i) genes done (%i introns taken) ... took %i secs' % (i+1, chunks.shape[0], num_introns_filtered, t1 - t0)
             	    t0 = t1
 
-	        args = [ chunks[i] chunk_idx[i], i, s, strand, chr, chr_num, bam_args, genes[chunk_idx[i]] ]
+	        args = [ chunks[i], chunk_idx[i], i, s, strand, chr, chr_num, bam_args, genes[chunk_idx[i]] ]
 		result = __process_chunk(args)
 		idx = result[0]
 		num_introns_filtered += result[2]
