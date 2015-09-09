@@ -388,10 +388,7 @@ def get_intron_list(genes, CFG):
         s = strands.index(regions[j].strand)
         
     	if CFG['parallel'] > 1:
-	    import multiprocessing as mp
-	    import signal as sig
-	    pool = mp.Pool(processes=CFG['parallel'], 
-				initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
+	    pool = CFG['pool']
 	    
 	    try:
 	        result = [pool.apply_async(__process_chunk, args=(
