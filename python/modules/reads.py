@@ -5,6 +5,7 @@ import scipy.sparse
 import copy
 import pdb
 import time
+import traceback
 
 if __package__ is None:
     __package__ = 'modules'
@@ -325,9 +326,15 @@ def __process_chunk(*args):
     gg[0].stop = gg[0].stop + 5000
     assert(gg[0].chr == chr)
 
-    intron_list_tmp = add_reads_from_bam(gg, bam_args[0], bam_args[1], bam_args[2], bam_args[3], bam_args[4])
+    try:
+        intron_list_tmp = add_reads_from_bam(gg, bam_args[0], bam_args[1], bam_args[2], bam_args[3], bam_args[4])
+    except:
+        traceback.print_exc()
+        raise
+
     introns = sort_rows(intron_list_tmp[0])
     num_introns_filtered = intron_list_tmp[0].shape[0]
+    del chunk, s, strand, chr, chr_num, bam_args, gene, intron_list_tmp
     return [chunk_idx, c, num_introns_filtered, introns]
 
 def __chunk_generator(chunks, chr_num, s, c):
