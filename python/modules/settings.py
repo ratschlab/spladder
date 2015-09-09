@@ -137,6 +137,7 @@ def default_settings():
 
     CFG['rproc'] = 0
     CFG['parallel'] = 1
+    CFG['pool'] = None
 
     CFG['bam_to_sparse'] = 0
     CFG['ignore_mismatch_tag'] = False
