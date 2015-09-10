@@ -793,9 +793,10 @@ def insert_intron_edges(genes, CFG):
     
     return (genes, inserted)
 
-__process_ce(*args):
+def __process_ce(*args):
     gg, strand, c, bam_args = args
     gg.strand = strand
+    num_exons_added, num_exons, inserted = 0
 
     try:
         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), )
@@ -877,7 +878,7 @@ __process_ce(*args):
         exon_order = sp.argsort(gg.splicegraph.vertices[0, :])
         gg.splicegraph.reorder(exon_order)
         if not any_added:
-            break
+            raise Exception("Error: something went wrong with inserting new cassettes")
     if any_added:
         #import pdb
         #pdb.set_trace()
