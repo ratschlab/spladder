@@ -395,7 +395,7 @@ def insert_intron_retentions(genes, CFG):
 		if CFG['verbose'] and (c+1) % 100 == 0:
                     print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested introns, %2.1f%%)' % \
 			(c+1, chunks.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
-		args = [genes[chunk_idx[i]], strands[s], bam_args]
+		args = [genes[chunk_idx[i]], strands[s], i, bam_args]
 		result = __process_ri(args)
 		genes[chunk_idx[i]] = result[1]
 		num_introns_added += result[2]
@@ -793,6 +793,98 @@ def insert_intron_edges(genes, CFG):
     
     return (genes, inserted)
 
+__process_ce(*args):
+    gg, strand, c, bam_args = args
+    gg.strand = strand
+
+    try:
+        tracks = add_reads_from_bam(sp.array([gg], dtype='object'), )
+    except:
+	traceback.print_exc()
+	raise
+
+            ### add introns implied by splicegraph to the list
+    all_introns = gg.introns[s][:, :2]
+    for k in range(gg.splicegraph.edges.shape[0]):
+        for l in range(k+1, gg.splicegraph.edges.shape[0]):
+            if gg.splicegraph.edges[k, l] == 1:
+                all_introns = sp.r_[all_introns, sp.array([[gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]]])] # introns are half open
+    all_introns = unique_rows(all_introns)
+       
+    ### use only relevant introns (inside gene boundaries)
+    if all_introns.shape[0] > 0:
+        keep_idx = sp.where((all_introns[:, 1] > gg.start) & (all_introns[:, 0] < gg.stop))[0]
+        all_introns = all_introns[keep_idx, :]
+
+    segment_starts = sp.sort(sp.unique(all_introns[:, 0]))
+    segment_ends = sp.sort(sp.unique(all_introns[:, 1]))
+
+    ### check for all intron-pairs, if exon could exist between them
+    new_cassette = sp.zeros((all_introns.shape[0], all_introns.shape[0]), dtype='int') 
+    for k in range(all_introns.shape[0]):
+        for l in range(k + 1, all_introns.shape[0]):
+            if all_introns[k, 1] >= all_introns[l, 0]:
+                continue
+            ### only take intron pair, if outer ends are supported by current exons
+            if (not all_introns[k, 0] in gg.splicegraph.vertices[1, :]) or (not all_introns[l, 1] in gg.splicegraph.vertices[0, :]): 
+                continue
+            curr_exon = [all_introns[k, 1], all_introns[l, 0]]
+            ### do not allow curr_exon to overlap existing exon
+            if sp.sum((gg.splicegraph.vertices[0, :] < curr_exon[1]) & (gg.splicegraph.vertices[1, :] > curr_exon[0])) > 0:
+                continue
+
+            num_exons += 1
+
+            if not ismember(curr_exon, gg.splicegraph.vertices.T, rows=True):
+                idx = sp.arange(curr_exon[0], curr_exon[1]) - gg.start
+                exon_cov = sp.sum(tracks[:, idx], axis=0)
+
+                pre_segment_end = sp.where(segment_ends < curr_exon[0])[0]
+                if pre_segment_end.shape[0] > 0:
+                    pre_segment_cov = sp.sum(tracks[:, sp.arange(segment_ends[pre_segment_end.max()], curr_exon[0]) - gg.start], axis=0)
+                else:
+                    pre_segment_cov = sp.sum(tracks[:, sp.arange(curr_exon[0] - gg.start)], axis=0)
+                min_len_pre = min(pre_segment_cov.shape[0], exon_cov.shape[0])
+
+                aft_segment_start = sp.where(segment_starts > curr_exon[1])[0]
+                if aft_segment_start.shape[0] > 0:
+                    aft_segment_cov = sp.sum(tracks[:, sp.arange(curr_exon[1], segment_starts[aft_segment_start.min()]) - gg.start], axis=0)
+                else:
+                    aft_segment_cov = sp.sum(tracks[:, (curr_exon[1] - gg.start):], axis=0)
+                min_len_aft = min(aft_segment_cov.shape[0], exon_cov.shape[0])
+
+                if sp.mean(exon_cov > (0.2 * sp.mean(exon_cov))) > CFG['cassette_exon']['min_cassette_region'] and \
+                   sp.median(exon_cov) > CFG['cassette_exon']['min_cassette_cov'] and \
+                   (sp.median(exon_cov[-min_len_aft:]) / sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
+                   (sp.median(exon_cov[:min_len_pre]) / sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
+                   #max(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) / min(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
+                   #max(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) / min(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
+                    new_cassette[k, l] = 1
+                    inserted += 1 
+    any_added = False
+    if any(new_cassette.ravel()):
+        curr_sg = gg.splicegraph.vertices
+        for k in range(new_cassette.shape[1]):
+            for l in range(k + 1, new_cassette.shape[1]):
+                if new_cassette[k, l] > 0:
+                    exons_pre = sp.where(curr_sg[1, :] == all_introns[k, 0])[0]
+                    exons_aft = sp.where(curr_sg[0, :] == all_introns[l, 1])[0]
+
+                    gg.splicegraph.add_cassette_exon(sp.array([all_introns[k, 1], all_introns[l, 0]]), exons_pre, exons_aft)
+                    new_cassette[k, l] = 0
+                    any_added = True
+                    num_exons_added += 1
+        exon_order = sp.argsort(gg.splicegraph.vertices[0, :])
+        gg.splicegraph.reorder(exon_order)
+        if not any_added:
+            break
+    if any_added:
+        #import pdb
+        #pdb.set_trace()
+        exon_order = sp.argsort(gg.splicegraph.vertices[0, :])
+        gg.splicegraph.reorder(exon_order)
+
+    return [c, gg, num_exons_added, num_exons, inserted]
 
 def insert_cassette_exons(genes, CFG):
     # written by Andre Kahles, Mpi Tuebingen, Germany, 2012
@@ -819,112 +911,48 @@ def insert_cassette_exons(genes, CFG):
     chunks = chunks[keepidx]
     chunk_idx = chunk_idx[keepidx]
 
-    c = 0
+    c = [0]
     num_exons_added = 0
     num_exons = 0
+    bam_args = [CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'] ]
 
     for j in range(regions.shape[0]):
         chr_num = regions[j].chr_num
         s = strands.index(regions[j].strand)
         
         # fill the chunks on the corresponding chromosome
-        while c < chunks.shape[0]:
+	if CFG['parallel'] > 1:
+	    pool = CFG['pool']
+	    try:
+		result = [pool.apply_async(__process_ce, args=[genes[chunk_idx[i]], strands[s], i, bam_args]) \
+						for i in __chunk_generator(chunks, chr_num, s, c)]
+	        while result:
+        	    tmp = result.pop(0).get()
+		    tmp_c = tmp[0]
+		    genes[chunk_idx[tmp_c]] = tmp[1]
+		    num_exons_added += tmp[2]
+		    num_exons += tmp[3]
+		    inserted += tmp[4]
+		    if CFG['verbose'] and (tmp_c+1) % 100 == 0:
+                	print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' \
+				% (tmp_c+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
+	    except KeyboardInterrupt:
+		print >> sys.stdout, 'Program exiting due to Keyboard Interruption'
+		pool.terminate()
+		pool.join()
+		sys.exit(1)
 
-            if chunks[c, 0] > chr_num or chunks[c, 1] > s:
-                break
-            if chunks[c, 0] != chr_num:
-                raise Exception('ERROR: c logic seems wrong')
-
-            if CFG['verbose'] and (c+1) % 100 == 0:
-                print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
-
-            gg = genes[chunk_idx[c]]
-            gg.strand = strands[s]
-            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'])
-
-            ### add introns implied by splicegraph to the list
-            all_introns = gg.introns[s][:, :2]
-            for k in range(gg.splicegraph.edges.shape[0]):
-                for l in range(k+1, gg.splicegraph.edges.shape[0]):
-                    if gg.splicegraph.edges[k, l] == 1:
-                        all_introns = sp.r_[all_introns, sp.array([[gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]]])] # introns are half open
-            all_introns = unique_rows(all_introns)
-       
-            ### use only relevant introns (inside gene boundaries)
-            if all_introns.shape[0] > 0:
-                keep_idx = sp.where((all_introns[:, 1] > gg.start) & (all_introns[:, 0] < gg.stop))[0]
-                all_introns = all_introns[keep_idx, :]
-
-            segment_starts = sp.sort(sp.unique(all_introns[:, 0]))
-            segment_ends = sp.sort(sp.unique(all_introns[:, 1]))
-
-            ### check for all intron-pairs, if exon could exist between them
-            new_cassette = sp.zeros((all_introns.shape[0], all_introns.shape[0]), dtype='int') 
-            for k in range(all_introns.shape[0]):
-                for l in range(k + 1, all_introns.shape[0]):
-                    if all_introns[k, 1] >= all_introns[l, 0]:
-                        continue
-                    ### only take intron pair, if outer ends are supported by current exons
-                    if (not all_introns[k, 0] in gg.splicegraph.vertices[1, :]) or (not all_introns[l, 1] in gg.splicegraph.vertices[0, :]): 
-                        continue
-                    curr_exon = [all_introns[k, 1], all_introns[l, 0]]
-                    ### do not allow curr_exon to overlap existing exon
-                    if sp.sum((gg.splicegraph.vertices[0, :] < curr_exon[1]) & (gg.splicegraph.vertices[1, :] > curr_exon[0])) > 0:
-                        continue
-
-                    num_exons += 1
-
-                    if not ismember(curr_exon, gg.splicegraph.vertices.T, rows=True):
-                        idx = sp.arange(curr_exon[0], curr_exon[1]) - gg.start
-                        exon_cov = sp.sum(tracks[:, idx], axis=0)
-
-                        pre_segment_end = sp.where(segment_ends < curr_exon[0])[0]
-                        if pre_segment_end.shape[0] > 0:
-                            pre_segment_cov = sp.sum(tracks[:, sp.arange(segment_ends[pre_segment_end.max()], curr_exon[0]) - gg.start], axis=0)
-                        else:
-                            pre_segment_cov = sp.sum(tracks[:, sp.arange(curr_exon[0] - gg.start)], axis=0)
-                        min_len_pre = min(pre_segment_cov.shape[0], exon_cov.shape[0])
-
-                        aft_segment_start = sp.where(segment_starts > curr_exon[1])[0]
-                        if aft_segment_start.shape[0] > 0:
-                            aft_segment_cov = sp.sum(tracks[:, sp.arange(curr_exon[1], segment_starts[aft_segment_start.min()]) - gg.start], axis=0)
-                        else:
-                            aft_segment_cov = sp.sum(tracks[:, (curr_exon[1] - gg.start):], axis=0)
-                        min_len_aft = min(aft_segment_cov.shape[0], exon_cov.shape[0])
-
-                        if sp.mean(exon_cov > (0.2 * sp.mean(exon_cov))) > CFG['cassette_exon']['min_cassette_region'] and \
-                           sp.median(exon_cov) > CFG['cassette_exon']['min_cassette_cov'] and \
-                           (sp.median(exon_cov[-min_len_aft:]) / sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
-                           (sp.median(exon_cov[:min_len_pre]) / sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
-                           #max(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) / min(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
-                           #max(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) / min(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
-                            new_cassette[k, l] = 1
-                            inserted += 1 
-            any_added = False
-            if any(new_cassette.ravel()):
-                curr_sg = gg.splicegraph.vertices
-                for k in range(new_cassette.shape[1]):
-                    for l in range(k + 1, new_cassette.shape[1]):
-                        if new_cassette[k, l] > 0:
-                            exons_pre = sp.where(curr_sg[1, :] == all_introns[k, 0])[0]
-                            exons_aft = sp.where(curr_sg[0, :] == all_introns[l, 1])[0]
-
-                            gg.splicegraph.add_cassette_exon(sp.array([all_introns[k, 1], all_introns[l, 0]]), exons_pre, exons_aft)
-                            new_cassette[k, l] = 0
-                            any_added = True
-                            num_exons_added += 1
-                exon_order = sp.argsort(gg.splicegraph.vertices[0, :])
-                gg.splicegraph.reorder(exon_order)
-                if not any_added:
-                    break
-            if any_added:
-                #import pdb
-                #pdb.set_trace()
-                exon_order = sp.argsort(gg.splicegraph.vertices[0, :])
-                gg.splicegraph.reorder(exon_order)
-            ### clean up gene structure
-            genes[chunk_idx[c]] = gg
-            c += 1
+        else:
+	    for i in __chunk_generator(chunks, chr_num, s, c):
+		if CFG['verbose'] and (c+1) % 100 == 0:
+                    print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' \
+			    % (c+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
+		args = [genes[chunk_idx[i]], strands[s], i, bam_args]
+		result = __process_ce(args)
+		genes[chunk_idx[i]] = result[1]
+		num_exons_added += result[2]
+		num_exons += result[3]
+		inserted += result[4]
 
     return (genes, inserted)
 
