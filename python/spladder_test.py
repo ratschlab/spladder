@@ -42,8 +42,8 @@ def parse_options(argv):
     parser = OptionParser()
     required = OptionGroup(parser, 'MANDATORY')
     required.add_option('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder output directory', default='-')
-    required.add_option('-a', '--conditionA', dest='conditionA', metavar='idA1,idA2,idA3,...', help='comma separated list of samples IDs for condition A', default='-')
-    required.add_option('-b', '--conditionB', dest='conditionB', metavar='idB1,idB2,idB3,...', help='comma separated list of samples IDs for condition B', default='-')
+    required.add_option('-a', '--conditionA', dest='conditionA', metavar='idA1,idA2,idA3,...', help='comma separated list of samples files for condition A', default='-')
+    required.add_option('-b', '--conditionB', dest='conditionB', metavar='idB1,idB2,idB3,...', help='comma separated list of samples files for condition B', default='-')
     input = OptionGroup(parser, 'INPUT OPTIONS')
     input.add_option('-n', '--readlen', dest='readlen', metavar='INT', type='int', help='read length [50]', default=50)
     input.add_option('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
@@ -218,15 +218,14 @@ def log_progress(idx, total, bins=50):
     
     global TIME0
 
-    binsize = total / bins
+    binsize = max(total / bins, 1)
     if idx % binsize == 0:
         time1 = time.time()
         if idx == 0:
             TIME0 = time1
         progress = idx / binsize
-        sys.stdout.write('\r[' + ('#' * progress) + (' ' * (bins - progress)) + ']' + ' %i / %i (%.0f%%)' % (idx, total, float(idx) / max(total, 1) * 100) + ' - took %i sec (ETA: %i sec)' % (time1 - TIME0, (100 - progress) * (time1 - TIME0)))
+        sys.stdout.write('\r[' + ('#' * progress) + (' ' * (bins - progress)) + ']' + ' %i / %i (%.0f%%)' % (idx, total, float(idx) / max(total, 1) * 100) + ' - took %i sec (ETA: %i sec)' % (time1 - TIME0, int((bins - progress) * float(time1 - TIME0) / max(progress, 1))))
         sys.stdout.flush()
-        TIME0 = time1
 
 def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
 
@@ -237,10 +236,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
     for i in range(idx.shape[0]):
 
         if log:
-            sys.stdout.write('.')
-            if (i + 1) % 100 == 0:
-                sys.stdout.write('%i/%i\n' % (i + 1, idx.shape[0]))
-            sys.stdout.flush()
+            log_progress(i, idx.shape[0])
 
         disp = 0.1
         resp = gene_counts[i, :].astype('int')
@@ -267,6 +263,8 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
             if j == 9:
                 disp_raw[i] = disp
                 disp_raw_conv[i] = False
+    if log:
+        log_progress(idx.shape[0], idx.shape[0])
 
     return (disp_raw, disp_raw_conv, idx)
 
@@ -296,6 +294,9 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
                         res_cnt += 1
                     disp_raw[j] = tmp[0][i]
                     disp_raw_conv[j] = tmp[1][i]
+            if CFG['verbose']:
+                log_progress(gene_counts.shape[0], gene_counts.shape[0])
+                print ''
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
@@ -303,9 +304,6 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
             sys.exit(1)
     else:        
         (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
-
-    if CFG['verbose']:
-        print ''
 
     if CFG['debug']:
         fig = plt.figure(figsize=(8, 6), dpi=100)
@@ -421,6 +419,9 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
                 if j == 9:
                     disp_adj[i] = disp
                     disp_adj_conv[i] = False
+    if log:
+        log_progress(idx.shape[0], idx.shape[0])
+        print ''
 
     return (disp_adj, disp_adj_conv, idx)
 
@@ -453,6 +454,9 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
                         res_cnt += 1
                     disp_adj[j] = tmp[0][i]
                     disp_adj_conv[j] = tmp[1][i]
+            if CFG['verbose']:
+                log_progress(counts.shape[0], counts.shape[0])
+                print ''
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
@@ -460,9 +464,6 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
             sys.exit(1)
     else:        
         (disp_adj, disp_adj_conv, _) = adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, sf, CFG, sp.arange(counts.shape[0]), log=CFG['verbose'])
-
-    if CFG['verbose']:
-        print ''
 
     if CFG['debug']:
         fig = plt.figure(figsize=(8, 6), dpi=100)
@@ -503,6 +504,10 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
         result1 = modNB1.fit()
         pval[i] = 1 - chi2.cdf(result0.deviance - result1.deviance, dmatrix1.shape[1] - dmatrix0.shape[1])
 
+    if log:
+        log_progress(idx.shape[0], idx.shape[0])
+        print ''
+
     return (pval, idx)
 
 
@@ -529,6 +534,9 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG):
                         log_progress(res_cnt, gene_counts.shape[0])
                         res_cnt += 1
                     pval[j] = tmp[0][i]
+            if CFG['verbose']:
+                log_progress(gene_counts.shape[0], gene_counts.shape[0])
+                print ''
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
@@ -690,6 +698,24 @@ def main():
 
         gene_strains = sp.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
 
+        ### estimate size factors for library size normalization
+        sf = get_size_factors(gene_counts, CFG)
+
+        ### get index of samples for difftest
+        idx1 = sp.where(sp.in1d(gene_strains, CFG['conditionA']))[0]
+        idx2 = sp.where(sp.in1d(gene_strains, CFG['conditionB']))[0]
+
+        ### for TESTING
+        #setsize = 100
+        #idx1 = sp.arange(0, setsize / 2)
+        #idx2 = sp.arange(setsize / 2, setsize)
+
+        ### subset expression counts to tested samples
+        gene_counts = gene_counts[:, sp.r_[idx1, idx2]]
+        sf = sf[sp.r_[idx1, idx2]]
+        sf = sp.r_[sf, sf]
+
+        ### test each event type individually
         for event_type in CFG['event_types']:
 
             if CFG['verbose']:
@@ -697,26 +723,13 @@ def main():
 
             CFG['fname_events'] = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, CFG['confidence_level']))
 
-            ### estimate size factors for library size normalization
-            sf = get_size_factors(gene_counts, CFG)
-
-            ### for TESTING
-            #setsize = 100
-            #idx1 = sp.arange(0, setsize / 2)
-            #idx2 = sp.arange(setsize / 2, setsize)
-
-            idx1 = sp.where(sp.in1d(gene_strains, CFG['conditionA']))[0]
-            idx2 = sp.where(sp.in1d(gene_strains, CFG['conditionB']))[0]
-
             ### quantify events
             (cov, gene_idx, event_idx, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], sp.r_[idx1, idx2], event_type, CFG)
 
             assert(sp.all(gene_strains == event_strains))
 
             ### map gene expression to event order
-            gene_counts = gene_counts[gene_idx, :]
-            gene_counts = gene_counts[:, sp.r_[idx1, idx2]]
-            sf = sf[sp.r_[idx1, idx2]]
+            curr_gene_counts = gene_counts[gene_idx, :]
 
             ### filter for min expression
             k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
@@ -726,18 +739,12 @@ def main():
            # k_idx = sp.where((sp.mean(cov[0], axis=1) > 2) & (sp.mean(cov[1], axis=1) > 2))[0]
             cov[0] = cov[0][k_idx, :]
             cov[1] = cov[1][k_idx, :]
-            gene_counts = gene_counts[k_idx, :]
+            curr_gene_counts = curr_gene_counts[k_idx, :]
             event_idx = event_idx[k_idx]
 
-            ### subset to first 500 events for now ...
-            #cov[0] = cov[0][:500, :]
-            #cov[0] = sp.around(sp.hstack([cov[0], gene_counts[:500, :]]))
-            cov[0] = sp.around(sp.hstack([cov[0], gene_counts]))
-            #cov[1] = cov[1][:500, :]
-            #cov[1] = sp.around(sp.hstack([cov[1], gene_counts[:500, :]]))
-            cov[1] = sp.around(sp.hstack([cov[1], gene_counts]))
+            cov[0] = sp.around(sp.hstack([cov[0], curr_gene_counts]))
+            cov[1] = sp.around(sp.hstack([cov[1], curr_gene_counts]))
             cov = sp.vstack(cov)
-            sf = sp.r_[sf, sf]
 
             tidx = sp.arange(idx1.shape[0])
 
@@ -766,6 +773,9 @@ def main():
 
             pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
             pvals_adj = adj_pval(pvals, CFG) 
+
+            ### write output
+
             pdb.set_trace()
 
 if __name__ == "__main__":
