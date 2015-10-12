@@ -136,6 +136,7 @@ def default_settings():
 
     CFG['rproc'] = 0
     CFG['parallel'] = 1
+    CFG['pool'] = None
 
     CFG['bam_to_sparse'] = 0
 
@@ -367,6 +368,14 @@ def parse_args(options, identity='main'):
 
     ### adapt graph validation requirement to max number of samples
     CFG['sg_min_edge_count'] = min(CFG['sg_min_edge_count'], len(CFG['samples']))
+
+    ### parallel processing
+    CFG['parallel'] = options.parallel
+    if CFG['parallel'] > 1:
+        import multiprocessing as mp
+	import signal as sig
+	CFG['pool'] = mp.Pool(processes=CFG['parallel'],
+				initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
 
     return CFG
 
