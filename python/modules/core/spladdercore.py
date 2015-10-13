@@ -7,11 +7,6 @@ from gen_graphs import gen_graphs
 
 def spladder_core(CFG):
 
-    ### add dependencies provided in config section
-    #if 'paths' in CFG:
-    #    for i in CFG['paths']:
-    #        eval('import %s'% CFG['paths'][i])
-
     genes_loaded = False
 
     ### check if result file exists and start gen graph step if necessary

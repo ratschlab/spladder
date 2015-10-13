@@ -30,7 +30,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
     sys.stdout.write('genes: %i\n' % genes.shape[0])
     for f in range(counts.shape[0]):
-        sys.stdout.write('sample %i/%i\n' % (f, counts.shape[0])) 
+        sys.stdout.write('sample %i/%i\n' % (f + 1, counts.shape[0])) 
 
         bam_cache = None
 
@@ -51,7 +51,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
             if CFG['bam_to_sparse'] and (fn_bam[f].endswith('npz') or os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz')):
                 ### load counts from summary file
-                if bam_cache == None:
+                if bam_cache is None:
                     bam_cache = dict()
                     if fn_bam[f].endswith('npz'):
                         tmp = sp.load(fn_bam[f])
@@ -143,7 +143,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
             counts['segments'].append(sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
             counts['seg_pos'].append(sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]))
             counts['gene_ids_segs'].append(sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * c)
-            tmp = sp.hstack([sp.atleast_2d(x.edges) for x in counts_tmp[:, c]])
+            tmp = sp.hstack([sp.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0])
             if tmp.shape[0] > 0:
                 counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
                 counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * c)
