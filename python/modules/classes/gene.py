@@ -1,4 +1,5 @@
 import scipy as sp
+import warnings
 
 if __package__ is None:
     __package__ = 'modules.classes'
@@ -15,7 +16,11 @@ class Gene:
         self.stop = stop
         self.exons = []
         self.chr = chr
-        self.strand = strand
+        if strand in ['+', '-']:
+            self.strand = strand
+        else:
+            warnings.warn('WARNING: strand of gene was provided as %s - automatically set to +')
+            self.strand = '+'
         self.transcripts = []
         self.source = source
         self.splicegraph = Splicegraph()
