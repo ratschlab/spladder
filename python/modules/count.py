@@ -90,12 +90,15 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
                 counts[f, i].segments[j] = sp.mean(sp.sum(tracks[:, idx], axis=0))
                 counts[f, i].seg_pos[j] = sp.sum(sp.sum(tracks[:, idx], axis=0) > 0)
 
+            k, l = sp.where(gg.segmentgraph.seg_edges == 1)
+
             ### there are no introns to count
             if intron_list.shape[0] == 0:
+                for m in range(k.shape[0]):
+                    counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))
                 continue
 
             ### extract intron counts 
-            k, l = sp.where(gg.segmentgraph.seg_edges == 1)
             for m in range(k.shape[0]):
                 idx = sp.where((sp.absolute(intron_list[:, 0] - gg.segmentgraph.segments[1, k[m]]) <= intron_tol) & (sp.absolute(intron_list[:, 1] - gg.segmentgraph.segments[0, l[m]]) <= intron_tol))[0]
                 if counts[f, i].edges.shape[0] == 0:
@@ -200,8 +203,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                         counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c))
 
     for key in counts:
-        if len(counts[key]) > 0:
-            counts[key] = sp.vstack(counts[key])
+        counts[key] = sp.vstack(counts[key]) if len(counts[key]) > 0 else counts[key]
     if len(counts['edges']) > 0:
         counts['edge_idx'] = counts['edges'][:, 0]
         counts['edges'] = counts['edges'][:, 1:]
