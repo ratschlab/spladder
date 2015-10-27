@@ -95,7 +95,10 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
             ### there are no introns to count
             if intron_list.shape[0] == 0:
                 for m in range(k.shape[0]):
-                    counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))
+                    if counts[f, i].edges.shape[0] == 0:
+                        counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))
+                    else:
+                        counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))]
                 continue
 
             ### extract intron counts 
