@@ -7,6 +7,7 @@ import h5py
 
 from .classes.gene import Gene
 from .classes.event import Event
+from .hdf5 import loadmat, fix_string_representation, fix_array_structure
 
 ### return identity
 def identity():
@@ -36,7 +37,14 @@ def load_genes(options):
     if options.validate_sg:
         genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.validated.mat' % options.confidence), struct_as_record=False)['genes'][0, :]
     else:
-        genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.mat' % options.confidence), struct_as_record=False)['genes'][0, :]
+        try:
+            genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.mat' % options.confidence), struct_as_record=False)['genes'][0, :]
+        except NotImplementedError:
+            genes = loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.mat' % options.confidence))['genes']
+            ### fix string representations
+            fix_string_representation(genes, ['chr', 'name', 'gene_info/ID', 'gene_info/Source', 'gene_info/Name', 'gene_info/Type', 'source', 'strand']) 
+            ### fix array structure
+            genes = fix_array_structure(genes)[:, 0]
 
     return genes
 

@@ -335,6 +335,7 @@ def __process_chunk(*args):
     introns = sort_rows(intron_list_tmp[0])
     num_introns_filtered = intron_list_tmp[0].shape[0]
     del chunk, s, strand, chr, chr_num, bam_args, gene, intron_list_tmp
+
     return [chunk_idx, c, num_introns_filtered, introns]
 
 def __chunk_generator(chunks, chr_num, s, c):
@@ -386,10 +387,10 @@ def get_intron_list(genes, CFG):
         
     	if CFG['parallel'] > 1:
 	    pool = CFG['pool']
-#	    import multiprocessing as mp
-#	    import signal as sig
-#	    pool = mp.Pool(processes=CFG['parallel'], 
-#				initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
+	    import multiprocessing as mp
+	    import signal as sig
+	    pool = mp.Pool(processes=CFG['parallel'], 
+				initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
 	    
 	    try:
 	        result = [pool.apply_async(__process_chunk, args=(

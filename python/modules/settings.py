@@ -369,6 +369,18 @@ def parse_args(options, identity='main'):
     ### adapt graph validation requirement to max number of samples
     CFG['sg_min_edge_count'] = min(CFG['sg_min_edge_count'], len(CFG['samples']))
 
+<<<<<<< HEAD
+=======
+    ### rproc options
+    if options.pyproc == 'y':
+        CFG['rproc'] = (options.pyproc == 'y')
+        CFG['options_rproc'] = dict()
+        CFG['options_rproc']['mem_req_resubmit']  = [30000, 60000, 80000]
+        CFG['options_rproc']['time_req_resubmit'] = [60*60, 80*60, 90*60]
+        CFG['options_rproc']['resubmit'] = 3
+        CFG['options_rproc']['priority'] = 100
+        CFG['options_rproc']['addpaths'] = CFG['paths']
+
     ### parallel processing
     CFG['parallel'] = options.parallel
     if CFG['parallel'] > 1:
@@ -376,7 +388,6 @@ def parse_args(options, identity='main'):
 	import signal as sig
 	CFG['pool'] = mp.Pool(processes=CFG['parallel'],
 				initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
-
     return CFG
 
 

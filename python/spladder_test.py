@@ -9,6 +9,7 @@ import pdb
 import cPickle
 import warnings
 import time
+import datetime
 from scipy.optimize import minimize_scalar
 from scipy.special import polygamma 
 from scipy.stats import chi2,nbinom
@@ -58,6 +59,8 @@ def parse_options(argv):
     output = OptionGroup(parser, 'OUTPUT OPTIONS')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     output.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
+    output.add_option('--labelA', dest='labelA', metavar='STRING', help='label for condition A (used for output naming)', default='condA')
+    output.add_option('--labelB', dest='labelB', metavar='STRING', help='label for condition B (used for output naming)', default='condB')
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
     parser.add_option_group(required)
@@ -610,7 +613,7 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG):
     pvals = test_count(cov, disp_adj, sf, dmatrix0, dmatrix1, CFG)
 
     ### reshape and qdjust p-values
-    pvals =  2 * pvals.reshape((2, pvals.shape[0] / 2)).T.min(axis=1)[:, sp.newaxis]
+    pvals =  2 * pvals.reshape((2, pvals.shape[0] / 2)).T.min(axis=1)
     pvals[pvals > 1] = 1
 
     return pvals
@@ -623,6 +626,13 @@ def main():
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='test')
+
+    ### generate output directory
+    outdir = os.path.join(options.outdir, 'test', str(datetime.datetime.now()).replace(' ', '_'))
+    if options.labelA != 'condA' and options.labelB != 'condB':
+        outdir = '%s_%s_vs_%s' % (outdir, options.labelA, options.labelB)
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
     if CFG['debug']:
 
@@ -775,8 +785,15 @@ def main():
             pvals_adj = adj_pval(pvals, CFG) 
 
             ### write output
-
-            pdb.set_trace()
+            out_fname = os.path.join(outdir, 'test_results_%s.tsv' % event_type)
+            if CFG['verbose']:
+                print 'Writing test results to %s' % out_fname
+            s_idx = sp.argsort(pvals_adj)
+            header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj']) 
+            event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
+            data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+            data_out = sp.r_[header[sp.newaxis, :], data_out]
+            sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 
 if __name__ == "__main__":
     main()
