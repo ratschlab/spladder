@@ -406,7 +406,6 @@ def parse_args(options, identity='main'):
 	import signal as sig
 	CFG['pool'] = mp.Pool(processes=CFG['parallel'],
 				initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
-
     return CFG
 
 
