@@ -2,6 +2,7 @@ import os
 import sys
 import scipy as sp
 import math
+import re
 
 def default_settings():
 
@@ -300,7 +301,7 @@ def parse_args(options):
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
     if CFG['bam_fnames'][0].split('.')[-1] == 'txt':
-        CFG['bam_fnames'] = list(sp.loadtxt(CFG.bam_fnames[0], dtype='str'))
+        CFG['bam_fnames'] = list(sp.loadtxt(CFG['bam_fnames'][0], dtype='str'))
 
     if options.refstrain != '-':
         CFG['reference_strain'] = options.refstrain
@@ -314,9 +315,9 @@ def parse_args(options):
     CFG['strains'] = []
     for i in range(len(CFG['bam_fnames'])):
         if options.label != '-':
-            CFG['samples'].append('%s_%s' % (options.label, CFG['bam_fnames'][i].split('/')[-1].replace('.bam', '')))
+            CFG['samples'].append('%s_%s' % (options.label, re.sub(r'(.bam|.npz)$', '', CFG['bam_fnames'][i].split('/')[-1])))
         else:
-            CFG['samples'].append(CFG['bam_fnames'][i].split('/')[-1].replace('.bam', ''))
+            CFG['samples'].append(re.sub(r'(.bam|.npz)$', '', CFG['bam_fnames'][i].split('/')[-1]))
         CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))
     CFG['strains'] = sp.array(CFG['strains'])
 

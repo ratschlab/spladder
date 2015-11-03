@@ -22,6 +22,7 @@ from modules.core.spladdercore import spladder_core
 from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
 from modules.count import count_graph_coverage_wrapper
+from modules.editgraph import filter_by_edgecount
 import modules.init as init
 import modules.rproc as rp
 from modules.merge import run_merge
@@ -112,6 +113,7 @@ def spladder():
 
     ### do not compute components of merged set, if result file already exists
     fn_out_merge = get_filename('fn_out_merge', CFG)
+    fn_out_merge_val = get_filename('fn_out_merge_val', CFG)
 
     if not 'spladder_infile' in CFG and not os.path.exists(fn_out_merge):
         ### iterate over files, if merge strategy is single
@@ -172,7 +174,7 @@ def spladder():
                 fn_out = re.sub('.pickle$', '_with_isoforms.pickle', fn_out)
     
             if os.path.exists(fn_out):
-                print >> sys.stdout, 'All result files already exist.'
+                print >> sys.stdout, '%s - All result files already exist.' % fn_out
             else:
                 if CFG['rproc']:
                     jobinfo.append(rp.rproc('spladder_core', CFG, 35000, CFG['options_rproc'], 60*60))
@@ -193,6 +195,12 @@ def spladder():
         if CFG['merge_strategy'] == 'merge_graphs':
             run_merge(CFG)
 
+    if not 'spladder_infile' in CFG and CFG['validate_splicegraphs'] and not os.path.exists(fn_out_merge_val):
+        (genes, inserted) = cPickle.load(open(fn_out_merge, 'r'))
+        genes = filter_by_edgecount(genes, CFG)
+        cPickle.dump((genes, inserted), open(fn_out_merge_val, 'w'), -1)
+        del genes
+
     ### get count output file
     fn_in_count = get_filename('fn_count_in', CFG)
     fn_out_count = get_filename('fn_count_out', CFG)
@@ -200,7 +208,7 @@ def spladder():
     ### convert input BAMs to sparse arrays
     if CFG['bam_to_sparse']:
         for bfn in CFG['bam_fnames']:
-            if not os.path.exists(re.sub(r'.bam$', '', bfn) + '.npz'):
+            if bfn.endswith('bam') and not os.path.exists(re.sub(r'.bam$', '', bfn) + '.npz'):
                 cnts = dict()
 
                 if not 'chrm_lookup' in CFG:
