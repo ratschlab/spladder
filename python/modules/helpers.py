@@ -69,4 +69,4 @@ def get_filename(which, CFG):
         else:
             return ''
     elif which == 'fn_out_merge_val':
-        return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], validate, prune_tag))
+        return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag))
