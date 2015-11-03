@@ -352,7 +352,7 @@ def parse_args(options, identity='main'):
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
     if len(CFG['bam_fnames']) > 0 and CFG['bam_fnames'][0].split('.')[-1] == 'txt':
-        CFG['bam_fnames'] = list(sp.loadtxt(CFG.bam_fnames[0], dtype='str'))
+        CFG['bam_fnames'] = [str(x) for x in sp.loadtxt(CFG['bam_fnames'][0], dtype='str')]
 
     ### assemble strain list
     CFG['samples'] = []
