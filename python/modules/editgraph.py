@@ -243,21 +243,23 @@ def reduce_splice_graph(genes):
 def filter_by_edgecount(genes, CFG):
 
     ### filter splicegraphs by support count over samples
+    keep_genes = []
     for i in range(len(genes)):
         u_exons = unique_rows(sp.vstack(genes[i].exons))
-        (tmp, tmp, k_idx) = intersect_rows(u_exons, genes[i].splicegraph.vertices.T)
+        import pdb
+        pdb.set_trace()
+        (tmp, tmp, k_idx) = intersect_rows(u_exons, genes[i].splicegraph.vertices.T, index=True)
         k_idx = sp.where(genes[i].splicegraph.edges.sum(axis = 1) == 0)[0]
         genes[i].splicegraph.edges = (genes[i].edge_count >= CFG['sg_min_edge_count'])
         ### remove all exons that have no incoming or outgoing edges (caused by validation, keep single exon transcripts that occured before)
         k_idx2 = sp.where(genes[i].splicegraph.edges.sum(axis = 1) == 0)[0]
         rm_idx = sp.where(~sp.in1d(k_idx2, k_idx))[0]
-        keep_idx = sp.where(~sp.in1d(sp.array(range(genes[i].splicegraph.edges.shape[0])), rm_idx))[0]
+        keep_idx = sp.where(~sp.in1d(sp.arange(genes[i].splicegraph.edges.shape[0]), rm_idx))[0]
         if keep_idx.shape[0] > 0:
             genes[i].splicegraph.subset(keep_idx)
-        else:
-            genes = []
+            keep_genes.append(i)
 
-    return genes
+    return genes[keep_genes]
 
 
 def insert_intron_retentions(genes, CFG):

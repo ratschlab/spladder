@@ -2,6 +2,7 @@ import os
 import sys
 import scipy as sp
 import math
+import re
 
 def default_settings():
 
@@ -359,9 +360,9 @@ def parse_args(options, identity='main'):
     CFG['strains'] = []
     for i in range(len(CFG['bam_fnames'])):
         if options.label != '-':
-            CFG['samples'].append('%s_%s' % (options.label, CFG['bam_fnames'][i].split('/')[-1].replace('.bam', '')))
+            CFG['samples'].append('%s_%s' % (options.label, re.sub(r'(.bam|.npz)$', '', CFG['bam_fnames'][i].split('/')[-1])))
         else:
-            CFG['samples'].append(CFG['bam_fnames'][i].split('/')[-1].replace('.bam', ''))
+            CFG['samples'].append(re.sub(r'(.bam|.npz)$', '', CFG['bam_fnames'][i].split('/')[-1]))
         CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))
     CFG['strains'] = sp.array(CFG['strains'])
 
