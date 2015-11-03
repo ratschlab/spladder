@@ -6,6 +6,43 @@ class hdf5data():
     pass
 
 
+def deref_array(data, file):
+    """Take an array of references and dereference them"""
+    
+    ret = sp.empty(shape=data.shape, dtype='object')
+    if len(data.shape) > 1:
+        for i in xrange(data.shape[0]):
+            for j in xrange(data.shape[1]):
+                ref = data[i, j]
+                dref = h5py.h5r.dereference(ref, file._id)
+                if isinstance(dref, h5py.h5g.GroupID):
+                    ret[i, j] = get_data(dref)
+                else:
+                    ret[i, j] = sp.empty(dref.shape, dtype=dref.dtype)
+                    dref.read(h5py.h5s.ALL, h5py.h5s.ALL, ret[i, j])
+                    ret[i, j] = ret[i, j].T
+                if isinstance(ret[i, j], sp.ndarray):
+                    shp = ret[i, j].shape
+                    if len(shp) == 2 and isinstance(ret[i, j][0, 0], h5py.h5r.Reference):
+                        ret[i, j] = deref_array(ret[i, j], file)
+                    elif len(shp) == 1 and isinstance(ret[i, j][0], h5py.h5r.Reference):
+                        ret[i, j] = deref_array(ret[i, j], file)
+    else:
+        for i in xrange(data.shape[0]):
+            ref = data[i]
+            dref = h5py.h5r.dereference(ref, file._id)
+            ret[i] = sp.empty(dref.shape, dtype=dref.dtype)
+            dref.read(h5py.h5s.ALL, h5py.h5s.ALL, ret[i])
+            ret[i] = ret[i].T
+            if isinstance(ret[i], sp.ndarray):
+                shp = ret[i].shape
+                if len(shp) == 2 and isinstance(ret[i][0, 0], h5py.h5r.Reference):
+                    ret[i] = deref_array(ret[i], file)
+                elif len(shp) == 1 and isinstance(ret[i][0], h5py.h5r.Reference):
+                    ret[i] = deref_array(ret[i], file)
+    return ret
+
+
 def get_data(IN):
     """This is a wrapper function that uses low level h5py to dereference
        data in a (most likely) matlab generated HDF5."""
@@ -23,25 +60,8 @@ def get_data(IN):
             dset.read(h5py.h5s.ALL, h5py.h5s.ALL, tmp)
             setattr(ret, k, tmp.T)
     else:
-        ret = sp.empty(shape=IN.shape, dtype='object')
-        if len(IN.shape) > 1:
-            for i in xrange(IN.shape[0]):
-                for j in xrange(IN.shape[1]):
-                    ref = IN[i, j]
-                    dref = h5py.h5r.dereference(ref, IN._id)
-                    if isinstance(dref, h5py.h5g.GroupID):
-                        ret[i, j] = get_data(dref)
-                    else:
-                        ret[i, j] = sp.empty(dref.shape, dtype=dref.dtype)
-                        dref.read(h5py.h5s.ALL, h5py.h5s.ALL, ret[i, j])
-                        ret[i, j] = ret[i, j].T
-        else:
-            for i in xrange(IN.shape[0]):
-                ref = IN[i]
-                dref = h5py.h5r.dereference(ref, IN._id)
-                ret[i] = sp.empty(dref.shape, dtype=dref.dtype)
-                dref.read(h5py.h5s.ALL, h5py.h5s.ALL, ret[i])
-                ret[i] = ret[i].T
+        ret = deref_array(IN, IN)
+
     return ret
         
 

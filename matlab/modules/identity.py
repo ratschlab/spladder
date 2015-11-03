@@ -35,28 +35,37 @@ def load_genes(options):
     """This is a helper function to load the gene data from file"""
 
     if options.validate_sg:
-        genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.validated.mat' % options.confidence), struct_as_record=False)['genes'][0, :]
+        validate_tag = '.validated'
     else:
-        try:
-            genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.mat' % options.confidence), struct_as_record=False)['genes'][0, :]
-        except NotImplementedError:
-            genes = loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.mat' % options.confidence))['genes']
-            ### fix string representations
-            fix_string_representation(genes, ['chr', 'name', 'gene_info/ID', 'gene_info/Source', 'gene_info/Name', 'gene_info/Type', 'source', 'strand']) 
-            ### fix array structure
-            genes = fix_array_structure(genes)[:, 0]
+        validate_tag = ''
+
+    try:
+        genes = scio.loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs%s.mat' % (options.confidence, validate_tag)), struct_as_record=False)['genes'][0, :]
+    except NotImplementedError:
+        genes = loadmat(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs%s.mat' % (options.confidence, validate_tag)))['genes']
+        ### fix string representations
+        fix_string_representation(genes, ['chr', 'name', 'gene_info/ID', 'gene_info/Source', 'gene_info/Name', 'gene_info/Type', 'source', 'strand']) 
+        ### fix array structure
+        genes = fix_array_structure(genes)[:, 0]
 
     return genes
+
 
 ### load a single event from file
 def load_events(options, event_info):
 
     event_list = []
     for event_type in sp.unique(event_info[:, 0]):
-        events_matlab = scio.loadmat(os.path.join(options.outdir, 'merge_graphs_%s_C%s.mat' % (event_type, options.confidence)), struct_as_record=False)['events_all']
+        try:
+            events_matlab = scio.loadmat(os.path.join(options.outdir, 'merge_graphs_%s_C%s.mat' % (event_type, options.confidence)), struct_as_record=False)['events_all'][0, :]
+        except NotImplementedError:
+            events_matlab = loadmat(os.path.join(options.outdir, 'merge_graphs_%s_C%s.mat' % (event_type, options.confidence)))['events_all']
+            ### fix array structure
+            events_matlab = fix_array_structure(events_matlab)[:, 0]
+
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
         for e in s_idx:
-            event_matlab = events_matlab[0, int(event_info[e, 1])]
+            event_matlab = events_matlab[int(event_info[e, 1])]
             event = Event(event_matlab.event_type[0])
             if event.event_type == 'exon_skip':
                 event.exons1 = sp.r_[event_matlab.exon_pre, event_matlab.exon_aft]
@@ -110,7 +119,11 @@ def get_conf_events(options, gid):
 
 def get_seg_counts(options, gid):
 
-    IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.mat' % (options.confidence)), 'r')
+    if options.validate_sg:
+        validate_tag = '.validated'
+    else:
+        validate_tag = ''
+    IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs%s.count.mat' % (options.confidence, validate_tag)), 'r')
     idx = sp.where(IN['gene_ids_edges'][:] == gid + 1)[1]
     edges = IN['edges'][:][:, idx].T
     edge_idx = IN['edge_idx'][:][0, idx].astype('int') - 1
