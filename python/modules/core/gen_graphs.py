@@ -76,19 +76,20 @@ def gen_graphs(genes, CFG=None):
     #genes = genes[s_idx]
 
     # append list of introns supported by RNA-seq data to 
-    # the genes structure
+    # the genes structure (only in case we want to augment the graph)
     ##############################################################################%%
-    print >> CFG['fd_log'], 'Loading introns from file ...'
-    introns = get_intron_list(genes, CFG)
-    print >> CFG['fd_log'], '...done.\n'
+    if (CFG['do_insert_cassette_exons'] or CFG['do_insert_intron_retentions'] or CFG['do_insert_intron_edges']): 
+        print >> CFG['fd_log'], 'Loading introns from file ...'
+        introns = get_intron_list(genes, CFG)
+        print >> CFG['fd_log'], '...done.\n'
 
-    ### check feasibility
-    print >> CFG['fd_log'], 'Testing for infeasible genes ...'
-    introns = make_introns_feasible(introns, genes, CFG)
-    print >> CFG['fd_log'], '...done.\n'
+        ### check feasibility
+        print >> CFG['fd_log'], 'Testing for infeasible genes ...'
+        introns = make_introns_feasible(introns, genes, CFG)
+        print >> CFG['fd_log'], '...done.\n'
 
-    for i in range(genes.shape[0]):
-        genes[i].introns = introns[i, :]
+        for i in range(genes.shape[0]):
+            genes[i].introns = introns[i, :]
 
     if CFG['do_insert_cassette_exons']:
         print >> CFG['fd_log'], 'Inserting cassette exons ...'

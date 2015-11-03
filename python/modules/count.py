@@ -9,6 +9,7 @@ import scipy as sp
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
 from reads import *
+from hdf5 import appendToHDF5
 import rproc as rp
 
 def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
@@ -126,7 +127,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
 
     (genes, inserted) = cPickle.load(open(fname_in, 'r'))
     
-    if genes[0].segmentgraph.is_empty():
+    if genes[0].segmentgraph is None or genes[0].segmentgraph.is_empty():
         for g in genes:
             g.segmentgraph = Segmentgraph(g)
         cPickle.dump((genes, inserted), open(fname_in, 'w'), -1)
@@ -137,6 +138,9 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
     counts['gene_ids_segs'] = []
     counts['edges'] = []
     counts['gene_ids_edges'] = []
+    counts['seg_len'] = sp.hstack([x.segmentgraph.segments[1, :] - x.segmentgraph.segments[0, :] for x in genes]).T
+    counts['gene_names'] = sp.array([x.name for x in genes], dtype='str')
+
     if not CFG['rproc']:
         for s_idx in range(CFG['strains'].shape[0]):
             print '\n%i/%i' % (s_idx + 1, CFG['strains'].shape[0])
@@ -156,6 +160,17 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
             if tmp.shape[0] > 0:
                 counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
                 counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * c)
+
+        ### write result data to hdf5
+        for key in counts:
+            counts[key] = sp.vstack(counts[key]) if len(counts[key]) > 0 else counts[key]
+        counts['edge_idx'] = counts['edges'][:, 0] if len(counts['edges']) > 0 else sp.array([])
+        counts['edges'] = counts['edges'][:, 1:] if len(counts['edges']) > 0 else sp.array([])
+        h5fid = h5py.File(fname_out, 'w')
+        h5fid.create_dataset(name='strains', data=CFG['strains'])
+        for key in counts:
+            h5fid.create_dataset(name=key, data=counts[key])
+        h5fid.close()
     else:
         ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
         chunksize = int(max(1, math.floor(10000 / len(CFG['strains']))))
@@ -164,6 +179,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
 
         PAR = dict()
         PAR['CFG'] = CFG
+
         for c_idx in range(0, genes.shape[0], chunksize):
             cc_idx = min(genes.shape[0], c_idx + chunksize)
             fn = fname_out.replace('.pickle', '.chunk_%i_%i.pickle' % (c_idx, cc_idx))
@@ -182,7 +198,13 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
         ### merge results from count chunks
         if 'verbose' in CFG and CFG['verbose']:
             print '\nCollecting count data from chunks ...\n'
+            print 'writing data to %s' % fname_out
 
+        ### write data to hdf5 continuously
+        h5fid = h5py.File(fname_out, 'w')
+        h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
+        h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
+        h5fid.create_dataset(name='strains', data=CFG['strains'])
         for c_idx in range(0, genes.shape[0], chunksize):
             cc_idx = min(genes.shape[0], c_idx + chunksize)
             if 'verbose' in CFG and CFG['verbose']:
@@ -194,34 +216,53 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
             else:
                 counts_tmp = cPickle.load(open(fn, 'r'))
                 for c in range(counts_tmp.shape[1]):
-                    counts['segments'].append(sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
-                    counts['seg_pos'].append(sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]))
-                    counts['gene_ids_segs'].append(sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (c_idx + c))
+                    if 'segments' in h5fid:
+                        appendToHDF5(h5fid, sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), 'segments')
+                        appendToHDF5(h5fid, sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), 'seg_pos') 
+                        appendToHDF5(h5fid, sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (c_idx + c), 'gene_ids_segs')
+                    else:
+                        h5fid.create_dataset(name='segments', data=sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(CFG['strains'])))
+                        h5fid.create_dataset(name='seg_pos', data=sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(CFG['strains'])))
+                        h5fid.create_dataset(name='gene_ids_segs', data=sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (c_idx + c), chunks=True, compression='gzip', maxshape=(None, 1))
+
+                        #counts['segments'].append(sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
+                        #counts['seg_pos'].append(sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]))
+                        #counts['gene_ids_segs'].append(sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (c_idx + c))
+
                     tmp = [sp.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0]
                     if len(tmp) == 0:
                         continue
                     tmp = sp.hstack(tmp)
                     if tmp.shape[0] > 0:
-                        counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
-                        counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c))
+                        if 'edges' in h5fid:
+                            appendToHDF5(h5fid, tmp[:, range(1, tmp.shape[1], 2)], 'edges')
+                            appendToHDF5(h5fid, tmp[:, 0], 'edge_idx')
+                            appendToHDF5(h5fid, sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c), 'gene_ids_edges')
+                        else:
+                            h5fid.create_dataset(name='edges', data=tmp[:, range(1, tmp.shape[1], 2)], chunks=True, compression='gzip', maxshape=(None, tmp.shape[1] / 2))
+                            h5fid.create_dataset(name='edge_idx', data=tmp[:, 0], chunks=True, compression='gzip', maxshape=(None,))
+                            h5fid.create_dataset(name='gene_ids_edges', data=sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c), chunks=True, compression='gzip', maxshape=(None, 1))
+                        #counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
+                        #counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c))
+                del tmp, counts_tmp
+        h5fid.close()
 
-    for key in counts:
-        counts[key] = sp.vstack(counts[key]) if len(counts[key]) > 0 else counts[key]
-    if len(counts['edges']) > 0:
-        counts['edge_idx'] = counts['edges'][:, 0]
-        counts['edges'] = counts['edges'][:, 1:]
-    else:
-        counts['edge_idx'] = sp.array([])
-        counts['edges'] = sp.array([])
-    counts['seg_len'] = sp.hstack([x.segmentgraph.segments[1, :] - x.segmentgraph.segments[0, :] for x in genes]).T
-
-    ### write result data to hdf5
-    h5fid = h5py.File(fname_out, 'w')
-    h5fid.create_dataset(name='gene_names', data=sp.array([x.name for x in genes], dtype='str'))
-    h5fid.create_dataset(name='strains', data=CFG['strains'])
-    for key in counts:
-        h5fid.create_dataset(name=key, data=counts[key])
-    h5fid.close()
+#    for key in counts:
+#        counts[key] = sp.vstack(counts[key]) if len(counts[key]) > 0 else counts[key]
+#    if len(counts['edges']) > 0:
+#        counts['edge_idx'] = counts['edges'][:, 0]
+#        counts['edges'] = counts['edges'][:, 1:]
+#    else:
+#        counts['edge_idx'] = sp.array([])
+#        counts['edges'] = sp.array([])
+#
+#    ### write result data to hdf5
+#    h5fid = h5py.File(fname_out, 'w')
+#    h5fid.create_dataset(name='gene_names', data=sp.array([x.name for x in genes], dtype='str'))
+#    h5fid.create_dataset(name='strains', data=CFG['strains'])
+#    for key in counts:
+#        h5fid.create_dataset(name=key, data=counts[key])
+#    h5fid.close()
 
 def get_intron_range(introns, start, stop):
     """Given a sorted list of introns, return the subset of introns that

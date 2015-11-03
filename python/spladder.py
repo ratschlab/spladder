@@ -22,6 +22,7 @@ from modules.core.spladdercore import spladder_core
 from modules.alt_splice.collect import collect_events
 from modules.alt_splice.analyze import analyze_events
 from modules.count import count_graph_coverage_wrapper
+from modules.editgraph import filter_by_edgecount
 import modules.init as init
 import modules.rproc as rp
 from modules.merge import run_merge
@@ -74,6 +75,8 @@ def parse_options(argv):
     experimental.add_option('-R', '--replicates', dest='replicates', metavar='1,1,2,2,...', help='replicate structure of files (same number as alignment files) [all 1 - no replicated]', default='-')
     experimental.add_option('-U', '--intron_cov', dest='intron_cov', metavar='y|n', help='count intron coverage [n]', default='n')
     experimental.add_option('', '--sparse_bam', dest='sparse_bam', metavar='y|n', help='store BAM content as sparse representation for later use [n]', default='n')
+    experimental.add_option('', '--ignore_mismatches', dest='ignore_mismatches', metavar='y|n', help='ignore mismatches - does not filter by edit operations - does not require NM in BAM [n]', default='n')
+    experimental.add_option('', '--output_struc', dest='output_struc', metavar='y|n', help='outputs events in structured splicing syntax similar to astalavista [n]', default='n')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
     experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicilty set then -T is set [n]', default='n')
     parser.add_option_group(required)
@@ -112,6 +115,7 @@ def spladder():
 
     ### do not compute components of merged set, if result file already exists
     fn_out_merge = get_filename('fn_out_merge', CFG)
+    fn_out_merge_val = get_filename('fn_out_merge_val', CFG)
 
     if not 'spladder_infile' in CFG and not os.path.exists(fn_out_merge):
         ### iterate over files, if merge strategy is single
@@ -172,7 +176,7 @@ def spladder():
                 fn_out = re.sub('.pickle$', '_with_isoforms.pickle', fn_out)
     
             if os.path.exists(fn_out):
-                print >> sys.stdout, 'All result files already exist.'
+                print >> sys.stdout, '%s - All result files already exist.' % fn_out
             else:
                 if CFG['rproc']:
                     jobinfo.append(rp.rproc('spladder_core', CFG, 15000, CFG['options_rproc'], 60*60))
@@ -193,6 +197,12 @@ def spladder():
         if CFG['merge_strategy'] == 'merge_graphs':
             run_merge(CFG)
 
+    if not 'spladder_infile' in CFG and CFG['validate_splicegraphs'] and not os.path.exists(fn_out_merge_val):
+        (genes, inserted) = cPickle.load(open(fn_out_merge, 'r'))
+        genes = filter_by_edgecount(genes, CFG)
+        cPickle.dump((genes, inserted), open(fn_out_merge_val, 'w'), -1)
+        del genes
+
     ### get count output file
     fn_in_count = get_filename('fn_count_in', CFG)
     fn_out_count = get_filename('fn_count_out', CFG)
@@ -200,7 +210,7 @@ def spladder():
     ### convert input BAMs to sparse arrays
     if CFG['bam_to_sparse']:
         for bfn in CFG['bam_fnames']:
-            if not os.path.exists(re.sub(r'.bam$', '', bfn) + '.npz'):
+            if bfn.endswith('bam') and not os.path.exists(re.sub(r'.bam$', '', bfn) + '.npz'):
                 cnts = dict()
 
                 if not 'chrm_lookup' in CFG:

@@ -33,6 +33,7 @@ def parse_options(argv):
     optional.add_option('-g', '--gene_name', dest='gene_name', metavar='STR', help='gene_name to be plotted', default=None)
     optional.add_option('-e', '--event_id', dest='event_id', metavar='STR', help='event to be plotted', default=None)
     optional.add_option('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
+    optional.add_option('', '--zoom_x', dest='zoom_x', metavar='percent_left,percent_right', help='zoom x axis from percent_left to percent_right [0.0,1.0]', default='0.0,1.0')
     optional.add_option('-V', '--validate_sg', dest='validate_sg', action='store_true', help='use validated splice graph [off]', default=False)
     optional.add_option('-T', '--transcripts', dest='transcripts', action='store_true', help='plot annotated transcripts', default=False)
     optional.add_option('-t', '--event_types', dest='event_types', metavar='EVENT1,EVENT2,...', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
@@ -112,6 +113,7 @@ def spladder_viz():
             sys.exit(1)
         gids = [sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0][0]]
     ### no gene specified but result provided - plot all genes with confirmed events
+    ### if an event_id is provided, only the associated gene will be plotted
     else:
         gids = get_gene_ids(options)
         
@@ -175,15 +177,21 @@ def spladder_viz():
             
         plot_event(options, event_info, axes[-1], xlim)
 
+        ### we only need to adapt the xoom for one axis object - as we share the x
+        zoom_x = [float(x) for x in options.zoom_x.split(',')]
+        xlim = axes[0].get_xlim()
+        xdiff = xlim[1] - xlim[0]
+        axes[0].set_xlim([xlim[0] + (zoom_x[0] * xdiff), xlim[0] + (zoom_x[1] * xdiff)])
+
         plt.tight_layout()
         ### save plot into file
         if options.format == 'd3':
-            out_fname = os.path.join(options.outdir, 'plots', 'gene_overview_%s%s%s.html' % (gene.name, event_tag, log_tag))
+            out_fname = os.path.join(options.outdir, 'plots', 'gene_overview_C%i_%s%s%s.html' % (options.confidence, gene.name, event_tag, log_tag))
             plugins.clear(fig)
             plugins.connect(fig, plugins.Zoom(enabled=True))
             mpld3.save_html(fig, open(out_fname, 'w'))
         else:
-            out_fname = os.path.join(options.outdir, 'plots', 'gene_overview_%s%s%s.%s' % (gene.name, event_tag, log_tag, options.format))
+            out_fname = os.path.join(options.outdir, 'plots', 'gene_overview_C%i_%s%s%s.%s' % (options.confidence, gene.name, event_tag, log_tag, options.format))
             plt.savefig(out_fname, format=options.format, bbox_inches='tight')
         plt.close(fig)
 

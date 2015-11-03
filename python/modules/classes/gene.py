@@ -144,11 +144,11 @@ class Gene:
            Currently, the definition of non-alternative means the segment is not spanned
            by any intron. In the narrow sense of non-alternative, one should also exclude
            alternative starts and ends but this could lead to cases where no segment is 
-           consiedered non-alternative, so we use this approximation for now.
+           considered as non-alternative, so we use this approximation for now.
         """
 
         tmp = sp.ones((self.segmentgraph.seg_edges.shape[0],), dtype='bool')
-        for i in range(self.segmentgraph.seg_edges.shape[0] - 1):
+        for i in xrange(self.segmentgraph.seg_edges.shape[0] - 1):
             ### get index of last acceptor
             idx = sp.where(self.segmentgraph.seg_edges[i, i + 1:])[0]
             ### mask all segments between current segment and acceptor
@@ -156,3 +156,4 @@ class Gene:
                 tmp[i + 1:idx[-1] + i + 1] = 0
 
         return sp.where(tmp)[0]
+

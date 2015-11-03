@@ -11,6 +11,7 @@ if __name__ == "__main__":
 from verify import *
 from write import *
 from ..rproc import rproc, rproc_wait
+from ..helpers import compute_psi
 
 def _prepare_count_hdf5(CFG, OUT, events, event_features):
     
@@ -59,6 +60,7 @@ def analyze_events(CFG, event_type):
         fn_out_txt = fn_out.replace('.pickle', '.txt')
         fn_out_struc = fn_out.replace('.pickle', '.struc.txt')
         fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt')
+        fn_out_conf_bed = fn_out_conf.replace('.pickle', '.bed')
         fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt')
         fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt')
         fn_out_conf_gff3 = fn_out_conf.replace('.pickle', '.gff3')
@@ -103,7 +105,13 @@ def analyze_events(CFG, event_type):
                     #events_all = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'][replicate, :], event_type, CFG)
                     # TODO handle replicate setting
                     (events_all, counts) = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
+
+                    psi = sp.empty((counts.shape[0], counts.shape[2]), dtype='float')
+                    for i in xrange(counts.shape[2]):
+                        psi[:, i] = compute_psi(counts[:, :, i], event_type, CFG) 
+
                     OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
+                    OUT.create_dataset(name='psi', data=psi, compression='gzip')
                     OUT.create_dataset(name='gene_idx', data=sp.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
                     _prepare_count_hdf5(CFG, OUT, events_all, event_features)
                 else:
@@ -127,7 +135,7 @@ def analyze_events(CFG, event_type):
                                 print 'Chunk event %i, strain %i already completed' % (i, j)
                             else:
                                 print 'Submitting job %i, event chunk %i, strain chunk %i' % (len(jobinfo) + 1, i, j)
-                                jobinfo.append(rproc('verify_all_events', PAR, 8000, CFG['options_rproc'], 60))
+                                jobinfo.append(rproc('verify_all_events', PAR, 30000, CFG['options_rproc'], 60 * 5))
                     
                     rproc_wait(jobinfo, 20, 1.0, 1)
                     
@@ -152,12 +160,20 @@ def analyze_events(CFG, event_type):
                                 for jj in range(len(ev_)):
                                     ev[jj].verified = sp.r_[ev[jj].verified, ev_[jj].verified]
                                     
+                        psi = sp.empty((counts.shape[0], counts.shape[2]), dtype='float')
+                        for j in xrange(counts.shape[2]):
+                            psi[:, j] = compute_psi(counts[:, :, j], event_type, CFG) 
+
                         if i == 0:
                             OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(CFG['strains']), len(event_features[event_type]), None), compression='gzip')
+                            OUT.create_dataset(name='psi', data=sp.atleast_2d(psi), maxshape=(psi.shape[0], None), compression='gzip')
                         else:
                             tmp = OUT['event_counts'].shape
                             OUT['event_counts'].resize((tmp[0], tmp[1], tmp[2] + len(ev)))
                             OUT['event_counts'][:, :, tmp[2]:] = counts
+                            tmp = OUT['psi'].shape
+                            OUT['psi'].resize((tmp[0], tmp[1] + len(ev)))
+                            OUT['psi'][:, tmp[1]:] = psi
                         events_all_ = sp.r_[events_all_, ev]
                         gene_idx_ = sp.r_[gene_idx_, [x.gene_idx for x in ev]]
 
@@ -224,7 +240,7 @@ def analyze_events(CFG, event_type):
             if os.path.exists(fn_out_struc):
                 print '%s already exists' % fn_out_struc
             else:
-                write_events_structured(fn_out_struc, CFG['strains'], events_all)
+                write_events_structured(fn_out_struc, events_all, fn_out_count)
 
         if confirmed_idx.shape[0] == 0:
             print '\nNo %s event could be confirmed. - Nothing to report.' % event_type
@@ -244,11 +260,17 @@ def analyze_events(CFG, event_type):
             else:
                 write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
 
+        if CFG['output_confirmed_bed']:
+            if os.path.exists(fn_out_conf_bed):
+                print '%s already exists' % fn_out_conf_bed
+            else:
+                write_events_bed(fn_out_conf_bed, events_all, idx=confirmed_idx)
+
         if CFG['output_confirmed_struc']:
             if os.path.exists(fn_out_conf_struc):
                 print '%s already exists' % fn_out_conf_struc
             else:
-                write_events_structured(fn_out_conf_struc, events_all, confirmed_idx)
+                write_events_structured(fn_out_conf_struc, events_all, fn_out_count, confirmed_idx)
 
         if CFG['output_confirmed_tcga']:
             if os.path.exists(fn_out_conf_tcga):

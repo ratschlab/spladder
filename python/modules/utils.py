@@ -70,20 +70,20 @@ def unique_rows(array, index = None):
         return array[s_idx[k_idx], :]
 
 
-def intersect_rows(array1, array2, index=None):
+def intersect_rows(array1, array2, index=False):
     """Return array with rows that intersect between array1 and array2"""
 
     tmp1 = sp.array(['-'.join(array1[i, :].astype('str')) for i in range(array1.shape[0])])
     tmp2 = sp.array(['-'.join(array2[i, :].astype('str')) for i in range(array2.shape[0])])
     
-    idx = sp.where(sp.in1d(tmp1, tmp2))
-    if index is not None:
-        idx2 = sp.where(sp.in1d(tmp2, tmp1))
+    idx = sp.where(sp.in1d(tmp1, tmp2))[0]
+    if index:
+        idx2 = sp.where(sp.in1d(tmp2, tmp1))[0]
 
-    if index is None:
-        return (array1[idx, :], None, None)
-    else:
+    if index:
         return (array1[idx, :], idx, idx2)
+    else:
+        return (array1[idx, :], None, None)
 
 def sort_rows(array, index = None):
     """Sort array by rows"""
