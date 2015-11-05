@@ -318,7 +318,10 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
     return (introns, coverage)
 
 def __process_chunk(*args):
-    chunk, chunk_idx, c, s, strand, chr, chr_num, bam_args, gene = args
+    if len(args) == 1:
+        chunk, chunk_idx, c, s, strand, chr, chr_num, bam_args, gene = args[0]
+    else:
+        chunk, chunk_idx, c, s, strand, chr, chr_num, bam_args, gene = args
 	
     gg = sp.array([copy.copy(gene)], dtype='object')
     gg[0].strand = strand
@@ -375,6 +378,7 @@ def get_intron_list(genes, CFG):
     c = [0]
     num_introns_filtered = 0
     t0 = time.time()
+    print CFG['bam_fnames']
     bam_args = CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']
 
     print >> sys.stdout, "starting to process chunks"
