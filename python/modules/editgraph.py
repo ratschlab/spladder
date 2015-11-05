@@ -275,7 +275,11 @@ def __chunk_generator(chunks, chr_num, s, c):
 	    c[0] += 1
 
 def __process_ri(*args):
-    gg, strand, c, bam_args = args
+    if len(args) == 1:
+        gg, strand, c, bam_args = args[0]
+    else:
+	gg, strand, c, bam_args = args
+
     gg.strand = strand
 
     try:    
@@ -393,9 +397,9 @@ def insert_intron_retentions(genes, CFG):
 		sys.exit(1)
         else:
 	    for i in __chunk_generator(chunks, chr_num, s, c):
-		if CFG['verbose'] and (c+1) % 100 == 0:
+		if CFG['verbose'] and (i+1) % 100 == 0:
                     print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested introns, %2.1f%%)' % \
-			(c+1, chunks.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
+			(i+1, chunks.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
 		args = [genes[chunk_idx[i]], strands[s], i, bam_args]
 		result = __process_ri(args)
 		genes[chunk_idx[i]] = result[1]
@@ -795,9 +799,15 @@ def insert_intron_edges(genes, CFG):
     return (genes, inserted)
 
 def __process_ce(*args):
-    gg, strand, c, bam_args = args
+    if len(args) == 1:
+	gg, strand, c, bam_args = args[0]
+    else:
+        gg, strand, c, bam_args = args
+
     gg.strand = strand
-    num_exons_added, num_exons, inserted = 0
+    num_exons_added = 0
+    num_exons = 0
+    inserted = 0
 
     try:
         tracks = add_reads_from_bam(sp.array([gg], dtype='object'), )
@@ -945,9 +955,9 @@ def insert_cassette_exons(genes, CFG):
 		sys.exit(1)
         else:
 	    for i in __chunk_generator(chunks, chr_num, s, c):
-		if CFG['verbose'] and (c+1) % 100 == 0:
+		if CFG['verbose'] and (i+1) % 100 == 0:
                     print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' \
-			    % (c+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
+			    % (i+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
 		args = [genes[chunk_idx[i]], strands[s], i, bam_args]
 		result = __process_ce(args)
 		genes[chunk_idx[i]] = result[1]
