@@ -224,7 +224,7 @@ def analyze_events(CFG, event_type):
             if os.path.exists(fn_out_struc):
                 print '%s already exists' % fn_out_struc
             else:
-                write_events_structured(fn_out_struc, CFG['strains'], events_all)
+                write_events_structured(fn_out_struc, events_all)
 
         if confirmed_idx.shape[0] == 0:
             print '\nNo %s event could be confirmed. - Nothing to report.' % event_type
