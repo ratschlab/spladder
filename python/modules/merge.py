@@ -354,7 +354,8 @@ def run_merge(CFG):
 
     if not os.path.exists(fn_out):
         if not CFG['rproc']:
-            merge_genes_by_splicegraph(CFG, merge_list=CFG['samples'], fn_out=fn_out)
+            merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], x, prune_tag) for x in CFG['samples']])
+            merge_genes_by_splicegraph(CFG, merge_list=merge_list, fn_out=fn_out)
         else:
             jobinfo = []
             PAR = dict()
