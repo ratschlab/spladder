@@ -139,6 +139,7 @@ def default_settings():
     CFG['parallel'] = 1
 
     CFG['bam_to_sparse'] = 0
+    CFG['ignore_mismatch_tag'] = False
 
     ### define which output files are written
     CFG['output_txt'] = False
@@ -246,6 +247,17 @@ def parse_args(options, identity='main'):
         else:
             print >> sys.stderr, 'ERROR: option quantify_graph should have value y or n, but has %s' % options.quantify_graph
 
+        if options.ignore_mismatches in ['n', 'y']:
+            CFG['ignore_mismatch_tag'] = (options.ignore_mismatches == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option ignore mismatches bam should have value y or n, but has %s' % options.ignore_mismatches
+    
+        if options.output_struc in ['n', 'y']:
+            CFG['output_struc'] = (options.output_struc == 'y')
+            CFG['output_confirmed_struc'] = (options.output_struc == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option output struc value y or n, but has %s' % options.output_struc
+    
         ### option to store sparse BAM representation
         if options.sparse_bam in ['n', 'y']:
             CFG['bam_to_sparse'] = (options.sparse_bam == 'y')
