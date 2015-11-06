@@ -128,7 +128,10 @@ def get_gene_expression(CFG, fn_out=None):
             gene_idx = (IN['gene_ids_segs'][:][seg_idx]).astype('int')
         if len(gene_idx.shape) > 0:
             gene_idx = gene_idx[0]
-        assert(IN['gene_names'][gene_idx] == genes[gidx].name)
+        if CFG['is_matlab']:
+            assert(IN['gene_names'][gene_idx] == genes[gidx].name)
+        else:
+            assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
         seg_idx = seg_idx[non_alt_idx]
 
@@ -136,11 +139,11 @@ def get_gene_expression(CFG, fn_out=None):
         if CFG['is_matlab']:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / sp.sum(IN['seg_len'][seg_idx, 0])
             gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / CFG['read_length']
+            seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
             gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / CFG['read_length']
-
-        seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
+            seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
 
@@ -791,7 +794,10 @@ def main():
             s_idx = sp.argsort(pvals_adj)
             header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj']) 
             event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
-            data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+            if CFG['is_matlab']:
+                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+            else:
+                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
             data_out = sp.r_[header[sp.newaxis, :], data_out]
             sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 
