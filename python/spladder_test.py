@@ -266,9 +266,9 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
                 disp_raw[i] = disp
                 disp_raw_conv[i] = True
                 break
-            if j == 9:
-                disp_raw[i] = disp
-                disp_raw_conv[i] = False
+        else:
+            disp_raw[i] = disp
+            disp_raw_conv[i] = False
     if log:
         log_progress(idx.shape[0], idx.shape[0])
 
@@ -303,6 +303,8 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
             if CFG['verbose']:
                 log_progress(gene_counts.shape[0], gene_counts.shape[0])
                 print ''
+            pool.terminate()
+            pool.join()
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
@@ -422,9 +424,9 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
                     disp_adj[i] = disp
                     disp_adj_conv[i] = True
                     break
-                if j == 9:
-                    disp_adj[i] = disp
-                    disp_adj_conv[i] = False
+            else:
+                disp_adj[i] = disp
+                disp_adj_conv[i] = False
     if log:
         log_progress(idx.shape[0], idx.shape[0])
         print ''
@@ -463,6 +465,8 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
             if CFG['verbose']:
                 log_progress(counts.shape[0], counts.shape[0])
                 print ''
+            pool.terminate()
+            pool.join()
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
@@ -543,13 +547,15 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG):
             if CFG['verbose']:
                 log_progress(gene_counts.shape[0], gene_counts.shape[0])
                 print ''
+            pool.terminate()
+            pool.join()
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
             pool.join()
             sys.exit(1)
     else:        
-        (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, sp.arange(counts.shape[0]), log=CFG['verbose'])
+        (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if CFG['verbose']:
         print ''
