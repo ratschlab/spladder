@@ -120,7 +120,7 @@ def get_gene_expression(CFG, fn_out=None):
 
     ### iterate over genes
     seg_offset = 0
-    for gidx in xrange(numgenes):
+    for gidx in sp.unique(gene_ids_segs):
 
         if CFG['verbose']:  
             log_progress(gidx, numgenes, 100)
@@ -183,7 +183,7 @@ def get_size_factors(gene_counts, CFG):
     gmean = sp.exp(sp.mean(sp.log(gene_counts + 1), axis=1))
 
     size_factors = []
-    for i in range(gene_counts.shape[1]):
+    for i in xrange(gene_counts.shape[1]):
         idx = gene_counts[:, i] > 0
         size_factors.append(sp.median(gene_counts[idx, i] / gmean[idx]))
 
@@ -777,6 +777,7 @@ def main():
             cov[1] = cov[1][k_idx, :]
             curr_gene_counts = curr_gene_counts[k_idx, :]
             event_idx = event_idx[k_idx]
+            gene_idx = gene_idx[k_idx]
 
             cov[0] = sp.around(sp.hstack([cov[0], curr_gene_counts]))
             cov[1] = sp.around(sp.hstack([cov[1], curr_gene_counts]))
