@@ -203,6 +203,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
         ### write data to hdf5 continuously
         h5fid = h5py.File(fname_out, 'w')
         h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
+        h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
         h5fid.create_dataset(name='strains', data=CFG['strains'])
         for c_idx in range(0, genes.shape[0], chunksize):
             cc_idx = min(genes.shape[0], c_idx + chunksize)

@@ -21,9 +21,13 @@ def load_genes(options):
     """This is a helper function to load the gene data from file"""
 
     if options.validate_sg:
-        (genes, events) = cPickle.load(open(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.validated.pickle' % options.confidence), 'r'))
+        gene_fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.validated.pickle' % options.confidence)
     else:
-        (genes, events) = cPickle.load(open(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.pickle' % options.confidence), 'r'))
+        gene_fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs.pickle' % options.confidence)
+
+    if options.verbose:
+        print 'loading annotation information from %s' % gene_fname
+    (genes, events) = cPickle.load(open(gene_fname, 'r'))
 
     return genes
 

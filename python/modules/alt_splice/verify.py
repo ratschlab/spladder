@@ -214,7 +214,7 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # exon_pre_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[6] = counts_edges[idx, 1]
-    if info[6] >= CFG['exon_skip']['min_non_skip_count']:
+    if info[6] >= CFG['exon_skip']['min_skip_count']:
         verified[3] = 1
 
     return (verified, info)

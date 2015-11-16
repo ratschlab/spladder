@@ -54,11 +54,12 @@ def parse_options(argv):
     input.add_option('-m', '--matlab', dest='matlab', metavar='y|n', help='input data was generated with matlab version [n]', default='n')
     testing = OptionGroup(parser, 'TESTING OPTIONS')
     testing.add_option('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
-    testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.8]', default=0.8)
+    testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)
     testing.add_option('-i', '--min_count', dest='min_count', metavar='INT', help='min read count sum over all samples for an event isoform to be tested [10]', default=10)
     output = OptionGroup(parser, 'OUTPUT OPTIONS')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     output.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
+    output.add_option('--timestamp', dest='timestamp', metavar='y|n', help='add timestamp to output directory [n]', default='n')
     output.add_option('--labelA', dest='labelA', metavar='STRING', help='label for condition A (used for output naming)', default='condA')
     output.add_option('--labelB', dest='labelB', metavar='STRING', help='label for condition B (used for output naming)', default='condB')
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
@@ -110,24 +111,33 @@ def get_gene_expression(CFG, fn_out=None):
     gene_counts = sp.zeros((numgenes, strains.shape[0]), dtype='float')
     gene_names = sp.array([x.name for x in genes], dtype='str')
 
+    if CFG['is_matlab']:
+        seg_lens = IN['seg_len'][:, 0]
+        gene_ids_segs = IN['gene_ids_segs'][0, :].astype('int') - 1
+    else:
+        seg_lens = IN['seg_len'][:]
+        gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
+
     ### iterate over genes
     seg_offset = 0
     for gidx in xrange(numgenes):
+
         if CFG['verbose']:  
-            log_progress(gidx, numgenes)
+            log_progress(gidx, numgenes, 100)
         ### get idx of non alternative segments
         if CFG['is_matlab']:
             non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
             seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
             if len(seg_idx) == 0:
                 continue
-            gene_idx = (IN['gene_ids_segs'][0, seg_idx] - 1).astype('int')
         else:
             non_alt_idx = genes[gidx].get_non_alt_seg_ids()
             seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
-            gene_idx = (IN['gene_ids_segs'][:][seg_idx]).astype('int')
+
+        gene_idx = gene_ids_segs[seg_idx]
         if len(gene_idx.shape) > 0:
             gene_idx = gene_idx[0]
+
         if CFG['is_matlab']:
             assert(IN['gene_names'][gene_idx] == genes[gidx].name)
         else:
@@ -138,11 +148,14 @@ def get_gene_expression(CFG, fn_out=None):
         ### compute gene expression as the read count over all non alternative segments
         if CFG['is_matlab']:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / sp.sum(IN['seg_len'][seg_idx, 0])
-            gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / CFG['read_length']
+            gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], seg_lens[seg_idx]) / CFG['read_length']
             seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
-            gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / CFG['read_length']
+            if seg_idx.shape[0] > 1:
+                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, seg_lens[seg_idx]) / CFG['read_length']
+            else:
+                gene_counts[gidx, :] = IN['segments'][seg_idx, :] * seg_lens[seg_idx] / CFG['read_length']
             seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
@@ -637,7 +650,10 @@ def main():
     CFG = settings.parse_args(options, identity='test')
 
     ### generate output directory
-    outdir = os.path.join(options.outdir, 'test', str(datetime.datetime.now()).replace(' ', '_'))
+    outdir = os.path.join(options.outdir, 'testing')
+    if options.timestamp == 'y':
+        outdir = '%s_%s' % (outdir, str(datetime.datetime.now()).replace(' ', '_'))
+
     if options.labelA != 'condA' and options.labelB != 'condB':
         outdir = '%s_%s_vs_%s' % (outdir, options.labelA, options.labelB)
     if not os.path.exists(outdir):
@@ -751,9 +767,10 @@ def main():
             curr_gene_counts = gene_counts[gene_idx, :]
 
             ### filter for min expression
-            k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
+            #k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])
+            k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
             if CFG['verbose']:
-                print 'Exclude %i of %i %s events (%.2f) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, 1 - float(k_idx.shape[0]) / cov[0].shape[0])
+                print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
            # k_idx = sp.where((sp.mean(sp.c_[cov[0], cov[1]], axis=1) > 2))[0]
            # k_idx = sp.where((sp.mean(cov[0], axis=1) > 2) & (sp.mean(cov[1], axis=1) > 2))[0]
             cov[0] = cov[0][k_idx, :]
@@ -794,7 +811,7 @@ def main():
             pvals_adj = adj_pval(pvals, CFG) 
 
             ### write output
-            out_fname = os.path.join(outdir, 'test_results_%s.tsv' % event_type)
+            out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
                 print 'Writing test results to %s' % out_fname
             s_idx = sp.argsort(pvals_adj)
