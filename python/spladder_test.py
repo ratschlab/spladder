@@ -118,21 +118,30 @@ def get_gene_expression(CFG, fn_out=None):
         seg_lens = IN['seg_len'][:]
         gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
 
+    ### no longer assume that the gene_ids_segs are sorted by gene ID
+    s_idx = sp.argsort(gene_ids_segs[:, 0], kind='mergesort')
+    _, u_idx = sp.unique(gene_ids_segs[s_idx, 0], return_index=True)
+    s_idx = s_idx[u_idx]
+
     ### iterate over genes
-    seg_offset = 0
-    for gidx in sp.unique(gene_ids_segs):
+    #seg_offset = 0
+    #tut = sp.where(gene_names == 'ENSG00000163812.9')[0]
+    #for gidx in tut:
+    for gidx, iidx in enumerate(s_idx):
 
         if CFG['verbose']:  
             log_progress(gidx, numgenes, 100)
         ### get idx of non alternative segments
         if CFG['is_matlab']:
-            non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
-            seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
+            #non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
+            #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
+            seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph[0, 2].shape[0])
             if len(seg_idx) == 0:
                 continue
         else:
-            non_alt_idx = genes[gidx].get_non_alt_seg_ids()
-            seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
+            #non_alt_idx = genes[gidx].get_non_alt_seg_ids()
+            #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
+            seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
 
         gene_idx = gene_ids_segs[seg_idx]
         if len(gene_idx.shape) > 0:
@@ -143,20 +152,20 @@ def get_gene_expression(CFG, fn_out=None):
         else:
             assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
-        seg_idx = seg_idx[non_alt_idx]
+        #seg_idx = seg_idx[non_alt_idx]
 
         ### compute gene expression as the read count over all non alternative segments
         if CFG['is_matlab']:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / sp.sum(IN['seg_len'][seg_idx, 0])
             gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], seg_lens[seg_idx]) / CFG['read_length']
-            seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
+            #seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
             if seg_idx.shape[0] > 1:
                 gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, seg_lens[seg_idx]) / CFG['read_length']
             else:
                 gene_counts[gidx, :] = IN['segments'][seg_idx, :] * seg_lens[seg_idx] / CFG['read_length']
-            seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
+            #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
 
@@ -722,7 +731,7 @@ def main():
             CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
 
         CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
-        if os.path.exists(CFG['fname_exp_hdf5']):
+        if False: #os.path.exists(CFG['fname_exp_hdf5']):
             IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
             gene_counts = IN['raw_count'][:]
             gene_strains = IN['strains'][:]
