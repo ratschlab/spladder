@@ -109,7 +109,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     ### open hdf5 file containing graph count information
     IN = h5py.File(CFG['fname_count_in'], 'r')
     strains = IN['strains'][:].astype('str')
-    if not strain_subset is None:
+    if strain_subset is None:
         strain_idx = sp.arange(strains.shape[0])
     else:
         strain_idx = sp.where(sp.in1d(strains, strain_subset))[0]
@@ -138,13 +138,13 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
             log_progress(gidx, numgenes, 100)
         ### get idx of non alternative segments
         if CFG['is_matlab']:
-            #non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
+            non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
             #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph[0, 2].shape[0])
             if len(seg_idx) == 0:
                 continue
         else:
-            #non_alt_idx = genes[gidx].get_non_alt_seg_ids()
+            non_alt_idx = genes[gidx].get_non_alt_seg_ids()
             #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
 
@@ -157,7 +157,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         else:
             assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
-        #seg_idx = seg_idx[non_alt_idx]
+        seg_idx = seg_idx[non_alt_idx]
 
         ### compute gene expression as the read count over all non alternative segments
         if CFG['is_matlab']:
@@ -743,9 +743,10 @@ def main():
             IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
             gene_counts = IN['raw_count'][:]
             gene_strains = IN['strains'][:]
+            gene_ids = IN['genes'][:]
             IN.close()
         else:
-            if options.subset_samples:
+            if options.subset_samples == 'y':
                 condition_strains = sp.unique(sp.r_[sp.array(CFG['conditionA']), sp.array(CFG['conditionB'])])
                 CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, hash(tuple(sp.unique(condition_strains))) * -1))
             if os.path.exists(CFG['fname_exp_hdf5']):
@@ -754,6 +755,7 @@ def main():
                 IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
                 gene_counts = IN['raw_count'][:]
                 gene_strains = IN['strains'][:]
+                gene_ids = IN['genes'][:]
                 IN.close()
             else:
                 gene_counts, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'], strain_subset=condition_strains)
@@ -794,10 +796,15 @@ def main():
             curr_gene_counts = gene_counts[gene_idx, :]
 
             ### filter for min expression
-            #k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])
-            k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
+            if True: #event_type == 'intron_retention':
+                k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
+            else:
+                k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
             if CFG['verbose']:
                 print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
+            if k_idx.shape[0] == 0:
+                print 'All events of type %s were filtered out due to low coverage. Please try re-running with less stringent filter criteria' % event_type
+                continue
            # k_idx = sp.where((sp.mean(sp.c_[cov[0], cov[1]], axis=1) > 2))[0]
            # k_idx = sp.where((sp.mean(cov[0], axis=1) > 2) & (sp.mean(cov[1], axis=1) > 2))[0]
             cov[0] = cov[0][k_idx, :]
