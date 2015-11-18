@@ -52,6 +52,7 @@ def parse_options(argv):
     input.add_option('-M', '--merge_strat', dest='merge', metavar='<STRAT>', help='merge strategy, where <STRAT> is one of: merge_bams, merge_graphs, merge_all [merge_graphs]', default='merge_graphs')
     input.add_option('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
     input.add_option('-m', '--matlab', dest='matlab', metavar='y|n', help='input data was generated with matlab version [n]', default='n')
+    input.add_option('-s', '--subset_samples', dest='subset_samples', metavar='y|n', help='gene expression counting will be only done on the tested subset of samples [n]', default='n')
     testing = OptionGroup(parser, 'TESTING OPTIONS')
     testing.add_option('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
     testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)
@@ -92,7 +93,7 @@ def get_non_alt_seg_ids_matlab(gene):
 
     return sp.where(tmp)[0]
 
-def get_gene_expression(CFG, fn_out=None):
+def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 
     if CFG['verbose']:
         sys.stdout.write('Quantifying gene expression ...\n')
@@ -108,7 +109,11 @@ def get_gene_expression(CFG, fn_out=None):
     ### open hdf5 file containing graph count information
     IN = h5py.File(CFG['fname_count_in'], 'r')
     strains = IN['strains'][:].astype('str')
-    gene_counts = sp.zeros((numgenes, strains.shape[0]), dtype='float')
+    if not strain_subset is None:
+        strain_idx = sp.arange(strains.shape[0])
+    else:
+        strain_idx = sp.where(sp.in1d(strains, strain_subset))[0]
+    gene_counts = sp.zeros((numgenes, strain_idx.shape[0]), dtype='float')
     gene_names = sp.array([x.name for x in genes], dtype='str')
 
     if CFG['is_matlab']:
@@ -157,14 +162,14 @@ def get_gene_expression(CFG, fn_out=None):
         ### compute gene expression as the read count over all non alternative segments
         if CFG['is_matlab']:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / sp.sum(IN['seg_len'][seg_idx, 0])
-            gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], seg_lens[seg_idx]) / CFG['read_length']
+            gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx][strain_idx], seg_lens[seg_idx]) / CFG['read_length']
             #seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
             if seg_idx.shape[0] > 1:
-                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, seg_lens[seg_idx]) / CFG['read_length']
+                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx]) / CFG['read_length']
             else:
-                gene_counts[gidx, :] = IN['segments'][seg_idx, :] * seg_lens[seg_idx] / CFG['read_length']
+                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
             #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
@@ -175,7 +180,7 @@ def get_gene_expression(CFG, fn_out=None):
     ### write results to hdf5
     if fn_out is not None:
         OUT = h5py.File(fn_out, 'w')
-        OUT.create_dataset(name='strains', data=strains)
+        OUT.create_dataset(name='strains', data=strains[strain_idx])
         OUT.create_dataset(name='genes', data=gene_names)
         OUT.create_dataset(name='raw_count', data=gene_counts, compression="gzip")
         OUT.close()
@@ -730,15 +735,28 @@ def main():
             CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
             CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
 
+        condition_strains = None
         CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
-        if False: #os.path.exists(CFG['fname_exp_hdf5']):
+        if os.path.exists(CFG['fname_exp_hdf5']):
+            if CFG['verbose']:
+                print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
             IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
             gene_counts = IN['raw_count'][:]
             gene_strains = IN['strains'][:]
-            gene_ids = IN['genes'][:]
             IN.close()
         else:
-            gene_counts, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'])
+            if options.subset_samples:
+                condition_strains = sp.unique(sp.r_[sp.array(CFG['conditionA']), sp.array(CFG['conditionB'])])
+                CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, hash(tuple(sp.unique(condition_strains))) * -1))
+            if os.path.exists(CFG['fname_exp_hdf5']):
+                if CFG['verbose']:
+                    print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
+                IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
+                gene_counts = IN['raw_count'][:]
+                gene_strains = IN['strains'][:]
+                IN.close()
+            else:
+                gene_counts, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'], strain_subset=condition_strains)
 
         gene_strains = sp.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
 
