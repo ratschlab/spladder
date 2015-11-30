@@ -319,11 +319,11 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 schain = ',%i-%i^' % (ev.exons2[1, 1], ev.exons2[1, 0] + 1)
             elif ev.event_type in ['alt_3prime', 'alt_5prime']:
                 if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
-                    struc = '1-,2-'
+                    struc = '1^,2^'
                     flanks = '%i-,%i-' % (min(ev.exons1[-1, 1], ev.exons2[-1, 1]), ev.exons1[0, 1])
                     schain = '%i^,%i^' % (max(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1, min(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1)
                 elif sp.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
-                    struc = '1^,2^'
+                    struc = '1-,2-'
                     flanks = '%i^,%i^' % (ev.exons1[-1, 0] + 1, max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1)
                     schain = '%i-,%i-' % (max(ev.exons1[0, 1], ev.exons2[0, 1]), min(ev.exons1[0, 1], ev.exons2[0, 1]))
                 else:
@@ -344,6 +344,120 @@ def write_events_structured(fn_out_struc, events, idx=None):
             else:
                 raise Exception("Unknown event type: %s" % ev.event_type)
         print >> fd_out, 'flanks "%s"; structure "%s"; splice_chain "%s";'  % (flanks, struc, schain)
+
+    fd_out.close()
+
+
+def write_events_bed(fn_out_bed, events, idx=None):
+    
+    if events.shape[0] == 0:
+        print >> sys.stderr, 'WARNING: No events present.'
+        return
+
+    if idx is None:
+        idx = sp.arange(events.shape[0])
+
+    print 'writing %s events in bed format to %s' % (events[0].event_type, fn_out_bed)
+
+    fd_out = open(fn_out_bed, 'w+') 
+
+    ### load gene structure
+    for i in idx:
+
+        ev = events[i]
+        gene_name = events[i].gene_name[0] ### TODO - why only first?
+        start_pos = ev.exons1[0, 0]
+        stop_pos = ev.exons1[-1, -1]
+
+        ### get order of isoforms o_idx(1) -> iso1 and o_idx(2) -> iso2
+        ### assert that first isoform is always the shorter one
+        #if ev.event_type == 'intron_retention':
+        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[1] - ev.exons2[0]))
+        #else:
+        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+
+        name = '%s.%i' % (ev.event_type, ev.id)
+
+        block_lens = []
+        block_starts = []
+        if ev.event_type == 'exon_skip':
+            event_id = 'CA-CA-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons2[1, 1])
+            for j in range(ev.exons2.shape[0]):
+                block_starts.append(str(int(ev.exons2[j, 0] - start_pos)))
+                block_lens.append(str(int(ev.exons2[j, 1] - ev.exons2[j, 0])))
+        elif ev.event_type == 'intron_retention':
+            event_id = 'IR-IR-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons1[1, 0])
+            block_starts.append('0')
+            block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+            block_starts.append(str(ev.exons1[0, 1] - start_pos))
+            block_lens.append(str(ev.exons1[1, 0] - ev.exons1[0, 1]))
+            block_starts.append(str(ev.exons1[1, 0] - start_pos))
+            block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        elif ev.event_type == 'alt_3prime':
+            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                block_starts.append('0')
+                block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                if ev.exons2[1, 0] < ev.exons1[1, 0]:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons1[1, 0])
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 0] - ev.exons2[1, 0]))
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+                else:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons1[1, 0], ev.exons2[1, 0])
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 0] - ev.exons1[1, 0]))
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 1] - ev.exons2[1, 0]))
+            else:
+                block_starts.append('0')
+                if ev.exons1[0, 1] < ev.exons2[0, 1]:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons2[0, 1])
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                    block_starts.append(str(ev.exons1[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons1[0, 1]))
+                else:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons2[0, 1], ev.exons1[0, 1])
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons2[0, 0]))
+                    block_starts.append(str(ev.exons2[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons2[0, 1]))
+                block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        elif ev.event_type == 'alt_5prime':
+            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                block_starts.append('0')
+                block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                if ev.exons1[1, 0] > ev.exons2[1, 0]:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons1[1, 0])
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 0] - ev.exons2[1, 0]))
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 1] - ev.exons2[1, 0]))
+                else:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons1[1, 0], ev.exons2[1, 0])
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 0] - ev.exons1[1, 0]))
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+            else:
+                block_starts.append('0')
+                if ev.exons1[0, 1] < ev.exons2[0, 1]:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons2[0, 1])
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                    block_starts.append(str(ev.exons1[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons1[0, 1]))
+                else:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons2[0, 1], ev.exons1[0, 1])
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons2[0, 0]))
+                    block_starts.append(str(ev.exons2[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons2[0, 1]))
+                block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        else:
+            print >> sys.stderr, 'WARNING: Event type %s not implemented yet for structured output' % ev.event_type
+            break
+
+        print >> fd_out, '\t'.join([ev.chr, str(start_pos), str(stop_pos), event_id, '0', ev.strand, str(start_pos), str(stop_pos), '255,0,0', '3', ','.join(block_lens), ','.join(block_starts)])
 
     fd_out.close()
 
