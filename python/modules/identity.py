@@ -5,6 +5,7 @@ import cPickle
 import os
 import h5py
 import scipy as sp
+import re
 
 ### return identity
 def identity():
@@ -48,10 +49,15 @@ def get_gene_ids(options):
 
     gids = []
 
-    for event_type in options.event_types:
-        IN = h5py.File(os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence)), 'r')
-        if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
-            gids.extend(IN['gene_idx'][:][IN['conf_idx'][:]])
+    if options.event_id is None:
+        for event_type in options.event_types:
+            IN = h5py.File(os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence)), 'r')
+            if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
+                gids.extend(IN['gene_idx'][:][IN['conf_idx'][:]])
+            IN.close()
+    else:
+        IN = h5py.File(os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (re.sub(r'_[0-9]*$', '', options.event_id), options.confidence)), 'r')
+        gids.append(IN['gene_idx'][int(options.event_id.split('_')[-1])].astype('int'))
         IN.close()
 
     return sp.unique(gids)
