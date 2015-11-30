@@ -113,6 +113,7 @@ def spladder_viz():
             sys.exit(1)
         gids = [sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0][0]]
     ### no gene specified but result provided - plot all genes with confirmed events
+    ### if an event_id is provided, only the associated gene will be plotted
     else:
         gids = get_gene_ids(options)
         
