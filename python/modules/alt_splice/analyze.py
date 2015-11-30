@@ -59,6 +59,7 @@ def analyze_events(CFG, event_type):
         fn_out_txt = fn_out.replace('.pickle', '.txt')
         fn_out_struc = fn_out.replace('.pickle', '.struc.txt')
         fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt')
+        fn_out_conf_bed = fn_out_conf.replace('.pickle', '.bed')
         fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt')
         fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt')
         fn_out_conf_gff3 = fn_out_conf.replace('.pickle', '.gff3')
@@ -127,7 +128,7 @@ def analyze_events(CFG, event_type):
                                 print 'Chunk event %i, strain %i already completed' % (i, j)
                             else:
                                 print 'Submitting job %i, event chunk %i, strain chunk %i' % (len(jobinfo) + 1, i, j)
-                                jobinfo.append(rproc('verify_all_events', PAR, 8000, CFG['options_rproc'], 60))
+                                jobinfo.append(rproc('verify_all_events', PAR, 30000, CFG['options_rproc'], 60 * 5))
                     
                     rproc_wait(jobinfo, 20, 1.0, 1)
                     
@@ -243,6 +244,12 @@ def analyze_events(CFG, event_type):
                 print '%s already exists' % fn_out_conf_txt
             else:
                 write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+
+        if CFG['output_confirmed_bed']:
+            if os.path.exists(fn_out_conf_bed):
+                print '%s already exists' % fn_out_conf_bed
+            else:
+                write_events_bed(fn_out_conf_bed, events_all, idx=confirmed_idx)
 
         if CFG['output_confirmed_struc']:
             if os.path.exists(fn_out_conf_struc):
