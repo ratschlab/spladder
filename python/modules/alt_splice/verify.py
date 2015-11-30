@@ -490,7 +490,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                     counts.append(sp.array([info]))
                 else:
                     counts[-1] = sp.r_[counts[-1], sp.array([info])]
-            ev[i].verified = sp.array(ev[i].verified)
+            ev[i].verified = sp.array(ev[i].verified, dtype='bool')
 
         IN.close()
         counts = sp.dstack(counts)
