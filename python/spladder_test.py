@@ -138,13 +138,13 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
             log_progress(gidx, numgenes, 100)
         ### get idx of non alternative segments
         if CFG['is_matlab']:
-            non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
+            #non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
             #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph[0, 2].shape[0])
             if len(seg_idx) == 0:
                 continue
         else:
-            non_alt_idx = genes[gidx].get_non_alt_seg_ids()
+            #non_alt_idx = genes[gidx].get_non_alt_seg_ids()
             #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
 
@@ -157,7 +157,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         else:
             assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
-        seg_idx = seg_idx[non_alt_idx]
+        #seg_idx = seg_idx[non_alt_idx]
 
         ### compute gene expression as the read count over all non alternative segments
         if CFG['is_matlab']:
@@ -167,9 +167,9 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
             if seg_idx.shape[0] > 1:
-                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx]) / CFG['read_length']
+                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx, 0]) / CFG['read_length']
             else:
-                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
+                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx, 0] / CFG['read_length']
             #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
@@ -796,7 +796,7 @@ def main():
             curr_gene_counts = gene_counts[gene_idx, :]
 
             ### filter for min expression
-            if True: #event_type == 'intron_retention':
+            if event_type == 'intron_retention':
                 k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
             else:
                 k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
@@ -833,13 +833,9 @@ def main():
             dmatrix1 = sp.zeros((cov.shape[1], 4), dtype='bool')
             dmatrix1[:, 0] = 1                      # intercept
             dmatrix1[tidx, 1] = 1                   # delta a
-            #dmatrix1[tidx + setsize, 2] = 1         # delta b
             dmatrix1[tidx, 2] = 1                   # delta g
             dmatrix1[tidx + (idx1.shape[0] + idx2.shape[0]), 2] = 1         # delta g
-            #dmatrix1[tidx + (2 * setsize), 2] = 1   # delta g
             dmatrix1[(idx1.shape[0] + idx2.shape[0]):, 3] = 1         # is g
-            #dmatrix1[:setsize, 5] = 1               # is a
-            #dmatrix1[setsize:(2 * setsize), 5] = 1  # is b
             dmatrix0 = dmatrix1[:, [0, 2, 3]]
 
             pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
