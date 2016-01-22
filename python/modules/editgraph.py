@@ -934,6 +934,7 @@ def insert_cassette_exons(genes, CFG):
         s = strands.index(regions[j].strand)
         
         # fill the chunks on the corresponding chromosome
+<<<<<<< HEAD
         while c < chunks.shape[0]:
 
             if chunks[c, 0] > chr_num or chunks[c, 1] > s:
@@ -991,6 +992,28 @@ def insert_cassette_exons(genes, CFG):
                             pre_segment_cov = sp.sum(tracks[:, sp.arange(curr_exon[0] - gg.start)], axis=0)
                         min_len_pre = min(pre_segment_cov.shape[0], exon_cov.shape[0])
 
+=======
+	if CFG['parallel'] > 1:
+	    pool = CFG['pool']
+	    try:
+		result = [pool.apply_async(__process_ce, args=[genes[chunk_idx[i]], strands[s], i, bam_args]) \
+						for i in __chunk_generator(chunks, chr_num, s, c)]
+	        while result:
+        	    tmp = result.pop(0).get()
+		    tmp_c = tmp[0]
+		    genes[chunk_idx[tmp_c]] = tmp[1]
+		    num_exons_added += tmp[2]
+		    num_exons += tmp[3]
+		    inserted += tmp[4]
+		    if CFG['verbose'] and (tmp_c+1) % 100 == 0:
+                	print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' \
+				% (tmp_c+1, chunks.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
+	    except KeyboardInterrupt:
+		print >> sys.stdout, 'Program exiting due to Keyboard Interruption'
+		pool.terminate()
+		pool.join()
+		sys.exit(1)
+>>>>>>> dd9fd35b21ef5237700bf75fac8d77b960ade4b5
         else:
 	    for i in __chunk_generator(chunks, chr_num, s, c):
 		if CFG['verbose'] and (i+1) % 100 == 0:
