@@ -345,12 +345,13 @@ def get_intron_list(genes, CFG):
     num_introns_filtered = 0
     t0 = time.time()
 
+    print >> sys.stdout, "starting to process chunks"
     for j in range(regions.shape[0]):
         chr = regions[j].chr
         chr_num = regions[j].chr_num
         s = strands.index(regions[j].strand)
-        
-        # fill the chunks on the corresponding chromosome
+
+	# fill the chunks on the corresponding chromosome
         while c < chunks.shape[0]:
             if chunks[c, 0] > chr_num or chunks[c, 1] > s:
                 break
@@ -373,7 +374,7 @@ def get_intron_list(genes, CFG):
             introns[chunk_idx[c], s] = sort_rows(intron_list_tmp[0])
 
             c += 1
-
+        
     for j in range(introns.shape[0]):
         if introns[j, 0] is None:
             introns[j, 0] = sp.zeros((0, 3), dtype='int')
