@@ -77,5 +77,6 @@ default configuration, which consists of the following steps:
     - intron retention
     - alternative 3'/5' splice site
     - multiple exon skip
+    - mutually exclusive exons
 * quantify all alternative splicing events on each of the provided alignment
   files
