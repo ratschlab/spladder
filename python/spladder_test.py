@@ -65,6 +65,7 @@ def parse_options(argv):
     output.add_option('--labelB', dest='labelB', metavar='STRING', help='label for condition B (used for output naming)', default='condB')
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
+    experimental.add_option('', '--non_alt_norm', dest='non_alt_norm', metavar='y|n', help='only use non alternative exon segments for gene expression counting [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
     parser.add_option_group(testing)
@@ -138,13 +139,13 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
             log_progress(gidx, numgenes, 100)
         ### get idx of non alternative segments
         if CFG['is_matlab']:
-            #non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
+            non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
             #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph[0, 2].shape[0])
             if len(seg_idx) == 0:
                 continue
         else:
-            #non_alt_idx = genes[gidx].get_non_alt_seg_ids()
+            non_alt_idx = genes[gidx].get_non_alt_seg_ids()
             #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
 
@@ -157,7 +158,9 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         else:
             assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
-        #seg_idx = seg_idx[non_alt_idx]
+
+        if CFG['non_alt_norm']:
+            seg_idx = seg_idx[non_alt_idx]
 
         ### compute gene expression as the read count over all non alternative segments
         if CFG['is_matlab']:
@@ -167,9 +170,9 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
             if seg_idx.shape[0] > 1:
-                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx, 0]) / CFG['read_length']
+                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx]) / CFG['read_length']
             else:
-                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx, 0] / CFG['read_length']
+                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
             #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
@@ -340,7 +343,7 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
     else:        
         (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
-    if CFG['debug']:
+    if CFG['debug_plots']:
         fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
         idx = sp.where(~sp.isnan(disp_raw))[0]
@@ -378,7 +381,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG):
     if sp.sum(disp_fitted > 0) > 0:
         print "Found dispersion fit"
 
-    if CFG['debug']:
+    if CFG['debug_plots']:
         fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
         idx = sp.where(~sp.isnan(disp_fitted))[0]
@@ -422,6 +425,7 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
     disp_adj = sp.empty((counts.shape[0], 1))
     disp_adj.fill(sp.nan)
     disp_adj_conv = sp.zeros_like(disp_adj, dtype='bool')
+    error_cnt = 0
 
     for i in range(idx.shape[0]):
 
@@ -444,7 +448,13 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
                 sign = -1.0
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    res = minimize_scalar(adj_loglikelihood_shrink_scalar_onedisper, args=(dmatrix1, resp, yhat, disp_fitted[i], varPrior, sign), method='Bounded', bounds=(0, 10.0), tol=1e-5)
+                    try:
+                        res = minimize_scalar(adj_loglikelihood_shrink_scalar_onedisper, args=(dmatrix1, resp, yhat, disp_fitted[i], varPrior, sign), method='Bounded', bounds=(0, 10.0), tol=1e-5)
+                    except TypeError:
+                        disp_adj[i] = disp 
+                        disp_adj_conv[i] = False
+                        error_cnt += 1
+                        break
                 disp = res.x
 
                 if abs(sp.log(disp) - sp.log(dispBef)) < 1e-4:
@@ -457,6 +467,9 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
     if log:
         log_progress(idx.shape[0], idx.shape[0])
         print ''
+
+    if error_cnt > 0:
+        print 'Warning: %i events did not fit due to a TypeError' % error_cnt
 
     return (disp_adj, disp_adj_conv, idx)
 
@@ -662,6 +675,7 @@ def main():
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='test')
+    CFG['debug_plots'] = True
 
     ### generate output directory
     outdir = os.path.join(options.outdir, 'testing')

@@ -350,6 +350,12 @@ def parse_args(options, identity='main'):
         CFG['max_0_frac'] = options.max_0_frac
         CFG['min_count'] = options.min_count
         
+        if options.non_alt_norm in ['n', 'y']:
+            CFG['non_alt_norm'] = (options.non_alt_norm == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option non_alt_norm should have value y or n, but has %s' % options.non_alt_norm
+            sys.exit(1)
+
         if options.matlab in ['n', 'y']:
             CFG['is_matlab'] = (options.matlab == 'y')
         else:
