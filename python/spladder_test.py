@@ -675,7 +675,7 @@ def main():
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='test')
-    CFG['debug_plots'] = True
+    CFG['debug_plots'] = False
 
     ### generate output directory
     outdir = os.path.join(options.outdir, 'testing')
