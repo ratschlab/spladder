@@ -107,7 +107,7 @@ def spladder_viz():
 
     ### the user specified a gene to plot
     if options.gene_name is not None:
-        gid = sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0]
+        gid = sp.where(sp.array([x.name.split('.')[0] for x in genes]) == options.gene_name.split('.')[0])[0]
         if gid.shape[0] == 0:
             sys.stderr.write('ERROR: provided gene ID %s could not be found, please check for correctness\n' % options.gene_name)
             sys.exit(1)

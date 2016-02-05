@@ -19,10 +19,7 @@ from modules.classes.gene import Gene
 import modules.alt_splice.quantify as quantify
 import modules.testing.likelihood as likelihood
 import modules.settings as settings 
-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import modules.viz.diagnose as plot
 
 import multiprocessing as mp 
 import signal as sig
@@ -60,6 +57,7 @@ def parse_options(argv):
     output = OptionGroup(parser, 'OUTPUT OPTIONS')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     output.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
+    output.add_option('-D', '--diagnose_plots', dest='diagnose_plots', metavar='y|n', help='generate diagnose plots [n]', default='n')
     output.add_option('--timestamp', dest='timestamp', metavar='y|n', help='add timestamp to output directory [n]', default='n')
     output.add_option('--labelA', dest='labelA', metavar='STRING', help='label for condition A (used for output naming)', default='condA')
     output.add_option('--labelB', dest='labelB', metavar='STRING', help='label for condition B (used for output naming)', default='condB')
@@ -130,23 +128,19 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     s_idx = s_idx[u_idx]
 
     ### iterate over genes
-    #seg_offset = 0
-    #tut = sp.where(gene_names == 'ENSG00000163812.9')[0]
-    #for gidx in tut:
     for gidx, iidx in enumerate(s_idx):
 
         if CFG['verbose']:  
             log_progress(gidx, numgenes, 100)
+            
         ### get idx of non alternative segments
         if CFG['is_matlab']:
             non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
-            #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph[0, 2].shape[0])
             if len(seg_idx) == 0:
                 continue
         else:
             non_alt_idx = genes[gidx].get_non_alt_seg_ids()
-            #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
             seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
 
         gene_idx = gene_ids_segs[seg_idx]
@@ -343,21 +337,18 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
     else:        
         (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
-    if CFG['debug_plots']:
-        fig = plt.figure(figsize=(8, 6), dpi=100)
-        ax = fig.add_subplot(111)
-        idx = sp.where(~sp.isnan(disp_raw))[0]
-        ax.plot(sp.mean(sp.log10(gene_counts + 1), axis=1)[idx], disp_raw[idx], 'bo')
-        ax.set_title('Raw Dispersion Estimate')
-        ax.set_xlabel('Mean expression count')
-        ax.set_ylabel('Dispersion')
-        plt.savefig('dispersion_raw.pdf', format='pdf', bbox_inches='tight')
-        plt.close(fig)
+    if CFG['diagnose_plots']:
+        plot.mean_variance_plot(counts=gene_counts,
+                                disp=disp_raw,
+                                matrix=matrix,
+                                figtitle='Raw Dispersion Estimate',
+                                filename=os.path.join(CFG['plot_dir'], 'dispersion_raw.pdf'),
+                                CFG=CFG)
 
     return (disp_raw, disp_raw_conv)
 
 
-def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG):
+def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG, dmatrix1):
 
     mean_count = sp.mean(counts / sf, axis=1)[:, sp.newaxis]
     index = sp.where(disp_conv)[0]
@@ -381,16 +372,13 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG):
     if sp.sum(disp_fitted > 0) > 0:
         print "Found dispersion fit"
 
-    if CFG['debug_plots']:
-        fig = plt.figure(figsize=(8, 6), dpi=100)
-        ax = fig.add_subplot(111)
-        idx = sp.where(~sp.isnan(disp_fitted))[0]
-        ax.plot(sp.mean(sp.log10(counts + 1), axis=1)[idx], disp_fitted[idx], 'bo')
-        ax.set_title('Fitted Dispersion Estimate')
-        ax.set_xlabel('Mean expression count')
-        ax.set_ylabel('Dispersion')
-        plt.savefig('dispersion_fitted.pdf', format='pdf', bbox_inches='tight')
-        plt.close(fig)
+    if CFG['diagnose_plots']:
+        plot.mean_variance_plot(counts=counts,
+                                disp=disp_fitted,
+                                matrix=dmatrix1,
+                                figtitle='Fitted Dispersion Estimate',
+                                filename=os.path.join(CFG['plot_dir'], 'dispersion_fitted.pdf'),
+                                CFG=CFG)
 
     return (disp_fitted, Lambda, idx)
 
@@ -515,16 +503,13 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
     else:        
         (disp_adj, disp_adj_conv, _) = adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, sf, CFG, sp.arange(counts.shape[0]), log=CFG['verbose'])
 
-    if CFG['debug']:
-        fig = plt.figure(figsize=(8, 6), dpi=100)
-        ax = fig.add_subplot(111)
-        idx = sp.where(~sp.isnan(disp_adj))[0]
-        ax.plot(sp.mean(sp.log10(counts + 1), axis=1)[idx], disp_adj[idx], 'bo')
-        ax.set_title('Adjusted Dispersion Estimate')
-        ax.set_xlabel('Mean expression count')
-        ax.set_ylabel('Dispersion')
-        plt.savefig('dispersion_adjusted.pdf', format='pdf', bbox_inches='tight')
-        plt.close(fig)
+    if CFG['diagnose_plots']:
+        plot.mean_variance_plot(counts=counts,
+                           disp=disp_adj,
+                           matrix=dmatrix1,
+                           figtitle='Adjusted Dispersion Estimate',
+                           filename=os.path.join(CFG['plot_dir'], 'dispersion_adjusted.pdf'),
+                           CFG=CFG)
 
     return (disp_adj, disp_adj_conv)
 
@@ -647,19 +632,23 @@ def calculate_varPrior(disp_raw, disp_fitted, idx, varLogDispSamp):
     return max(varPrior, 0.1)
 
 
-def run_testing(cov, dmatrix0, dmatrix1, sf, CFG):
+def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, r_idx=None):
 
     ### estimate dispersion
     (disp_raw, disp_raw_conv) = estimate_dispersion(cov, dmatrix1, sf, CFG)
 
     ### fit dispersion
-    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, disp_raw_conv, sf, CFG)
+    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, disp_raw_conv, sf, CFG, dmatrix1)
 
     ### adjust dispersion estimates
     (disp_adj, disp_adj_conv) = adjust_dispersion(cov, dmatrix1, disp_raw, disp_fitted, disp_idx, sf, CFG)
 
     ### do test 
     pvals = test_count(cov, disp_adj, sf, dmatrix0, dmatrix1, CFG)
+
+    ### revert from unique
+    if r_idx is not None:
+        pvals = pvals[r_idx]
 
     ### reshape and qdjust p-values
     pvals =  2 * pvals.reshape((2, pvals.shape[0] / 2)).T.min(axis=1)
@@ -675,12 +664,16 @@ def main():
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='test')
-    CFG['debug_plots'] = False
+    CFG['use_exon_counts'] = False
 
     ### generate output directory
     outdir = os.path.join(options.outdir, 'testing')
     if options.timestamp == 'y':
         outdir = '%s_%s' % (outdir, str(datetime.datetime.now()).replace(' ', '_'))
+    if CFG['diagnose_plots']:
+        CFG['plot_dir'] = os.path.join(options.outdir, 'plots')
+        if not os.path.exists(CFG['plot_dir']):
+            os.makedirs(CFG['plot_dir'])
 
     if options.labelA != 'condA' and options.labelB != 'condB':
         outdir = '%s_%s_vs_%s' % (outdir, options.labelA, options.labelB)
@@ -777,7 +770,7 @@ def main():
         gene_strains = sp.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
 
         ### estimate size factors for library size normalization
-        sf = get_size_factors(gene_counts, CFG)
+        sf_ge = get_size_factors(gene_counts, CFG)
 
         ### get index of samples for difftest
         idx1 = sp.where(sp.in1d(gene_strains, CFG['conditionA']))[0]
@@ -790,8 +783,8 @@ def main():
 
         ### subset expression counts to tested samples
         gene_counts = gene_counts[:, sp.r_[idx1, idx2]]
-        sf = sf[sp.r_[idx1, idx2]]
-        sf = sp.r_[sf, sf]
+        sf_ge = sf_ge[sp.r_[idx1, idx2]]
+        #sf = sp.r_[sf, sf]
 
         ### test each event type individually
         for event_type in CFG['event_types']:
@@ -802,7 +795,12 @@ def main():
             CFG['fname_events'] = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, CFG['confidence_level']))
 
             ### quantify events
-            (cov, gene_idx, event_idx, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], sp.r_[idx1, idx2], event_type, CFG)
+            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], sp.r_[idx1, idx2], event_type, CFG)
+
+            ### estimate size factors
+            sf_ev = get_size_factors(sp.vstack(cov), CFG)
+
+            sf = sp.r_[sf_ev, sf_ge]
 
             assert(sp.all(gene_strains == event_strains))
 
@@ -811,9 +809,13 @@ def main():
 
             ### filter for min expression
             if event_type == 'intron_retention':
-                k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
+                k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | \
+                                 (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
             else:
-                k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
+                k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | \
+                                  (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & \
+                                 (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & \
+                                 (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
             if CFG['verbose']:
                 print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
             if k_idx.shape[0] == 0:
@@ -826,10 +828,12 @@ def main():
             curr_gene_counts = curr_gene_counts[k_idx, :]
             event_idx = event_idx[k_idx]
             gene_idx = gene_idx[k_idx]
+            event_ids = [x[k_idx] for x in event_ids]
 
             cov[0] = sp.around(sp.hstack([cov[0], curr_gene_counts]))
             cov[1] = sp.around(sp.hstack([cov[1], curr_gene_counts]))
             cov = sp.vstack(cov)
+            event_ids = sp.hstack(event_ids)
 
             tidx = sp.arange(idx1.shape[0])
 
@@ -852,6 +856,13 @@ def main():
             dmatrix1[(idx1.shape[0] + idx2.shape[0]):, 3] = 1         # is g
             dmatrix0 = dmatrix1[:, [0, 2, 3]]
 
+            ### make event splice forms unique to prevent unnecessary tests
+            event_ids, u_idx, r_idx = sp.unique(event_ids, return_index=True, return_inverse=True)
+            if CFG['verbose']:
+                print 'Consider %i unique event splice forms for testing' % u_idx.shape[0]
+
+            ### run testing
+            #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, r_idx)
             pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
             pvals_adj = adj_pval(pvals, CFG) 
 

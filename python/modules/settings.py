@@ -158,6 +158,7 @@ def default_settings():
     CFG['min_truncation_cov'] = 5
 
     CFG['psi_min_reads'] = 10
+    CFG['diagnose_plots'] = False
 
     return CFG
 
@@ -367,6 +368,12 @@ def parse_args(options, identity='main'):
             sys.exit(1)
         if options.conditionB == '-':
             print >> sys.stderr, 'ERROR: At least one sample for condition B required'
+            sys.exit(1)
+
+        if options.diagnose_plots in ['n', 'y']:
+            CFG['diagnose_plots'] = (options.diagnose_plots == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option diagnose_plots should have value y or n, but has %s' % options.diagnose_plots
             sys.exit(1)
 
         CFG['conditionA'] = [os.path.basename(x).replace('.bam', '') for x in options.conditionA.strip(',').split(',')]
