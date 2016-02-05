@@ -401,54 +401,95 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
 
     ### get event features we need to include for counting
     if event_type == 'exon_skip':
-    #    fidx0e = []
         fidx0i = [sp.where(event_features == 'exon_pre_exon_aft_conf')[0]]
-    #    fidx1e = [sp.where(event_features == 'exon_cov')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon_conf')[0], sp.where(event_features == 'exon_exon_aft_conf')[0]] 
-    #    pos1e = [IN['event_pos'][[2, 3], :].astype('int')]
+        if CFG['use_exon_counts']:
+            fidx0e = []
+            fidx1e = [sp.where(event_features == 'exon_cov')[0]]
+            if CFG['is_matlab']:
+                pos1e = [IN['event_pos'][[2, 3], :].astype('int')]
+            else:
+                pos1e = [IN['event_pos'][:, [2, 3]].astype('int')]
     elif event_type == 'intron_retention':
-    #    fidx0e = []
         fidx0i = [sp.where(event_features == 'intron_conf')[0]]
-    #    fidx1e = [sp.where(event_features == 'intron_cov')[0]]
         fidx1i = []
-    #    pos1e = [IN['event_pos'][[1, 2], :].astype('int')]
+        if CFG['use_exon_counts']:
+            fidx0e = []
+            fidx1e = [sp.where(event_features == 'intron_cov')[0]]
+            if CFG['is_matlab']:
+                pos1e = [IN['event_pos'][[1, 2], :].astype('int')]
+            else:
+                pos1e = [IN['event_pos'][:, [1, 2]].astype('int')]
     elif event_type in ['alt_3prime', 'alt_5prime']:
-    #    fidx0e = []
         fidx0i = [sp.where(event_features == 'intron1_conf')[0]]
-    #    fidx1e = [sp.where(event_features == 'exon_diff_cov')[0]]
         fidx1i = [sp.where(event_features == 'intron2_conf')[0]]
-    #    pos1e = [sp.zeros((IN['event_pos'].shape[0], 2), dtype='int')]
-        idx = sp.where(IN['event_pos'][0, :] == IN['event_pos'][2, :])[0]
-    #    pos1e[0][idx, :] = IN['event_pos'][[1, 3], :].astype('int')
-        idx = sp.where(IN['event_pos'][3, :] == IN['event_pos'][5, :])[0]
-    #    pos1e[0][idx, :] = IN['event_pos'][[2, 4], :].astype('int')
+        if CFG['use_exon_counts']:
+            fidx0e = []
+            fidx1e = [sp.where(event_features == 'exon_diff_cov')[0]]
+            if CFG['is_matlab']:
+                pos1e = [sp.zeros((IN['event_pos'].shape[1], 2), dtype='int')]
+                idx = sp.where(IN['event_pos'][0, :] == IN['event_pos'][2, :])[0]
+                pos1e[0][idx, :] = IN['event_pos'][[1, 3], :][:, idx].astype('int')
+                idx = sp.where(IN['event_pos'][3, :] == IN['event_pos'][5, :])[0]
+                pos1e[0][idx, :] = IN['event_pos'][[2, 4], :][:, idx].astype('int')
+            else:
+                pos1e = [sp.zeros((IN['event_pos'].shape[0], 2), dtype='int')]
+                idx = sp.where((IN['event_pos'][:, 4] == IN['event_pos'][:, 6]) & (IN['event_pos'][:, 1] < IN['event_pos'][:, 3]))[0]
+                pos1e[0][idx, :] = IN['event_pos'][:, [1, 3]][idx, :].astype('int')
+                idx = sp.where((IN['event_pos'][:, 4] == IN['event_pos'][:, 6]) & (IN['event_pos'][:, 1] > IN['event_pos'][:, 3]))[0]
+                pos1e[0][idx, :] = IN['event_pos'][:, [1, 3]][idx, :].astype('int')[:, ::-1]
+                idx = sp.where((IN['event_pos'][:, 1] == IN['event_pos'][:, 3]) & (IN['event_pos'][:, 4] < IN['event_pos'][:, 6]))[0]
+                pos1e[0][idx, :] = IN['event_pos'][:, [4, 6]][idx, :].astype('int')
+                idx = sp.where((IN['event_pos'][:, 1] == IN['event_pos'][:, 3]) & (IN['event_pos'][:, 4] > IN['event_pos'][:, 6]))[0]
+                pos1e[0][idx, :] = IN['event_pos'][:, [4, 6]][idx, :].astype('int')[:, ::-1]
     elif event_type == 'mult_exon_skip':
-    #    fidx0e = []
         fidx0i = [sp.where(event_features == 'exon_pre_exon_aft_conf')[0]]
-    #    fidx1e = [sp.where(event_features == 'exons_cov')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon_conf')[0], sp.where(event_features == 'exon_exon_aft_conf')[0], sp.where(event_features == 'sum_inner_exon_conf')[0]] 
         tmp_idx = sp.where(event_features == 'len_inner_exon')[0]
-    #    pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[0],), dtype='int'), IN['event_counts'][:, tmp_idx, 0].astype('int')]]
+        if CFG['use_exon_counts']:
+            fidx0e = []
+            fidx1e = [sp.where(event_features == 'exons_cov')[0]]
+            if CFG['is_matlab']:
+                pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[0],), dtype='int'), IN['event_counts'][:, tmp_idx, 0].astype('int')]]
+            else:
+                pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[2],), dtype='int'), IN['event_counts'][0, tmp_idx, :].astype('int')]]
     elif event_type == 'mutex_exons':
-    #    fidx0e = [sp.where(event_features == 'exon1_cov')[0]]
         fidx0i = [sp.where(event_features == 'exon_pre_exon1_conf')[0], sp.where(event_features == 'exon1_exon_aft_conf')[0]]
-    #    fidx1e = [sp.where(event_features == 'exon2_cov')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon2_conf')[0], sp.where(event_features == 'exon2_exon_aft_conf')[0]] 
-    #    pos0e = [IN['event_pos'][[2, 3], :].astype('int')]
-    #    pos1e = [IN['event_pos'][[4, 5], :].astype('int')]
+        if CFG['use_exon_counts']:
+            fidx0e = [sp.where(event_features == 'exon1_cov')[0]]
+            fidx1e = [sp.where(event_features == 'exon2_cov')[0]]
+            if CFG['is_matlab']:
+                pos0e = [IN['event_pos'][[2, 3], :].astype('int')]
+                pos1e = [IN['event_pos'][[4, 5], :].astype('int')]
+            else:
+                pos0e = [IN['event_pos'][:, [2, 3]].astype('int')]
+                pos1e = [IN['event_pos'][:, [4, 5]].astype('int')]
     else:
         raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
 
     ### init coverage matrix
     cov = [sp.zeros((event_idx.shape[0], strain_idx.shape[0]), dtype='float'), sp.zeros((event_idx.shape[0], strain_idx.shape[0]), dtype='float')]
 
+    for c in pos0e:
+        assert(sp.all((c[:, 1] - c[:, 0]) >= 0))
+    for c in pos1e:
+        assert(sp.all((c[:, 1] - c[:, 0]) >= 0))
+
     ### get counts for exon segments
-    #if CFG['verbose']:
-    #    print 'Collecting exon segment expression values'
-    #for f, ff in enumerate(fidx0e):
-    #    cov[0] += (IN['event_counts'][:, ff[0], strain_idx][event_idx, :] * (pos0e[f][1, event_idx] - pos0e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
-    #for f, ff in enumerate(fidx1e):
-    #    cov[1] += (IN['event_counts'][:, ff[0], strain_idx][event_idx, :] * (pos1e[f][1, event_idx] - pos1e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+    if CFG['use_exon_counts']:
+        if CFG['verbose']:
+            print 'Collecting exon segment expression values'
+        if CFG['is_matlab']:
+            for f, ff in enumerate(fidx0e):
+                cov[0] += (IN['event_counts'][:, ff[0], strain_idx][event_idx, :] * (pos0e[f][1, event_idx] - pos0e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+            for f, ff in enumerate(fidx1e):
+                cov[1] += (IN['event_counts'][:, ff[0], strain_idx][event_idx, :] * (pos1e[f][1, event_idx] - pos1e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+        else:
+            for f, ff in enumerate(fidx0e):
+                cov[0] += (IN['event_counts'][strain_idx, ff[0], :][:, event_idx].T * (pos0e[f][event_idx, 1].T - pos0e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+            for f, ff in enumerate(fidx1e):
+                cov[1] += (IN['event_counts'][strain_idx, ff[0], :][:, event_idx].T * (pos1e[f][event_idx, 1].T - pos1e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
 
     ### get counts for introns
     if CFG['verbose']:
@@ -471,12 +512,19 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
     ### get strain list
     strains = IN['strains'][:]
 
+    ### get list of event IDs - we will use these to make event forms unique
+    event_ids = get_event_ids(IN, event_type, event_idx, CFG)
+
     IN.close()
 
     ### only keep confident events
     gene_idx = gene_idx[event_idx]
 
-    return (cov, gene_idx, event_idx, strains)
+    ### round to the closest int
+    cov[0] = sp.floor(cov[0])
+    cov[1] = sp.floor(cov[1])
+
+    return (cov, gene_idx, event_idx, event_ids, strains)
 
 
 def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=None, fn_merge=None):
@@ -589,3 +637,53 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
         cPickle.dump((ev, counts), open(out_fn, 'w'))
 
     return (ev, counts)
+
+
+def get_event_ids(IN, event_type, event_idx, CFG):
+
+    if CFG['verbose']:
+        print 'Constructing event IDs'
+    
+    if CFG['is_matlab']:
+        gene_idx = IN['gene_idx'][:].astype('int') - 1
+        gene_chr = IN['gene_chr'][:][gene_idx]
+        if event_type in ['exon_skip', 'mult_exon_skip']:
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[0, 1, 3, 4], i].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][:, i].astype('str'))) for i in event_idx], dtype='str')
+        elif event_type == 'intron_retention':
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[1, 2], i].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][:, i].astype('str'))) for i in event_idx], dtype='str')
+        elif event_type in ['alt_3prime', 'alt_5prime']:
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[0, 1, 4, 5], i].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.zeros((event_idx.shape[0], ), dtype='int')
+            idx = sp.where(IN['event_pos'][3, event_idx] < IN['event_pos'][4, event_idx])[0]
+            event_ids1[idx] = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[2, 3, 4, 5], i].astype('str'))) for i in event_idx[idx]], dtype='str')
+            idx = sp.where(IN['event_pos'][3, event_idx] > IN['event_pos'][4, event_idx])[0]
+            event_ids1[idx] = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[0, 1, 2, 3], i].astype('str'))) for i in event_idx[idx]], dtype='str')
+            assert(sp.sum(event_ids1 == '') == 0)
+        elif event_type == 'mutex_exons':
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][:4, i].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][4:, i].astype('str'))) for i in event_idx], dtype='str')
+        else:
+            raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
+    ### we are not operating on matlab hdf5 files
+    else:
+        gene_idx = IN['gene_idx'][:].astype('int')
+        gene_chr = IN['gene_chr'][:][gene_idx]
+        if event_type in ['exon_skip', 'mult_exon_skip']:
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [0, 1, 3, 4]].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :].astype('str'))) for i in event_idx], dtype='str')
+        elif event_type == 'intron_retention':
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [1, 2]].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :].astype('str'))) for i in event_idx], dtype='str')
+        elif event_type in ['alt_3prime', 'alt_5prime']:
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [0, 1, 6, 7]].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [2, 3, 4, 5]].astype('str'))) for i in event_idx], dtype='str')
+        elif event_type == 'mutex_exons':
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :4].astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, 4:].astype('str'))) for i in event_idx], dtype='str')
+        else:
+            raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
+            
+    return [event_ids0, event_ids1]
+
