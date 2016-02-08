@@ -219,7 +219,7 @@ def spladder():
                     IN.close()
 
                 if CFG['parallel'] > 1:
-		    import multiprocessing as mp
+                    import multiprocessing as mp
                     pool = mp.Pool(processes=CFG['parallel'])
                     result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), CFG,)) for chrm in sorted(CFG['chrm_lookup'])]
                     while result:
