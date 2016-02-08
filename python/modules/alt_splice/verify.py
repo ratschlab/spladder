@@ -498,7 +498,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
     counts = counts[:, :, old_idx]
 
     if out_fn is not None:
-        cPickle.dump((ev, counts), open(out_fn, 'w'))
+        cPickle.dump((ev, counts), open(out_fn, 'w'), -1)
 
     return (ev, counts)
 
