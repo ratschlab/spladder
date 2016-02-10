@@ -24,6 +24,8 @@ import modules.viz.diagnose as plot
 import multiprocessing as mp 
 import signal as sig
 
+from modules.helpers import log_progress 
+
 TIME0 = time.time()
 
 class Dummy():
@@ -243,19 +245,6 @@ def re_quantify_events(CFG):
     cov = quantify.quantify_from_graph(ev, sp.arange(1000), 'exon_skip', CFG, fn_merge=sys.argv[1])
 
     return cov
-
-def log_progress(idx, total, bins=50):
-    
-    global TIME0
-
-    binsize = max(total / bins, 1)
-    if idx % binsize == 0:
-        time1 = time.time()
-        if idx == 0:
-            TIME0 = time1
-        progress = idx / binsize
-        sys.stdout.write('\r[' + ('#' * progress) + (' ' * (bins - progress)) + ']' + ' %i / %i (%.0f%%)' % (idx, total, float(idx) / max(total, 1) * 100) + ' - took %i sec (ETA: %i sec)' % (time1 - TIME0, int((bins - progress) * float(time1 - TIME0) / max(progress, 1))))
-        sys.stdout.flush()
 
 def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
 
