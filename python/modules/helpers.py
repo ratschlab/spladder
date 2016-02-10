@@ -1,4 +1,5 @@
 import scipy as sp
+import warnings
 
 if __package__ is None:
     __package__ = 'modules'
@@ -92,12 +93,29 @@ def compute_psi(counts, event_type, CFG):
     else:
         raise Exception('Unknown event type: %s' % event_type)
 
-    ### compute psi
-    psi = a / (a + b)  
+    ### compute psi - catch div by 0 warning
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        psi = a / (a + b)  
 
     ### filter for sufficient read support
     n_idx = sp.where((a + b) < CFG['psi_min_reads'])
     psi[n_idx] = sp.nan
 
     return psi
+
+
+def log_progress(idx, total, bins=50):
+    
+    global TIME0
+
+    binsize = max(total / bins, 1)
+    if idx % binsize == 0:
+        time1 = time.time()
+        if idx == 0:
+            TIME0 = time1
+        progress = idx / binsize
+        sys.stdout.write('\r[' + ('#' * progress) + (' ' * (bins - progress)) + ']' + ' %i / %i (%.0f%%)' % (idx, total, float(idx) / max(total, 1) * 100) + ' - took %i sec (ETA: %i sec)' % (time1 - TIME0, int((bins - progress) * float(time1 - TIME0) / max(progress, 1))))
+        sys.stdout.flush()
+
 
