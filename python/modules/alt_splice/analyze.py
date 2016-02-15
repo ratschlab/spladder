@@ -221,6 +221,7 @@ def analyze_events(CFG, event_type):
             cPickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)
 
         else:
+            print '\nLoading event data from %s' % fn_out
             (events_all, events_all_strains) = cPickle.load(open(fn_out, 'r'))
             confirmed_idx = cPickle.load(open(fn_out_conf, 'r'))
 
