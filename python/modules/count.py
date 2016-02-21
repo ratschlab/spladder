@@ -31,90 +31,91 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
     sys.stdout.write('genes: %i\n' % genes.shape[0])
     for f in range(counts.shape[0]):
-        sys.stdout.write('sample %i/%i\n' % (f + 1, counts.shape[0])) 
-
-        bam_cache = None
+        sys.stdout.write('\nsample %i/%i\n' % (f + 1, counts.shape[0])) 
 
         ### iterate over all genes and generate counts for
         ### the segments in the segment graph
         ### and the splice junctions in the splice graph
-        for i in range(genes.shape[0]):
-            sys.stdout.write('.')
-            if i > 0 and i % 50 == 0:
-                sys.stdout.write('%i\n' % i)
-            gg = genes[i]
-            if gg.segmentgraph.is_empty():
-                gg.segmentgraph = Segmentgraph(gg)
-            gg.start = gg.segmentgraph.segments.ravel().min()
-            gg.stop = gg.segmentgraph.segments.ravel().max()
+        ### iterate per contig, so the bam caching works better
+        contigs = sp.array([x.chr for x in genes])
+        for contig in sp.unique(contigs):
+            contig_idx = sp.where(contigs == contig)[0]
+            bam_cache = dict()
+            for ii,i in enumerate(contig_idx):
+                sys.stdout.write('.')
+                if i > 0 and i % 50 == 0:
+                    sys.stdout.write('%i\n' % i)
+                gg = genes[i]
+                if gg.segmentgraph.is_empty():
+                    gg.segmentgraph = Segmentgraph(gg)
+                gg.start = gg.segmentgraph.segments.ravel().min()
+                gg.stop = gg.segmentgraph.segments.ravel().max()
 
-            counts[f, i] = Counts(gg.segmentgraph.segments.shape[1])
+                counts[f, i] = Counts(gg.segmentgraph.segments.shape[1])
 
-            if CFG['bam_to_sparse'] and (fn_bam[f].endswith('npz') or os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz')):
-                ### load counts from summary file
-                if bam_cache is None:
-                    bam_cache = dict()
-                    if fn_bam[f].endswith('npz'):
-                        tmp = sp.load(fn_bam[f])
+                if CFG['bam_to_sparse'] and (fn_bam[f].endswith('npz') or os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz')):
+                    if ii == 0:
+                        ### load counts from summary file
+                        if fn_bam[f].endswith('npz'):
+                            tmp = sp.load(fn_bam[f])
+                        else:
+                            tmp = sp.load(re.sub(r'bam$', '', fn_bam[f]) + 'npz')
+                        ### re-build sparse matrix
+                        bam_cache[contig + '_reads'] = scipy.sparse.coo_matrix((tmp[contig + '_reads_dat'], (tmp[contig + '_reads_row'], tmp[contig + '_reads_col'])), shape=tmp[contig + '_reads_shp'], dtype='uint32').tocsc()
+                        bam_cache[contig + '_introns_m'] = tmp[contig + '_introns_m']
+                        bam_cache[contig + '_introns_p'] = tmp[contig + '_introns_p']
+                        del tmp
+
+                    if bam_cache[gg.chr + '_reads'].shape[0] == 0:
+                        tracks = sp.zeros((1, gg.stop - gg.start), dtype='int')
+                    elif bam_cache[gg.chr + '_reads'].shape[0] > 1:
+                        tracks = bam_cache[gg.chr + '_reads'][[0, 1 + int(gg.strand == '-')], gg.start:gg.stop].todense() 
                     else:
-                        tmp = sp.load(re.sub(r'bam$', '', fn_bam[f]) + 'npz')
-                    ### re-built sparse matrix
-                    for c in sp.unique([re.sub(r'_reads_dat$', '', x) for x in tmp if x.endswith('_reads_dat')]):
-                        bam_cache[c + '_reads'] = scipy.sparse.coo_matrix((tmp[c + '_reads_dat'], (tmp[c + '_reads_row'], tmp[c + '_reads_col'])), shape=tmp[c + '_reads_shp'], dtype='uint32').tocsc()
-                        bam_cache[c + '_introns_m'] = tmp[c + '_introns_m']
-                        bam_cache[c + '_introns_p'] = tmp[c + '_introns_p']
-                    del tmp
+                        tracks = bam_cache[gg.chr + '_reads'][:, gg.start:gg.stop].todense() 
 
-                if bam_cache[gg.chr + '_reads'].shape[0] == 0:
-                    tracks = sp.zeros((1, gg.stop - gg.start), dtype='int')
-                elif bam_cache[gg.chr + '_reads'].shape[0] > 1:
-                    tracks = bam_cache[gg.chr + '_reads'][[0, 1 + int(gg.strand == '-')], gg.start:gg.stop].todense() 
-                else:
-                    tracks = bam_cache[gg.chr + '_reads'][:, gg.start:gg.stop].todense() 
-
-                if bam_cache[c + '_introns_m'].shape[0] > 0:
-                    if gg.strand == '-':
-                        intron_list = get_intron_range(bam_cache[gg.chr + '_introns_m'], gg.start, gg.stop)
+                    if bam_cache[gg.chr + '_introns_m'].shape[0] > 0:
+                        if gg.strand == '-':
+                            intron_list = get_intron_range(bam_cache[gg.chr + '_introns_m'], gg.start, gg.stop)
+                        else:
+                            intron_list = get_intron_range(bam_cache[gg.chr + '_introns_p'], gg.start, gg.stop)
                     else:
                         intron_list = get_intron_range(bam_cache[gg.chr + '_introns_p'], gg.start, gg.stop)
                 else:
-                    intron_list = get_intron_range(bam_cache[gg.chr + '_introns_p'], gg.start, gg.stop)
-            else:
-                ### add RNA-seq evidence to the gene structure
-                #(tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
-                (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);
-                intron_list = intron_list[0] ### TODO
+                    ### add RNA-seq evidence to the gene structure
+                    #(tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
+                    (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);
+                    intron_list = intron_list[0] ### TODO
 
-            ### extract mean exon coverage for all segments
-            for j in range(gg.segmentgraph.segments.shape[1]):
-                idx = sp.arange(gg.segmentgraph.segments[0, j], gg.segmentgraph.segments[1, j]) - gg.start
-                counts[f, i].segments[j] = sp.mean(sp.sum(tracks[:, idx], axis=0))
-                counts[f, i].seg_pos[j] = sp.sum(sp.sum(tracks[:, idx], axis=0) > 0)
+                ### extract mean exon coverage for all segments
+                for j in range(gg.segmentgraph.segments.shape[1]):
+                    idx = sp.arange(gg.segmentgraph.segments[0, j], gg.segmentgraph.segments[1, j]) - gg.start
+                    counts[f, i].segments[j] = sp.mean(sp.sum(tracks[:, idx], axis=0))
+                    counts[f, i].seg_pos[j] = sp.sum(sp.sum(tracks[:, idx], axis=0) > 0)
 
-            k, l = sp.where(gg.segmentgraph.seg_edges == 1)
+                k, l = sp.where(gg.segmentgraph.seg_edges == 1)
 
-            ### there are no introns to count
-            if intron_list.shape[0] == 0:
+                ### there are no introns to count
+                if intron_list.shape[0] == 0:
+                    for m in range(k.shape[0]):
+                        if counts[f, i].edges.shape[0] == 0:
+                            counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))
+                        else:
+                            counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))]
+                    continue
+
+                ### extract intron counts 
                 for m in range(k.shape[0]):
+                    idx = sp.where((sp.absolute(intron_list[:, 0] - gg.segmentgraph.segments[1, k[m]]) <= intron_tol) & (sp.absolute(intron_list[:, 1] - gg.segmentgraph.segments[0, l[m]]) <= intron_tol))[0]
                     if counts[f, i].edges.shape[0] == 0:
-                        counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))
+                        if idx.shape[0] > 0:
+                            counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), sp.sum(intron_list[idx, 2])]))
+                        else:
+                            counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))
                     else:
-                        counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))]
-                continue
-
-            ### extract intron counts 
-            for m in range(k.shape[0]):
-                idx = sp.where((sp.absolute(intron_list[:, 0] - gg.segmentgraph.segments[1, k[m]]) <= intron_tol) & (sp.absolute(intron_list[:, 1] - gg.segmentgraph.segments[0, l[m]]) <= intron_tol))[0]
-                if counts[f, i].edges.shape[0] == 0:
-                    if idx.shape[0] > 0:
-                        counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), sp.sum(intron_list[idx, 2])]))
-                    else:
-                        counts[f, i].edges = sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))
-                else:
-                    if idx.shape[0] > 0:
-                        counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), sp.sum(intron_list[idx, 2])]))]
-                    else:
-                        counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))]
+                        if idx.shape[0] > 0:
+                            counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), sp.sum(intron_list[idx, 2])]))]
+                        else:
+                            counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))]
 
     if fn_out is not None:
         cPickle.dump(counts, open(fn_out, 'w'), -1)
@@ -186,7 +187,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
             if os.path.exists(fn):
                 continue
             else:
-                print 'submitting chunk %i to %i' % (c_idx, cc_idx)
+                print 'submitting chunk %i to %i (%i)' % (c_idx, cc_idx, genes.shape[0])
                 PAR['genes'] = genes[c_idx:cc_idx]
                 PAR['fn_bam'] = CFG['bam_fnames']
                 PAR['fn_out'] = fn
@@ -194,6 +195,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                 jobinfo.append(rp.rproc('count_graph_coverage', PAR, 6000, CFG['options_rproc'], 60*48))
 
         rp.rproc_wait(jobinfo, 30, 1.0, -1)
+        del genes
 
         ### merge results from count chunks
         if 'verbose' in CFG and CFG['verbose']:
