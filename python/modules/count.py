@@ -41,10 +41,12 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
         for contig in sp.unique(contigs):
             contig_idx = sp.where(contigs == contig)[0]
             bam_cache = dict()
+            print '\ncounting %i genes on contig %s' % (contig_idx.shape[0], contig)
             for ii,i in enumerate(contig_idx):
                 sys.stdout.write('.')
-                if i > 0 and i % 50 == 0:
-                    sys.stdout.write('%i\n' % i)
+                if ii > 0 and ii % 50 == 0:
+                    sys.stdout.write('%i/%i\n' % (ii, contig_idx.shape[0]))
+                sys.stdout.flush()
                 gg = genes[i]
                 if gg.segmentgraph.is_empty():
                     gg.segmentgraph = Segmentgraph(gg)
