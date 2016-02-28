@@ -280,36 +280,33 @@ def collect_events(CFG):
                 ### detect multiple_exon_skips from splicegraph
                 if do_mult_exon_skip:
                     if not os.path.exists(fn_out_mes):
-                        idx_mult_exon_skip, exon_mult_exon_skip, id_mult_exon_skip = detect_events(genes, 'mult_exon_skip', sp.where([x.is_alt for x in genes])[0], CFG)
-                        if len(id_mult_exon_skip) > 0:
-                            for k in id_mult_exon_skip:
-                                #k_ = sp.where(sp.array(id_mult_exon_skip) == k)[0]
-                                #gene = genes[idx_mult_exon_skip[k_[0]]]
-                                gene = genes[idx_mult_exon_skip[k]]
+                        idx_mult_exon_skip, exon_mult_exon_skip = detect_events(genes, 'mult_exon_skip', sp.where([x.is_alt for x in genes])[0], CFG)
+                        for k, gidx in enumerate(idx_mult_exon_skip):
+                            gene = genes[gidx] 
 
-                                ### perform liftover between strains if necessary
-                                exons = gene.splicegraph.vertices
-                                if not 'reference_strain' in CFG:
-                                    exons_col = exons
-                                    exons_col_pos = exons
-                                else:
-                                    exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                    exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                if exons_col.shape != exons_col_pos.shape: 
-                                    print 'skipping non-mappable multiple exon skip event'
-                                    continue
+                            ### perform liftover between strains if necessary
+                            exons = gene.splicegraph.vertices
+                            if not 'reference_strain' in CFG:
+                                exons_col = exons
+                                exons_col_pos = exons
+                            else:
+                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                            if exons_col.shape != exons_col_pos.shape: 
+                                print 'skipping non-mappable multiple exon skip event'
+                                continue
 
-                                ### build multiple exon skip data structure
-                                event = Event('mult_exon_skip', gene.chr, gene.strand)
-                                event.strain = sp.array([strain])
-                                event.exons1 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][2]]].T
-                                event.exons2 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][1]], exons[:, exon_mult_exon_skip[k][2]]].T
-                                event.exons1_col = sp.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][2]]].T
-                                event.exons2_col = sp.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][1]], exons_col[:, exon_mult_exon_skip[k][2]]].T
-                                event.gene_name = sp.array([gene.name])
-                                event.gene_idx = idx_mult_exon_skip[k]
-                                #event.transcript_type = sp.array([gene.transcript_type])
-                                mult_exon_skip_pos[ridx, i].append(event)
+                            ### build multiple exon skip data structure
+                            event = Event('mult_exon_skip', gene.chr, gene.strand)
+                            event.strain = sp.array([strain])
+                            event.exons1 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][2]]].T
+                            event.exons2 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][1]], exons[:, exon_mult_exon_skip[k][2]]].T
+                            event.exons1_col = sp.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][2]]].T
+                            event.exons2_col = sp.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][1]], exons_col[:, exon_mult_exon_skip[k][2]]].T
+                            event.gene_name = sp.array([gene.name])
+                            event.gene_idx = gidx
+                            #event.transcript_type = sp.array([gene.transcript_type])
+                            mult_exon_skip_pos[ridx, i].append(event)
                     else:
                         print '%s already exists' % fn_out_mes
 

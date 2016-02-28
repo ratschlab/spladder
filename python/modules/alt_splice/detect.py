@@ -10,11 +10,9 @@ import signal as sig
 from ..helpers import log_progress
 
 def detect_multipleskips(genes, gidx, log=False, edge_limit=1000):
-    # [idx_multiple_skips, exon_multiple_skips, id_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
+    # [idx_multiple_skips, exon_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
 
-    id = 0
     idx_multiple_skips = []
-    id_multiple_skips = []
     exon_multiple_skips = []
     for iix, ix in enumerate(gidx):
         if log:
@@ -89,8 +87,6 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=1000):
                     backtrace = backtrace[::-1]
                     idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
-                    id_multiple_skips.append(id) # * sp.ones((1, backtrace.shape[0] + 2)))
-                    id += 1
                 elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
                     backtrace = sp.array([long_path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
@@ -99,13 +95,11 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=1000):
                     backtrace = backtrace[::-1]
                     idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
-                    id_multiple_skips.append(id) # * sp.ones((1, backtrace.shape[0] + 2)))
-                    id += 1
 
     if log:
         print 'Number of multiple exon skips:\t\t\t\t\t%d' % len(idx_multiple_skips)
 
-    return (idx_multiple_skips, exon_multiple_skips, id_multiple_skips)
+    return (idx_multiple_skips, exon_multiple_skips)
 
 
 def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
@@ -210,7 +204,7 @@ def detect_altprime(genes, gidx, log=False, edge_limit=1000):
         num_exons = genes[iix].splicegraph.get_len()
         vertices = genes[iix].splicegraph.vertices
         edges = genes[iix].splicegraph.edges
-        strand = genes[ix].strand
+        strand = genes[iix].strand
 
         if edges.shape[0] > edge_limit:
             print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
@@ -314,7 +308,7 @@ def detect_xorexons(genes, gidx, log=False, edge_limit=1000):
         if log:
             sys.stdout.write('.')
             if (iix + 1) % 50 == 0:
-                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_xor_exons)))
+                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, gidx.shape[0], len(idx_xor_exons)))
             sys.stdout.flush()
 
         num_exons = genes[iix].splicegraph.get_len()
@@ -388,7 +382,7 @@ def detect_events(genes, event_type, idx, CFG):
         if len(result_list) > 0:
             result_list = [reduce(operator.add, [x[i] for x in result_list]) for i in range(len(result_list[0]))]
     else:
-        result_list = detect_wrapper(genes, event_type, idx, None, log=CFG['verbose'])[0]        
+        result_list = detect_wrapper(genes[idx], event_type, idx, None, log=CFG['verbose'])[0]        
 
     return result_list
  
