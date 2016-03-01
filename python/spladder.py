@@ -139,9 +139,9 @@ def spladder():
         ### pre-process annotation, if necessary
         if CFG['anno_fname'].split('.')[-1] != 'pickle':
             if not os.path.exists(CFG['anno_fname'] + '.pickle'):
-                if CFG['anno_fname'].split('.')[-1] in ['gff', 'gff3']:
+                if CFG['anno_fname'].split('.')[-1].lower() in ['gff', 'gff3']:
                     (genes, CFG) = init.init_genes_gff3(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
-                elif CFG['anno_fname'].split('.')[-1] in ['gtf']:
+                elif CFG['anno_fname'].split('.')[-1].lower() in ['gtf']:
                     (genes, CFG) = init.init_genes_gtf(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
                 else:
                     print >> sys.stderr, 'ERROR: Unknown annotation format. File needs to end in gtf or gff/gff3\nCurrent file: %s' % CFG['anno_fname']
@@ -156,7 +156,44 @@ def spladder():
         CFG = init.append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), CFG)
         del genes
 
+        ### convert input BAMs to sparse arrays - filtered case
+        if CFG['bam_to_sparse']:
+            for bfn in CFG['bam_fnames']:
+                if bfn.endswith('bam') and not os.path.exists(re.sub(r'.bam$', '', bfn) + '.filt.npz'):
+                    cnts = dict()
 
+                    if not 'chrm_lookup' in CFG:
+                        IN = pysam.Samfile(bfn, 'rb')
+                        CFG = append_chrms([x['SN'] for x in parse_header(IN.text)['SQ']], CFG)
+                        IN.close()
+
+                    if CFG['parallel'] > 1:
+                        import multiprocessing as mp
+                        pool = mp.Pool(processes=CFG['parallel'])
+                        result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), CFG,), kwds={'filter':CFG['read_filter'], 'var_aware':CFG['var_aware']}) for chrm in sorted(CFG['chrm_lookup'])]
+                        while result:
+                            tmp = result.pop(0).get()
+                            cnts[tmp[0] + '_reads_row'] = tmp[1].row.astype('uint8')
+                            cnts[tmp[0] + '_reads_col'] = tmp[1].col
+                            cnts[tmp[0] + '_reads_dat'] = tmp[1].data
+                            cnts[tmp[0] + '_reads_shp'] = tmp[1].shape
+                            cnts[tmp[0] + '_introns_m'] = tmp[2]
+                            cnts[tmp[0] + '_introns_p'] = tmp[3]
+                    else:
+                        for chrm in CFG['chrm_lookup']:
+                            tmp = summarize_chr(bfn, str(chrm), CFG, filter=CFG['read_filter'], var_aware=CFG['var_aware'])
+                            cnts[chrm + '_reads_row'] = tmp[1].row.astype('uint8')
+                            cnts[chrm + '_reads_col'] = tmp[1].col
+                            cnts[chrm + '_reads_dat'] = tmp[1].data
+                            cnts[chrm + '_reads_shp'] = tmp[1].shape
+                            cnts[chrm + '_introns_m'] = tmp[2]
+                            cnts[chrm + '_introns_p'] = tmp[3]
+                    sp.savez_compressed(re.sub(r'.bam$', '', bfn) + '.filt', **cnts)
+                    del cnts
+                elif CFG['verbose']:
+                    print >> sys.stdout, 'Filtered sparse BAM representation for %s already exists.' % bfn
+
+        ### build individual graphs
         for idx in idxs:
             CFG_ = dict()
             if CFG['merge_strategy'] != 'merge_bams':
@@ -207,7 +244,7 @@ def spladder():
     fn_in_count = get_filename('fn_count_in', CFG)
     fn_out_count = get_filename('fn_count_out', CFG)
 
-    ### convert input BAMs to sparse arrays
+    ### convert input BAMs to sparse arrays - unfiltered case
     if CFG['bam_to_sparse']:
         for bfn in CFG['bam_fnames']:
             if bfn.endswith('bam') and not os.path.exists(re.sub(r'.bam$', '', bfn) + '.npz'):
@@ -240,6 +277,7 @@ def spladder():
                         cnts[chrm + '_introns_m'] = tmp[2]
                         cnts[chrm + '_introns_p'] = tmp[3]
                 sp.savez_compressed(re.sub(r'.bam$', '', bfn), **cnts)
+                del cnts
             elif CFG['verbose']:
                 print >> sys.stdout, 'Sparse BAM representation for %s already exists.' % bfn
 

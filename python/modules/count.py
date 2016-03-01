@@ -56,35 +56,11 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
                 counts[f, i] = Counts(gg.segmentgraph.segments.shape[1])
 
                 if CFG['bam_to_sparse'] and (fn_bam[f].endswith('npz') or os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz')):
-                    if ii == 0:
-                        ### load counts from summary file
-                        if fn_bam[f].endswith('npz'):
-                            tmp = sp.load(fn_bam[f])
-                        else:
-                            tmp = sp.load(re.sub(r'bam$', '', fn_bam[f]) + 'npz')
-                        ### re-build sparse matrix
-                        bam_cache[contig + '_reads'] = scipy.sparse.coo_matrix((tmp[contig + '_reads_dat'], (tmp[contig + '_reads_row'], tmp[contig + '_reads_col'])), shape=tmp[contig + '_reads_shp'], dtype='uint32').tocsc()
-                        bam_cache[contig + '_introns_m'] = tmp[contig + '_introns_m']
-                        bam_cache[contig + '_introns_p'] = tmp[contig + '_introns_p']
-                        del tmp
-
-                    if bam_cache[gg.chr + '_reads'].shape[0] == 0:
-                        tracks = sp.zeros((1, gg.stop - gg.start), dtype='int')
-                    elif bam_cache[gg.chr + '_reads'].shape[0] > 1:
-                        tracks = bam_cache[gg.chr + '_reads'][[0, 1 + int(gg.strand == '-')], gg.start:gg.stop].todense() 
-                    else:
-                        tracks = bam_cache[gg.chr + '_reads'][:, gg.start:gg.stop].todense() 
-
-                    if bam_cache[gg.chr + '_introns_m'].shape[0] > 0:
-                        if gg.strand == '-':
-                            intron_list = get_intron_range(bam_cache[gg.chr + '_introns_m'], gg.start, gg.stop)
-                        else:
-                            intron_list = get_intron_range(bam_cache[gg.chr + '_introns_p'], gg.start, gg.stop)
-                    else:
-                        intron_list = get_intron_range(bam_cache[gg.chr + '_introns_p'], gg.start, gg.stop)
+                    ### make sure that we query the right contig from cache
+                    assert(gg.chr == contig)
+                    (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, types=['exon_track','intron_list'], filter=False, cache=bam_cache)
                 else:
                     ### add RNA-seq evidence to the gene structure
-                    #(tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only']);
                     (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);
                     intron_list = intron_list[0] ### TODO
 
@@ -268,15 +244,4 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
 #        h5fid.create_dataset(name=key, data=counts[key])
 #    h5fid.close()
 
-def get_intron_range(introns, start, stop):
-    """Given a sorted list of introns, return the subset of introns that
-       overlaps that start stop interval"""
-
-    if introns.shape[0] == 0:
-        return introns
-
-    idx = sp.where(((introns[:, 0] < stop) & (introns[:, 1] > start)) |
-                   ((introns[:, 0] < start) & (introns[:, 1] > stop)))[0]
-
-    return introns[idx, :]
 
