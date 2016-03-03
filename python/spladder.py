@@ -75,6 +75,8 @@ def parse_options(argv):
     experimental.add_option('-R', '--replicates', dest='replicates', metavar='1,1,2,2,...', help='replicate structure of files (same number as alignment files) [all 1 - no replicated]', default='-')
     experimental.add_option('-U', '--intron_cov', dest='intron_cov', metavar='y|n', help='count intron coverage [n]', default='n')
     experimental.add_option('', '--sparse_bam', dest='sparse_bam', metavar='y|n', help='store BAM content as sparse representation for later use [n]', default='n')
+    experimental.add_option('', '--ignore_mismatches', dest='ignore_mismatches', metavar='y|n', help='ignore mismatches - does not filter by edit operations - does not require NM in BAM [n]', default='n')
+    experimental.add_option('', '--output_struc', dest='output_struc', metavar='y|n', help='outputs events in structured splicing syntax similar to astalavista [n]', default='n')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
     experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicilty set then -T is set [n]', default='n')
     parser.add_option_group(required)
@@ -137,9 +139,9 @@ def spladder():
         ### pre-process annotation, if necessary
         if CFG['anno_fname'].split('.')[-1] != 'pickle':
             if not os.path.exists(CFG['anno_fname'] + '.pickle'):
-                if CFG['anno_fname'].split('.')[-1] in ['gff', 'gff3']:
+                if CFG['anno_fname'].split('.')[-1].lower() in ['gff', 'gff3']:
                     (genes, CFG) = init.init_genes_gff3(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
-                elif CFG['anno_fname'].split('.')[-1] in ['gtf']:
+                elif CFG['anno_fname'].split('.')[-1].lower() in ['gtf']:
                     (genes, CFG) = init.init_genes_gtf(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
                 else:
                     print >> sys.stderr, 'ERROR: Unknown annotation format. File needs to end in gtf or gff/gff3\nCurrent file: %s' % CFG['anno_fname']
@@ -155,6 +157,7 @@ def spladder():
         del genes
 
 
+        ### build individual graphs
         for idx in idxs:
             CFG_ = dict()
             if CFG['merge_strategy'] != 'merge_bams':
@@ -205,7 +208,7 @@ def spladder():
     fn_in_count = get_filename('fn_count_in', CFG)
     fn_out_count = get_filename('fn_count_out', CFG)
 
-    ### convert input BAMs to sparse arrays
+    ### convert input BAMs to sparse arrays - unfiltered case
     if CFG['bam_to_sparse']:
         for bfn in CFG['bam_fnames']:
             if bfn.endswith('bam') and not os.path.exists(re.sub(r'.bam$', '', bfn) + '.npz'):
@@ -238,6 +241,7 @@ def spladder():
                         cnts[chrm + '_introns_m'] = tmp[2]
                         cnts[chrm + '_introns_p'] = tmp[3]
                 sp.savez_compressed(re.sub(r'.bam$', '', bfn), **cnts)
+                del cnts
             elif CFG['verbose']:
                 print >> sys.stdout, 'Sparse BAM representation for %s already exists.' % bfn
 
