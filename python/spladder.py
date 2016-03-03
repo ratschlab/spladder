@@ -170,7 +170,7 @@ def spladder():
                     if CFG['parallel'] > 1:
                         import multiprocessing as mp
                         pool = mp.Pool(processes=CFG['parallel'])
-                        result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), CFG,), kwds={'filter':CFG['read_filter'], 'var_aware':CFG['var_aware']}) for chrm in sorted(CFG['chrm_lookup'])]
+                        result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), CFG,), kwds={'filter':CFG['read_filter']}) for chrm in sorted(CFG['chrm_lookup'])]
                         while result:
                             tmp = result.pop(0).get()
                             cnts[tmp[0] + '_reads_row'] = tmp[1].row.astype('uint8')
@@ -181,7 +181,7 @@ def spladder():
                             cnts[tmp[0] + '_introns_p'] = tmp[3]
                     else:
                         for chrm in CFG['chrm_lookup']:
-                            tmp = summarize_chr(bfn, str(chrm), CFG, filter=CFG['read_filter'], var_aware=CFG['var_aware'])
+                            tmp = summarize_chr(bfn, str(chrm), CFG, filter=CFG['read_filter'])
                             cnts[chrm + '_reads_row'] = tmp[1].row.astype('uint8')
                             cnts[chrm + '_reads_col'] = tmp[1].col
                             cnts[chrm + '_reads_dat'] = tmp[1].data

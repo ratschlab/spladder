@@ -84,6 +84,7 @@ def gen_graphs(genes, CFG=None):
         print >> CFG['fd_log'], '...done.\n'
 
         ### check feasibility
+        ### TODO when working exclusively with sparse bam, we need to skip this ...
         print >> CFG['fd_log'], 'Testing for infeasible genes ...'
         introns = make_introns_feasible(introns, genes, CFG)
         print >> CFG['fd_log'], '...done.\n'
