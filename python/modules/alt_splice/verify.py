@@ -214,7 +214,7 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # exon_pre_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[6] = counts_edges[idx, 1]
-    if info[6] >= CFG['exon_skip']['min_non_skip_count']:
+    if info[6] >= CFG['exon_skip']['min_skip_count']:
         verified[3] = 1
 
     return (verified, info)
@@ -421,8 +421,18 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
         ### load count index data from hdf5
         IN = h5py.File(fn_count, 'r')
-        gene_ids_segs = IN['gene_ids_segs'][:]
-        gene_ids_edges = IN['gene_ids_edges'][:]
+        if os.path.exists(fn_count + '.quick_ids_segs'):
+            gene_ids_segs = cPickle.load(open(fn_count + '.quick_ids_segs', 'r'))
+        else:
+            gene_ids_segs = IN['gene_ids_segs'][:]
+        if os.path.exists(fn_count + '.quick_ids_edges'):
+            gene_ids_edges = cPickle.load(open(fn_count + '.quick_ids_edges', 'r'))
+        else:
+            gene_ids_edges = IN['gene_ids_edges'][:]
+        if os.path.exists(fn_count + '.quick_edge_idx'):
+            edge_idx = cPickle.load(open(fn_count + '.quick_edge_idx', 'r'))
+        else:
+            edge_idx = IN['edge_idx'][:]
 
         ### sort events by gene idx
         s_idx = sp.argsort([x.gene_idx for x in ev])
@@ -430,17 +440,9 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         old_idx = sp.argsort(s_idx)
 
         ### find gene idx boundaries
-        assert(isequal(gene_ids_segs, sp.sort(gene_ids_segs)))
-        assert(isequal(gene_ids_edges, sp.sort(gene_ids_edges)))
 
-        tmp, genes_f_idx_segs = sp.unique(gene_ids_segs, return_index=True)
-        genes_l_idx_segs = sp.r_[genes_f_idx_segs[1:] - 1, gene_ids_segs.shape[0]]
 
-        tmp, genes_f_idx_edges = sp.unique(gene_ids_edges, return_index=True)
-        genes_l_idx_edges = sp.r_[genes_f_idx_edges[1:] - 1, gene_ids_edges.shape[0]]
 
-        gr_idx_segs = 0
-        gr_idx_edges = 0
         counts = []
         for i in range(ev.shape[0]):
             g_idx = ev[i].gene_idx
@@ -449,48 +451,45 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
             if gene_ids_edges.shape[0] == 0:
                 ver, info = verify_empty(event_type)
                 counts.append(sp.array([info]))
-                ev[i].verified = sp.array(ev[i].verified)
+                ev[i].verified = sp.array(ev[i].verified, dtype='bool')
                 continue
 
-            while gene_ids_segs[genes_f_idx_segs[gr_idx_segs]] < g_idx:
-                gr_idx_segs += 1
-            assert(gene_ids_segs[genes_f_idx_segs[gr_idx_segs]] == g_idx)
-
-            while gene_ids_edges[genes_f_idx_edges[gr_idx_edges]] < g_idx:
-                gr_idx_edges += 1
-            if gr_idx_edges > g_idx:
+            gr_idx_segs = sp.where(gene_ids_segs == g_idx)[0]
+            gr_idx_edges = sp.where(gene_ids_edges == g_idx)[0]
+            if gr_idx_edges.shape[0] == 0:
                 ver, info = verify_empty(event_type)
                 counts.append(sp.array([info]))
-                ev[i].verified = sp.array(ev[i].verified)
+                ev[i].verified = sp.array(ev[i].verified, dtype='bool')
                 continue
-            assert(gene_ids_edges[genes_f_idx_edges[gr_idx_edges]] == g_idx)
 
             ### laod relevant count data from HDF5
-            segments = IN['segments'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
-            seg_pos = IN['seg_pos'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
-            edges = IN['edges'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1, strain_idx]
-            edge_idx = IN['edge_idx'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1]
+            segments = sp.atleast_2d(IN['segments'][gr_idx_segs, :])[:, strain_idx]
+            seg_pos = sp.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, strain_idx]
+            edges = sp.atleast_2d(IN['edges'][gr_idx_edges, :])[:, strain_idx]
+            curr_edge_idx = edge_idx[gr_idx_edges]
 
             for s_idx in range(len(strain_idx)):
-                print '%i/%i\r' % (s_idx, len(strain_idx))
+                sys.stdout.write('.')
+                if s_idx > 0 and s_idx % 50 == 0:
+                    sys.stdout.write('%i\n' % s_idx)
                # ev_tmp.subset_strain(s_idx) ### TODO 
                 if event_type == 'exon_skip':
-                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
                 elif event_type in ['alt_3prime', 'alt_5prime']:
-                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
                 elif event_type == 'intron_retention':
-                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
+                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
                 elif event_type == 'mult_exon_skip':
-                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
                 elif event_type == 'mutex_exons':
-                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
 
                 ev[i].verified.append(ver)
                 if s_idx == 0:
                     counts.append(sp.array([info]))
                 else:
                     counts[-1] = sp.r_[counts[-1], sp.array([info])]
-            ev[i].verified = sp.array(ev[i].verified)
+            ev[i].verified = sp.array(ev[i].verified, dtype='bool')
 
         IN.close()
         counts = sp.dstack(counts)
@@ -498,7 +497,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
     counts = counts[:, :, old_idx]
 
     if out_fn is not None:
-        cPickle.dump((ev, counts), open(out_fn, 'w'))
+        cPickle.dump((ev, counts), open(out_fn, 'w'), -1)
 
     return (ev, counts)
 
