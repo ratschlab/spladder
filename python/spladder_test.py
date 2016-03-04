@@ -52,17 +52,20 @@ def parse_options(argv):
     input.add_option('-M', '--merge_strat', dest='merge', metavar='<STRAT>', help='merge strategy, where <STRAT> is one of: merge_bams, merge_graphs, merge_all [merge_graphs]', default='merge_graphs')
     input.add_option('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
     input.add_option('-m', '--matlab', dest='matlab', metavar='y|n', help='input data was generated with matlab version [n]', default='n')
+    input.add_option('-s', '--subset_samples', dest='subset_samples', metavar='y|n', help='gene expression counting will be only done on the tested subset of samples [n]', default='n')
     testing = OptionGroup(parser, 'TESTING OPTIONS')
     testing.add_option('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
-    testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.8]', default=0.8)
+    testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)
     testing.add_option('-i', '--min_count', dest='min_count', metavar='INT', help='min read count sum over all samples for an event isoform to be tested [10]', default=10)
     output = OptionGroup(parser, 'OUTPUT OPTIONS')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     output.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
+    output.add_option('--timestamp', dest='timestamp', metavar='y|n', help='add timestamp to output directory [n]', default='n')
     output.add_option('--labelA', dest='labelA', metavar='STRING', help='label for condition A (used for output naming)', default='condA')
     output.add_option('--labelB', dest='labelB', metavar='STRING', help='label for condition B (used for output naming)', default='condB')
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
+    experimental.add_option('', '--non_alt_norm', dest='non_alt_norm', metavar='y|n', help='only use non alternative exon segments for gene expression counting [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
     parser.add_option_group(testing)
@@ -91,7 +94,7 @@ def get_non_alt_seg_ids_matlab(gene):
 
     return sp.where(tmp)[0]
 
-def get_gene_expression(CFG, fn_out=None):
+def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 
     if CFG['verbose']:
         sys.stdout.write('Quantifying gene expression ...\n')
@@ -107,40 +110,70 @@ def get_gene_expression(CFG, fn_out=None):
     ### open hdf5 file containing graph count information
     IN = h5py.File(CFG['fname_count_in'], 'r')
     strains = IN['strains'][:].astype('str')
-    gene_counts = sp.zeros((numgenes, strains.shape[0]), dtype='float')
+    if strain_subset is None:
+        strain_idx = sp.arange(strains.shape[0])
+    else:
+        strain_idx = sp.where(sp.in1d(strains, strain_subset))[0]
+    gene_counts = sp.zeros((numgenes, strain_idx.shape[0]), dtype='float')
     gene_names = sp.array([x.name for x in genes], dtype='str')
 
+    if CFG['is_matlab']:
+        seg_lens = IN['seg_len'][:, 0]
+        gene_ids_segs = IN['gene_ids_segs'][0, :].astype('int') - 1
+    else:
+        seg_lens = IN['seg_len'][:]
+        gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
+
+    ### no longer assume that the gene_ids_segs are sorted by gene ID
+    s_idx = sp.argsort(gene_ids_segs[:, 0], kind='mergesort')
+    _, u_idx = sp.unique(gene_ids_segs[s_idx, 0], return_index=True)
+    s_idx = s_idx[u_idx]
+
     ### iterate over genes
-    seg_offset = 0
-    for gidx in xrange(numgenes):
+    #seg_offset = 0
+    #tut = sp.where(gene_names == 'ENSG00000163812.9')[0]
+    #for gidx in tut:
+    for gidx, iidx in enumerate(s_idx):
+
         if CFG['verbose']:  
-            log_progress(gidx, numgenes)
+            log_progress(gidx, numgenes, 100)
         ### get idx of non alternative segments
         if CFG['is_matlab']:
             non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
-            seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
+            #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph[0, 2].shape[0])
+            seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph[0, 2].shape[0])
             if len(seg_idx) == 0:
                 continue
-            gene_idx = (IN['gene_ids_segs'][0, seg_idx] - 1).astype('int')
         else:
             non_alt_idx = genes[gidx].get_non_alt_seg_ids()
-            seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
-            gene_idx = (IN['gene_ids_segs'][:][seg_idx]).astype('int')
+            #seg_idx = sp.arange(seg_offset, seg_offset + genes[gidx].segmentgraph.seg_edges.shape[0])
+            seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
+
+        gene_idx = gene_ids_segs[seg_idx]
         if len(gene_idx.shape) > 0:
             gene_idx = gene_idx[0]
-        assert(IN['gene_names'][gene_idx] == genes[gidx].name)
+
+        if CFG['is_matlab']:
+            assert(IN['gene_names'][gene_idx] == genes[gidx].name)
+        else:
+            assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
-        seg_idx = seg_idx[non_alt_idx]
+
+        if CFG['non_alt_norm']:
+            seg_idx = seg_idx[non_alt_idx]
 
         ### compute gene expression as the read count over all non alternative segments
         if CFG['is_matlab']:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / sp.sum(IN['seg_len'][seg_idx, 0])
-            gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / CFG['read_length']
+            gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx][strain_idx], seg_lens[seg_idx]) / CFG['read_length']
+            #seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
-            gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / CFG['read_length']
-
-        seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
+            if seg_idx.shape[0] > 1:
+                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx]) / CFG['read_length']
+            else:
+                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
+            #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
 
@@ -150,7 +183,7 @@ def get_gene_expression(CFG, fn_out=None):
     ### write results to hdf5
     if fn_out is not None:
         OUT = h5py.File(fn_out, 'w')
-        OUT.create_dataset(name='strains', data=strains)
+        OUT.create_dataset(name='strains', data=strains[strain_idx])
         OUT.create_dataset(name='genes', data=gene_names)
         OUT.create_dataset(name='raw_count', data=gene_counts, compression="gzip")
         OUT.close()
@@ -167,7 +200,7 @@ def get_size_factors(gene_counts, CFG):
     gmean = sp.exp(sp.mean(sp.log(gene_counts + 1), axis=1))
 
     size_factors = []
-    for i in range(gene_counts.shape[1]):
+    for i in xrange(gene_counts.shape[1]):
         idx = gene_counts[:, i] > 0
         size_factors.append(sp.median(gene_counts[idx, i] / gmean[idx]))
 
@@ -263,9 +296,9 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
                 disp_raw[i] = disp
                 disp_raw_conv[i] = True
                 break
-            if j == 9:
-                disp_raw[i] = disp
-                disp_raw_conv[i] = False
+        else:
+            disp_raw[i] = disp
+            disp_raw_conv[i] = False
     if log:
         log_progress(idx.shape[0], idx.shape[0])
 
@@ -300,6 +333,8 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
             if CFG['verbose']:
                 log_progress(gene_counts.shape[0], gene_counts.shape[0])
                 print ''
+            pool.terminate()
+            pool.join()
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
@@ -308,7 +343,7 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
     else:        
         (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
-    if CFG['debug']:
+    if CFG['debug_plots']:
         fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
         idx = sp.where(~sp.isnan(disp_raw))[0]
@@ -346,7 +381,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG):
     if sp.sum(disp_fitted > 0) > 0:
         print "Found dispersion fit"
 
-    if CFG['debug']:
+    if CFG['debug_plots']:
         fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
         idx = sp.where(~sp.isnan(disp_fitted))[0]
@@ -390,6 +425,7 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
     disp_adj = sp.empty((counts.shape[0], 1))
     disp_adj.fill(sp.nan)
     disp_adj_conv = sp.zeros_like(disp_adj, dtype='bool')
+    error_cnt = 0
 
     for i in range(idx.shape[0]):
 
@@ -412,19 +448,28 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
                 sign = -1.0
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    res = minimize_scalar(adj_loglikelihood_shrink_scalar_onedisper, args=(dmatrix1, resp, yhat, disp_fitted[i], varPrior, sign), method='Bounded', bounds=(0, 10.0), tol=1e-5)
+                    try:
+                        res = minimize_scalar(adj_loglikelihood_shrink_scalar_onedisper, args=(dmatrix1, resp, yhat, disp_fitted[i], varPrior, sign), method='Bounded', bounds=(0, 10.0), tol=1e-5)
+                    except TypeError:
+                        disp_adj[i] = disp 
+                        disp_adj_conv[i] = False
+                        error_cnt += 1
+                        break
                 disp = res.x
 
                 if abs(sp.log(disp) - sp.log(dispBef)) < 1e-4:
                     disp_adj[i] = disp
                     disp_adj_conv[i] = True
                     break
-                if j == 9:
-                    disp_adj[i] = disp
-                    disp_adj_conv[i] = False
+            else:
+                disp_adj[i] = disp
+                disp_adj_conv[i] = False
     if log:
         log_progress(idx.shape[0], idx.shape[0])
         print ''
+
+    if error_cnt > 0:
+        print 'Warning: %i events did not fit due to a TypeError' % error_cnt
 
     return (disp_adj, disp_adj_conv, idx)
 
@@ -460,6 +505,8 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
             if CFG['verbose']:
                 log_progress(counts.shape[0], counts.shape[0])
                 print ''
+            pool.terminate()
+            pool.join()
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
@@ -540,13 +587,15 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG):
             if CFG['verbose']:
                 log_progress(gene_counts.shape[0], gene_counts.shape[0])
                 print ''
+            pool.terminate()
+            pool.join()
         except KeyboardInterrupt:
             print >> sys.stderr, 'Keyboard Interrupt - exiting'
             pool.terminate()
             pool.join()
             sys.exit(1)
     else:        
-        (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, sp.arange(counts.shape[0]), log=CFG['verbose'])
+        (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if CFG['verbose']:
         print ''
@@ -626,9 +675,13 @@ def main():
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='test')
+    CFG['debug_plots'] = False
 
     ### generate output directory
-    outdir = os.path.join(options.outdir, 'test', str(datetime.datetime.now()).replace(' ', '_'))
+    outdir = os.path.join(options.outdir, 'testing')
+    if options.timestamp == 'y':
+        outdir = '%s_%s' % (outdir, str(datetime.datetime.now()).replace(' ', '_'))
+
     if options.labelA != 'condA' and options.labelB != 'condB':
         outdir = '%s_%s_vs_%s' % (outdir, options.labelA, options.labelB)
     if not os.path.exists(outdir):
@@ -696,15 +749,30 @@ def main():
             CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
             CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
 
+        condition_strains = None
         CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
         if os.path.exists(CFG['fname_exp_hdf5']):
+            if CFG['verbose']:
+                print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
             IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
             gene_counts = IN['raw_count'][:]
             gene_strains = IN['strains'][:]
             gene_ids = IN['genes'][:]
             IN.close()
         else:
-            gene_counts, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'])
+            if options.subset_samples == 'y':
+                condition_strains = sp.unique(sp.r_[sp.array(CFG['conditionA']), sp.array(CFG['conditionB'])])
+                CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, hash(tuple(sp.unique(condition_strains))) * -1))
+            if os.path.exists(CFG['fname_exp_hdf5']):
+                if CFG['verbose']:
+                    print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
+                IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
+                gene_counts = IN['raw_count'][:]
+                gene_strains = IN['strains'][:]
+                gene_ids = IN['genes'][:]
+                IN.close()
+            else:
+                gene_counts, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'], strain_subset=condition_strains)
 
         gene_strains = sp.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
 
@@ -742,15 +810,22 @@ def main():
             curr_gene_counts = gene_counts[gene_idx, :]
 
             ### filter for min expression
-            k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
+            if event_type == 'intron_retention':
+                k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
+            else:
+                k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
             if CFG['verbose']:
-                print 'Exclude %i of %i %s events (%.2f) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, 1 - float(k_idx.shape[0]) / cov[0].shape[0])
+                print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
+            if k_idx.shape[0] == 0:
+                print 'All events of type %s were filtered out due to low coverage. Please try re-running with less stringent filter criteria' % event_type
+                continue
            # k_idx = sp.where((sp.mean(sp.c_[cov[0], cov[1]], axis=1) > 2))[0]
            # k_idx = sp.where((sp.mean(cov[0], axis=1) > 2) & (sp.mean(cov[1], axis=1) > 2))[0]
             cov[0] = cov[0][k_idx, :]
             cov[1] = cov[1][k_idx, :]
             curr_gene_counts = curr_gene_counts[k_idx, :]
             event_idx = event_idx[k_idx]
+            gene_idx = gene_idx[k_idx]
 
             cov[0] = sp.around(sp.hstack([cov[0], curr_gene_counts]))
             cov[1] = sp.around(sp.hstack([cov[1], curr_gene_counts]))
@@ -772,26 +847,25 @@ def main():
             dmatrix1 = sp.zeros((cov.shape[1], 4), dtype='bool')
             dmatrix1[:, 0] = 1                      # intercept
             dmatrix1[tidx, 1] = 1                   # delta a
-            #dmatrix1[tidx + setsize, 2] = 1         # delta b
             dmatrix1[tidx, 2] = 1                   # delta g
             dmatrix1[tidx + (idx1.shape[0] + idx2.shape[0]), 2] = 1         # delta g
-            #dmatrix1[tidx + (2 * setsize), 2] = 1   # delta g
             dmatrix1[(idx1.shape[0] + idx2.shape[0]):, 3] = 1         # is g
-            #dmatrix1[:setsize, 5] = 1               # is a
-            #dmatrix1[setsize:(2 * setsize), 5] = 1  # is b
             dmatrix0 = dmatrix1[:, [0, 2, 3]]
 
             pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
             pvals_adj = adj_pval(pvals, CFG) 
 
             ### write output
-            out_fname = os.path.join(outdir, 'test_results_%s.tsv' % event_type)
+            out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
                 print 'Writing test results to %s' % out_fname
             s_idx = sp.argsort(pvals_adj)
             header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj']) 
             event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
-            data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+            if CFG['is_matlab']:
+                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+            else:
+                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
             data_out = sp.r_[header[sp.newaxis, :], data_out]
             sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 

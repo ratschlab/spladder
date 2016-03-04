@@ -107,11 +107,17 @@ def spladder_viz():
 
     ### the user specified a gene to plot
     if options.gene_name is not None:
-        gid = sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0]
-        if gid.shape[0] == 0:
+        if isinstance(genes[0].name, sp.ndarray):
+            gids = sp.where(sp.array([x.name[0] for x in genes]) == options.gene_name)[0]
+            if gids.shape[0] == 0:
+                gids = sp.where(sp.array([x.name[0].startswith(options.gene_name) for x in genes]))[0]
+        else:
+            gids = sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0]
+            if gids.shape[0] == 0:
+                gids = sp.where(sp.array([x.name.startswith(options.gene_name) for x in genes]))[0]
+        if gids.shape[0] == 0:
             sys.stderr.write('ERROR: provided gene ID %s could not be found, please check for correctness\n' % options.gene_name)
             sys.exit(1)
-        gids = [sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0][0]]
     ### no gene specified but result provided - plot all genes with confirmed events
     else:
         gids = get_gene_ids(options)

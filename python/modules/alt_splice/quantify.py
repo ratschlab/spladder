@@ -390,8 +390,10 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
     ### get indices of confident events
     if CFG['is_matlab']:
         event_idx = IN['conf_idx'][:].astype('int') - 1
+        event_features = IN['event_features'][:]
     else:
         event_idx = IN['conf_idx'][:].astype('int')
+        event_features = IN['event_features'][event_type][:]
 
     ### arrays to collect exon coordinates for length normalization
     pos0e = []
@@ -400,21 +402,21 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
     ### get event features we need to include for counting
     if event_type == 'exon_skip':
     #    fidx0e = []
-        fidx0i = [sp.where(IN['event_features'][:] == 'exon_pre_exon_aft_conf')[0]]
-    #    fidx1e = [sp.where(IN['event_features'][:] == 'exon_cov')[0]]
-        fidx1i = [sp.where(IN['event_features'][:] == 'exon_pre_exon_conf')[0], sp.where(IN['event_features'][:] == 'exon_exon_aft_conf')[0]] 
+        fidx0i = [sp.where(event_features == 'exon_pre_exon_aft_conf')[0]]
+    #    fidx1e = [sp.where(event_features == 'exon_cov')[0]]
+        fidx1i = [sp.where(event_features == 'exon_pre_exon_conf')[0], sp.where(event_features == 'exon_exon_aft_conf')[0]] 
     #    pos1e = [IN['event_pos'][[2, 3], :].astype('int')]
     elif event_type == 'intron_retention':
     #    fidx0e = []
-        fidx0i = [sp.where(IN['event_features'][:] == 'intron_conf')[0]]
-    #    fidx1e = [sp.where(IN['event_features'][:] == 'intron_cov')[0]]
+        fidx0i = [sp.where(event_features == 'intron_conf')[0]]
+    #    fidx1e = [sp.where(event_features == 'intron_cov')[0]]
         fidx1i = []
     #    pos1e = [IN['event_pos'][[1, 2], :].astype('int')]
     elif event_type in ['alt_3prime', 'alt_5prime']:
     #    fidx0e = []
-        fidx0i = [sp.where(IN['event_features'][:] == 'intron1_conf')[0]]
-    #    fidx1e = [sp.where(IN['event_features'][:] == 'exon_diff_cov')[0]]
-        fidx1i = [sp.where(IN['event_features'][:] == 'intron2_conf')[0]]
+        fidx0i = [sp.where(event_features == 'intron1_conf')[0]]
+    #    fidx1e = [sp.where(event_features == 'exon_diff_cov')[0]]
+        fidx1i = [sp.where(event_features == 'intron2_conf')[0]]
     #    pos1e = [sp.zeros((IN['event_pos'].shape[0], 2), dtype='int')]
         idx = sp.where(IN['event_pos'][0, :] == IN['event_pos'][2, :])[0]
     #    pos1e[0][idx, :] = IN['event_pos'][[1, 3], :].astype('int')
@@ -422,16 +424,16 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
     #    pos1e[0][idx, :] = IN['event_pos'][[2, 4], :].astype('int')
     elif event_type == 'mult_exon_skip':
     #    fidx0e = []
-        fidx0i = [sp.where(IN['event_features'][:] == 'exon_pre_exon_aft_conf')[0]]
-    #    fidx1e = [sp.where(IN['event_features'][:] == 'exons_cov')[0]]
-        fidx1i = [sp.where(IN['event_features'][:] == 'exon_pre_exon_conf')[0], sp.where(IN['event_features'][:] == 'exon_exon_aft_conf')[0], sp.where(IN['event_features'][:] == 'sum_inner_exon_conf')[0]] 
-        tmp_idx = sp.where(IN['event_features'][:] == 'len_inner_exon')[0]
+        fidx0i = [sp.where(event_features == 'exon_pre_exon_aft_conf')[0]]
+    #    fidx1e = [sp.where(event_features == 'exons_cov')[0]]
+        fidx1i = [sp.where(event_features == 'exon_pre_exon_conf')[0], sp.where(event_features == 'exon_exon_aft_conf')[0], sp.where(event_features == 'sum_inner_exon_conf')[0]] 
+        tmp_idx = sp.where(event_features == 'len_inner_exon')[0]
     #    pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[0],), dtype='int'), IN['event_counts'][:, tmp_idx, 0].astype('int')]]
     elif event_type == 'mutex_exons':
-    #    fidx0e = [sp.where(IN['event_features'][:] == 'exon1_cov')[0]]
-        fidx0i = [sp.where(IN['event_features'][:] == 'exon_pre_exon1_conf')[0], sp.where(IN['event_features'][:] == 'exon1_exon_aft_conf')[0]]
-    #    fidx1e = [sp.where(IN['event_features'][:] == 'exon2_cov')[0]]
-        fidx1i = [sp.where(IN['event_features'][:] == 'exon_pre_exon2_conf')[0], sp.where(IN['event_features'][:] == 'exon2_exon_aft_conf')[0]] 
+    #    fidx0e = [sp.where(event_features == 'exon1_cov')[0]]
+        fidx0i = [sp.where(event_features == 'exon_pre_exon1_conf')[0], sp.where(event_features == 'exon1_exon_aft_conf')[0]]
+    #    fidx1e = [sp.where(event_features == 'exon2_cov')[0]]
+        fidx1i = [sp.where(event_features == 'exon_pre_exon2_conf')[0], sp.where(event_features == 'exon2_exon_aft_conf')[0]] 
     #    pos0e = [IN['event_pos'][[2, 3], :].astype('int')]
     #    pos1e = [IN['event_pos'][[4, 5], :].astype('int')]
     else:
@@ -451,16 +453,20 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
     ### get counts for introns
     if CFG['verbose']:
         print 'Collecting intron confirmation values'
-    for f in fidx0i:
-        cov[0] += IN['event_counts'][:, f[0], strain_idx][event_idx, :]
-    for f in fidx1i:
-        cov[1] += IN['event_counts'][:, f[0], strain_idx][event_idx, :]
 
     ### get gene index
     if CFG['is_matlab']:
         gene_idx = IN['gene_idx'][:].astype('int') - 1
+        for f in fidx0i:
+            cov[0] += IN['event_counts'][:, f[0], strain_idx][event_idx, :]
+        for f in fidx1i:
+            cov[1] += IN['event_counts'][:, f[0], strain_idx][event_idx, :]
     else:
         gene_idx = IN['gene_idx'][:].astype('int')
+        for f in fidx0i:
+            cov[0] += IN['event_counts'][strain_idx, f[0], :][:, event_idx].T
+        for f in fidx1i:
+            cov[1] += IN['event_counts'][strain_idx, f[0], :][:, event_idx].T
 
     ### get strain list
     strains = IN['strains'][:]

@@ -30,23 +30,23 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
     if events[0].event_type == 'exon_skip':
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_start\texon_end\texon_aft_start\texon_aft_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_aft_conf\t%s:intron_skip_conf' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_aft_conf\t%s:intron_skip_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type in ['alt_3prime', 'alt_5prime']:
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_const_start\texon_const_end\texon_alt1_start\texon_alt1_end\texon_alt2_start\texon_alt2_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_diff_cov\t%s:exon_const_cov\t%s:intron1_conf\t%s:intron2_conf' % (strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:exon_diff_cov\t%s:exon_const_cov\t%s:intron1_conf\t%s:intron2_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type == 'intron_retention':
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon1_start\texon1_end\tintron_start\tintron_end\texon2_start\texon2_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon1_cov\t%s:intron_cov\t%s:exon2_cov\t%s:intron_conf' % (strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:exon1_cov\t%s:intron_cov\t%s:exon2_cov\t%s:intron_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type == 'mult_exon_skip':
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_starts\texon_ends\texon_aft_start\texon_aft_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_inner_conf\t%s:exon_inner_count\t%s:intron_aft_conf\t%s:intron_skip_conf' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_inner_conf\t%s:exon_inner_count\t%s:intron_aft_conf\t%s:intron_skip_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type == 'mutex_exons':
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon1_start\texon1_end\texon2_start\texon2_end\texon_aft_start\texon_aft_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_pre_cov\t%s:exon1_cov\t%s:exon2_cov\t%s:exon_aft_cov\t%s:pre_exon1_conf\t%s:pre_exon2_conf\t%s:exon1_aft_conf\t%s:exon2_aft_conf' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:exon_pre_cov\t%s:exon1_cov\t%s:exon2_cov\t%s:exon_aft_cov\t%s:pre_exon1_conf\t%s:pre_exon2_conf\t%s:exon1_aft_conf\t%s:exon2_aft_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     else:
         print >> sys.stderr, 'Unknown event type: %s' % events[0].event_type
     fd.write('\n')
@@ -63,20 +63,21 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
 
         ev = events[i]
         counts = IN['event_counts'][:, :, i]
+	psi = IN['psi'][:,i]
         if ev.event_type == 'exon_skip':
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons2[0, 0] + 1, ev.exons2[0, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1], ev.exons2[2, 0] + 1, ev.exons2[2, 1]))
             for j in range(len(strains)):
                 if counts[j, 0] == 1:
-                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i' % (counts[j, 2], counts[j, 1], counts[j, 3], counts[j, 4], counts[j, 5], counts[j, 6]))
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%.2f' % (counts[j, 2], counts[j, 1], counts[j, 3], counts[j, 4], counts[j, 5], counts[j, 6], psi[j]))
                 else:
-                    fd.write('\t-1\t-1\t-1\t-1')
+                    fd.write('\t-1\t-1\t-1\t-1\t-1')
         elif ev.event_type == 'intron_retention':
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[0, 1] + 1, ev.exons1[1, 0], ev.exons1[1, 0] + 1, ev.exons1[1, 1,]))
             for j in range(len(strains)):
                 if counts[j, 0] == 1:
-                    fd.write('\t%.1f\t%.1f\t%.1f\t%i' % (counts[j, 2], counts[j, 1], counts[j, 3], counts[j, 4]))
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%.2f' % (counts[j, 2], counts[j, 1], counts[j, 3], counts[j, 4], psi[j]))
                 else:
-                    fd.write('\t-1\t-1\t-1')
+                    fd.write('\t-1\t-1\t-1\t-1')
         elif ev.event_type in ['alt_3prime', 'alt_5prime']:
             if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
                 fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1]))
@@ -84,9 +85,9 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
                 fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons2[0, 0] + 1, ev.exons2[0, 1]))
             for j in range(len(strains)):
                 if counts[j, 0]:
-                    fd.write('\t%1.1f\t%1.1f\t%i\t%i' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4]))
+                    fd.write('\t%1.1f\t%1.1f\t%i\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], psi[j]))
                 else:
-                    fd.write('\t-1\t-1\t-1\t-1')
+                    fd.write('\t-1\t-1\t-1\t-1\t-1')
         elif ev.event_type == 'mult_exon_skip':
             fd.write('\t%i\t%i' % (ev.exons2[0, 0] + 1, ev.exons2[0, 1]))
             starts = '%i' % (ev.exons2[1, 0] + 1)
@@ -97,16 +98,16 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
             fd.write('\t%s\t%s\t%i\t%i' % (starts, ends, ev.exons2[-1, 0] + 1, ev.exons2[-1, 1]))
             for j in range(len(strains)):
                 if counts[j, 0]:
-                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i\t%i' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 7], counts[j, 8], counts[j, 5], counts[j, 6]))
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 7], counts[j, 8], counts[j, 5], counts[j, 6], psi[j]))
                 else:
-                    fd.write('\t-1\t-1\t-1\t-1\t-1\t-1\t-1')
+                    fd.write('\t-1\t-1\t-1\t-1\t-1\t-1\t-1\t-1')
         elif ev.event_type == 'mutex_exons':
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1], ev.exons2[2, 0] + 1, ev.exons2[2, 1]))
             for j in range(len(strains)):
                 if counts[j, 0] == 1:
-                    fd.write('\t%.1f\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 5], counts[j, 6], counts[j, 7], counts[j, 8]))
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 5], counts[j, 6], counts[j, 7], counts[j, 8], psi[j]))
                 else:
-                    fd.write('\t-1\t-1\t-1\t-1\t-1\t-1\t-1\t-1')
+                    fd.write('\t-1\t-1\t-1\t-1\t-1\t-1\t-1\t-1\t-1')
         fd.write('\n')
         fd.flush()
     fd.close()
@@ -254,7 +255,7 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
     fd_out.close()
 
 
-def write_events_structured(fn_out_struc, events, idx=None):
+def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
     
     if events.shape[0] == 0:
         print >> sys.stderr, 'WARNING: No events present.'
@@ -267,6 +268,10 @@ def write_events_structured(fn_out_struc, events, idx=None):
     mult_exon_skip_bool = True
 
     fd_out = open(fn_out_struc, 'w+') 
+
+    ### load data from count hdf5
+    IN = h5py.File(fn_counts, 'r')
+    strains = IN['strains'][:]
     
     ### load gene structure
     for i in idx:
@@ -275,6 +280,8 @@ def write_events_structured(fn_out_struc, events, idx=None):
         gene_name = events[i].gene_name[0] ### TODO - why only first?
         start_pos = ev.exons1[0, 0]
         stop_pos = ev.exons1[-1, -1]
+
+        psi = IN['psi'][:, i]
 
         name = '%s.%i' % (ev.event_type, ev.id)
 
@@ -305,11 +312,10 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 flanks = '%i^,%i-' % (ev.exons1[0, 1], ev.exons1[-1, 0] + 1) 
                 schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1])
             elif ev.event_type == 'mult_exon_skip':
-		if mult_exon_skip_bool:
-		    mult_exon_skip_bool = False
-	            print >> sys.stderr, 'WARNING: Event type mult_exon_skip not implemented yet for structured output'
-		break
-		#raise Exception('Event type mult_exon_skip not implemented yet for structured output')
+                if mult_exon_skip_bool:
+                    mult_exon_skip_bool = False
+                    print >> sys.stderr, 'WARNING: Event type mult_exon_skip not implemented yet for structured output'
+                    break
             else:
                 raise Exception("Unknown event type: %s" % ev.event_type)
         ### - strand - revert donor/acceptor
@@ -320,11 +326,11 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 schain = ',%i-%i^' % (ev.exons2[1, 1], ev.exons2[1, 0] + 1)
             elif ev.event_type in ['alt_3prime', 'alt_5prime']:
                 if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
-                    struc = '1-,2-'
+                    struc = '1^,2^'
                     flanks = '%i-,%i-' % (min(ev.exons1[-1, 1], ev.exons2[-1, 1]), ev.exons1[0, 1])
                     schain = '%i^,%i^' % (max(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1, min(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1)
                 elif sp.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
-                    struc = '1^,2^'
+                    struc = '1-,2-'
                     flanks = '%i^,%i^' % (ev.exons1[-1, 0] + 1, max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1)
                     schain = '%i-,%i-' % (max(ev.exons1[0, 1], ev.exons2[0, 1]), min(ev.exons1[0, 1], ev.exons2[0, 1]))
                 else:
@@ -338,14 +344,243 @@ def write_events_structured(fn_out_struc, events, idx=None):
                 flanks = '%i^,%i-' % (ev.exons1[-1, 0] + 1, ev.exons1[0, 1]) 
                 schain = '%i-%i^,%i-%i^' % (ev.exons1[1, 1], ev.exons1[1, 0] + 1, ev.exons2[1, 1], ev.exons2[1, 0] + 1)
             elif ev.event_type == 'mult_exon_skip':
-		if mult_exon_skip_bool:
-		    mult_exon_skip_bool = False
-	            print >> sys.stderr, 'WARNING: Event type mult_exon_skip not implemented yet for structured output'
-		break
-                #raise Exception('Event type mult_exon_skip not implemented yet for structured output')
+                if mult_exon_skip_bool:
+                    mult_exon_skip_bool = False
+                    print >> sys.stderr, 'WARNING: Event type mult_exon_skip not implemented yet for structured output'
+                    break
             else:
                 raise Exception("Unknown event type: %s" % ev.event_type)
-        print >> fd_out, 'flanks "%s"; structure "%s"; splice_chain "%s";'  % (flanks, struc, schain)
+        psi_tag = ';'.join([' psi_%s "%f"' % (strains[k], l) for k, l in enumerate(psi)])
+        print >> fd_out, 'flanks "%s"; structure "%s"; splice_chain "%s";%s;'  % (flanks, struc, schain, psi_tag)
+
+    fd_out.close()
+    IN.close()
+
+
+def write_events_bed(fn_out_bed, events, idx=None):
+    
+    if events.shape[0] == 0:
+        print >> sys.stderr, 'WARNING: No events present.'
+        return
+
+    if idx is None:
+        idx = sp.arange(events.shape[0])
+
+    print 'writing %s events in bed format to %s' % (events[0].event_type, fn_out_bed)
+
+    fd_out = open(fn_out_bed, 'w+') 
+
+    ### load gene structure
+    for i in idx:
+
+        ev = events[i]
+        gene_name = events[i].gene_name[0] ### TODO - why only first?
+        start_pos = ev.exons1[0, 0]
+        stop_pos = ev.exons1[-1, -1]
+
+        ### get order of isoforms o_idx(1) -> iso1 and o_idx(2) -> iso2
+        ### assert that first isoform is always the shorter one
+        #if ev.event_type == 'intron_retention':
+        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[1] - ev.exons2[0]))
+        #else:
+        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+
+        name = '%s.%i' % (ev.event_type, ev.id)
+
+        block_lens = []
+        block_starts = []
+        if ev.event_type == 'exon_skip':
+            event_id = 'CA-CA-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons2[1, 1])
+            for j in range(ev.exons2.shape[0]):
+                block_starts.append(str(int(ev.exons2[j, 0] - start_pos)))
+                block_lens.append(str(int(ev.exons2[j, 1] - ev.exons2[j, 0])))
+        elif ev.event_type == 'intron_retention':
+            event_id = 'IR-IR-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons1[1, 0])
+            block_starts.append('0')
+            block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+            block_starts.append(str(ev.exons1[0, 1] - start_pos))
+            block_lens.append(str(ev.exons1[1, 0] - ev.exons1[0, 1]))
+            block_starts.append(str(ev.exons1[1, 0] - start_pos))
+            block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        elif ev.event_type == 'alt_3prime':
+            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                block_starts.append('0')
+                block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                if ev.exons2[1, 0] < ev.exons1[1, 0]:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons1[1, 0])
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 0] - ev.exons2[1, 0]))
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+                else:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons1[1, 0], ev.exons2[1, 0])
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 0] - ev.exons1[1, 0]))
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 1] - ev.exons2[1, 0]))
+            else:
+                block_starts.append('0')
+                if ev.exons1[0, 1] < ev.exons2[0, 1]:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons2[0, 1])
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                    block_starts.append(str(ev.exons1[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons1[0, 1]))
+                else:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons2[0, 1], ev.exons1[0, 1])
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons2[0, 0]))
+                    block_starts.append(str(ev.exons2[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons2[0, 1]))
+                block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        elif ev.event_type == 'alt_5prime':
+            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                block_starts.append('0')
+                block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                if ev.exons1[1, 0] > ev.exons2[1, 0]:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons1[1, 0])
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 0] - ev.exons2[1, 0]))
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 1] - ev.exons2[1, 0]))
+                else:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons1[1, 0], ev.exons2[1, 0])
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 0] - ev.exons1[1, 0]))
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+            else:
+                block_starts.append('0')
+                if ev.exons1[0, 1] < ev.exons2[0, 1]:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons2[0, 1])
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                    block_starts.append(str(ev.exons1[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons1[0, 1]))
+                else:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons2[0, 1], ev.exons1[0, 1])
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons2[0, 0]))
+                    block_starts.append(str(ev.exons2[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons2[0, 1]))
+                block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        else:
+            print >> sys.stderr, 'WARNING: Event type %s not implemented yet for structured output' % ev.event_type
+            break
+
+        print >> fd_out, '\t'.join([ev.chr, str(start_pos), str(stop_pos), event_id, '0', ev.strand, str(start_pos), str(stop_pos), '255,0,0', '3', ','.join(block_lens), ','.join(block_starts)])
+
+    fd_out.close()
+
+
+def write_events_bed(fn_out_bed, events, idx=None):
+    
+    if events.shape[0] == 0:
+        print >> sys.stderr, 'WARNING: No events present.'
+        return
+
+    if idx is None:
+        idx = sp.arange(events.shape[0])
+
+    print 'writing %s events in bed format to %s' % (events[0].event_type, fn_out_bed)
+
+    fd_out = open(fn_out_bed, 'w+') 
+
+    ### load gene structure
+    for i in idx:
+
+        ev = events[i]
+        gene_name = events[i].gene_name[0] ### TODO - why only first?
+        start_pos = ev.exons1[0, 0]
+        stop_pos = ev.exons1[-1, -1]
+
+        ### get order of isoforms o_idx(1) -> iso1 and o_idx(2) -> iso2
+        ### assert that first isoform is always the shorter one
+        #if ev.event_type == 'intron_retention':
+        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[1] - ev.exons2[0]))
+        #else:
+        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+
+        name = '%s.%i' % (ev.event_type, ev.id)
+
+        block_lens = []
+        block_starts = []
+        if ev.event_type == 'exon_skip':
+            event_id = 'CA-CA-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons2[1, 1])
+            for j in range(ev.exons2.shape[0]):
+                block_starts.append(str(int(ev.exons2[j, 0] - start_pos)))
+                block_lens.append(str(int(ev.exons2[j, 1] - ev.exons2[j, 0])))
+        elif ev.event_type == 'intron_retention':
+            event_id = 'IR-IR-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons1[1, 0])
+            block_starts.append('0')
+            block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+            block_starts.append(str(ev.exons1[0, 1] - start_pos))
+            block_lens.append(str(ev.exons1[1, 0] - ev.exons1[0, 1]))
+            block_starts.append(str(ev.exons1[1, 0] - start_pos))
+            block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        elif ev.event_type == 'alt_3prime':
+            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                block_starts.append('0')
+                block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                if ev.exons2[1, 0] < ev.exons1[1, 0]:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons1[1, 0])
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 0] - ev.exons2[1, 0]))
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+                else:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons1[1, 0], ev.exons2[1, 0])
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 0] - ev.exons1[1, 0]))
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 1] - ev.exons2[1, 0]))
+            else:
+                block_starts.append('0')
+                if ev.exons1[0, 1] < ev.exons2[0, 1]:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons2[0, 1])
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                    block_starts.append(str(ev.exons1[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons1[0, 1]))
+                else:
+                    event_id = 'AA-AA-%i-%i.0[L]' % (ev.exons2[0, 1], ev.exons1[0, 1])
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons2[0, 0]))
+                    block_starts.append(str(ev.exons2[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons2[0, 1]))
+                block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        elif ev.event_type == 'alt_5prime':
+            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                block_starts.append('0')
+                block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                if ev.exons1[1, 0] > ev.exons2[1, 0]:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons2[1, 0], ev.exons1[1, 0])
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 0] - ev.exons2[1, 0]))
+                    block_starts.append(str(ev.exons2[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 1] - ev.exons2[1, 0]))
+                else:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons1[1, 0], ev.exons2[1, 0])
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons2[1, 0] - ev.exons1[1, 0]))
+                    block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                    block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+            else:
+                block_starts.append('0')
+                if ev.exons1[0, 1] < ev.exons2[0, 1]:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons1[0, 1], ev.exons2[0, 1])
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
+                    block_starts.append(str(ev.exons1[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons1[0, 1]))
+                else:
+                    event_id = 'AD-AD-%i-%i.0[L]' % (ev.exons2[0, 1], ev.exons1[0, 1])
+                    block_lens.append(str(ev.exons2[0, 1] - ev.exons2[0, 0]))
+                    block_starts.append(str(ev.exons2[0, 1] - start_pos))
+                    block_lens.append(str(ev.exons1[0, 1] - ev.exons2[0, 1]))
+                block_starts.append(str(ev.exons1[1, 0] - start_pos))
+                block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
+        else:
+            print >> sys.stderr, 'WARNING: Event type %s not implemented yet for structured output' % ev.event_type
+            break
+
+        print >> fd_out, '\t'.join([ev.chr, str(start_pos), str(stop_pos), event_id, '0', ev.strand, str(start_pos), str(stop_pos), '255,0,0', '3', ','.join(block_lens), ','.join(block_starts)])
 
     fd_out.close()
 

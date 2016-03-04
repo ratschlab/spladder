@@ -139,12 +139,15 @@ def default_settings():
     CFG['parallel'] = 1
 
     CFG['bam_to_sparse'] = 0
+    CFG['ignore_mismatch_tag'] = False
 
     ### define which output files are written
     CFG['output_txt'] = False
+    CFG['output_bed'] = False
     CFG['output_struc'] = False
     CFG['output_confirmed_gff3'] = True
     CFG['output_confirmed_txt'] = True
+    CFG['output_confirmed_bed'] = False
     CFG['output_confirmed_struc'] = False
     CFG['output_filtered_txt'] = False
     CFG['output_confirmed_tcga'] = False
@@ -154,8 +157,9 @@ def default_settings():
     CFG['count_intron_cov'] = False
     CFG['min_truncation_cov'] = 5
 
-    return CFG
+    CFG['psi_min_reads'] = 10
 
+    return CFG
 
 
 def parse_args(options, identity='main'):
@@ -246,6 +250,17 @@ def parse_args(options, identity='main'):
         else:
             print >> sys.stderr, 'ERROR: option quantify_graph should have value y or n, but has %s' % options.quantify_graph
 
+        if options.ignore_mismatches in ['n', 'y']:
+            CFG['ignore_mismatch_tag'] = (options.ignore_mismatches == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option ignore mismatches bam should have value y or n, but has %s' % options.ignore_mismatches
+    
+        if options.output_struc in ['n', 'y']:
+            CFG['output_struc'] = (options.output_struc == 'y')
+            CFG['output_confirmed_struc'] = (options.output_struc == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option output struc value y or n, but has %s' % options.output_struc
+    
         ### option to store sparse BAM representation
         if options.sparse_bam in ['n', 'y']:
             CFG['bam_to_sparse'] = (options.sparse_bam == 'y')
@@ -335,6 +350,12 @@ def parse_args(options, identity='main'):
         CFG['max_0_frac'] = options.max_0_frac
         CFG['min_count'] = options.min_count
         
+        if options.non_alt_norm in ['n', 'y']:
+            CFG['non_alt_norm'] = (options.non_alt_norm == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option non_alt_norm should have value y or n, but has %s' % options.non_alt_norm
+            sys.exit(1)
+
         if options.matlab in ['n', 'y']:
             CFG['is_matlab'] = (options.matlab == 'y')
         else:
@@ -350,10 +371,14 @@ def parse_args(options, identity='main'):
 
         CFG['conditionA'] = [os.path.basename(x).replace('.bam', '') for x in options.conditionA.strip(',').split(',')]
         CFG['conditionB'] = [os.path.basename(x).replace('.bam', '') for x in options.conditionB.strip(',').split(',')]
+        if len(CFG['conditionA']) > 0 and CFG['conditionA'][0].lower().endswith('txt'):
+            CFG['conditionA'] = [str(x) for x in sp.loadtxt(CFG['conditionA'][0], dtype='str')]
+        if len(CFG['conditionB']) > 0 and CFG['conditionB'][0].lower().endswith('txt'):
+            CFG['conditionB'] = [str(x) for x in sp.loadtxt(CFG['conditionB'][0], dtype='str')]
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
     if len(CFG['bam_fnames']) > 0 and CFG['bam_fnames'][0].split('.')[-1] == 'txt':
-        CFG['bam_fnames'] = [str(x) for x in sp.loadtxt(CFG['bam_fnames'][0], dtype='str')]
+        CFG['bam_fnames'] = [str(x) for x in sp.atleast_1d(sp.loadtxt(CFG['bam_fnames'][0], dtype='str'))]
 
     ### assemble strain list
     CFG['samples'] = []

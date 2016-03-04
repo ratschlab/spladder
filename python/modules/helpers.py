@@ -70,3 +70,34 @@ def get_filename(which, CFG):
             return ''
     elif which == 'fn_out_merge_val':
         return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag))
+
+def compute_psi(counts, event_type, CFG):
+    
+    ### collect count data based on event type
+    if event_type == 'exon_skip':
+        a = counts[:, 4] + counts[:, 5]
+        b = 2 * counts[:, 6]
+    elif event_type == 'intron_retention':
+        a = counts[:, 1] # intron cov
+        b = counts[:, 4] # intron conf
+    elif event_type in ['alt_3prime', 'alt_5prime']:
+        a = counts[:, 3] # intron1 conf
+        b = counts[:, 4] # intron2 conf
+    elif event_type == 'mutex_exons':
+        a = counts[:, 5] + counts[:, 7] # exon_pre_exon1_conf + exon1_exon_aft_conf
+        b = counts[:, 6] + counts[:, 8] # exon_pre_exon2_conf + exon2_exon_aft_conf
+    elif event_type == 'mult_exon_skip':
+        a = counts[:, 4] + counts[:, 5] + counts[:, 7] # exon_pre_exon_conf + exon_exon_aft_conf + sum_inner_exon_conf
+        b = (counts[:, 8] + 1) * counts[:, 6] # (num_inner_exon + 1) * exon_pre_exon_aft_conf
+    else:
+        raise Exception('Unknown event type: %s' % event_type)
+
+    ### compute psi
+    psi = a / (a + b)  
+
+    ### filter for sufficient read support
+    n_idx = sp.where((a + b) < CFG['psi_min_reads'])
+    psi[n_idx] = sp.nan
+
+    return psi
+
