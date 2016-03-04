@@ -418,7 +418,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
 
         (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
 
-        fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
+        fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
         ### load count index data from hdf5
         IN = h5py.File(fn_count, 'r')
         gene_ids_segs = IN['gene_ids_segs'][:]

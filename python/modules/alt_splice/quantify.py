@@ -548,7 +548,7 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
         fn_count = fn_merge.replace('mat', 'count.mat')
     else:
         genes = cPickle.load(open(fn_merge_val, 'r'))[0]
-        fn_count = fn_merge.replace('pickle', 'count.pickle')
+        fn_count = fn_merge.replace('pickle', 'count.hdf5')
 
     ### load count index data from hdf5
     IN = h5py.File(fn_count, 'r')

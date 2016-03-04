@@ -63,7 +63,7 @@ def get_filename(which, CFG):
         if which == 'fn_count_in':
             return fname
         elif which == 'fn_count_out':
-            return fname.replace('.pickle', '') + '.count.pickle'
+            return fname.replace('.pickle', '') + '.count.hdf5'
     elif which == 'fn_out_merge':
         if CFG['merge_strategy'] == 'merge_graphs':
             return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))

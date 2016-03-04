@@ -81,7 +81,7 @@ def get_conf_events(options, gid):
 
 def get_seg_counts(options, gid):
 
-    IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.pickle' % (options.confidence)), 'r')
+    IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % (options.confidence)), 'r')
     idx = sp.where(IN['gene_ids_edges'][:] == gid)[0]
     edges = IN['edges'][:][idx, :]
     edge_idx = IN['edge_idx'][:][idx]
