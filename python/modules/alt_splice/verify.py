@@ -418,7 +418,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
 
         (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
 
-        fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
+        fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
         ### load count index data from hdf5
         IN = h5py.File(fn_count, 'r')
         if os.path.exists(fn_count + '.quick_ids_segs'):
@@ -469,9 +469,9 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
             curr_edge_idx = edge_idx[gr_idx_edges]
 
             for s_idx in range(len(strain_idx)):
-                sys.stdout.write('.')
-                if s_idx > 0 and s_idx % 50 == 0:
-                    sys.stdout.write('%i\n' % s_idx)
+                #sys.stdout.write('.')
+                #if s_idx > 0 and s_idx % 50 == 0:
+                #    sys.stdout.write('%i\n' % s_idx)
                # ev_tmp.subset_strain(s_idx) ### TODO 
                 if event_type == 'exon_skip':
                     ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)

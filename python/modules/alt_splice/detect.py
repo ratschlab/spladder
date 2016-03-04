@@ -2,22 +2,26 @@ from scipy.sparse import lil_matrix
 from numpy.matlib import repmat
 import scipy as sp
 import sys
+import operator
 
-def detect_multipleskips(genes, idx_alt):
-    # [idx_multiple_skips, exon_multiple_skips, id_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
+import multiprocessing as mp 
+import signal as sig
 
-    id = 0
+from ..helpers import log_progress
+
+def detect_multipleskips(genes, gidx, log=False, edge_limit=1000):
+    # [idx_multiple_skips, exon_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
+
     idx_multiple_skips = []
-    id_multiple_skips = []
     exon_multiple_skips = []
-    for iix, ix in enumerate(idx_alt):
-
-        sys.stdout.write('.')
-        if (iix + 1) % 50 == 0:
-            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_multiple_skips)))
-        sys.stdout.flush()
-        num_exons = genes[ix].splicegraph.get_len()
-        edges = genes[ix].splicegraph.edges
+    for iix, ix in enumerate(gidx):
+        if log:
+            sys.stdout.write('.')
+            if (iix + 1) % 50 == 0:
+                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_multiple_skips)))
+            sys.stdout.flush()
+        num_exons = genes[iix].splicegraph.get_len()
+        edges = genes[iix].splicegraph.edges
         labels = repmat(sp.arange(num_exons), num_exons, 1).T
         
         # adjecency matrix: upper half only
@@ -36,8 +40,8 @@ def detect_multipleskips(genes, idx_alt):
         
         edge = sp.where(Pairs.toarray() == 1)
         
-        if edge[0].shape[0] > 10000:
-            print 'Warning: not processing gene %d, because there are more than 10000 potential hits.' % ix
+        if edge[0].shape[0] > edge_limit:
+            print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edge[0].shape[0], edge_limit)
             continue
         
         for cnt in range(edge[0].shape[0]):
@@ -83,8 +87,6 @@ def detect_multipleskips(genes, idx_alt):
                     backtrace = backtrace[::-1]
                     idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
-                    id_multiple_skips.append(id) # * sp.ones((1, backtrace.shape[0] + 2)))
-                    id += 1
                 elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
                     backtrace = sp.array([long_path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
@@ -93,26 +95,33 @@ def detect_multipleskips(genes, idx_alt):
                     backtrace = backtrace[::-1]
                     idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
-                    id_multiple_skips.append(id) # * sp.ones((1, backtrace.shape[0] + 2)))
-                    id += 1
 
-    print 'Number of multiple exon skips:\t\t\t\t\t%d' % len(idx_multiple_skips)
-    return (idx_multiple_skips, exon_multiple_skips, id_multiple_skips)
+    if log:
+        print 'Number of multiple exon skips:\t\t\t\t\t%d' % len(idx_multiple_skips)
+
+    return (idx_multiple_skips, exon_multiple_skips)
 
 
-def detect_intronreten(genes, idx_alt):
-    # [idx_intron_reten,intron_intron_reten] = detect_intronreten(genes,idx_alt) ;
+def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
+    # [idx_intron_reten,intron_intron_reten] = detect_intronreten(genes) ;
 
     idx_intron_reten = []
     intron_intron_reten = []
-    for iix, ix in enumerate(idx_alt):
-        sys.stdout.write('.')
-        if (iix + 1) % 50 == 0:
-            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_intron_reten)))
-        sys.stdout.flush()
-        num_exons = genes[ix].splicegraph.get_len()
-        vertices = genes[ix].splicegraph.vertices
-        edges = genes[ix].splicegraph.edges
+    for iix, ix in enumerate(gidx):
+        if log:
+            sys.stdout.write('.')
+            if (iix + 1) % 50 == 0:
+                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_intron_reten)))
+            sys.stdout.flush()
+
+        num_exons = genes[iix].splicegraph.get_len()
+        vertices = genes[iix].splicegraph.vertices
+        edges = genes[iix].splicegraph.edges
+
+        if edges.shape[0] > edge_limit:
+            print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
+            continue
+        
         introns  = []
         for exon_idx in range(num_exons - 1):  # start of intron
             idx = sp.where(edges[exon_idx, exon_idx + 1 : num_exons] == 1)[0]
@@ -134,36 +143,47 @@ def detect_intronreten(genes, idx_alt):
                     intron_intron_reten.append([exon_idx, exon_idx2, long_exon])
                     introns.append([vertices[1, exon_idx], vertices[0, exon_idx2]])
 
-    print '\nNumber of intron retentions:\t\t\t\t\t%d' % len(idx_intron_reten)
+    if log:
+        print '\nNumber of intron retentions:\t\t\t\t\t%d' % len(idx_intron_reten)
+
     return (idx_intron_reten, intron_intron_reten)
 
 
-def detect_exonskips(genes, idx_alt):
-    # [idx_exon_skips, exon_exon_skips] = detect_exonskips(genes, idx_alt) ;
+def detect_exonskips(genes, gidx, log=False, edge_limit=1000):
+    # [idx_exon_skips, exon_exon_skips] = detect_exonskips(genes) ;
 
     idx_exon_skips = []
     exon_exon_skips = []
-    for iix, ix in enumerate(idx_alt):
-        sys.stdout.write('.')
-        if (iix + 1) % 50 == 0:
-            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_exon_skips)))
-        sys.stdout.flush()
-        num_exons = genes[ix].splicegraph.get_len()
-        edges = genes[ix].splicegraph.edges
+    for iix, ix in enumerate(gidx):
+        if log:
+            sys.stdout.write('.')
+            if (iix + 1) % 50 == 0:
+                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_exon_skips)))
+            sys.stdout.flush()
+
+        num_exons = genes[iix].splicegraph.get_len()
+        edges = genes[iix].splicegraph.edges
+
+        if edges.shape[0] > edge_limit:
+            print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
+            continue
+        
         for exon_idx in range(num_exons - 2): #first exon
             for exon_idx1 in range(exon_idx + 1, num_exons - 1): # middle exon
                 for exon_idx2 in range(exon_idx1 + 1, num_exons): # last exon
                     if (edges[exon_idx, exon_idx1] == 1) and edges[exon_idx, exon_idx2] and edges[exon_idx1, exon_idx2]:
                         idx_exon_skips.append(ix)
                         exon_exon_skips.append([exon_idx, exon_idx1, exon_idx2])
-    print '\nNumber of single exon skips:\t\t\t\t\t%d' % len(idx_exon_skips)
+    if log:
+        print '\nNumber of single exon skips:\t\t\t\t\t%d' % len(idx_exon_skips)
+
     return (idx_exon_skips, exon_exon_skips)
 
 
 
-def detect_altprime(genes, idx_alt):
+def detect_altprime(genes, gidx, log=False, edge_limit=1000):
     # function [idx_alt_5prime,exon_alt_5prime, idx_alt_3prime,exon_alt_3prime] ...
-    #    = detect_altprime(genes, idx_alt);
+    #    = detect_altprime(genes);
     #
     # detect the alternative 5 and 3 prime ends of the intron. Note that 5 prime refers to the left
     # and 3 prime to the right for a positive strand
@@ -175,15 +195,21 @@ def detect_altprime(genes, idx_alt):
     exon_alt_5prime = []
     exon_alt_3prime = []
 
-    for iix, ix in enumerate(idx_alt):
-        sys.stdout.write('.')
-        if (iix + 1) % 50 == 0:
-            sys.stdout.write(' - %i/%i, found %i + %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_alt_3prime), len(idx_alt_5prime)))
-        sys.stdout.flush()
-        num_exons = genes[ix].splicegraph.get_len()
-        vertices = genes[ix].splicegraph.vertices
-        edges = genes[ix].splicegraph.edges
-        strand = genes[ix].strand
+    for iix, ix in enumerate(gidx):
+        if log:
+            sys.stdout.write('.')
+            if (iix + 1) % 50 == 0:
+                sys.stdout.write(' - %i/%i, found %i + %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_alt_3prime), len(idx_alt_5prime)))
+            sys.stdout.flush()
+        num_exons = genes[iix].splicegraph.get_len()
+        vertices = genes[iix].splicegraph.vertices
+        edges = genes[iix].splicegraph.edges
+        strand = genes[iix].strand
+
+        if edges.shape[0] > edge_limit:
+            print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
+            continue
+        
         # Find alternative sites on the right of the intron,
         # same site on the left of the intron.
         for exon_idx in range(num_exons - 2):
@@ -264,28 +290,35 @@ def detect_altprime(genes, idx_alt):
                     exon_alt_3prime.append({'fiveprimesite':exon_idx, 'threeprimesites':leftidx})
                     idx_alt_3prime.append(ix)
 
-    print '\nNumber of alternative 5 prime sites:\t\t\t\t%d' % len(idx_alt_5prime)
-    print 'Number of alternative 3 prime sites:\t\t\t\t%d' % len(idx_alt_3prime)
+    if log:
+        print '\nNumber of alternative 5 prime sites:\t\t\t\t%d' % len(idx_alt_5prime)
+        print 'Number of alternative 3 prime sites:\t\t\t\t%d' % len(idx_alt_3prime)
 
     return (idx_alt_5prime, exon_alt_5prime, idx_alt_3prime, exon_alt_3prime)
 
-def detect_xorexons(genes, idx_alt):
-    #[idx_xor_exons, exon_xor_exons] = detect_xorexons(genes, idx_alt);
+
+def detect_xorexons(genes, gidx, log=False, edge_limit=1000):
+    #[idx_xor_exons, exon_xor_exons] = detect_xorexons(genes);
 
     idx_xor_exons = []
     exon_xor_exons = [] ### 5primesite of first exon, the 2 skipped
                         ### exons, 3primesite of last exon %%%
-    for iix, ix in enumerate(idx_alt):
+    for iix, ix in enumerate(gidx):
 
-        sys.stdout.write('.')
-        if (iix + 1) % 50 == 0:
-            sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, len(idx_alt) + 1, len(idx_xor_exons)))
-        sys.stdout.flush()
+        if log:
+            sys.stdout.write('.')
+            if (iix + 1) % 50 == 0:
+                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, gidx.shape[0], len(idx_xor_exons)))
+            sys.stdout.flush()
 
-        num_exons = genes[ix].splicegraph.get_len()
-        edges = genes[ix].splicegraph.edges
-        vertices = genes[ix].splicegraph.vertices
+        num_exons = genes[iix].splicegraph.get_len()
+        edges = genes[iix].splicegraph.edges
+        vertices = genes[iix].splicegraph.vertices
 
+        if edges.shape[0] > edge_limit:
+            print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
+            continue
+        
         for exon_idx1 in range(num_exons - 3):
             for exon_idx2 in range(exon_idx1 + 1, num_exons - 2):
                 if edges[exon_idx1, exon_idx2] == 1:
@@ -296,6 +329,61 @@ def detect_xorexons(genes, idx_alt):
                                     idx_xor_exons.append(ix)
                                     exon_xor_exons.append([exon_idx1, exon_idx2, exon_idx3, exon_idx4])
 
-    print '\n\nNumber of XOR exons:\t\t\t\t\t\t%i\n' % len(idx_xor_exons)
+    if log:
+        print '\n\nNumber of XOR exons:\t\t\t\t\t\t%i\n' % len(idx_xor_exons)
 
     return (idx_xor_exons, exon_xor_exons)
+
+
+def detect_wrapper(genes, event_type, gidx, idx, log=False):
+
+    if event_type == 'mutex_exons':
+        return (detect_xorexons(genes, gidx, log), idx)
+    elif event_type == 'exon_skip':
+        return (detect_exonskips(genes, gidx, log), idx)
+    elif event_type == 'alt_prime':
+        return (detect_altprime(genes, gidx, log), idx) 
+    elif event_type == 'intron_retention':
+        return (detect_intronreten(genes, gidx, log), idx)
+    elif event_type == 'mult_exon_skip':
+        return (detect_multipleskips(genes, gidx, log), idx)
+    
+
+def detect_events(genes, event_type, idx, CFG):
+
+    if CFG['parallel'] > 1:
+        pool = mp.Pool(processes=CFG['parallel'], initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
+        binsize = 3
+        maxsize = idx.shape[0]
+        idx_chunks = [sp.arange(x, min(x + binsize, maxsize)) for x in range(0, maxsize, binsize)]
+        result_list = sp.empty((len(idx_chunks), ), dtype='object')
+
+        try:
+            result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c)) for c,cidx in enumerate(idx_chunks)]
+            res_cnt = 0
+            while result:
+                tmp = result.pop(0).get()
+                result_list[tmp[1]] = tmp[0]
+                if CFG['verbose']:
+                    log_progress(res_cnt, len(idx_chunks))
+                    res_cnt += 1
+            if CFG['verbose']:
+                log_progress(len(idx_chunks), len(idx_chunks))
+                print ''
+            pool.terminate()
+            pool.join()
+        except KeyboardInterrupt:
+            print >> sys.stderr, 'Keyboard Interrupt - exiting'
+            pool.terminate()
+            pool.join()
+            sys.exit(1)
+
+        ### integrate results in list into a coherent results list
+        if len(result_list) > 0:
+            result_list = [reduce(operator.add, [x[i] for x in result_list]) for i in range(len(result_list[0]))]
+    else:
+        result_list = detect_wrapper(genes[idx], event_type, idx, None, log=CFG['verbose'])[0]        
+
+    return result_list
+ 
+

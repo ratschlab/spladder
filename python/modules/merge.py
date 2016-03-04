@@ -348,9 +348,9 @@ def run_merge(CFG):
     fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'] , CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     #fn_out_val = '%s/spladder/genes_graph_conf%i.%s%s.validated.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     if CFG['validate_splicegraphs']:
-        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.validated.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
+        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.validated.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
     else:
-        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.count.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
+        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
 
     if not os.path.exists(fn_out):
         if not CFG['rproc']:

@@ -70,7 +70,7 @@ def spladder_core(CFG):
             ### re-constitute splicing graph
             print '\tRe-constituting simplified splice graph from generated transcripts'
             genes_unsimplified = genes
-            genes = splice_graph(genes, conf['do_infer_splice_graph'])
+            genes = splice_graph(genes, CFG['do_infer_splice_graph'])
 
             ### save splicing graph with isoforms
             print '\tSaving genes to %s' % CFG['out_fname']
