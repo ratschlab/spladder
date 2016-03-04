@@ -299,11 +299,11 @@ def insert_intron_retentions(genes, CFG):
 
                 if CFG['bam_to_sparse']:
                     if isinstance(CFG['bam_fnames'], str):
-                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
                         for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                            [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:
@@ -552,11 +552,11 @@ def insert_intron_edges(genes, CFG):
 
                         if CFG['bam_to_sparse']:
                             if isinstance(CFG['bam_fnames'], str):
-                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
                                 for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                                    [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
@@ -648,11 +648,11 @@ def insert_intron_edges(genes, CFG):
 
                         if CFG['bam_to_sparse']:
                             if isinstance(CFG['bam_fnames'], str):
-                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
                                 for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                                    [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
@@ -857,11 +857,11 @@ def insert_cassette_exons(genes, CFG):
 
                 if CFG['bam_to_sparse']:
                     if isinstance(CFG['bam_fnames'], str):
-                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
                         for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache)
+                            [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:

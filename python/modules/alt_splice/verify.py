@@ -472,7 +472,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
             edge_idx = IN['edge_idx'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1]
 
             for s_idx in range(len(strain_idx)):
-                print '%i/%i\r' % (s_idx, len(strain_idx))
+                #print '%i/%i\r' % (s_idx, len(strain_idx))
                # ev_tmp.subset_strain(s_idx) ### TODO 
                 if event_type == 'exon_skip':
                     ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)

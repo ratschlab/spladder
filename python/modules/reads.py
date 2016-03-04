@@ -5,6 +5,7 @@ import scipy.sparse
 import copy
 import pdb
 import time
+import h5py
 
 if __package__ is None:
     __package__ = 'modules'
@@ -243,24 +244,26 @@ def add_reads_from_sparse_bam(gg, fname, contig, types=None, filter=None, cache=
 
     if cache is None or len(cache) == 0:
         ### load counts from summary file
-        if fname.endswith('npz'):
-            tmp = sp.load(fname)
+        if fname.endswith('hdf5'):
+            IN = h5py.File(fname, 'r')
         else:
             if not filter is None:
-                tmp = sp.load(re.sub(r'bam$', '', fname) + 'filt.' + 'npz')
+                IN = h5py.File(re.sub(r'bam$', '', fname) + 'filt.' + 'hdf5', 'r')
             else:
-                tmp = sp.load(re.sub(r'bam$', '', fname) + 'npz')
+                IN = h5py.File(re.sub(r'bam$', '', fname) + 'hdf5')
+
         ### re-build sparse matrix
-        cache['reads'] = scipy.sparse.coo_matrix((tmp[contig + '_reads_dat'], (tmp[contig + '_reads_row'], tmp[contig + '_reads_col'])), shape=tmp[contig + '_reads_shp'], dtype='uint32').tocsc()
-        cache['introns_m'] = tmp[contig + '_introns_m']
-        cache['introns_p'] = tmp[contig + '_introns_p']
-        del tmp
+        cache['reads'] = scipy.sparse.coo_matrix((IN[contig + '_reads_dat'][:], (IN[contig + '_reads_row'][:], IN[contig + '_reads_col'][:])), shape=IN[contig + '_reads_shp'][:], dtype='uint32').tocsc()
+        cache['introns_m'] = IN[contig + '_introns_m'][:]
+        cache['introns_p'] = IN[contig + '_introns_p'][:]
+
+        IN.close()
 
     ret = []
     if 'exon_track' in types:
         if cache['reads'].shape[0] == 0:
             tracks = sp.zeros((1, gg.stop - gg.start), dtype='int')
-        elif cache['reads'].shape[0] > 1:
+        elif not unstranded and cache['reads'].shape[0] > 1:
             tracks = cache['reads'][[0, 1 + int(gg.strand == '-')], gg.start:gg.stop].todense() 
         else:
             tracks = cache['reads'][:, gg.start:gg.stop].todense() 
