@@ -88,6 +88,10 @@ def analyze_events(CFG, event_type):
                 events_all = events_all_
                 events_all_strains = None
 
+            ### DEBUG!!!
+            #for xx in xrange(events_all.shape[0]):
+            #    events_all[xx].verified = []
+
             ### add strain information, so we can do two way chunking!
             if events_all_strains is None:
                 events_all_strains = CFG['strains']
@@ -123,7 +127,7 @@ def analyze_events(CFG, event_type):
                         idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
                             idx_strains = sp.arange(j, min(j + chunk_size_strains, len(CFG['strains'])))
-                            PAR['ev'] = events_all[idx_events]
+                            PAR['ev'] = events_all[idx_events].copy()
                             PAR['strain_idx'] = idx_strains
                             #PAR['list_bam'] = CFG['bam_fnames'][replicate, :]
                             # TODO handle replicate setting
@@ -221,6 +225,7 @@ def analyze_events(CFG, event_type):
             cPickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)
 
         else:
+            print '\nLoading event data from %s' % fn_out
             (events_all, events_all_strains) = cPickle.load(open(fn_out, 'r'))
             confirmed_idx = cPickle.load(open(fn_out_conf, 'r'))
 
