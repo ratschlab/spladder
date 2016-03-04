@@ -205,10 +205,6 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                         h5fid.create_dataset(name='seg_pos', data=sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(CFG['strains'])))
                         h5fid.create_dataset(name='gene_ids_segs', data=sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (c_idx + c), chunks=True, compression='gzip', maxshape=(None, 1))
 
-                        #counts['segments'].append(sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
-                        #counts['seg_pos'].append(sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]))
-                        #counts['gene_ids_segs'].append(sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (c_idx + c))
-
                     tmp = [sp.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0]
                     if len(tmp) == 0:
                         continue
@@ -222,8 +218,6 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                             h5fid.create_dataset(name='edges', data=tmp[:, range(1, tmp.shape[1], 2)], chunks=True, compression='gzip', maxshape=(None, tmp.shape[1] / 2))
                             h5fid.create_dataset(name='edge_idx', data=tmp[:, 0], chunks=True, compression='gzip', maxshape=(None,))
                             h5fid.create_dataset(name='gene_ids_edges', data=sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c), chunks=True, compression='gzip', maxshape=(None, 1))
-                        #counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
-                        #counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * (c_idx + c))
                 del tmp, counts_tmp
         h5fid.close()
 
