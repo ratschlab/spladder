@@ -39,7 +39,7 @@ def make_introns_feasible(introns, genes, CFG):
     return introns
 
 ### determine count output file
-def get_filename(which, CFG):
+def get_filename(which, CFG, sample_idx=None):
     """This function returns a filename generated from the current configuration"""
 
     ### init any tags
@@ -53,10 +53,13 @@ def get_filename(which, CFG):
     ### iterate over return file types    
     if which in ['fn_count_in', 'fn_count_out']:
         if not 'spladder_infile' in CFG:
-            if CFG['validate_splicegraphs']:
-                fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.validated.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
+            if CFG['merge_strategy'] == 'single':
+                fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['samples'][sample_idx], prune_tag))
             else:
-                fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
+                if CFG['validate_splicegraphs']:
+                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.validated.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
+                else:
+                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
         else:
             fname = CFG['spladder_infile']
         
