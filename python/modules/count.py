@@ -5,6 +5,7 @@ import cPickle
 import math
 import h5py
 import scipy as sp
+import re
 
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
@@ -102,7 +103,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
 
 
-def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
+def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
 
     (genes, inserted) = cPickle.load(open(fname_in, 'r'))
     
@@ -121,12 +122,16 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
     counts['gene_names'] = sp.array([x.name for x in genes], dtype='str')
 
     if not CFG['rproc']:
-        for s_idx in range(CFG['strains'].shape[0]):
-            print '\n%i/%i' % (s_idx + 1, CFG['strains'].shape[0])
-            if s_idx == 0:
-                counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][s_idx], CFG)
-            else:
-                counts_tmp = sp.r_[sp.atleast_2d(counts_tmp), count_graph_coverage(genes, CFG['bam_fnames'][s_idx], CFG)]
+        if CFG['merge_strategy'] == 'single':
+            print '\nprocessing %s' % (CFG['samples'][sample_idx])
+            counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][sample_idx], CFG)
+        else:
+            for s_idx in range(CFG['strains'].shape[0]):
+                print '\n%i/%i' % (s_idx + 1, CFG['strains'].shape[0])
+                if s_idx == 0:
+                    counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][s_idx], CFG)
+                else:
+                    counts_tmp = sp.r_[sp.atleast_2d(counts_tmp), count_graph_coverage(genes, CFG['bam_fnames'][s_idx], CFG)]
 
         for c in range(counts_tmp.shape[1]):
             counts['segments'].append(sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
@@ -157,12 +162,17 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
         jobinfo = []
 
         PAR = dict()
-        PAR['CFG'] = CFG
+        PAR['CFG'] = CFG.copy()
+        if CFG['merge_strategy'] == 'single':
+            PAR['CFG']['bam_fnames'] = PAR['CFG']['bam_fnames'][sample_idx]
+            PAR['CFG']['samples'] = PAR['CFG']['samples'][sample_idx]
+            PAR['CFG']['strains'] = PAR['CFG']['strains'][sample_idx]
+
         #s_idx = sp.argsort([x.chr for x in genes]) # TODO
         s_idx = sp.arange(genes.shape[0])
         for c_idx in range(0, s_idx.shape[0], chunksize):
             cc_idx = min(s_idx.shape[0], c_idx + chunksize)
-            fn = fname_out.replace('.pickle', '.chunk_%i_%i.pickle' % (c_idx, cc_idx))
+            fn = re.sub(r'.hdf5$', '', fname_out) + '.chunk_%i_%i.pickle' % (c_idx, cc_idx)
             if os.path.exists(fn):
                 continue
             else:
@@ -190,7 +200,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
             cc_idx = min(s_idx.shape[0], c_idx + chunksize)
             if 'verbose' in CFG and CFG['verbose']:
                 print 'collecting chunk %i-%i (%i)' % (c_idx, cc_idx, s_idx.shape[0])
-            fn = fname_out.replace('.pickle', '.chunk_%i_%i.pickle' % (c_idx, cc_idx))
+            fn = re.sub(r'.hdf5$', '', fname_out) + '.chunk_%i_%i.pickle' % (c_idx, cc_idx)
             if not os.path.exists(fn):
                 print >> sys.stderr, 'ERROR: Not all chunks in counting graph coverage completed!'
                 sys.exit(1)
@@ -221,22 +231,4 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG):
                             h5fid.create_dataset(name='gene_ids_edges', data=sp.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
                 del tmp, counts_tmp
         h5fid.close()
-
-#    for key in counts:
-#        counts[key] = sp.vstack(counts[key]) if len(counts[key]) > 0 else counts[key]
-#    if len(counts['edges']) > 0:
-#        counts['edge_idx'] = counts['edges'][:, 0]
-#        counts['edges'] = counts['edges'][:, 1:]
-#    else:
-#        counts['edge_idx'] = sp.array([])
-#        counts['edges'] = sp.array([])
-#
-#    ### write result data to hdf5
-#    h5fid = h5py.File(fname_out, 'w')
-#    h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
-#    h5fid.create_dataset(name='strains', data=CFG['strains'])
-#    for key in counts:
-#        h5fid.create_dataset(name=key, data=counts[key])
-#    h5fid.close()
-
 

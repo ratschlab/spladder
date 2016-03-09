@@ -192,8 +192,6 @@ def spladder():
                             OUT.create_dataset(name=(chrm + '_introns_m'), data=tmp[2], compression='gzip')
                             OUT.create_dataset(name=(chrm + '_introns_p'), data=tmp[3], compression='gzip')
                     OUT.close()
-                    #sp.savez_compressed(re.sub(r'.bam$', '', bfn) + '.filt', **cnts)
-                    #del cnts
                 elif CFG['verbose']:
                     print >> sys.stdout, 'Filtered sparse BAM representation for %s already exists.' % bfn
 
@@ -238,15 +236,11 @@ def spladder():
         if CFG['merge_strategy'] == 'merge_graphs':
             run_merge(CFG)
 
-    if not 'spladder_infile' in CFG and CFG['validate_splicegraphs'] and not os.path.exists(fn_out_merge_val):
+    if not 'spladder_infile' in CFG and CFG['merge_strategy'] == 'merge_graphs' and CFG['validate_splicegraphs'] and not os.path.exists(fn_out_merge_val):
         (genes, inserted) = cPickle.load(open(fn_out_merge, 'r'))
         genes = filter_by_edgecount(genes, CFG)
         cPickle.dump((genes, inserted), open(fn_out_merge_val, 'w'), -1)
         del genes
-
-    ### get count output file
-    fn_in_count = get_filename('fn_count_in', CFG)
-    fn_out_count = get_filename('fn_count_out', CFG)
 
     ### convert input BAMs to sparse arrays - unfiltered case
     if CFG['bam_to_sparse']:
@@ -282,27 +276,42 @@ def spladder():
                         OUT.create_dataset(name=(chrm + '_introns_m'), data=tmp[2], compression='gzip')
                         OUT.create_dataset(name=(chrm + '_introns_p'), data=tmp[3], compression='gzip')
                 OUT.close()
-                #sp.savez_compressed(re.sub(r'.bam$', '', bfn), **cnts)
-                #del cnts
             elif CFG['verbose']:
                 print >> sys.stdout, 'Sparse BAM representation for %s already exists.' % bfn
 
-    ### count segment graph
-    if CFG['run_as_analysis'] or CFG['count_segment_graph']:
-        if not os.path.exists(fn_out_count):
-            count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
+    if CFG['merge_strategy'] == 'single':
+        idxs = range(len(CFG['samples']))
+    else:
+        idxs = [0]
 
-    ### count intron coverage phenotype
-    if CFG['count_intron_cov']:
-        fn_out_intron_count = fn_out_count.replace('mat', 'introns.pickle')
-        count_intron_coverage_wrapper(fn_in_count, fn_out_intron_count, CFG)
+    for idx in idxs:
+        ### get count output file
+        if CFG['merge_strategy'] == 'single':
+            fn_in_count = get_filename('fn_count_in', CFG, sample_idx=idx)
+            fn_out_count = get_filename('fn_count_out', CFG, sample_idx=idx)
+        else:
+            fn_in_count = get_filename('fn_count_in', CFG)
+            fn_out_count = get_filename('fn_count_out', CFG)
+
+        ### count segment graph
+        if CFG['run_as_analysis'] or CFG['count_segment_graph']:
+            if not os.path.exists(fn_out_count):
+                if CFG['merge_strategy'] == 'single':
+                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG, sample_idx=idx)
+                else:
+                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
+
+        ### count intron coverage phenotype
+        if CFG['count_intron_cov']:
+            fn_out_intron_count = fn_out_count.replace('pickle', 'introns.pickle')
+            count_intron_coverage_wrapper(fn_in_count, fn_out_intron_count, CFG)
 
     ### handle alternative splicing part
     if CFG['run_as_analysis']:
         collect_events(CFG)
 
-        for idx in range(len(CFG['event_types'])):
-            analyze_events(CFG, CFG['event_types'][idx])
+        for e_idx in range(len(CFG['event_types'])):
+            analyze_events(CFG, CFG['event_types'][e_idx])
 
 
 if __name__ == "__main__":
