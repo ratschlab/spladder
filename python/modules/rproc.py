@@ -231,7 +231,8 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         option_str += '%s -l hostname=%s' % (option_str, options['hostname'])
 
     ### TODO make this configurable
-    bin_str = 'python'
+    # use same pthon that the one it was called with
+    bin_str = sys.executable
 
     ### request cplex license
     if 'cplex' in options and options['cplex']:
