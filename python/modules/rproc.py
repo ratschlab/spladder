@@ -9,6 +9,9 @@ import pdb
 import inspect
 import types
 import imp
+import re
+
+from string import Template
 
 ### define globals
 rproc_nqstat_time = None
@@ -16,6 +19,15 @@ rproc_nqstat_output = None
 MATLAB_RETURN_VALUE = None
 THIS_IS_A_RPROC_PROCESS = None
 rproc_wait_jobinfo = None
+SCHEDULER = 'lsf'
+
+SCHED_KILL_JOB = None
+SCHED_GET_JOB_RUNTIME = None
+SCHED_JOB_ID_SPLIT = None
+SCHED_GET_JOB_NUMBER = None
+SCHED_SUBMIT_CMD = None
+SCHED_MIN_OPTIONS = None
+
 
 #### define jobinfo class
 class Jobinfo():
@@ -60,11 +72,53 @@ class RprocRerun(Exception):
         
         return repr(self.string)
 
+
+def _set_scheduler():
+    
+    global SCHEDULER, SCHED_KILL_JOB, SCHED_GET_JOB_RUNTIME
+    global SCHED_JOB_ID_SPLIT, SCHED_GET_JOB_NUMBER, SCHED_SUBMIT_CMD
+    global SCHED_MIN_OPTIONS
+
+    if SCHEDULER == 'lsf':
+        SCHED_KILL_JOB = 'bkill'
+        SCHED_GET_JOB_RUNTIME = Template('bjobs -o run_time ${jobid} | tail -n +2 | sed -e "s/ .*//g" ')
+        SCHED_JOB_ID_SPLIT = Template('${var}.split(\'<\')[1].split(\'>\')')
+        SCHED_GET_JOB_NUMBER = Template('bjobs -u ${user} 2> /dev/null | grep ${user} | wc -l | tr -d " "')
+        SCHED_SUBMIT_CMD = Template('echo \'${env} hostname; bash ${script} >> ${log}\' | bsub -o ${qsub_log} -e ${qsub_log} ${options} -J ${name} >> ${log} 2>&1')
+        SCHED_MIN_OPTIONS = Template('-n ${cores} -M ${mem} -R "rusage[mem=${coremem}]" -W ${time}')
+    elif SCHEDULER == 'torque':
+        SCHED_KILL_JOB = 'qdel'
+        SCHED_GET_JOB_RUNTIME = Template('qstat -f ${jobid} | grep resources_used.walltime | sed -e "s/.*= //g"')
+        SCHED_JOB_ID_SPLIT = Template('${var}.split(\'.\')')
+        SCHED_GET_JOB_NUMBER = Template('qstat -u ${user} 2> /dev/null | grep  ${user} | wc -l | tr -d " "')
+        SCHED_SUBMIT_CMD = Template('echo \'${env} hostname; bash ${script} >> ${log}\' | qsub -o ${qsub_log} -j oe -r y ${options} -N ${name} >> ${log} 2>&1')
+        SCHED_MIN_OPTIONS = Template('-l nodes=1:ppn=${cores} -l mem=${mem}mb,vmem=${mem}mb,pmem=${mem}mb -l walltime=${time}')
+    elif SCHEDULER == 'slurm':
+        SCHED_KILL_JOB = 'qdel'
+        SCHED_GET_JOB_RUNTIME = None #TODO
+        SCHED_JOB_ID_SPLIT = Template('${var}.split(\'.\')')
+        SCHED_GET_JOB_NUMBER = Template('qstat -u ${user} 2> /dev/null | grep  ${user} | wc -l | tr -d " "')
+        SCHED_SUBMIT_CMD = Template('echo \'${env} hostname; bash ${script} >> ${log}\' | qsub -o ${qsub_log} -j y -r y ${options} -N ${name} >> ${log} 2>&1') # TODO check this
+        SCHED_MIN_OPTIONS = Template(' -l h_vmem=${mem}M -l s_vmem=${mem}M -l h_cpu=${time}') # TODO check this
+    elif SCHEDULER == 'sge':
+        SCHED_KILL_JOB = 'qdel'
+        SCHED_GET_JOB_RUNTIME = None #TODO
+        SCHED_JOB_ID_SPLIT = Template('${var}.split(\'.\')')
+        SCHED_GET_JOB_NUMBER = Template('qstat -u ${user} 2> /dev/null | grep  ${user} | wc -l | tr -d " "')
+        SCHED_SUBMIT_CMD = Template('echo \'${env} hostname; bash ${script} >> ${log}\' | qsub -o ${qsub_log} -j y -r y ${options} -N ${name} >> ${log} 2>&1')
+        SCHED_MIN_OPTIONS = Template(' -l h_vmem=${mem}M -l s_vmem=${mem}M -soft -l h_cpu=${time} -hard ')
+
+
 def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, resubmission=False):
     # [jobinfo]=rproc(ProcName, P1, Mem, options, time)
     #
     # time in minutes
     # mem in mb
+
+    global SCHED_JOB_ID_SPLIT, SCHED_GET_JOB_NUMBER, SCHED_SUBMIT_CMD
+    global SCHED_MIN_OPTIONS
+
+    _set_scheduler()
 
     environment = '' # TODO
 
@@ -85,7 +139,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     rproc_path = os.path.abspath(inspect.getfile(this_frame))
 
     if runtime is None:
-        runtime = 10000
+        runtime = 24
 
     if Mem is None:
         Mem = 300
@@ -118,10 +172,8 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     home_str = os.environ['HOME'] 
 
     use_reservation = False
-
     ### TODO this is only relevant for SGE
     if 'ncpus' in options and options['ncpus'] > 1:
-        Mem /= options['ncpus']
         use_reservation = 1 ;
 
     if not 'verbosity' in options:
@@ -185,13 +237,15 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
             os.makedirs(os.path.join(os.environ['HOME'], 'tmp'))
 
         if not os.path.exists(os.path.join(os.environ['HOME'], 'tmp', '.sge')):
+            ### TODO this does not exist anywhere: sge_tmp_dir
             os.symlink(sge_tmp_dir, os.path.join(os.environ['HOME'], 'tmp', '.sge'))
 
     assert(os.path.exists(os.path.join(os.environ['HOME'],'tmp', '.sge')))
 
     if not os.path.exists(os.path.join(dirctry, '.sge')):
         username = os.environ['USER']
-        sge_base_dir = dirctry.replace(os.path.join('cbio', 'grlab', 'home', username), os.path.join(home_str, '.sge', 'tmp', username))
+        ### TODO make this configurable
+        sge_base_dir = dirctry.replace(os.path.join('cluster', 'home', username), os.path.join(home_str, '.sge', 'tmp', username))
         if not os.path.exists(sge_base_dir):
             os.makedirs(sge_base_dir)
 
@@ -200,7 +254,6 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         
         os.symlink(sge_dir, os.path.join(dirctry, '.sge'))
 
-
     ### assembly option string
     if use_reservation:
         option_str = ' -R y'
@@ -208,7 +261,10 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         option_str = ''
      
     #option_str += ' -l h_vmem=%iM -l s_vmem=%iM -soft -l h_cpu=%1.0f -hard ' % (Mem, Mem,  max(60, runtime*60))
-    option_str += '-l nodes=1:ppn=%i -l mem=%imb,vmem=%imb,pmem=%imb -l walltime=%1.0f' % (options['ncpus'], Mem, Mem,  Mem, max(60, runtime*60))
+    # TORQUE
+    #option_str += '-l nodes=1:ppn=%i -l mem=%imb,vmem=%imb,pmem=%imb -l walltime=%1.0f' % (options['ncpus'], Mem, Mem,  Mem, max(60, runtime*60))
+    #option_str += '-n %i -M %i -R "rusage[mem=%i]" -W %i' % (options['ncpus'], Mem, math.ceil(Mem / float(options['ncpus'])), max(60, runtime*60))
+    option_str += SCHED_MIN_OPTIONS.substitute(cores=str(options['ncpus']), mem=str(Mem), coremem=str(math.ceil(Mem / float(options['ncpus']))), time=str(max(60, runtime*60)))
 
     if environment == 'galaxy':
         option_str += ' -l parent=0.0 '
@@ -294,25 +350,30 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         envstr = '' 
 
     if options['immediately']:
-        str = '%s bash %s >> %s' % (envstr, m_fname, log_fname)
+        callstr = '%s bash %s >> %s' % (envstr, m_fname, log_fname)
     elif options['immediately_bg']:
-        str = '%s bash %s >> %s &' % (envstr, m_fname, log_fname)
+        callstr = '%s bash %s >> %s &' % (envstr, m_fname, log_fname)
     else:
       #str = 'echo \'%s hostname; bash %s >> %s\' | qsub -o %s -j y -r y %s -N %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, option_str, prefix, log_fname)
-      str = 'echo \'%s hostname; bash %s >> %s\' | qsub -o %s -j oe -r y %s -N %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, option_str, prefix, log_fname)
-      #print >> sys.stderr, str
-      #import pdb
-      #pdb.set_trace()
+      # TORQUE
+      #str = 'echo \'%s hostname; bash %s >> %s\' | qsub -o %s -j oe -r y %s -N %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, option_str, prefix, log_fname)
+      # LSF
+      #str = 'echo \'%s hostname; bash %s >> %s\' | bsub -o %s -e %s %s -J %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, qsublog_fname, option_str, prefix, log_fname)
+      callstr = SCHED_SUBMIT_CMD.substitute(env=envstr, script=m_fname, log=log_fname, qsub_log=qsublog_fname, options=option_str, name=prefix)
+
+      #print >> sys.stderr, callstr
 
     ### too verbose
     #if options['submit_now'] and options['verbosity']:
-    #    print str
+    #    print callstr
 
     # wait until we are allowed to submit again, i.e. #jobs < maxjobs
     if not options['immediately'] and not options['immediately_bg'] and options['waitonfull']:
         while True:
             try:
-                num_queued = int(subprocess.check_output('qstat -u' + os.environ['USER'] + '2> /dev/null | grep ' + os.environ['USER'] + '| wc -l | tr -d " "', shell=True).strip())
+                #num_queued = int(subprocess.check_output('qstat -u' + os.environ['USER'] + '2> /dev/null | grep ' + os.environ['USER'] + '| wc -l | tr -d " "', shell=True).strip())
+                #num_queued = int(subprocess.check_output('bjobs -u' + os.environ['USER'] + '2> /dev/null | grep ' + os.environ['USER'] + '| wc -l | tr -d " "', shell=True).strip())
+                num_queued = int(subprocess.check_output(SCHED_GET_JOB_NUMBER.substitute(user=os.environ['USER']), shell=True).strip())
             except:
                 print >> sys.stderr, 'WARNING: could not determine how many jobs are scheduled'
                 break
@@ -348,28 +409,32 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
                     break
             time.sleep(2)
       
-        p1 = subprocess.Popen(['echo', str], stdout=subprocess.PIPE)
+        p1 = subprocess.Popen(['echo', callstr], stdout=subprocess.PIPE)
         p2 = subprocess.Popen(['bash'], stdin=p1.stdout, stdout=subprocess.PIPE)
         p2.communicate()
         ret = p2.returncode
         if ret != 0:
-            print >> sys.stderr, 'submission failed:\n\tsubmission string: %s\n\treturn code: %i' % (str, ret)
+            print >> sys.stderr, 'submission failed:\n\tsubmission string: %s\n\treturn code: %i' % (callstr, ret)
         jobinfo.submission_time = time.time()
       
+        ### grab job ID from submission log file
         if not options['immediately'] and not options['immediately_bg']:
             fd = open(log_fname, 'r')
             jobinfo.jobid = -1
             if fd:
-              s = fd.read().strip()
-              items = s.split('.')
-              if not ((items[1] == 'mskcc-fe1') and (items[2] == 'local')):
-                  print >> sys.stderr, str
-                  print >> sys.stderr, 'ERROR: submission failed: %s' % s
-                  sys.exit(1)
-              jobinfo.jobid = int(items[0])
-              fd.close()
-      
-              rproc_register('submit', jobinfo)
+                s = fd.read().strip()
+
+                items = eval(SCHED_JOB_ID_SPLIT.substitute(var='s'))
+                try:
+                    jobinfo.jobid = int(items[0])
+                except:
+                    print >> sys.stderr, callstr
+                    print >> sys.stderr, 'ERROR: submission failed: %s' % s
+                    sys.exit(1)
+                fd.close()
+                rproc_register('submit', jobinfo)
+            else:
+                print  >> sys.stderr, '%s does not exist' % log_fname
         else:
             jobinfo.jobid = 0 
     else:
@@ -448,7 +513,6 @@ def rproc_cmd(unix_cmd, jobinfo):
         if len(jobinfo[i].jobid) > 0 and jobinfo[i].jobid != -1:
             subprocess.call([unix_cmd, jobinfo[i].jobid])
 
-
 def rproc_create(ProcName, P1, Mem=100, options=[], runtime=144000):
     # [jobinfo]=rproc(ProcName, P1, Mem, options, time)
     #
@@ -468,7 +532,7 @@ def rproc_create(ProcName, P1, Mem=100, options=[], runtime=144000):
 
     return jobinfo
 
-def rproc_empty(N = None):
+def rproc_empty(N=None):
     """Create jobinfo list"""
   
     if N is None:
@@ -496,20 +560,24 @@ def rproc_finished(jobinfo):
 
 def rproc_kill(jobinfo):
 
+    global SCHED_KILL_JOB
     if jobinfo == 'wait':
         global rproc_wait_jobinfo
         jobinfo = rproc_wait_jobinfo
 
     for i in range(len(jobinfo)):  
         if len(jobinfo[i].jobid) and jobinfo[i].jobid > 0:
-            subprocess.call('qdel', jobinfo[i].jobid, '2>', '/dev/null')
+            subprocess.call(SCHED_KILL_JOB, jobinfo[i].jobid, '2>', '/dev/null')
             rproc_register('kill', jobinfo[i])
 
 def rproc_reached_timelimit(jobinfo):
     # [result, jobwalltime] = rproc_reached_timelimit(jobinfo)
 
+    global SCHED_GET_JOB_RUNTIME
     #str_ = 'qacct -j %i | grep ru_wallclock|sed \'s/ru_wallclock//g\'' % jobinfo.jobid
-    str_ = 'qstat -f %i | grep resources_used.walltime | sed -e "s/.*= //g"' % jobinfo.jobid
+    #str_ = 'qstat -f %i | grep resources_used.walltime | sed -e "s/.*= //g"' % jobinfo.jobid
+    #str_ = 'bjobs -o run_time %i | tail -n +2 | sed -e "s/ .*//g"' % (jobinfo.jobid)
+    str_ = SCHED_GET_JOB_RUNTIME.substitute(jobid=jobinfo.jobid)
     w = subprocess.check_output(str_, shell=True)
     ## TODO use save Popen for pipeline
 
@@ -623,9 +691,20 @@ def rproc_result(jobinfo, read_attempts=None):
 
     return (retval1, retval2)
 
-
 def rproc_still_running(jobinfo):
 # [still_running, line, start_time, status] = rproc_still_running(jobinfo);
+
+    global SCHEDULER
+
+    # SCHED_JOB_STATUS
+    if SCHEDULER == 'torque':
+        qstat_command = ['qstat', '-u', os.environ['USER']]
+    elif SCHEDULER == 'sge':
+        qstat_command = ['qstat', '-u', os.environ['USER']]
+    elif SCHEDULER == 'lsf':
+        qstat_command = ['bjobs', '-u', os.environ['USER']]
+    elif SCHEDULER == 'slurm':
+        qstat_command = ['qstat', '-u', os.environ['USER']] 
 
     status = 0
     still_running = 0
@@ -641,7 +720,7 @@ def rproc_still_running(jobinfo):
     curtime = time.time()
     if rproc_nqstat_time is None or (curtime - rproc_nqstat_time > 0.5e-4):
         try:
-            text = subprocess.check_output(['qstat', '-u', os.environ['USER']])
+            text = subprocess.check_output(qstat_command)
             rproc_nqstat_output = text
             rproc_nqstat_time = curtime
         except subprocess.CalledProcessError as e:
@@ -657,7 +736,7 @@ def rproc_still_running(jobinfo):
     
     for line in text.strip().split('\n'):
         if len(line) > 0:
-            items = line.split(' ')
+            items = re.sub(r' +', ' ', line).split(' ')
             if not os.environ['USER'] in items:
                 continue
             for j in range(len(items)): #assume that first non-empty item is the jobid
@@ -679,6 +758,18 @@ def rproc_still_running(jobinfo):
 
 def get_status(items):
 # status = get_status(items)
+    global SCHEDULER
+
+    #SCHED_STATUS_IDX
+    if SCHEDULER == 'torque':
+        status_idx = 10
+    elif SCHEDULER == 'sge':
+        status_idx = None
+    elif SCHEDULER == 'lsf':
+        status_idx = 2
+    elif SCHEDULER == 'slurm':
+        status_idx = 5
+
     status = ''
     num = 0
     for j in range(len(items)):
@@ -691,8 +782,19 @@ def get_status(items):
 
 def check_status(status):
 # ret = check_status(status)
-    #if status in ['t', 'Eqw', 'dt', 'dr']:
-    if status in ['E', 'C', 'S']:
+    global SCHEDULER
+    
+    #SCHED_STATUS_LIST
+    if SCHEDULER == 'torque':
+        status_list = ['E', 'C', 'S']
+    elif SCHEDULER == 'sge':
+        status_list = ['d', 'E', 't', 's', 'S'] 
+    elif SCHEDULER == 'lsf':
+        status_list = ['USUSP', 'SSUSP', 'DONE', 'EXIT', 'ZOMBI']
+    elif SCHEDULER == 'slurm':
+        status_list = ['t', 'Eqw', 'dt', 'dr']
+
+    if status in status_list:
     	return 0
     else:
         return 1
@@ -768,7 +870,6 @@ def rproc_submit_batch(jobinfo, blocksize):
 
     return (jobinfo, meta_jobinfo)
 
-
 def rproc_submit_batch_helper(parameters):
     # x = rproc_submit_batch_helper(parameters)
 
@@ -792,7 +893,6 @@ def rproc_submit_batch_helper(parameters):
         os.remove(fname) # data file
 
     return 0
-
 
 def rproc_time_since_submission(jobinfo):
     # time = rproc_time_since_submission(jobinfo)
@@ -873,6 +973,7 @@ def rproc_wait(jobinfo, pausetime=120, frac_finished=1.0, resub_on=1, verbosity=
             ### hard_time_limit in minutes
             if len(jobinfo[id].start_time) > 0 and 24 * 60 * (time.time() - jobinfo[id].start_time) > jobinfo[id].hard_time_limit:
                 print 'delete job (%i) because hard time limit (%imin) was reached\n' % (jobinfo[id].jobid, jobinfo[id].hard_time_limit)
+                #SCHED_DELETE_JOB
                 subprocess.call(['qdel', str(jobinfo[id].jobid)])
         if verbosity >= 1:
             print '\n%i of %i jobs finished (%i of them crashed) \n' % (num_finished, num_jobs, num_crashed)
@@ -921,7 +1022,6 @@ def start_proc(fname, data_fname, rm_flag=True):
     if 'rm_flag' in options:
         rm_flag = options['rm_flag']
 
-    
     ### create environment
     import_list = []
     for mod in options['imports']:
@@ -944,7 +1044,6 @@ def start_proc(fname, data_fname, rm_flag=True):
                                 import scipy
                                 import_list.append('scipy')
                                 continue
-                            #print '%s = imp.load_module(\'%s\', f, fn, des)' % ('.'.join(mod_sl[:m+1]), '.'.join(mod_sl[:m+1]))
                             exec('%s = imp.load_module(\'%s\', f, fn, des)' % ('.'.join(mod_sl[:m+1]), '.'.join(mod_sl[:m+1])))
                             import_list.append('.'.join(mod_sl[:m+1]))
                         except:
@@ -965,9 +1064,11 @@ def start_proc(fname, data_fname, rm_flag=True):
 
     retval1 = []
     retval2 = []
-
     try:
-        exec('from %s import %s' % (callfile[0], ProcName))
+        if callfile[0] == '__main__':
+            exec('from %s import %s' % (re.sub(r'.py$', '', callfile[1]), ProcName))
+        else:
+            exec('from %s import %s' % (callfile[0], ProcName))
 
         if len(P1) > 0:
             retval = eval('%s(P1)' % ProcName)
@@ -1001,6 +1102,14 @@ def start_proc(fname, data_fname, rm_flag=True):
     print '### job finished %s' % time.strftime('%Y-%m-%d %H:%S')
 
 def split_walltime(time_str):
+    """ Transform wallclock time string into integer of seconds
+
+    Arguments:
+        time_str -- time stamp of the format hours:minutes:seconds
+
+    Return values:
+        seconds -- integer containing number of seconds expressed by time_str
+    """
 
     factors = [1, 60, 3600, 86400]
     seconds = 0
@@ -1012,11 +1121,11 @@ def split_walltime(time_str):
             print >> sys.stderr, 'WARNING: walltime computation exceeds max value'
     return seconds
 
-
 def get_subpaths(sl):
 
     return ['/'.join(sl[:len(sl)-i]) for i in range(len(sl) - 1)]
 
 if __name__ == "__main__":
     
+    _set_scheduler()
     start_proc(sys.argv[1], sys.argv[2])
