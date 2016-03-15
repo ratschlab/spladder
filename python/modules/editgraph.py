@@ -302,7 +302,7 @@ def insert_intron_retentions(genes, CFG):
                     else:
                         tracks = None
                         for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:
@@ -555,7 +555,7 @@ def insert_intron_edges(genes, CFG):
                             else:
                                 tracks = None
                                 for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
@@ -651,7 +651,7 @@ def insert_intron_edges(genes, CFG):
                             else:
                                 tracks = None
                                 for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
@@ -860,7 +860,7 @@ def insert_cassette_exons(genes, CFG):
                     else:
                         tracks = None
                         for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:

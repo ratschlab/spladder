@@ -545,10 +545,16 @@ def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, s
                     p += o[1]
 
     ### convert introns into scipy array
-    introns_p = sp.array([[k[0], k[1], v] for k, v in introns_p.iteritems()], dtype='uint32')
-    introns_p = sort_rows(introns_p)
-    introns_m = sp.array([[k[0], k[1], v] for k, v in introns_m.iteritems()], dtype='uint32')
-    introns_m = sort_rows(introns_m)
+    if len(introns_p) >= 1:
+        introns_p = sp.array([[k[0], k[1], v] for k, v in introns_p.iteritems()], dtype='uint32')
+        introns_p = sort_rows(introns_p)
+    else:
+        introns_p = sp.zeros(shape=(0, 3), dtype='uint32')
+    if len(introns_m) >= 1:
+        introns_m = sp.array([[k[0], k[1], v] for k, v in introns_m.iteritems()], dtype='uint32')
+        introns_m = sort_rows(introns_m)
+    else:
+        introns_m = sp.zeros(shape=(0, 3), dtype='uint32')
     ### make read matrix sparse
     if not stranded:
         read_matrix = scipy.sparse.coo_matrix(read_matrix[[0], :], dtype='uint32')

@@ -74,12 +74,20 @@ def collect_events(CFG):
                 genes_fnames = '%s/spladder/genes_graph_conf%i%s.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], rep_tag, CFG['merge_strategy'], validate_tag)
 
             ### define outfile names
-            fn_out_ir = '%s/%s_intron_retention%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
-            fn_out_es = '%s/%s_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
-            fn_out_mes = '%s/%s_mult_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level']) 
-            fn_out_a5 = '%s/%s_alt_5prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
-            fn_out_a3 = '%s/%s_alt_3prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
-            fn_out_mex = '%s/%s_mutex_exons%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+            if CFG['merge_strategy'] == 'single':
+                fn_out_ir = '%s/%s_intron_retention%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][i], rep_tag, CFG['confidence_level'])
+                fn_out_es = '%s/%s_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][i], rep_tag, CFG['confidence_level'])
+                fn_out_mes = '%s/%s_mult_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][i], rep_tag, CFG['confidence_level']) 
+                fn_out_a5 = '%s/%s_alt_5prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][i], rep_tag, CFG['confidence_level'])
+                fn_out_a3 = '%s/%s_alt_3prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][i], rep_tag, CFG['confidence_level'])
+                fn_out_mex = '%s/%s_mutex_exons%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][i], rep_tag, CFG['confidence_level'])
+            else:
+                fn_out_ir = '%s/%s_intron_retention%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+                fn_out_es = '%s/%s_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+                fn_out_mes = '%s/%s_mult_exon_skip%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level']) 
+                fn_out_a5 = '%s/%s_alt_5prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+                fn_out_a3 = '%s/%s_alt_3prime%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
+                fn_out_mex = '%s/%s_mutex_exons%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], rep_tag, CFG['confidence_level'])
 
             if do_intron_retention:
                 intron_reten_pos[ridx, i] = []
