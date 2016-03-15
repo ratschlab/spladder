@@ -362,7 +362,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
             if fd:
               s = fd.read().strip()
               items = s.split('.')
-              if not ((items[1] == 'mskcc-fe1') and (items[2] == 'local')):
+              if not ((items[1] == 'hal-sched1') and (items[2] == 'local')):
                   print >> sys.stderr, str
                   print >> sys.stderr, 'ERROR: submission failed: %s' % s
                   sys.exit(1)
