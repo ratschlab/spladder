@@ -310,8 +310,12 @@ def spladder():
     if CFG['run_as_analysis']:
         collect_events(CFG)
 
-        for e_idx in range(len(CFG['event_types'])):
-            analyze_events(CFG, CFG['event_types'][e_idx])
+        for idx in idxs:
+            for e_idx in range(len(CFG['event_types'])):
+                if CFG['merge_strategy'] == 'single':
+                    analyze_events(CFG, CFG['event_types'][e_idx], sample_idx=idx)
+                else:
+                    analyze_events(CFG, CFG['event_types'][e_idx])
 
 
 if __name__ == "__main__":

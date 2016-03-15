@@ -13,7 +13,7 @@ from write import *
 from ..rproc import rproc, rproc_wait
 from ..helpers import compute_psi
 
-def _prepare_count_hdf5(CFG, OUT, events, event_features):
+def _prepare_count_hdf5(CFG, OUT, events, event_features, sample_idx=None):
     
     ### load gene info
     if 'spladder_infile' in CFG and os.path.exists(CFG['spladder_infile']):
@@ -25,7 +25,10 @@ def _prepare_count_hdf5(CFG, OUT, events, event_features):
         validate_tag = ''
         if CFG['validate_splicegraphs']:
             validate_tag = '.validated'
-        (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
+        if not sample_idx is None:
+            (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][sample_idx], validate_tag, prune_tag)))
+        else:
+            (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
 
     ### write strain and gene indices to hdf5
     OUT.create_dataset(name='strains', data=CFG['strains'])
@@ -38,7 +41,7 @@ def _prepare_count_hdf5(CFG, OUT, events, event_features):
     OUT.create_dataset(name='gene_pos', data=sp.array([[x.start, x.stop] for x in genes], dtype='int'))
 
 
-def analyze_events(CFG, event_type):
+def analyze_events(CFG, event_type, sample_idx=None):
 
     if CFG['rproc'] and not os.path.exists('%s/event_count_chunks' % CFG['out_dirname']):
         os.makedirs('%s/event_count_chunks' % CFG['out_dirname'])
@@ -52,7 +55,10 @@ def analyze_events(CFG, event_type):
         else:
             rep_tag = ''
 
-        fn_out = '%s/%s_%s%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], event_type, rep_tag, CFG['confidence_level'])
+        if CFG['merge_strategy'] == 'single':
+            fn_out = '%s/%s_%s%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][sample_idx], event_type, rep_tag, CFG['confidence_level'])
+        else:
+            fn_out = '%s/%s_%s%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], event_type, rep_tag, CFG['confidence_level'])
         fn_out_conf = fn_out.replace('.pickle', '.confirmed.pickle')
         fn_out_count = fn_out.replace('.pickle', '.counts.hdf5')
 
@@ -100,7 +106,7 @@ def analyze_events(CFG, event_type):
             if sp.sum([x.event_type == event_type for x in events_all]) == 0:
                 OUT = h5py.File(fn_out_count, 'w')
                 OUT.create_dataset(name='event_counts', data=[0])
-                _prepare_count_hdf5(CFG, OUT, events_all, event_features)
+                _prepare_count_hdf5(CFG, OUT, events_all, event_features, sample_idx=sample_idx)
                 OUT.close()
                 confirmed_idx = sp.array([], dtype='int')
             else:
@@ -117,7 +123,7 @@ def analyze_events(CFG, event_type):
                     OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
                     OUT.create_dataset(name='psi', data=psi, compression='gzip')
                     OUT.create_dataset(name='gene_idx', data=sp.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
-                    _prepare_count_hdf5(CFG, OUT, events_all, event_features)
+                    _prepare_count_hdf5(CFG, OUT, events_all, event_features, sample_idx=sample_idx)
                 else:
                     jobinfo = []
                     PAR = dict()
@@ -185,7 +191,7 @@ def analyze_events(CFG, event_type):
                     assert(sp.all([sp.all(events_all[e].exons1 == events_all_[e].exons1) for e in range(events_all.shape[0])]))
                     OUT.create_dataset(name='gene_idx', data=gene_idx_)
                     events_all = events_all_
-                    _prepare_count_hdf5(CFG, OUT, events_all, event_features)
+                    _prepare_count_hdf5(CFG, OUT, events_all, event_features, sample_idx=sample_idx)
                 
                 ### write more event infos to hdf5
                 if event_type == 'exon_skip':
