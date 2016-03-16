@@ -77,7 +77,10 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
     inferred_genes = False
     for line in open(infile, 'r'):
         if CFG is not None and CFG['verbose'] and counter % 10000 == 0:
-            print >> sys.stderr, '.',
+            sys.stdout.write('.')
+            if counter % 100000 == 0:
+                sys.stdout.write(' %i lines processed\n' % counter)
+            sys.stdout.flush()
         counter += 1        
 
         if line[0] == '#':
@@ -132,6 +135,9 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
 
     ### convert to scipy array
     genes = sp.array([genes[gene] for gene in genes], dtype='object')
+
+    ### check for consistency and validity of genes
+    genes = check_annotation(CFG, genes)
 
     if CFG is not None and CFG['verbose']:
         print >> sys.stderr, "... done"
@@ -208,8 +214,12 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
 
     counter = 1
     for line in open(infile, 'r'):
+
         if CFG is not None and CFG['verbose'] and counter % 10000 == 0:
-            print >> sys.stderr, '.',
+            sys.stdout.write('.')
+            if counter % 100000 == 0:
+                sys.stdout.write(' %i lines processed\n' % counter)
+            sys.stdout.flush()
         counter += 1        
 
         if line[0] == '#':
@@ -246,6 +256,9 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
 
     ### convert to scipy array
     genes = sp.array([genes[gene] for gene in genes], dtype='object')
+
+    ### check for consistency and validity of genes
+    genes = check_annotation(CFG, genes)
 
     if CFG is not None and CFG['verbose']:
         print >> sys.stderr, "... done"
@@ -313,3 +326,36 @@ def init_regions(fn_bams, CFG=None):
         break
 
     return (sp.array(regions, dtype = 'object'), CFG)
+
+
+def check_annotation(CFG, genes):
+    
+    if CFG['verbose']:
+        print '\n... checking annotation'
+
+    ### check whether exons are part of multiple genes
+    exon_map = dict()
+    for i, g in enumerate(genes):
+        for t in range(len(g.exons)):
+            for e in range(g.exons[t].shape[0]):
+                k = frozenset(g.exons[t][e, :])
+                if k in exon_map:
+                    exon_map[k].append(g.name)
+                else:
+                    exon_map[k] = [g.name]
+    rm_ids = []
+    for exon in exon_map:
+        if sp.unique(exon_map[exon]).shape[0] > 1:
+            rm_ids.extend(exon_map[exon])
+    if len(rm_ids) > 0:
+        rm_ids = sp.unique(rm_ids)
+        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that share exact exon coordines:' % rm_ids.shape[0]
+        print >> sys.stderr, 'list of excluded exons written to: %s' % (CFG['anno_fname'] + '.excluded_exons')
+        sp.savetxt(CFG['anno_fname'] + '.excluded_exons', rm_ids, fmt='%s', delimiter='\t')
+        gene_names = sp.array([x.name for x in genes], dtype='str')
+        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+        genes = genes[k_idx]
+
+    return genes
+
+
