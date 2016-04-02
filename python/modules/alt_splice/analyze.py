@@ -110,7 +110,6 @@ def analyze_events(CFG, event_type, sample_idx=None):
                 OUT.close()
                 confirmed_idx = sp.array([], dtype='int')
             else:
-                OUT = h5py.File(fn_out_count, 'w')
                 if not CFG['rproc']:
                     #events_all = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'][replicate, :], event_type, CFG)
                     # TODO handle replicate setting
@@ -120,6 +119,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                     for i in xrange(counts.shape[2]):
                         psi[:, i] = compute_psi(counts[:, :, i], event_type, CFG) 
 
+                    OUT = h5py.File(fn_out_count, 'w')
                     OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
                     OUT.create_dataset(name='psi', data=psi, compression='gzip')
                     OUT.create_dataset(name='gene_idx', data=sp.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
@@ -152,6 +152,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                     events_all_ = []
                     gene_idx_ = []
                     print 'Collecting results from chunks ...'
+                    OUT = h5py.File(fn_out_count, 'w')
                     for i in range(0, events_all.shape[0], chunk_size_events):
                         idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
@@ -225,7 +226,11 @@ def analyze_events(CFG, event_type, sample_idx=None):
 
                 ### close HDF5
                 OUT.close()
-
+    
+            ### make verified matrix bool
+            for ev in events_all:
+                ev.verified = ev.verified.astype('bool')
+    
             ### save events
             cPickle.dump((events_all, events_all_strains), open(fn_out, 'w'), -1)
             cPickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)

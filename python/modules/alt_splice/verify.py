@@ -443,13 +443,16 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         ev = ev[s_idx]
         old_idx = sp.argsort(s_idx)
 
-        ### find gene idx boundaries
-
-
-
         counts = []
         for i in range(ev.shape[0]):
+            
+            #sys.stdout.write('.')
+            #if i > 0 and i % 50 == 0:
+            #    sys.stdout.write('%i (%i)\n' % (i, ev.shape[0]))
+            #sys.stdout.flush()
+        
             g_idx = ev[i].gene_idx
+            ev[i].verified = [] ### TODO: maybe solve that differently
 
             ### there are no edges present in the event
             if gene_ids_edges.shape[0] == 0:
@@ -475,8 +478,9 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
             for s_idx in range(len(strain_idx)):
                 #sys.stdout.write('.')
                 #if s_idx > 0 and s_idx % 50 == 0:
-                #    sys.stdout.write('%i\n' % s_idx)
+                #    sys.stdout.write('%i (%i)\n' % (s_idx, len(strain_idx)))
                # ev_tmp.subset_strain(s_idx) ### TODO 
+                #sys.stdout.flush()
                 if event_type == 'exon_skip':
                     ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
                 elif event_type in ['alt_3prime', 'alt_5prime']:

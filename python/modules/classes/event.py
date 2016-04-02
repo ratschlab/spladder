@@ -12,7 +12,6 @@ class Event:
         self.exons2 = sp.zeros((0, 2), dtype = 'int')
         self.exons1_col = sp.zeros((2, 0), dtype = 'int')
         self.exons2_col = sp.zeros((2, 0), dtype = 'int')
-        self.p_values = None
         self.gene_name = None
         self.transcript_type = None
         self.num_detected = None
