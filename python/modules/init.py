@@ -267,7 +267,10 @@ def parse_header(header_string):
 
     for line in header_string.strip('\n').split('\n'):
         sl = line.strip().split('\t')
-        td = dict([x.split(':', 1) for x in sl[1:]])    
+        ### ignore comment lines
+        if sl[0] == '@CO':
+            continue
+        td = dict([x.split(':', 1) for x in sl[1:] if ':' in x])    
         try:
             hd[sl[0].strip('@')].append(td)
         except KeyError:
