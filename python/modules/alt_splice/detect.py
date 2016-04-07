@@ -9,7 +9,7 @@ import signal as sig
 
 from ..helpers import log_progress
 
-def detect_multipleskips(genes, gidx, log=False, edge_limit=1000):
+def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
     # [idx_multiple_skips, exon_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
 
     idx_multiple_skips = []
