@@ -69,10 +69,11 @@ def analyze_events(CFG, event_type, sample_idx=None):
         fn_out_conf_bed = fn_out_conf.replace('.pickle', '.bed')
         fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt')
         fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt')
+        fn_out_conf_icgc = fn_out_conf.replace('.pickle', '.icgc.txt.gz')
         fn_out_conf_gff3 = fn_out_conf.replace('.pickle', '.gff3')
 
         ### check if there is anything to do
-        if os.path.exists(fn_out_txt) and os.path.exists(fn_out_conf_txt) and os.path.exists(fn_out_conf_tcga) and os.path.exists(fn_out_conf_gff3):
+        if os.path.exists(fn_out_txt) and os.path.exists(fn_out_conf_txt) and os.path.exists(fn_out_conf_tcga) and os.path.exists(fn_out_conf_icgc) and os.path.exists(fn_out_conf_gff3):
             print 'All output files for %s exist.\n' % event_type
             continue
 
@@ -293,6 +294,13 @@ def analyze_events(CFG, event_type, sample_idx=None):
                 print '%s already exists' % fn_out_conf_tcga
             else:
                 write_events_tcga(fn_out_conf_tcga, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+
+        if CFG['output_confirmed_icgc']:
+            if os.path.exists(fn_out_conf_icgc):
+                print '%s already exists' % fn_out_conf_icgc
+            else:
+                write_events_icgc(fn_out_conf_icgc, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+
 
         if CFG['output_filtered_txt']:
             fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')

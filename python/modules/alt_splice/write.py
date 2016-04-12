@@ -2,6 +2,7 @@ import sys
 import os
 import scipy as sp
 import h5py
+import gzip
 
 def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, anno_fn=None):
     # write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, anno_fn)
@@ -114,6 +115,74 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
     IN.close()
 
 
+def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
+    # write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None)
+
+    if events.shape[0] == 0:
+        print >> sys.stderr, 'WARNING: No events present.'
+        return
+
+    if event_idx is None:
+        event_idx = sp.arange(events.shape[0])
+
+    event_type = events[0].event_type
+
+    print 'writing %s events in ICGC format to %s' % (events[0].event_type, fn_out)
+
+    ### load counts from hdf5
+    IN = h5py.File(fn_counts, 'r')
+
+    fd = gzip.open(fn_out, 'w')
+    fd.write('event_id\tevent_type\tevent_chr\tevent_coordinates\talt_region_coordinates\tgene_name')
+    for s in strains:
+        fd.write('\t%s' % s)
+    fd.write('\n')
+
+    event_type_dict = {'intron_retention':'IR',
+                       'exon_skip':'ES',
+                       'mult_exon_skip':'MES',
+                       'alt_3prime':'A3',
+                       'alt_5prime':'A5',
+                       'mutex_exons':'MEX'}
+
+    for i in event_idx:
+        psi = IN['psi'][:, i]
+        if sp.all(sp.isnan(psi)):
+            continue
+
+        fd.write('%s_%s\t%s\t%s\t' % (event_type, events[i].id, event_type_dict[event_type], events[i].chr))
+        if event_type == 'intron_retention':
+            fd.write('%i:%i:%i:%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1]))
+            fd.write('\t%i:%i' % (events[i].exons1[0, 1], events[i].exons1[1, 0]))
+        elif event_type in ['alt_3prime', 'alt_5prime']:
+            if sp.all(events[i].exons1[0, :] == events[i].exons2[0, :]):
+                fd.write('%i:%i:%i:%i:%i:%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1]))
+                fd.write('\t%i:%i' % (min(events[i].exons1[1, 0], events[i].exons2[1, 0]), max(events[i].exons1[1, 0], events[i].exons2[1, 0])))
+            else:
+                fd.write('%i:%i:%i:%i:%i:%i' % (events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons2[0, 0], events[i].exons2[0, 1]))
+                fd.write('\t%i:%i' % (min(events[i].exons1[0, 1], events[i].exons2[0, 1]), max(events[i].exons1[0, 1], events[i].exons2[0, 1])))
+        elif event_type == 'exon_skip':
+            fd.write('%i:%i:%i:%i:%i:%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons2[2, 0], events[i].exons2[2, 1]))
+            fd.write('\t%i:%i' % (events[i].exons2[1, 0], events[i].exons2[1, 1]))
+        elif event_type == 'mult_exon_skip':
+            fd.write('%i:%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1]))
+            for j in range(1, events[i].exons2.shape[0] - 1):
+                fd.write(':%i:%i' % (events[i].exons2[j, 0], events[i].exons2[j, 1]))
+            fd.write(':%i:%i' % (events[i].exons2[-1, 0], events[i].exons2[-1, 1]))
+            fd.write('\t')
+            for j in range(1, events[i].exons2.shape[0] - 1):
+                fd.write(':%i:%i' % (events[i].exons2[j, 0], events[i].exons2[j, 1]))
+        elif event_type == 'mutex_exons':
+            fd.write('%i:%i:%i:%i:%i:%i:%i:%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons1[2, 0], events[i].exons1[2, 1]))
+            fd.write('\t%i:%i:%i:%i' % (events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1]))
+        fd.write('\t%s' % events[i].gene_name[0])
+            
+        for j in range(len(strains)):
+            fd.write('\t%.6f' % psi[j])
+        fd.write('\n')
+    fd.close()
+
+
 def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
     # write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None)
 
@@ -137,7 +206,7 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
         print >> fd, '\t%s', s,
     print >> fd, '\n',
 
-    for i in range(events.shape[0]):
+    for i in event_idx:
         counts = IN['event_counts'][:, :, i]
 
         print >> fd, '%s\t%s\t%s:' % (events[i].gene_name[0], event_type, events[i].chr),

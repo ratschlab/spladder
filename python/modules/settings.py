@@ -151,6 +151,7 @@ def default_settings():
     CFG['output_confirmed_struc'] = False
     CFG['output_filtered_txt'] = False
     CFG['output_confirmed_tcga'] = False
+    CFG['output_confirmed_icgc'] = False
 
     ### settings for truncation detection mode
     CFG['detect_trunc'] = False
