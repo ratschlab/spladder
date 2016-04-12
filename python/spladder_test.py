@@ -729,7 +729,7 @@ def main():
             CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.mat' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
         else:
             CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
-            CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
+            CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
 
         condition_strains = None
         CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
