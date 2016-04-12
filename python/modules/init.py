@@ -74,6 +74,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
     CFG = append_chrms(sp.sort(sp.unique(chrms)), CFG)
 
     counter = 1
+    warn_infer_count = 0
     inferred_genes = False
     for line in open(infile, 'r'):
         if CFG is not None and CFG['verbose'] and counter % 10000 == 0:
@@ -116,7 +117,13 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
                     gene_type = tags['gene_biotype']
                 else:
                     gene_type = None
-                print >> sys.stderr, 'WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (infile, trans_id)
+
+                warn_infer_count += 1
+                if warn_infer_count < 5:
+                    print >> sys.stderr, 'WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (infile, trans_id)
+                elif warn_infer_count == 5:
+                    print >> sys.stderr, 'WARNING: too many warnings for inferred tags'
+                    
                 genes[gene_id] = Gene(name=gene_id, start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
                 t_idx = len(genes[gene_id].transcripts)
                 genes[gene_id].transcripts.append(trans_id)
@@ -124,8 +131,12 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
             genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
 
     ### post-process in case we have inferred genes
+    if warn_infer_count >= 5:
+        print >> sys.stderr, '\nWARNING: a total of %i cases had no gene level information annotated - information has been inferred from tags' % warn_infer_count
     if inferred_genes:
         for gene in genes:
+            if len(genes[gene].exons) == 0:
+                continue
             genes[gene].start = min([x.min() for x in genes[gene].exons])
             genes[gene].stop = max([x.max() for x in genes[gene].exons])
 
@@ -336,6 +347,39 @@ def check_annotation(CFG, genes):
     if CFG['verbose']:
         print '\n... checking annotation'
 
+    ### check whether genes have no exons annotated
+    rm_ids = []
+    for gene in genes:
+        if len(gene.exons) == 0:
+            rm_ids.append(gene.name)
+    if len(rm_ids) > 0:
+        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that had no exons annotated:' % len(rm_ids)
+        print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_no_exons')
+        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_no_exons', rm_ids, fmt='%s', delimiter='\t')
+        gene_names = sp.array([x.name for x in genes], dtype='str')
+        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+        genes = genes[k_idx]
+
+    ### check whether we run unstranded analysis and have to exclude overlapping gene annotations
+    ### TODO: make this also work for stranded analysis and only exclude genes overlapping on the same strand
+    rm_ids = []
+    chrms = sp.array([x.chr for x in genes])
+    starts = sp.array([x.start for x in genes], dtype='int')
+    stops = sp.array([x.stop for x in genes], dtype='int')
+    for c in sp.unique(chrms):
+        c_idx = sp.where(chrms == c)[0]
+        for i in c_idx:
+            if sp.sum((starts[i] <= stops[c_idx]) & (stops[i] >= starts[c_idx])) > 1:
+                rm_ids.append(genes[i].name)
+    if len(rm_ids) > 0:
+        rm_ids = sp.unique(rm_ids)
+        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0]
+        print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_gene_overlap')
+        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
+        gene_names = sp.array([x.name for x in genes], dtype='str')
+        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+        genes = genes[k_idx]
+
     ### check whether exons are part of multiple genes
     exon_map = dict()
     for i, g in enumerate(genes):
@@ -353,11 +397,32 @@ def check_annotation(CFG, genes):
     if len(rm_ids) > 0:
         rm_ids = sp.unique(rm_ids)
         print >> sys.stderr, 'WARNING: removing %i genes from given annotation that share exact exon coordines:' % rm_ids.shape[0]
-        print >> sys.stderr, 'list of excluded exons written to: %s' % (CFG['anno_fname'] + '.excluded_exons')
-        sp.savetxt(CFG['anno_fname'] + '.excluded_exons', rm_ids, fmt='%s', delimiter='\t')
+        print >> sys.stderr, 'list of excluded exons written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_shared')
+        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
         gene_names = sp.array([x.name for x in genes], dtype='str')
         k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
         genes = genes[k_idx]
+
+    ### check whether exons within the same transcript overlap
+    rm_ids = []
+    for i, g in enumerate(genes):
+        for t in range(len(g.exons)):
+            for e in range(g.exons[t].shape[0] - 1):
+                if sp.any(g.exons[t][e+1:, 0] < g.exons[t][e, 1]):
+                    rm_ids.append(g.name)
+    if len(rm_ids) > 0:
+        rm_ids = sp.unique(rm_ids)
+        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that have at least one transcript with overlapping exons.' % rm_ids.shape[0]
+        print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_overlap')
+        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
+        gene_names = sp.array([x.name for x in genes], dtype='str')
+        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+        genes = genes[k_idx]
+
+    ### do we have any genes left?
+    if genes.shape[0] == 0:
+        print >> sys.stderr, '\nERROR: there are no valid genes left in the input. Please verify correctnes of input annotation.\n'
+        sys.exit(1)
 
     return genes
 

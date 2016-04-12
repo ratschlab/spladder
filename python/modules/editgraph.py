@@ -463,7 +463,6 @@ def insert_intron_edges(genes, CFG):
                     ### find all exons that completely include added introns 
                     idx1__ = sp.where((genes[i].introns[s][j, 0] > genes[i].splicegraph.vertices[0, :]) & (genes[i].introns[s][j, 1] < genes[i].splicegraph.vertices[1, :]))[0]
                     for idx1_ in idx1__:
-
                         genes[i].splicegraph.vertices = sp.c_[genes[i].splicegraph.vertices, genes[i].splicegraph.vertices[:, idx1_]]
                         genes[i].splicegraph.vertices[1, -1] = genes[i].introns[s][j, 0]
                                 
@@ -602,7 +601,7 @@ def insert_intron_edges(genes, CFG):
                 if  not intron_used and CFG['intron_edges']['append_new_terminal_exons']:
                     inserted['new_terminal_exon'] += 1
 
-                    iregion = sp.array([[genes[i].introns[s][j, 0] - CFG['intron_edges']['append_new_terminal_exons_len']], [genes[i].introns[s][j, 0]]])
+                    iregion = sp.array([[max(0, genes[i].introns[s][j, 0] - CFG['intron_edges']['append_new_terminal_exons_len'])], [genes[i].introns[s][j, 0]]])
                     idx_iregion = sp.where((genes[i].introns[s][:, 1] >= iregion[0]) & (genes[i].introns[s][:, 1] < iregion[1]))[0]
                     if idx_iregion.shape[0] > 0:
                         if not idx_iregion.shape[0] == 1:
