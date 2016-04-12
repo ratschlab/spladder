@@ -381,6 +381,11 @@ def detect_events(genes, event_type, idx, CFG):
         ### integrate results in list into a coherent results list
         if len(result_list) > 0:
             result_list = [reduce(operator.add, [x[i] for x in result_list]) for i in range(len(result_list[0]))]
+        else:
+            if event_type == 'alt_prime':
+                result_list = [[], [], [], []]
+            else:
+                result_list = [[], []]
     else:
         result_list = detect_wrapper(genes[idx], event_type, idx, None, log=CFG['verbose'])[0]        
 
