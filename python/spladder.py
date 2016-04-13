@@ -68,7 +68,7 @@ def parse_options(argv):
     splice = OptionGroup(parser, 'SPLICE OPTIONS')
     splice.add_option('-T', '--extract_as', dest='extract_as', metavar='y|n', help='extract alternative splicing events [y]', default='y')
     splice.add_option('-A', '--curate_alt_prime', dest='curate_alt_prime', metavar='y|n', help='curate alt prime events [y]', default='y')
-    splice.add_option('-t', '--event_types', dest='event_types', metavar='y|n', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip')
+    splice.add_option('-t', '--event_types', dest='event_types', metavar='STRING', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip')
     #optional.add_option('-C', '--truncations', dest='truncations', metavar='y|n', help='truncation detection mode [n]', default='n')
     #optional.add_option('-', '--', dest='', metavar='y|n', help='', default=False)
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
