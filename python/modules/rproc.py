@@ -179,7 +179,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     if not 'verbosity' in options:
         options['verbosity'] = True
     if not 'maxjobs' in options:
-        options['maxjobs'] = 3000
+        options['maxjobs'] = 5000
     if not 'waitonfull' in options:
         options['waitonfull'] = True
     if not 'immediately' in options:
@@ -264,7 +264,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     # TORQUE
     #option_str += '-l nodes=1:ppn=%i -l mem=%imb,vmem=%imb,pmem=%imb -l walltime=%1.0f' % (options['ncpus'], Mem, Mem,  Mem, max(60, runtime*60))
     #option_str += '-n %i -M %i -R "rusage[mem=%i]" -W %i' % (options['ncpus'], Mem, math.ceil(Mem / float(options['ncpus'])), max(60, runtime*60))
-    option_str += SCHED_MIN_OPTIONS.substitute(cores=str(options['ncpus']), mem=str(Mem), coremem=str(math.ceil(Mem / float(options['ncpus']))), time=str(max(60, runtime*60)))
+    option_str += SCHED_MIN_OPTIONS.substitute(cores=str(options['ncpus']), mem=str(Mem), coremem=str(math.ceil(Mem / float(options['ncpus']))), time=str(max(60, runtime)))
 
     if environment == 'galaxy':
         option_str += ' -l parent=0.0 '
