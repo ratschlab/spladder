@@ -199,7 +199,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                 if event_type == 'exon_skip':
                     event_pos = sp.array([x.exons2.ravel() for x in events_all])
                 elif event_type == 'intron_retention':
-                    event_pos = sp.array([x.exons2.ravel() for x in events_all])
+                    event_pos = sp.array([x.exons1.ravel() for x in events_all])
                 elif event_type in ['alt_3prime', 'alt_5prime']:
                     event_pos = sp.array([unique_rows(sp.c_[x.exons1, x.exons2]).ravel() for x in events_all])
                 elif event_type == 'mult_exon_skip':
