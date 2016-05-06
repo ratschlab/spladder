@@ -680,8 +680,8 @@ def get_event_ids(IN, event_type, event_idx, CFG):
             event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [0, 1, 6, 7]].astype('str'))) for i in event_idx], dtype='str')
             event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [2, 3, 4, 5]].astype('str'))) for i in event_idx], dtype='str')
         elif event_type == 'mutex_exons':
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :4].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, 4:].astype('str'))) for i in event_idx], dtype='str')
+            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :, [0, 1, 3]].T.ravel().astype('str'))) for i in event_idx], dtype='str')
+            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :, [0, 2, 3]].T.ravel().astype('str'))) for i in event_idx], dtype='str')
         else:
             raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
             
