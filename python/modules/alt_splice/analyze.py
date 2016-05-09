@@ -12,7 +12,6 @@ from verify import *
 from write import *
 from ..rproc import rproc, rproc_wait
 from ..helpers import compute_psi
-from ..classes.event import EventInfo
 
 def _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=None):
     

@@ -395,7 +395,7 @@ def parse_args(options, identity='main'):
         if options.label != '-':
             CFG['samples'].append('%s_%s' % (options.label, re.sub(r'(.bam|.hdf5)$', '', CFG['bam_fnames'][i].split('/')[-1])))
         else:
-            CFG['samples'].append(re.sub(r'(.bam|.hdf5)$', '', CFG['bam_fnames'][i].split('/')[-1]))
+            CFG['samples'].append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', CFG['bam_fnames'][i].split('/')[-1]))
         CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))
     CFG['strains'] = sp.array(CFG['strains'])
 
