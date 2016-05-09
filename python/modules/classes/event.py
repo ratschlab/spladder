@@ -17,9 +17,6 @@ class Event:
         self.num_detected = None
         self.id = None
         self.detected = None
-        self.verified = []
-        self.num_verified = 0
-        self.confirmed = []
 
     def get_len(self, trafo=False):
 
