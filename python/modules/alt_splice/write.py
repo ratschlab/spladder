@@ -21,7 +21,10 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
 
     print 'writing %s events in flat txt format to %s' % (events[0].event_type, fn_out_txt)
 
-    fd = open(fn_out_txt, 'w+')
+    if fn_out_txt.endswith('.gz'):
+        fd = gzip.open(fn_out_txt, 'w+')
+    else:
+        fd = open(fn_out_txt, 'w+')
 
     if anno_fn is not None:
         gene_header = '\tgene_start\tgene_end'

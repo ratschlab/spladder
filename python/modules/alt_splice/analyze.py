@@ -64,9 +64,9 @@ def analyze_events(CFG, event_type, sample_idx=None):
         fn_out_count = fn_out.replace('.pickle', '.counts.hdf5')
 
         ### define result files
-        fn_out_txt = fn_out.replace('.pickle', '.txt')
+        fn_out_txt = fn_out.replace('.pickle', '.txt.gz')
         fn_out_struc = fn_out.replace('.pickle', '.struc.txt')
-        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt')
+        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt.gz')
         fn_out_conf_bed = fn_out_conf.replace('.pickle', '.bed')
         fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt')
         fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt')
