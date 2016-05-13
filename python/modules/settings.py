@@ -377,12 +377,14 @@ def parse_args(options, identity='main'):
             print >> sys.stderr, 'ERROR: option diagnose_plots should have value y or n, but has %s' % options.diagnose_plots
             sys.exit(1)
 
-        CFG['conditionA'] = [os.path.basename(x).replace('.bam', '') for x in options.conditionA.strip(',').split(',')]
-        CFG['conditionB'] = [os.path.basename(x).replace('.bam', '') for x in options.conditionB.strip(',').split(',')]
+        CFG['conditionA'] = [re.sub(r'.bam$', '', x) for x in options.conditionA.strip(',').split(',')]
+        CFG['conditionB'] = [re.sub(r'.bam$', '', x) for x in options.conditionB.strip(',').split(',')]
         if len(CFG['conditionA']) > 0 and CFG['conditionA'][0].lower().endswith('txt'):
             CFG['conditionA'] = [str(x) for x in sp.loadtxt(CFG['conditionA'][0], dtype='str')]
         if len(CFG['conditionB']) > 0 and CFG['conditionB'][0].lower().endswith('txt'):
             CFG['conditionB'] = [str(x) for x in sp.loadtxt(CFG['conditionB'][0], dtype='str')]
+        CFG['conditionA'] = [os.path.basename(x) for x in CFG['conditionA']]
+        CFG['conditionB'] = [os.path.basename(x) for x in CFG['conditionB']]
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
     if len(CFG['bam_fnames']) > 0 and CFG['bam_fnames'][0].split('.')[-1] == 'txt':
