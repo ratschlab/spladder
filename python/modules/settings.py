@@ -161,6 +161,8 @@ def default_settings():
     CFG['psi_min_reads'] = 10
     CFG['diagnose_plots'] = False
 
+    CFG['filter_overlapping_genes'] = True
+
     return CFG
 
 
@@ -262,6 +264,11 @@ def parse_args(options, identity='main'):
             CFG['output_confirmed_struc'] = (options.output_struc == 'y')
         else:
             print >> sys.stderr, 'ERROR: option output struc value y or n, but has %s' % options.output_struc
+
+        if options.filter_overlap_genes in ['n', 'y']:
+            CFG['filter_overlapping_genes'] = (options.filter_overlap_genes == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option filter overlap genes should have value y or n, but has %s' % options.filter_overlap_genes
     
         ### option to store sparse BAM representation
         if options.sparse_bam in ['n', 'y']:

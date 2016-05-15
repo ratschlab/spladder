@@ -48,6 +48,7 @@ def parse_options(argv):
     input.add_option('-n', '--readlen', dest='readlen', metavar='INT', type='int', help='read length (used for automatic confidence levele settings) [36]', default=36)
     input.add_option('-x', '--same_genome', dest='same_genome', metavar='y|n', help='input alignments share the same genome [y]', default='y')
     input.add_option('-F', '--spladderfile', dest='spladderfile', metavar='FILE', help='use existing SplAdder output file as input (advanced) [-]', default='-')
+    input.add_option('--filter_overlap_genes', dest='filter_overlap_genes', metavar='y|n', help='remove genes from annotation that overlap each other [off]', default='n')
     output = OptionGroup(parser, 'OUTPUT OPTIONS')
     output.add_option('-l', '--logfile', dest='logfile', metavar='FILE', help='log file name [stdout]', default='-')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')

@@ -206,9 +206,13 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
             continue
         sl = line.strip().split('\t')
         tags = get_tags_gff3(sl[8])
-        if sl[2] in ['mRNA', 'transcript', 'mrna', 'miRNA', 'tRNA', 'snRNA', 'snoRNA', 'ncRNA', 'rRNA', 'pseudogenic_transcript', 'transposon_fragment', 'mRNA_TE_gene']:
+        if sl[2].lower() in ['chromosome', 'contig', 'supercontig']:
+            continue
+        ### middle layer
+        if 'ID' in tags and 'Parent' in tags:
             trans2gene[tags['ID']] = tags['Parent']
-        elif sl[2] in ['gene', 'transposable_element_gene', 'pseudogene']:
+        ### root layer
+        elif 'ID' in tags and not 'Parent' in tags:
             try:
                 start = int(sl[3]) - 1
             except ValueError:
@@ -362,23 +366,24 @@ def check_annotation(CFG, genes):
 
     ### check whether we run unstranded analysis and have to exclude overlapping gene annotations
     ### TODO: make this also work for stranded analysis and only exclude genes overlapping on the same strand
-    rm_ids = []
-    chrms = sp.array([x.chr for x in genes])
-    starts = sp.array([x.start for x in genes], dtype='int')
-    stops = sp.array([x.stop for x in genes], dtype='int')
-    for c in sp.unique(chrms):
-        c_idx = sp.where(chrms == c)[0]
-        for i in c_idx:
-            if sp.sum((starts[i] <= stops[c_idx]) & (stops[i] >= starts[c_idx])) > 1:
-                rm_ids.append(genes[i].name)
-    if len(rm_ids) > 0:
-        rm_ids = sp.unique(rm_ids)
-        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0]
-        print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_gene_overlap')
-        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
-        gene_names = sp.array([x.name for x in genes], dtype='str')
-        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
-        genes = genes[k_idx]
+    if CFG['filter_overlapping_genes']:
+        rm_ids = []
+        chrms = sp.array([x.chr for x in genes])
+        starts = sp.array([x.start for x in genes], dtype='int')
+        stops = sp.array([x.stop for x in genes], dtype='int')
+        for c in sp.unique(chrms):
+            c_idx = sp.where(chrms == c)[0]
+            for i in c_idx:
+                if sp.sum((starts[i] <= stops[c_idx]) & (stops[i] >= starts[c_idx])) > 1:
+                    rm_ids.append(genes[i].name)
+        if len(rm_ids) > 0:
+            rm_ids = sp.unique(rm_ids)
+            print >> sys.stderr, 'WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0]
+            print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_gene_overlap')
+            sp.savetxt(CFG['anno_fname'] + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
+            gene_names = sp.array([x.name for x in genes], dtype='str')
+            k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+            genes = genes[k_idx]
 
     ### check whether exons are part of multiple genes
     exon_map = dict()

@@ -19,7 +19,7 @@ class Gene:
         if strand in ['+', '-']:
             self.strand = strand
         else:
-            warnings.warn('WARNING: strand of gene was provided as %s - automatically set to +')
+            warnings.warn('WARNING: strand of gene was provided as %s - automatically set to +') % strand
             self.strand = '+'
         self.transcripts = []
         self.source = source
