@@ -4,7 +4,7 @@ import scipy as sp
 import h5py
 import gzip
 
-def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, anno_fn=None):
+def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, anno_fn=None, compressed=False):
     # write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, anno_fn)
     
     if events.shape[0] == 0:
@@ -21,8 +21,8 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
 
     print 'writing %s events in flat txt format to %s' % (events[0].event_type, fn_out_txt)
 
-    if fn_out_txt.endswith('.gz'):
-        fd = gzip.open(fn_out_txt, 'w+')
+    if compressed:
+        fd = gzip.open(fn_out_txt + '.gz', 'w+')
     else:
         fd = open(fn_out_txt, 'w+')
 
@@ -118,8 +118,8 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
     IN.close()
 
 
-def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
-    # write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None)
+def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None, compressed=False):
+    # write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None, compressed=False)
 
     if events.shape[0] == 0:
         print >> sys.stderr, 'WARNING: No events present.'
@@ -135,7 +135,10 @@ def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
     ### load counts from hdf5
     IN = h5py.File(fn_counts, 'r')
 
-    fd = gzip.open(fn_out, 'w')
+    if compressed:
+        fd = gzip.open(fn_out + '.gz', 'w')
+    else:
+        fd = open(fn_out, 'w')
     fd.write('event_id\tevent_type\tevent_chr\tevent_coordinates\talt_region_coordinates\tgene_name')
     for s in strains:
         fd.write('\t%s' % s)

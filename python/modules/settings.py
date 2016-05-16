@@ -152,6 +152,7 @@ def default_settings():
     CFG['output_filtered_txt'] = False
     CFG['output_confirmed_tcga'] = False
     CFG['output_confirmed_icgc'] = False
+    CFG['compress_text'] = True
 
     ### settings for truncation detection mode
     CFG['detect_trunc'] = False
@@ -269,6 +270,11 @@ def parse_args(options, identity='main'):
             CFG['filter_overlapping_genes'] = (options.filter_overlap_genes == 'y')
         else:
             print >> sys.stderr, 'ERROR: option filter overlap genes should have value y or n, but has %s' % options.filter_overlap_genes
+    
+        if options.compress_text in ['n', 'y']:
+            CFG['compress_text'] = (options.compress_text == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option compress text should have value y or n, but has %s' % options.compress_text
     
         ### option to store sparse BAM representation
         if options.sparse_bam in ['n', 'y']:

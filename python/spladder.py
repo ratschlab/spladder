@@ -53,6 +53,7 @@ def parse_options(argv):
     output.add_option('-l', '--logfile', dest='logfile', metavar='FILE', help='log file name [stdout]', default='-')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     output.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
+    output.add_option('--compress_text', dest='compress_text', metavar='y|n', help='compress text output [y]', default='y')
     graph = OptionGroup(parser, 'GRAPH OPTIONS')
     graph.add_option('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
     graph.add_option('-I', '--iterations', dest='iterations', metavar='INT', type='int', help='number of iterations to insert new introns into the graph [5]', default=5)
