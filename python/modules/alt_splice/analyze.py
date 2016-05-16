@@ -63,13 +63,17 @@ def analyze_events(CFG, event_type, sample_idx=None):
         fn_out_count = fn_out.replace('.pickle', '.counts.hdf5')
 
         ### define result files
-        fn_out_txt = fn_out.replace('.pickle', '.txt')
+        if CFG['compress_text']:
+            gz_suffix = '.gz'
+        else:
+            gz_suffix = ''
+        fn_out_txt = fn_out.replace('.pickle', '.txt' + gz_suffix)
         fn_out_struc = fn_out.replace('.pickle', '.struc.txt')
-        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt')
+        fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt' + gz_suffix)
         fn_out_conf_bed = fn_out_conf.replace('.pickle', '.bed')
         fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt')
-        fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt')
-        fn_out_conf_icgc = fn_out_conf.replace('.pickle', '.icgc.txt')
+        fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt' + gz_suffix)
+        fn_out_conf_icgc = fn_out_conf.replace('.pickle', '.icgc.txt' + gz_suffix)
         fn_out_conf_gff3 = fn_out_conf.replace('.pickle', '.gff3')
 
         ### check if there is anything to do
@@ -242,7 +246,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
             if os.path.exists(fn_out_txt):
                 print '%s already exists' % fn_out_txt
             else:
-                write_events_txt(fn_out_txt, events_all, fn_out_count, compressed=CFG['compress_text'])
+                write_events_txt(fn_out_txt, events_all, fn_out_count)
 
         if CFG['output_struc']:
             if os.path.exists(fn_out_struc):
@@ -266,7 +270,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
             if os.path.exists(fn_out_conf_txt):
                 print '%s already exists' % fn_out_conf_txt
             else:
-                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx, compressed=CFG['compress_text'])
+                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_confirmed_bed']:
             if os.path.exists(fn_out_conf_bed):
@@ -284,13 +288,13 @@ def analyze_events(CFG, event_type, sample_idx=None):
             if os.path.exists(fn_out_conf_tcga):
                 print '%s already exists' % fn_out_conf_tcga
             else:
-                write_events_tcga(fn_out_conf_tcga, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx, compressed=CFG['compress_text'])
+                write_events_tcga(fn_out_conf_tcga, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_confirmed_icgc']:
             if os.path.exists(fn_out_conf_icgc):
                 print '%s already exists' % fn_out_conf_icgc
             else:
-                write_events_icgc(fn_out_conf_icgc, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx, compressed=CFG['compress_text'])
+                write_events_icgc(fn_out_conf_icgc, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_filtered_txt']:
             fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
@@ -299,7 +303,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
             else:
                 print '\nWriting filtered events (sample freq 0.05):'
                 cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * CFG['strains'].shape[0]))[0]
-                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx], compressed=CFG['compress_text'])
+                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
 
             fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
             if os.path.exists(fn_out_conf_txt):
@@ -307,4 +311,4 @@ def analyze_events(CFG, event_type, sample_idx=None):
             else:
                 print '\nWriting filtered events (sample freq 0.01):'
                 cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * CFG['strains'].shape[0]))[0]
-                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx], compressed=CFG['compress_text'])
+                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
