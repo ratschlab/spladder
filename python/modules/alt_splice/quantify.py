@@ -383,6 +383,7 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
             out_fn = PAR['out_fn']
         event_type = PAR['event_type']
         CFG = PAR['CFG']
+    strain_idx = sp.sort(strain_idx)
 
     ### read count_data from event HDF5
     IN = h5py.File(event_fn, 'r', driver='core')
