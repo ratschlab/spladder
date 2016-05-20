@@ -307,30 +307,30 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
         name = '%s.%i' % (ev.event_type, ev.id)
 
         if as_gtf:
-            print >> fd_out, '%s\t%s\tgene\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s"; gene_name "%s";' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, gene_name)
-            print >> fd_out, '%s\t%s\ttranscript\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso1"; gene_name "%s";' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, gene_name) 
+            print >> fd_out, '%s\t%s\tgene\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s"; gene_name "%s";' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, gene_name)
+            print >> fd_out, '%s\t%s\ttranscript\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso1"; gene_name "%s";' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, gene_name) 
             for i in range(ev.exons1.shape[0]):
-                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso1"; exon_id "%s_iso1_exon%i"' % (ev.chr, ev.event_type, ev.exons1[i, 0], ev.exons1[i, 1], ev.strand, name, name, name, i+1)
-            print >> fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; gene_name "%s"' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, gene_name)
+                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso1"; exon_id "%s_iso1_exon%i"' % (ev.chr, ev.event_type, ev.exons1[i, 0] + 1, ev.exons1[i, 1], ev.strand, name, name, name, i+1)
+            print >> fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; gene_name "%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, gene_name)
             ex_cnt = 1
             if ev.event_type == 'intron_retention':
-                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; exon_id "%s_iso2_exon1";' % (ev.chr, ev.event_type, ev.exons2[0], ev.exons2[1], ev.strand, name, name, name)
+                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; exon_id "%s_iso2_exon1";' % (ev.chr, ev.event_type, ev.exons2[0] + 1, ev.exons2[1], ev.strand, name, name, name)
                 ex_cnt += 1
             else:
                 for i in range(ev.exons2.shape[0]):
-                    print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; exon_id "%s_iso2_exon%i";' % (ev.chr, ev.event_type, ev.exons2[i, 0], ev.exons2[i, 1], ev.strand, name, name, name, ex_cnt)
+                    print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; exon_id "%s_iso2_exon%i";' % (ev.chr, ev.event_type, ev.exons2[i, 0] + 1, ev.exons2[i, 1], ev.strand, name, name, name, ex_cnt)
                     ex_cnt += 1
         else:
-            print >> fd_out, '%s\t%s\tgene\t%i\t%i\t.\t%c\t.\tID=%s;GeneName="%s"' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, ev.gene_name[0])
-            print >> fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso1;Parent=%s;GeneName="%s"' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, ev.gene_name[0]) 
+            print >> fd_out, '%s\t%s\tgene\t%i\t%i\t.\t%c\t.\tID=%s;GeneName="%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, ev.gene_name[0])
+            print >> fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso1;Parent=%s;GeneName="%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, ev.gene_name[0]) 
             for i in range(ev.exons1.shape[0]):
-                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1' % (ev.chr, ev.event_type, ev.exons1[i, 0], ev.exons1[i, 1], ev.strand, name)
-            print >> fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso2;Parent=%s;GeneName="%s"' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, ev.gene_name[0])
+                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1' % (ev.chr, ev.event_type, ev.exons1[i, 0] + 1, ev.exons1[i, 1], ev.strand, name)
+            print >> fd_out, '%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso2;Parent=%s;GeneName="%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, ev.gene_name[0])
             if ev.event_type == 'intron_retention':
-                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[0], ev.exons2[1], ev.strand, name)
+                print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[0] + 1, ev.exons2[1], ev.strand, name)
             else:
                 for i in range(ev.exons2.shape[0]):
-                    print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[i, 0], ev.exons2[i, 1], ev.strand, name)
+                    print >> fd_out, '%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[i, 0] + 1, ev.exons2[i, 1], ev.strand, name)
     fd_out.close()
 
 
