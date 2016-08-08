@@ -372,18 +372,18 @@ def quantify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
     return cov
 
 
-def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG=None, out_fn=None):
+def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, event_type=None, CFG=None, out_fn=None, gen_event_ids=False):
 
     ### set parameters if called by rproc
-    if strain_idx is None:
+    if strain_idx1 is None:
         PAR = event_fn
         event_fn = PAR['event_fn']
-        strain_idx = PAR['strain_idx']
+        strain_idx1 = PAR['strain_idx1']
+        strain_idx2 = PAR['strain_idx2']
         if 'out_fn' in PAR:
             out_fn = PAR['out_fn']
         event_type = PAR['event_type']
         CFG = PAR['CFG']
-    strain_idx = sp.sort(strain_idx)
 
     ### read count_data from event HDF5
     IN = h5py.File(event_fn, 'r', driver='core')
@@ -470,12 +470,18 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
         raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
 
     ### init coverage matrix
-    cov = [sp.zeros((event_idx.shape[0], strain_idx.shape[0]), dtype='float'), sp.zeros((event_idx.shape[0], strain_idx.shape[0]), dtype='float')]
+    cov = [sp.zeros((event_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float'), sp.zeros((event_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float')]
 
     for c in pos0e:
         assert(sp.all((c[:, 1] - c[:, 0]) >= 0))
     for c in pos1e:
         assert(sp.all((c[:, 1] - c[:, 0]) >= 0))
+
+    ### tackle unsorted input
+    s_idx = sp.argsort(IN['strains'][:])
+    strain_idx1 = sp.sort(s_idx[strain_idx1])
+    strain_idx2 = sp.sort(s_idx[strain_idx2])
+    idx1_len = strain_idx1.shape[0]
 
     ### get counts for exon segments
     if CFG['use_exon_counts']:
@@ -483,14 +489,18 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
             print 'Collecting exon segment expression values'
         if CFG['is_matlab']:
             for f, ff in enumerate(fidx0e):
-                cov[0] += (IN['event_counts'][:, ff[0], strain_idx][event_idx, :] * (pos0e[f][1, event_idx] - pos0e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][event_idx, :] * (pos0e[f][1, event_idx] - pos0e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][event_idx, :] * (pos0e[f][1, event_idx] - pos0e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
             for f, ff in enumerate(fidx1e):
-                cov[1] += (IN['event_counts'][:, ff[0], strain_idx][event_idx, :] * (pos1e[f][1, event_idx] - pos1e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][event_idx, :] * (pos1e[f][1, event_idx] - pos1e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][event_idx, :] * (pos1e[f][1, event_idx] - pos1e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
         else:
             for f, ff in enumerate(fidx0e):
-                cov[0] += (IN['event_counts'][strain_idx, ff[0], :][:, event_idx].T * (pos0e[f][event_idx, 1].T - pos0e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, event_idx].T * (pos0e[f][event_idx, 1].T - pos0e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, event_idx].T * (pos0e[f][event_idx, 1].T - pos0e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
             for f, ff in enumerate(fidx1e):
-                cov[1] += (IN['event_counts'][strain_idx, ff[0], :][:, event_idx].T * (pos1e[f][event_idx, 1].T - pos1e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, event_idx].T * (pos1e[f][event_idx, 1].T - pos1e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, event_idx].T * (pos1e[f][event_idx, 1].T - pos1e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
 
     ### get counts for introns
     if CFG['verbose']:
@@ -500,21 +510,37 @@ def quantify_from_counted_events(event_fn, strain_idx=None, event_type=None, CFG
     if CFG['is_matlab']:
         gene_idx = IN['gene_idx'][:].astype('int') - 1
         for f in fidx0i:
-            cov[0] += IN['event_counts'][:, f[0], strain_idx][event_idx, :]
+            cov[0][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][event_idx, :]
+            cov[0][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][event_idx, :]
         for f in fidx1i:
-            cov[1] += IN['event_counts'][:, f[0], strain_idx][event_idx, :]
+            cov[1][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][event_idx, :]
+            cov[1][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][event_idx, :]
     else:
         gene_idx = IN['gene_idx'][:].astype('int')
         for f in fidx0i:
-            cov[0] += IN['event_counts'][strain_idx, f[0], :][:, event_idx].T
+            cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
+            cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
         for f in fidx1i:
-            cov[1] += IN['event_counts'][strain_idx, f[0], :][:, event_idx].T
+            cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
+            cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
 
     ### get strain list
-    strains = IN['strains'][:]
+    strains1 = IN['strains'][:][strain_idx1]
+    s_idx = sp.argsort(strains1)
+    strains1 = strains1[s_idx]
+    cov[0][:, :idx1_len] = cov[0][:, :idx1_len][:, s_idx]
+    cov[1][:, :idx1_len] = cov[1][:, :idx1_len][:, s_idx]
+    strains2 = IN['strains'][:][strain_idx2]
+    s_idx = sp.argsort(strains2)
+    strains2 = strains2[s_idx]
+    cov[0][:, idx1_len:] = cov[0][:, idx1_len:][:, s_idx]
+    cov[1][:, idx1_len:] = cov[1][:, idx1_len:][:, s_idx]
+    strains = sp.r_[strains1, strains2]
 
     ### get list of event IDs - we will use these to make event forms unique
-    event_ids = get_event_ids(IN, event_type, event_idx, CFG)
+    event_ids = None
+    if gen_event_ids:
+        event_ids = get_event_ids(IN, event_type, event_idx, CFG)
 
     IN.close()
 
