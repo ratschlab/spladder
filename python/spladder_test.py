@@ -110,10 +110,12 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     ### open hdf5 file containing graph count information
     IN = h5py.File(CFG['fname_count_in'], 'r')
     strains = IN['strains'][:].astype('str')
+    ### sort by strain ID
+    s_idx = sp.argsort(strains)
     if strain_subset is None:
-        strain_idx = sp.arange(strains.shape[0])
+        strain_idx = s_idx.copy()
     else:
-        strain_idx = sp.where(sp.in1d(strains, strain_subset))[0]
+        strain_idx = s_idx[sp.in1d(strains[s_idx], strain_subset)]
     gene_counts = sp.zeros((numgenes, strain_idx.shape[0]), dtype='float')
     gene_names = sp.array([x.name for x in genes], dtype='str')
 
@@ -166,9 +168,9 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
             if seg_idx.shape[0] > 1:
-                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx, 0]) / CFG['read_length']
+                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx]) / CFG['read_length']
             else:
-                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx, 0] / CFG['read_length']
+                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
             #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
@@ -184,7 +186,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         OUT.create_dataset(name='raw_count', data=gene_counts, compression="gzip")
         OUT.close()
 
-    return (gene_counts, strains, gene_names)
+    return (gene_counts, strains[strain_idx], gene_names)
 
 
 def get_size_factors(gene_counts, CFG):
@@ -331,7 +333,7 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
                                 disp=disp_raw,
                                 matrix=matrix,
                                 figtitle='Raw Dispersion Estimate',
-                                filename=os.path.join(CFG['plot_dir'], 'dispersion_raw.pdf'),
+                                filename=os.path.join(CFG['plot_dir'], 'dispersion_raw.png'),
                                 CFG=CFG)
 
     return (disp_raw, disp_raw_conv)
@@ -366,7 +368,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG, dmatrix1):
                                 disp=disp_fitted,
                                 matrix=dmatrix1,
                                 figtitle='Fitted Dispersion Estimate',
-                                filename=os.path.join(CFG['plot_dir'], 'dispersion_fitted.pdf'),
+                                filename=os.path.join(CFG['plot_dir'], 'dispersion_fitted.png'),
                                 CFG=CFG)
 
     return (disp_fitted, Lambda, idx)
@@ -454,7 +456,7 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
 def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
 
     if CFG['verbose']:
-        print 'Start to estimate adjusted dispersions.'
+        print 'Estimating adjusted dispersions.'
 
     varLogDispSamp = polygamma(1, (dmatrix1.shape[0] - dmatrix1.shape[1] ) / 2) ## number of samples - number of coefficients
     varPrior = calculate_varPrior(disp_raw, disp_fitted, idx, varLogDispSamp)
@@ -497,7 +499,7 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
                            disp=disp_adj,
                            matrix=dmatrix1,
                            figtitle='Adjusted Dispersion Estimate',
-                           filename=os.path.join(CFG['plot_dir'], 'dispersion_adjusted.pdf'),
+                           filename=os.path.join(CFG['plot_dir'], 'dispersion_adjusted.png'),
                            CFG=CFG)
 
     return (disp_adj, disp_adj_conv)
@@ -521,11 +523,17 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
         if sp.sum(response[:response.shape[0] / 2] == 0) >= CFG['max_0_frac'] * response.shape[0] / 2:
             pval[i] = 1
             continue
-
         modNB0 = sm.GLM(response, dmatrix0, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
         modNB1 = sm.GLM(response, dmatrix1, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
-        result0 = modNB0.fit()
-        result1 = modNB1.fit()
+        try:
+            result0 = modNB0.fit()
+            result1 = modNB1.fit()
+        except:
+            print >> sys.stderr, '\nWARNING: SVD did not converge - skipping'
+            #traceback.print_exc(file=sys.stderr)
+            pval[i] = 1
+            continue
+
         pval[i] = 1 - chi2.cdf(result0.deviance - result1.deviance, dmatrix1.shape[1] - dmatrix0.shape[1])
 
     if log:
@@ -538,7 +546,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
 def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG):
 
     if CFG['verbose']:
-        print 'Start the statistical test.'
+        print 'Running the statistical test.'
 
     if CFG['parallel'] > 1:
         pval = sp.zeros((gene_counts.shape[0], 1), dtype='float')
@@ -659,15 +667,14 @@ def main():
     outdir = os.path.join(options.outdir, 'testing')
     if options.timestamp == 'y':
         outdir = '%s_%s' % (outdir, str(datetime.datetime.now()).replace(' ', '_'))
-    if CFG['diagnose_plots']:
-        CFG['plot_dir'] = os.path.join(options.outdir, 'plots')
-        if not os.path.exists(CFG['plot_dir']):
-            os.makedirs(CFG['plot_dir'])
-
     if options.labelA != 'condA' and options.labelB != 'condB':
         outdir = '%s_%s_vs_%s' % (outdir, options.labelA, options.labelB)
     if not os.path.exists(outdir):
         os.makedirs(outdir)
+    if CFG['diagnose_plots']:
+        CFG['plot_dir'] = os.path.join(outdir, 'plots')
+        if not os.path.exists(CFG['plot_dir']):
+            os.makedirs(CFG['plot_dir'])
 
     if CFG['debug']:
 
@@ -742,6 +749,7 @@ def main():
             gene_ids = IN['genes'][:]
             IN.close()
         else:
+            condition_strains = None
             if options.subset_samples == 'y':
                 condition_strains = sp.unique(sp.r_[sp.array(CFG['conditionA']), sp.array(CFG['conditionB'])])
                 CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, hash(tuple(sp.unique(condition_strains))) * -1))
@@ -772,6 +780,7 @@ def main():
 
         ### subset expression counts to tested samples
         gene_counts = gene_counts[:, sp.r_[idx1, idx2]]
+        gene_strains = gene_strains[sp.r_[idx1, idx2]]
         sf_ge = sf_ge[sp.r_[idx1, idx2]]
         #sf = sp.r_[sf, sf]
 
@@ -784,7 +793,7 @@ def main():
             CFG['fname_events'] = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, CFG['confidence_level']))
 
             ### quantify events
-            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], sp.r_[idx1, idx2], event_type, CFG)
+            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1, idx2, event_type, CFG)
 
             ### estimate size factors
             sf_ev = get_size_factors(sp.vstack(cov), CFG)
@@ -817,12 +826,14 @@ def main():
             curr_gene_counts = curr_gene_counts[k_idx, :]
             event_idx = event_idx[k_idx]
             gene_idx = gene_idx[k_idx]
-            event_ids = [x[k_idx] for x in event_ids]
+            if not event_ids is None:
+                event_ids = [x[k_idx] for x in event_ids]
 
             cov[0] = sp.around(sp.hstack([cov[0], curr_gene_counts]))
             cov[1] = sp.around(sp.hstack([cov[1], curr_gene_counts]))
             cov = sp.vstack(cov)
-            event_ids = sp.hstack(event_ids)
+            if not event_ids is None:
+                event_ids = sp.hstack(event_ids)
 
             tidx = sp.arange(idx1.shape[0])
 
@@ -846,26 +857,62 @@ def main():
             dmatrix0 = dmatrix1[:, [0, 2, 3]]
 
             ### make event splice forms unique to prevent unnecessary tests
-            event_ids, u_idx, r_idx = sp.unique(event_ids, return_index=True, return_inverse=True)
-            if CFG['verbose']:
-                print 'Consider %i unique event splice forms for testing' % u_idx.shape[0]
+            if not event_ids is None:
+                event_ids, u_idx, r_idx = sp.unique(event_ids, return_index=True, return_inverse=True)
+                if CFG['verbose']:
+                    print 'Consider %i unique event splice forms for testing' % u_idx.shape[0]
 
             ### run testing
             #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, r_idx)
             pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
             pvals_adj = adj_pval(pvals, CFG) 
 
+            if CFG['diagnose_plots']:
+                plot.qq_plot(pvals=pvals_adj,
+                             figtitle='Quantile-Quantile Plot (Adjusted)',
+                             filename=os.path.join(CFG['plot_dir'], 'qq_plot.adj.png'),
+                             CFG=CFG)
+                plot.qq_plot(pvals=pvals,
+                             figtitle='Quantile-Quantile Plot',
+                             filename=os.path.join(CFG['plot_dir'], 'qq_plot.png'),
+                             CFG=CFG)
+
             ### write output
+            s_idx = sp.argsort(pvals)
+            header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj']) 
+            event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
+
             out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
                 print 'Writing test results to %s' % out_fname
-            s_idx = sp.argsort(pvals_adj)
-            header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj']) 
-            event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
             if CFG['is_matlab']:
                 data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
             else:
                 data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+            data_out = sp.r_[header[sp.newaxis, :], data_out]
+            sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
+
+            ### write output unique over genes
+            out_fname = os.path.join(outdir, 'test_results_C%i_%s.gene_unique.tsv' % (options.confidence, event_type))
+            if CFG['verbose']:
+                print 'Writing gene unique test results to %s' % out_fname
+            ks_idx = []
+            taken = set()
+            for i in s_idx:
+                if CFG['is_matlab']:
+                    gid = gene_ids[gene_idx[i], 0]
+                else:
+                    gid = gene_ids[gene_idx[i]]
+                if gid in taken:
+                    continue
+                ks_idx.append(i)
+                taken.add(gid)
+            ks_idx = sp.array(ks_idx)
+
+            if CFG['is_matlab']:
+                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx], 0], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str')]
+            else:
+                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str')]
             data_out = sp.r_[header[sp.newaxis, :], data_out]
             sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 
