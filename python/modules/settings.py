@@ -390,12 +390,14 @@ def parse_args(options, identity='main'):
             print >> sys.stderr, 'ERROR: option diagnose_plots should have value y or n, but has %s' % options.diagnose_plots
             sys.exit(1)
 
-        CFG['conditionA'] = [re.sub(r'.bam$', '', x) for x in options.conditionA.strip(',').split(',')]
-        CFG['conditionB'] = [re.sub(r'.bam$', '', x) for x in options.conditionB.strip(',').split(',')]
+        CFG['conditionA'] = options.conditionA.strip(',').split(',')
+        CFG['conditionB'] = options.conditionB.strip(',').split(',')
         if len(CFG['conditionA']) > 0 and CFG['conditionA'][0].lower().endswith('txt'):
             CFG['conditionA'] = [str(x) for x in sp.loadtxt(CFG['conditionA'][0], dtype='str')]
         if len(CFG['conditionB']) > 0 and CFG['conditionB'][0].lower().endswith('txt'):
             CFG['conditionB'] = [str(x) for x in sp.loadtxt(CFG['conditionB'][0], dtype='str')]
+        CFG['conditionA'] = [re.sub(r'.bam$', '', x) for x in CFG['conditionA']]
+        CFG['conditionB'] = [re.sub(r'.bam$', '', x) for x in CFG['conditionB']]
         CFG['conditionA'] = [os.path.basename(x) for x in CFG['conditionA']]
         CFG['conditionB'] = [os.path.basename(x) for x in CFG['conditionB']]
 
