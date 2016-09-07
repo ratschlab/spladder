@@ -469,7 +469,11 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
             if no_mm:
                 return False
             else:
-                return filter['mismatch'] < tags['NM']
+                try:
+                    return filter['mismatch'] < tags['NM']
+                except KeyError:
+                    print >> sys.stderr, 'SplAdder expects the NM tag to be present in all input alignment files. If you are unable to provide this information in the input files, please restart SplAdder with the option --ignore_mismatches y.'
+                    sys.exit(1)
 
         if is_spliced:
             ### handle min segment length
