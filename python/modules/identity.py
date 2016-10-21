@@ -38,7 +38,7 @@ def load_events(options, event_info):
 
     event_list = []
     for event_type in sp.unique(event_info[:, 0]):
-        (events, _) = cPickle.load(open(os.path.join(options.outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, options.confidence)),'r'))
+        events = cPickle.load(open(os.path.join(options.outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, options.confidence)),'r'))
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
         for e in s_idx:
             event_list.append(events[int(event_info[e, 1])])
