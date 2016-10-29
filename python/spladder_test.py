@@ -168,7 +168,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         else:
             #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
             if seg_idx.shape[0] > 1:
-                gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx]) / CFG['read_length']
+                gene_counts[gidx, :] = sp.squeeze(sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx])) / CFG['read_length']
             else:
                 gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
             #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
