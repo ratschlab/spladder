@@ -38,6 +38,7 @@ class Segmentgraph:
         ### create edge graph between segments
         self.seg_edges = sp.zeros((self.segments.shape[1], self.segments.shape[1]), dtype='bool')
         k, l = sp.where(sp.triu(gene.splicegraph.edges))
+
         for m in range(k.shape[0]):
             ### donor segment
             d = sp.where(self.seg_match[k[m], :])[0][-1]
