@@ -164,6 +164,10 @@ def default_settings():
 
     CFG['filter_overlapping_genes'] = True
 
+    ### edge limit for detecting events from a graph, if a graph has
+    ### more edges, the gene will be ignored for event detection
+    CFG['detect_edge_limit'] = 2000
+
     return CFG
 
 
