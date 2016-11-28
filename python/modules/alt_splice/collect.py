@@ -50,9 +50,10 @@ def collect_events(CFG):
                 intron_reten_pos = sp.c_[intron_reten_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
             if do_exon_skip:
                 exon_skip_pos = sp.c_[exon_skip_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
-            if do_alt_3prime or do_alt_5prime:
-                alt_end_5prime_pos = sp.c_[alt_end_5prime_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
+            if do_alt_3prime:
                 alt_end_3prime_pos = sp.c_[alt_end_3prime_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
+            if do_alt_5prime:
+                alt_end_5prime_pos = sp.c_[alt_end_5prime_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
             if do_mult_exon_skip:
                 mult_exon_skip_pos = sp.c_[mult_exon_skip_pos, sp.zeros((len(CFG['replicate_idxs']), 1), dtype = 'object')]
             if do_mutex_exons:
@@ -231,7 +232,8 @@ def collect_events(CFG):
                                         event.exons1 = event.exons2.copy()
                                         event.exons2 = _tmp
                                     #event.transcript_type = sp.array([gene.transcript_type])
-                                    alt_end_5prime_pos[ridx, i].append(event)
+                                    if do_alt_5prime:
+                                        alt_end_5prime_pos[ridx, i].append(event)
 
                         ### handle 3 prime events
                         for k in range(len(idx_alt_end_3prime)):
@@ -281,7 +283,8 @@ def collect_events(CFG):
                                         event.exons2 = _tmp
 
                                     #event.transcript_type = sp.array([gene.transcript_type])
-                                    alt_end_3prime_pos[ridx, i].append(event)
+                                    if do_alt_3prime:
+                                        alt_end_3prime_pos[ridx, i].append(event)
                     else:
                         print '%s and %s already exists' % (fn_out_a5, fn_out_a3)
 
