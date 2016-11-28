@@ -506,6 +506,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     if CFG['verbose']:
         print 'Collecting intron confirmation values'
 
+
     ### get gene index
     if CFG['is_matlab']:
         gene_idx = IN['gene_idx'][:].astype('int') - 1
@@ -517,12 +518,27 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
             cov[1][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][event_idx, :]
     else:
         gene_idx = IN['gene_idx'][:].astype('int')
+        cnt1 = []
+        cnt2 = []
         for f in fidx0i:
-            cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
-            cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
+            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T)
+            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T)
+            #cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
+            #cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
+        if len(fidx0i) > 0:
+            cov[0][:, :idx1_len] += sp.array(cnt1).min(axis=0)
+            cov[0][:, idx1_len:] += sp.array(cnt2).min(axis=0)
+        cnt1 = []
+        cnt2 = []
         for f in fidx1i:
-            cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
-            cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
+            #cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
+            #cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
+            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T)
+            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T)
+        if len(fidx1i) > 0:
+            cov[1][:, :idx1_len] += sp.array(cnt1).min(axis=0)
+            cov[1][:, idx1_len:] += sp.array(cnt2).min(axis=0)
+        del cnt1, cnt2
 
     ### get strain list
     strains1 = IN['strains'][:][strain_idx1]
