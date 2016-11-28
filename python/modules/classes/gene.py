@@ -1,4 +1,5 @@
 import scipy as sp
+import scipy.sparse as spsp
 import warnings
 
 if __package__ is None:
@@ -156,4 +157,38 @@ class Gene:
                 tmp[i + 1:idx[-1] + i + 1] = 0
 
         return sp.where(tmp)[0]
+
+    def to_sparse(self):
+        
+        self.splicegraph_edges_shape = self.splicegraph.edges.shape
+        self.splicegraph.edges = spsp.coo_matrix(self.splicegraph.edges) 
+        self.splicegraph_edges_data = self.splicegraph.edges.data
+        self.splicegraph_edges_row = self.splicegraph.edges.row
+        self.splicegraph_edges_col = self.splicegraph.edges.col
+        self.splicegraph.edges = None
+
+        if hasattr(self, 'edge_count'):
+            self.edge_count_shape = self.edge_count.shape
+            self.edge_count = spsp.coo_matrix(self.edge_count)
+            self.edge_count_data = self.edge_count.data
+            self.edge_count_row = self.edge_count.row
+            self.edge_count_col = self.edge_count.col
+            self.edge_count = None 
+        
+
+    def from_sparse(self):
+        
+        if hasattr(self, 'splicegraph_edges_data'):
+            self.splicegraph.edges = spsp.coo_matrix((self.splicegraph_edges_data, (self.splicegraph_edges_row, self.splicegraph_edges_col)), shape=self.splicegraph_edges_shape).toarray()
+            del self.splicegraph_edges_data
+            del self.splicegraph_edges_shape
+            del self.splicegraph_edges_row
+            del self.splicegraph_edges_col
+
+        if hasattr(self, 'edge_count_data'):
+            self.edge_count = spsp.coo_matrix((self.edge_count_data, (self.edge_count_row, self.edge_count_col)), shape=self.edge_count_shape).toarray()
+            del self.edge_count_data
+            del self.edge_count_shape
+            del self.edge_count_row
+            del self.edge_count_col
 
