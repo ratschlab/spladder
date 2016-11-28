@@ -92,6 +92,8 @@ def merge_genes_by_isoform(CFG):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
         (genes, inserted) = cPickle.load(open(merge_list[i]), 'r')
+        for g in genes:
+            g.from_sparse()
         print '... done'
 
         ### sort
@@ -159,6 +161,8 @@ def merge_genes_by_isoform(CFG):
 
     fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print 'Store genes at: %s' % fn
+    for g in genes:
+        g.to_sparse()
     cPickle.dump((genes, inserted), open(fn, 'w'), -1)
 
     ### subsample transcripts if neccessary 
@@ -209,6 +213,8 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
         ### load gene structure from sample i
         print 'Loading %s ...' % merge_list[i]
         (genes, inserted) = cPickle.load(open(merge_list[i], 'r'))
+        for g in genes:
+            g.from_sparse()
         print '... done (%i / %i)' % (i + 1, len(merge_list))
 
         ### sort genes by name
@@ -328,6 +334,8 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     #    chunk_tag = '_level%i_chunk%i_%i' % (level, chunk_idx[0], chunk_idx[-1] + 1)
     #    fn_out = fn_out.replace('.pickle', '%s.pickle' % chunk_tag)
 
+    for g in genes:
+        g.to_sparse()
     print 'Store genes at: %s' % fn_out
     cPickle.dump((genes, inserted), open(fn_out, 'w'), -1)
 
@@ -389,7 +397,7 @@ def run_merge(CFG):
             else:
                 PAR['merge_list'] = CFG['samples']
                 PAR['fn_out'] = fn_out
-                jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 10000, CFG['options_rproc'], 40*60))
+                jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000, CFG['options_rproc'], 40*60))
                 rp.rproc_wait(jobinfo, 30, 1.0, -1)
     else:
         print 'File %s already exists!' % fn_out

@@ -20,9 +20,12 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
             if (iix + 1) % 50 == 0:
                 sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_multiple_skips)))
             sys.stdout.flush()
+
+        genes[iix].from_sparse()
         num_exons = genes[iix].splicegraph.get_len()
-        edges = genes[iix].splicegraph.edges
+        edges = genes[iix].splicegraph.edges.copy()
         labels = repmat(sp.arange(num_exons), num_exons, 1).T
+        genes[iix].to_sparse()
         
         # adjecency matrix: upper half only
         A = sp.zeros((num_exons, num_exons))
@@ -40,6 +43,7 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
         
         edge = sp.where(Pairs.toarray() == 1)
         
+
         if edge[0].shape[0] > edge_limit:
             print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edge[0].shape[0], edge_limit)
             continue
@@ -114,9 +118,11 @@ def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
                 sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_intron_reten)))
             sys.stdout.flush()
 
+        genes[iix].from_sparse()
         num_exons = genes[iix].splicegraph.get_len()
         vertices = genes[iix].splicegraph.vertices
-        edges = genes[iix].splicegraph.edges
+        edges = genes[iix].splicegraph.edges.copy()
+        genes[iix].to_sparse()
 
         if edges.shape[0] > edge_limit:
             print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
@@ -161,8 +167,10 @@ def detect_exonskips(genes, gidx, log=False, edge_limit=1000):
                 sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_exon_skips)))
             sys.stdout.flush()
 
+        genes[iix].from_sparse()
         num_exons = genes[iix].splicegraph.get_len()
-        edges = genes[iix].splicegraph.edges
+        edges = genes[iix].splicegraph.edges.copy()
+        genes[iix].to_sparse()
 
         if edges.shape[0] > edge_limit:
             print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
@@ -201,10 +209,13 @@ def detect_altprime(genes, gidx, log=False, edge_limit=1000):
             if (iix + 1) % 50 == 0:
                 sys.stdout.write(' - %i/%i, found %i + %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_alt_3prime), len(idx_alt_5prime)))
             sys.stdout.flush()
+
+        genes[iix].from_sparse()
         num_exons = genes[iix].splicegraph.get_len()
         vertices = genes[iix].splicegraph.vertices
-        edges = genes[iix].splicegraph.edges
+        edges = genes[iix].splicegraph.edges.copy()
         strand = genes[iix].strand
+        genes[iix].to_sparse()
 
         if edges.shape[0] > edge_limit:
             print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
@@ -311,9 +322,11 @@ def detect_xorexons(genes, gidx, log=False, edge_limit=1000):
                 sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, gidx.shape[0], len(idx_xor_exons)))
             sys.stdout.flush()
 
+        genes[iix].from_sparse()
         num_exons = genes[iix].splicegraph.get_len()
-        edges = genes[iix].splicegraph.edges
+        edges = genes[iix].splicegraph.edges.copy()
         vertices = genes[iix].splicegraph.vertices
+        genes[iix].to_sparse()
 
         if edges.shape[0] > edge_limit:
             print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
@@ -335,18 +348,18 @@ def detect_xorexons(genes, gidx, log=False, edge_limit=1000):
     return (idx_xor_exons, exon_xor_exons)
 
 
-def detect_wrapper(genes, event_type, gidx, idx, log=False):
+def detect_wrapper(genes, event_type, gidx, idx, edge_limit, log=False):
 
     if event_type == 'mutex_exons':
-        return (detect_xorexons(genes, gidx, log), idx)
+        return (detect_xorexons(genes, gidx, log, edge_limit), idx)
     elif event_type == 'exon_skip':
-        return (detect_exonskips(genes, gidx, log), idx)
+        return (detect_exonskips(genes, gidx, log, edge_limit), idx)
     elif event_type == 'alt_prime':
-        return (detect_altprime(genes, gidx, log), idx) 
+        return (detect_altprime(genes, gidx, log, edge_limit), idx) 
     elif event_type == 'intron_retention':
-        return (detect_intronreten(genes, gidx, log), idx)
+        return (detect_intronreten(genes, gidx, log, edge_limit), idx)
     elif event_type == 'mult_exon_skip':
-        return (detect_multipleskips(genes, gidx, log), idx)
+        return (detect_multipleskips(genes, gidx, log, edge_limit), idx)
     
 
 def detect_events(genes, event_type, idx, CFG):
@@ -359,7 +372,7 @@ def detect_events(genes, event_type, idx, CFG):
         result_list = sp.empty((len(idx_chunks), ), dtype='object')
 
         try:
-            result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c)) for c,cidx in enumerate(idx_chunks)]
+            result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c, CFG['detect_edge_limit'])) for c,cidx in enumerate(idx_chunks)]
             res_cnt = 0
             while result:
                 tmp = result.pop(0).get()
@@ -387,7 +400,7 @@ def detect_events(genes, event_type, idx, CFG):
             else:
                 result_list = [[], []]
     else:
-        result_list = detect_wrapper(genes[idx], event_type, idx, None, log=CFG['verbose'])[0]        
+        result_list = detect_wrapper(genes[idx], event_type, idx, None, edge_limit=CFG['detect_edge_limit'], log=CFG['verbose'])[0]        
 
     return result_list
  

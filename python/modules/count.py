@@ -24,6 +24,10 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
             fn_out = PAR['fn_out'] 
         CFG = PAR['CFG']
 
+    if hasattr(genes[0], 'splicegraph_edges_data'):
+        for gg in genes:
+            gg.from_sparse()
+
     if not isinstance(fn_bam, list):
         fn_bam = [fn_bam]
     counts = sp.zeros((len(fn_bam), genes.shape[0]), dtype='object')
@@ -106,11 +110,16 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
 
     (genes, inserted) = cPickle.load(open(fname_in, 'r'))
+    for g in genes:
+        g.from_sparse()
     
     if genes[0].segmentgraph is None or genes[0].segmentgraph.is_empty():
         for g in genes:
             g.segmentgraph = Segmentgraph(g)
+            g.to_sparse()
         cPickle.dump((genes, inserted), open(fname_in, 'w'), -1)
+        for g in genes:
+            g.from_sparse()
 
     counts = dict()
     counts['segments'] = []
@@ -178,6 +187,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
             else:
                 print 'submitting chunk %i to %i (%i)' % (c_idx, cc_idx, s_idx.shape[0])
                 PAR['genes'] = genes[s_idx][c_idx:cc_idx]
+                for gg in PAR['genes']:
+                    gg.to_sparse()
                 PAR['fn_bam'] = CFG['bam_fnames']
                 PAR['fn_out'] = fn
                 PAR['CFG'] = CFG
