@@ -521,7 +521,6 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
         response = gene_counts[i, :].astype('int')
 
         if sp.sum(response[:response.shape[0] / 2] == 0) >= CFG['max_0_frac'] * response.shape[0] / 2:
-            pval[i] = 1
             continue
         modNB0 = sm.GLM(response, dmatrix0, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
         modNB1 = sm.GLM(response, dmatrix1, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
@@ -531,7 +530,6 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
         except:
             print >> sys.stderr, '\nWARNING: SVD did not converge - skipping'
             #traceback.print_exc(file=sys.stderr)
-            pval[i] = 1
             continue
 
         pval[i] = 1 - chi2.cdf(result0.deviance - result1.deviance, dmatrix1.shape[1] - dmatrix0.shape[1])
@@ -647,11 +645,25 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, r_idx=None):
     if r_idx is not None:
         pvals = pvals[r_idx]
 
-    ### reshape and qdjust p-values
-    pvals =  2 * pvals.reshape((2, pvals.shape[0] / 2)).T.min(axis=1)
+    ### reshape and adjust p-values
+    pvals = pvals.reshape((2, pvals.shape[0] / 2)).T
+    m_idx = sp.zeros(shape=(pvals.shape[0],), dtype='int')
+    for i in range(pvals.shape[0]):
+        if sp.all(sp.isnan(pvals[i, :])):
+            continue
+        elif sp.isnan(pvals[i, 0]):
+            m_idx[i] = 1
+        elif sp.isnan(pvals[i, 1]):
+            m_idx[i] = 0
+        else:
+            m_idx[i] = sp.argmin(pvals[i, :])
+    #m_idx = sp.argmin(pvals, axis=1)
+    pvals = 2 * sp.array([pvals[i, m_idx[i]] for i in range(pvals.shape[0])], dtype='float')
+    offset = cov.shape[0] / 2
+    cov_used = sp.array([cov[i, :] if m_idx[i] == 0 else cov[i + offset, :] for i in range(pvals.shape[0])], dtype=cov.dtype)
     pvals[pvals > 1] = 1
 
-    return pvals
+    return (pvals, cov_used)
 
 
 def main():
@@ -805,20 +817,29 @@ def main():
             ### map gene expression to event order
             curr_gene_counts = gene_counts[gene_idx, :]
 
+            CFG['max_0_frac'] = 0.49
             ### filter for min expression
             if event_type == 'intron_retention':
                 k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | \
                                  (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
             else:
-                k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | \
-                                  (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac'])) & \
-                                 (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) < CFG['max_0_frac']) & \
-                                 (sp.mean(sp.c_[cov[0][:, idx2.shape[0]:], cov[1][:, idx2.shape[0]:]] == 0, axis=1) < CFG['max_0_frac']))[0]
+                ### filter all events that have too many 0 counts in inclusion or exclusion 
+                ### filter all events where inclusion and exclusion in 
+                mean1 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, idx1.shape[0]:], (cov[1] / sf_ev)[:, idx1.shape[0]:]], axis=1)
+                mean2 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, :idx1.shape[0]], (cov[1] / sf_ev)[:, :idx1.shape[0]]], axis=1)
+                k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) | \
+                                  (sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac'])) & \
+                                 (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) <= CFG['max_0_frac']) & \
+                                 (sp.mean(sp.c_[cov[0][:, idx1.shape[0]:], cov[1][:, idx1.shape[0]:]] == 0, axis=1) <= CFG['max_0_frac']) & \
+                                 ((mean1 >= 10) | (mean2 >= 10)))[0]
+                del mean1, mean2
+
             if CFG['verbose']:
                 print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
             if k_idx.shape[0] == 0:
                 print 'All events of type %s were filtered out due to low coverage. Please try re-running with less stringent filter criteria' % event_type
                 continue
+
            # k_idx = sp.where((sp.mean(sp.c_[cov[0], cov[1]], axis=1) > 2))[0]
            # k_idx = sp.where((sp.mean(cov[0], axis=1) > 2) & (sp.mean(cov[1], axis=1) > 2))[0]
             cov[0] = cov[0][k_idx, :]
@@ -850,12 +871,20 @@ def main():
             ### build design matrix for testing
             dmatrix1 = sp.zeros((cov.shape[1], 4), dtype='bool')
             dmatrix1[:, 0] = 1                      # intercept
-            dmatrix1[tidx, 1] = 1                   # delta a
-            dmatrix1[tidx, 2] = 1                   # delta g
-            dmatrix1[tidx + (idx1.shape[0] + idx2.shape[0]), 2] = 1         # delta g
-            dmatrix1[(idx1.shape[0] + idx2.shape[0]):, 3] = 1         # is g
+            dmatrix1[tidx, 1] = 1                   # delta splice
+            dmatrix1[tidx, 2] = 1                   # delta gene exp
+            dmatrix1[tidx + (idx1.shape[0] + idx2.shape[0]), 2] = 1         # delta gene exp
+            dmatrix1[(idx1.shape[0] + idx2.shape[0]):, 3] = 1         # is gene exp
+            #dmatrix1[:(idx1.shape[0] + idx2.shape[0]), 4] = 1         # is splice
             dmatrix0 = dmatrix1[:, [0, 2, 3]]
+            #dmatrix0 = dmatrix1[:, [0, 2, 3, 4]]
 
+            if CFG['diagnose_plots']:
+                plot.count_histogram(counts=cov,
+                                     matrix=dmatrix1,
+                                     figtitle='Count Distributions',
+                                     filename=os.path.join(CFG['plot_dir'], 'count_distribution.%s.png' % event_type),
+                                     CFG=CFG)
             ### make event splice forms unique to prevent unnecessary tests
             if not event_ids is None:
                 event_ids, u_idx, r_idx = sp.unique(event_ids, return_index=True, return_inverse=True)
@@ -864,7 +893,7 @@ def main():
 
             ### run testing
             #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, r_idx)
-            pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
+            (pvals, cov_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
             pvals_adj = adj_pval(pvals, CFG) 
 
             if CFG['diagnose_plots']:
@@ -889,8 +918,25 @@ def main():
                 data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
             else:
                 data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
-            data_out = sp.r_[header[sp.newaxis, :], data_out]
-            sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
+            sp.savetxt(out_fname, sp.r_[header[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
+
+            out_fname = os.path.join(outdir, 'test_results_extended_C%i_%s.tsv' % (options.confidence, event_type))
+            if CFG['verbose']:
+                print 'Writing extended test results to %s' % out_fname
+            header_long = sp.r_[header, ['mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'], ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains]]
+
+            ### compute means
+            s = event_strains.shape[0]
+            m_ev1 = sp.nanmean(cov_used[:, :idx1.shape[0]] / sf_ev[:idx1.shape[0]], axis=1)
+            m_ev2 = sp.nanmean(cov_used[:, idx1.shape[0]:s] / sf_ev[idx1.shape[0]:], axis=1)
+            fc_ev = sp.log2(m_ev1) - sp.log2(m_ev2)
+            m_ge1 = sp.nanmean(cov_used[:, s:s+idx1.shape[0]] / sf_ge[:idx1.shape[0]], axis=1)
+            m_ge2 = sp.nanmean(cov_used[:, s+idx1.shape[0]:] / sf_ge[idx1.shape[0]:], axis=1)
+            fc_ge = sp.log2(m_ge1) - sp.log2(m_ge2)
+            m_all = sp.c_[m_ev1, m_ev2, fc_ev, m_ge1, m_ge2, fc_ge]
+
+            data_out = sp.c_[data_out, m_all[s_idx, :], (cov_used[s_idx, :] / sf).astype('str')]
+            sp.savetxt(out_fname, sp.r_[header_long[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
             ### write output unique over genes
             out_fname = os.path.join(outdir, 'test_results_C%i_%s.gene_unique.tsv' % (options.confidence, event_type))
