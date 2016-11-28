@@ -4,7 +4,7 @@ import scipy as sp
 import h5py
 import gzip
 
-def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, anno_fn=None):
+def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, anno_fn=None, verbose=True):
     # write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx, anno_fn)
     
     if events.shape[0] == 0:
@@ -19,7 +19,8 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
        anno_names, s_idx = sort([x.name for x in genes])
        anno = anno[s_idx]
 
-    print 'writing %s events in flat txt format to %s' % (events[0].event_type, fn_out_txt)
+    if verbose:
+        print 'writing %s events in flat txt format to %s' % (events[0].event_type, fn_out_txt)
 
     if fn_out_txt.endswith('.gz'):
         fd = gzip.open(fn_out_txt, 'w+')
@@ -59,7 +60,9 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
     ### load data from count hdf5
     IN = h5py.File(fn_counts, 'r')
 
-    for i in event_idx:
+    for ii,i in enumerate(event_idx):
+        if verbose and ii > 0 and (ii+1) % 1000 == 0:
+            print '%i/%i' % (ii+1, )
         fd.write('%s\t%c\t%s_%i\t%s' % (events[i].chr, events[i].strand, events[i].event_type, events[i].id, events[i].gene_name[0]))
         if anno_fn is not None:
             a_idx = anno_names.index(events[i].gene_name[0])
