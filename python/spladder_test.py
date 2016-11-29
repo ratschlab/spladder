@@ -290,7 +290,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
     return (disp_raw, disp_raw_conv, idx)
 
 
-def estimate_dispersion(gene_counts, matrix, sf, CFG):
+def estimate_dispersion(gene_counts, matrix, sf, CFG, event_type):
     
     if CFG['verbose']:
         print 'Estimating raw dispersions'
@@ -333,13 +333,13 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG):
                                 disp=disp_raw,
                                 matrix=matrix,
                                 figtitle='Raw Dispersion Estimate',
-                                filename=os.path.join(CFG['plot_dir'], 'dispersion_raw.png'),
+                                filename=os.path.join(CFG['plot_dir'], 'dispersion_raw_%s.png' % event_type),
                                 CFG=CFG)
 
     return (disp_raw, disp_raw_conv)
 
 
-def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG, dmatrix1):
+def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG, dmatrix1, event_type):
 
     mean_count = sp.mean(counts / sf, axis=1)[:, sp.newaxis]
     index = sp.where(disp_conv)[0]
@@ -368,7 +368,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG, dmatrix1):
                                 disp=disp_fitted,
                                 matrix=dmatrix1,
                                 figtitle='Fitted Dispersion Estimate',
-                                filename=os.path.join(CFG['plot_dir'], 'dispersion_fitted.png'),
+                                filename=os.path.join(CFG['plot_dir'], 'dispersion_fitted_%s.png' % event_type),
                                 CFG=CFG)
 
     return (disp_fitted, Lambda, idx)
@@ -453,7 +453,7 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
     return (disp_adj, disp_adj_conv, idx)
 
 
-def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
+def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG, event_type):
 
     if CFG['verbose']:
         print 'Estimating adjusted dispersions.'
@@ -499,7 +499,7 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG):
                            disp=disp_adj,
                            matrix=dmatrix1,
                            figtitle='Adjusted Dispersion Estimate',
-                           filename=os.path.join(CFG['plot_dir'], 'dispersion_adjusted.png'),
+                           filename=os.path.join(CFG['plot_dir'], 'dispersion_adjusted_%s.png' % event_type),
                            CFG=CFG)
 
     return (disp_adj, disp_adj_conv)
@@ -627,16 +627,16 @@ def calculate_varPrior(disp_raw, disp_fitted, idx, varLogDispSamp):
     return max(varPrior, 0.1)
 
 
-def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, r_idx=None):
+def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, r_idx=None):
 
     ### estimate dispersion
-    (disp_raw, disp_raw_conv) = estimate_dispersion(cov, dmatrix1, sf, CFG)
+    (disp_raw, disp_raw_conv) = estimate_dispersion(cov, dmatrix1, sf, CFG, event_type)
 
     ### fit dispersion
-    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, disp_raw_conv, sf, CFG, dmatrix1)
+    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, disp_raw_conv, sf, CFG, dmatrix1, event_type)
 
     ### adjust dispersion estimates
-    (disp_adj, disp_adj_conv) = adjust_dispersion(cov, dmatrix1, disp_raw, disp_fitted, disp_idx, sf, CFG)
+    (disp_adj, disp_adj_conv) = adjust_dispersion(cov, dmatrix1, disp_raw, disp_fitted, disp_idx, sf, CFG, event_type)
 
     ### do test 
     pvals = test_count(cov, disp_adj, sf, dmatrix0, dmatrix1, CFG)
@@ -735,7 +735,7 @@ def main():
         cov = cov * sf
         #sf = sp.ones((cov.shape[1], ), dtype='float')
 
-        pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
+        pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, 'debug')
         pvals_adj = adj_pval(pvals, CFG) 
         pdb.set_trace()
     else:
@@ -892,8 +892,8 @@ def main():
                     print 'Consider %i unique event splice forms for testing' % u_idx.shape[0]
 
             ### run testing
-            #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, r_idx)
-            (pvals, cov_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG)
+            #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, event_type, r_idx)
+            (pvals, cov_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type)
             pvals_adj = adj_pval(pvals, CFG) 
 
             if CFG['diagnose_plots']:
