@@ -899,11 +899,11 @@ def main():
             if CFG['diagnose_plots']:
                 plot.qq_plot(pvals=pvals_adj,
                              figtitle='Quantile-Quantile Plot (Adjusted)',
-                             filename=os.path.join(CFG['plot_dir'], 'qq_plot.adj.png'),
+                             filename=os.path.join(CFG['plot_dir'], 'qq_plot_%s.adj.png' % event_type),
                              CFG=CFG)
                 plot.qq_plot(pvals=pvals,
                              figtitle='Quantile-Quantile Plot',
-                             filename=os.path.join(CFG['plot_dir'], 'qq_plot.png'),
+                             filename=os.path.join(CFG['plot_dir'], 'qq_plot_%s.png' % event_type),
                              CFG=CFG)
 
             ### write output
