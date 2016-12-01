@@ -62,7 +62,7 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
 
     for ii,i in enumerate(event_idx):
         if verbose and ii > 0 and (ii+1) % 1000 == 0:
-            print '%i/%i' % (ii+1, )
+            print '%i/%i' % (ii+1, event_idx.shape[0])
         fd.write('%s\t%c\t%s_%i\t%s' % (events[i].chr, events[i].strand, events[i].event_type, events[i].id, events[i].gene_name[0]))
         if anno_fn is not None:
             a_idx = anno_names.index(events[i].gene_name[0])
