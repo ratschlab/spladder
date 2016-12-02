@@ -520,7 +520,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
 
         response = gene_counts[i, :].astype('int')
 
-        if sp.sum(response[:response.shape[0] / 2] == 0) >= CFG['max_0_frac'] * response.shape[0] / 2:
+        if sp.sum(response[:response.shape[0] / 2] == 0) > CFG['max_0_frac'] * response.shape[0] / 2:
             continue
         modNB0 = sm.GLM(response, dmatrix0, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
         modNB1 = sm.GLM(response, dmatrix1, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
@@ -661,9 +661,11 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, r_idx=None):
     pvals = 2 * sp.array([pvals[i, m_idx[i]] for i in range(pvals.shape[0])], dtype='float')
     offset = cov.shape[0] / 2
     cov_used = sp.array([cov[i, :] if m_idx[i] == 0 else cov[i + offset, :] for i in range(pvals.shape[0])], dtype=cov.dtype)
+    disp_raw_used = sp.array([disp_raw[i] if m_idx[i] == 0 else disp_raw[i + offset] for i in range(pvals.shape[0])], dtype=disp_raw.dtype)
+    disp_adj_used = sp.array([disp_adj[i] if m_idx[i] == 0 else disp_adj[i + offset] for i in range(pvals.shape[0])], dtype=disp_adj.dtype)
     pvals[pvals > 1] = 1
 
-    return (pvals, cov_used)
+    return (pvals, cov_used, disp_raw_used, disp_adj_used)
 
 
 def main():
@@ -750,7 +752,6 @@ def main():
             CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
             CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
 
-        condition_strains = None
         CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
         if os.path.exists(CFG['fname_exp_hdf5']):
             if CFG['verbose']:
@@ -817,7 +818,6 @@ def main():
             ### map gene expression to event order
             curr_gene_counts = gene_counts[gene_idx, :]
 
-            CFG['max_0_frac'] = 0.49
             ### filter for min expression
             if event_type == 'intron_retention':
                 k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | \
@@ -893,7 +893,7 @@ def main():
 
             ### run testing
             #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, event_type, r_idx)
-            (pvals, cov_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type)
+            (pvals, cov_used, disp_raw_used, disp_adj_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type)
             pvals_adj = adj_pval(pvals, CFG) 
 
             if CFG['diagnose_plots']:
@@ -906,7 +906,21 @@ def main():
                              filename=os.path.join(CFG['plot_dir'], 'qq_plot_%s.png' % event_type),
                              CFG=CFG)
 
-            ### write output
+            ### 
+            ### OUTPUT
+            ###
+
+            ### write test summary (what has been tested, which bam files, etc. ...)
+            cPickle.dump((gene_strains,
+                          event_strains,
+                          dmatrix0,
+                          dmatrix1,
+                          event_type,
+                          options,
+                          CFG),
+                         open(os.path.join(outdir, 'test_setup_C%i_%s.pickle' % (options.confidence, event_type)), 'w'), -1)
+
+            ### write test results
             s_idx = sp.argsort(pvals)
             header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj']) 
             event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
@@ -920,10 +934,11 @@ def main():
                 data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
             sp.savetxt(out_fname, sp.r_[header[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
+            ### write extended output
             out_fname = os.path.join(outdir, 'test_results_extended_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
                 print 'Writing extended test results to %s' % out_fname
-            header_long = sp.r_[header, ['mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'], ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains]]
+            header_long = sp.r_[header, ['mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'], ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains], ['disp_raw', 'disp_adj']]
 
             ### compute means
             s = event_strains.shape[0]
@@ -935,7 +950,7 @@ def main():
             fc_ge = sp.log2(m_ge1) - sp.log2(m_ge2)
             m_all = sp.c_[m_ev1, m_ev2, fc_ev, m_ge1, m_ge2, fc_ge]
 
-            data_out = sp.c_[data_out, m_all[s_idx, :], (cov_used[s_idx, :] / sf).astype('str')]
+            data_out = sp.c_[data_out, m_all[s_idx, :], (cov_used[s_idx, :] / sf).astype('str'), disp_raw_used.astype('str'), disp_adj_used.astype('str')]
             sp.savetxt(out_fname, sp.r_[header_long[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
             ### write output unique over genes
