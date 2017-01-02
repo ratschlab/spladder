@@ -13,6 +13,12 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # [verified, info] = verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG) 
 
     verified = [0, 0, 0, 0, 0]
+    # (0) exon coordinates are valid (>= 0 && start < stop && non-overlapping) & skipped exon coverage >= FACTOR * mean(pre, after)
+    # (1) inclusion count first intron >= threshold
+    # (2) inclusion count last intron >= threshold
+    # (3) avg inclusion count inner exons >= threshold
+    # (4) skip count >= threshold
+
     info = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # (0) valid, (1) exon_pre_cov, (2) exons_cov, (3) exon_aft_cov
     # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
@@ -95,10 +101,12 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     # [verified, info] = verify_intron_retention(event, fn_bam, CFG)
 
     verified = [0, 0]
+    # (0) counts meet criteria for min_retention_cov, min_retention_region and min_retetion_rel_cov 
+    # (1) min_non_retention_count >= threshold
 
+    info = [1, 0, 0, 0, 0, 0]
     # (0) valid, (1) intron_cov, (2) exon1_cov, (3), exon2_cov
     # (4) intron_conf, (5) intron_cov_region
-    info = [1, 0, 0, 0, 0, 0]
 
     ### check validity of exon coordinates (>=0)
     if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
@@ -155,14 +163,18 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     return (verified, info)
 
 
-
 def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # [verified, info] = verify_exon_skip(event, fn_bam, CFG)
 
     verified = [0, 0, 0, 0]
+    # (0) coverage of skipped exon is >= than FACTOR * mean(pre, after)
+    # (1) inclusion count of first intron >= threshold 
+    # (2) inclusion count of second intron >= threshold
+    # (3) skip count of exon >= threshold
+
+    info = [1, 0, 0, 0, 0, 0, 0]
     # (0) valid, (1) exon_cov, (2) exon_pre_cov, (3) exon_aft_cov, 
     # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
-    info = [1, 0, 0, 0, 0, 0, 0]
 
     ### check validity of exon coordinates (>=0)
     if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
@@ -223,10 +235,13 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
 def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     # [verified, info] = verify_exon_skip(event, fn_bam, cfg)
 
+    verified = [0, 0]
+    # (0) coverage of diff region is at least FACTOR * coverage constant region
+    # (1) both alternative introns are >= threshold 
+
+    info = [1, 0, 0, 0, 0]
     # (0) valid, (1) exon_diff_cov, (2) exon_const_cov
     # (3) intron1_conf, (4) intron2_conf
-    info = [1, 0, 0, 0, 0]
-    verified = [0, 0]
 
     ### check validity of exon coordinates (>=0)
     if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
@@ -316,10 +331,14 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
     #
 
     verified = [0, 0, 0, 0]
+    # (0) coverage of first alt exon is >= than FACTOR times average of pre and after 
+    # (1) coverage of second alt exon is >= than FACTOR times average of pre and after 
+    # (2) both introns neighboring first alt exon are confirmed >= threshold
+    # (3) both introns neighboring second alt exon are confirmed >= threshold
 
-    # (0) valid, (1) exon_pre_cov, (2) exon1_cov, (3) exon1_cov, (4) exon_aft_cov, 
-    # (5) exon_pre_exon1_conf, (6) exon_pre_exon2_conf, (7) exon1_exon_aft_conf, (8) exon2_exon_aft_conf
     info = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+    # (0) valid, (1) exon_pre_cov, (2) exon1_cov, (3) exon2_cov, (4) exon_aft_cov, 
+    # (5) exon_pre_exon1_conf, (6) exon_pre_exon2_conf, (7) exon1_exon_aft_conf, (8) exon2_exon_aft_conf
 
     ### check validity of exon coordinates (>=0)
     if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
