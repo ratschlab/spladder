@@ -42,12 +42,12 @@ def parse_options(argv):
     parser = OptionParser()
     required = OptionGroup(parser, 'MANDATORY')
     required.add_option('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder output directory', default='-')
-    required.add_option('-a', '--conditionA', dest='conditionA', metavar='idA1,idA2,idA3,...', help='comma separated list of samples files for condition A', default='-')
-    required.add_option('-b', '--conditionB', dest='conditionB', metavar='idB1,idB2,idB3,...', help='comma separated list of samples files for condition B', default='-')
+    required.add_option('-a', '--conditionA', dest='conditionA', metavar='idA1,idA2,idA3,...', help='comma separated list of alignment files for condition A', default='-')
+    required.add_option('-b', '--conditionB', dest='conditionB', metavar='idB1,idB2,idB3,...', help='comma separated list of alignment files for condition B', default='-')
     input = OptionGroup(parser, 'INPUT OPTIONS')
     input.add_option('-n', '--readlen', dest='readlen', metavar='INT', type='int', help='read length [50]', default=50)
     input.add_option('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
-    input.add_option('-t', '--event_types', dest='event_types', metavar='y|n', help='list of alternative splicing events to be tested [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip')
+    input.add_option('-t', '--event_types', dest='event_types', metavar='y|n', help='list of alternative splicing events to be tested [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
     input.add_option('-M', '--merge_strat', dest='merge', metavar='<STRAT>', help='merge strategy, where <STRAT> is one of: merge_bams, merge_graphs, merge_all [merge_graphs]', default='merge_graphs')
     input.add_option('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
     input.add_option('-m', '--matlab', dest='matlab', metavar='y|n', help='input data was generated with matlab version [n]', default='n')
@@ -248,7 +248,7 @@ def re_quantify_events(CFG):
 
     return cov
 
-def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
+def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, test_idx, idx, log=False):
 
     disp_raw = sp.empty((idx.shape[0], 1), dtype='float')
     disp_raw.fill(sp.nan)
@@ -262,7 +262,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
         disp = 0.1
         resp = gene_counts[i, :].astype('int')
 
-        if sum(resp / sf) < CFG['min_count'] or sp.mean(resp == 0) > 0.6:
+        if sum(resp / sf) < CFG['min_count'] or sp.mean(resp == 0) > 0.6 or not test_idx[i]:
             continue
 
         for j in range(10):
@@ -290,7 +290,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, idx, log=False):
     return (disp_raw, disp_raw_conv, idx)
 
 
-def estimate_dispersion(gene_counts, matrix, sf, CFG, event_type):
+def estimate_dispersion(gene_counts, matrix, sf, CFG, test_idx, event_type):
     
     if CFG['verbose']:
         print 'Estimating raw dispersions'
@@ -305,7 +305,7 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG, event_type):
         idx_chunks = [sp.arange(x, min(x + binsize, gene_counts.shape[0])) for x in range(0, gene_counts.shape[0], binsize)]
 
         try:
-            result = [pool.apply_async(estimate_dispersion_chunk, args=(gene_counts[idx, :], matrix, sf, CFG, idx,)) for idx in idx_chunks]
+            result = [pool.apply_async(estimate_dispersion_chunk, args=(gene_counts[idx, :], matrix, sf, CFG, test_idx[idx], idx,)) for idx in idx_chunks]
             res_cnt = 0
             while result:
                 tmp = result.pop(0).get()
@@ -326,7 +326,7 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG, event_type):
             pool.join()
             sys.exit(1)
     else:        
-        (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
+        (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, test_idx, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if CFG['diagnose_plots']:
         plot.mean_variance_plot(counts=gene_counts,
@@ -447,8 +447,8 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
         log_progress(idx.shape[0], idx.shape[0])
         print ''
 
-    if error_cnt > 0:
-        print 'Warning: %i events did not fit due to a TypeError' % error_cnt
+    #if error_cnt > 0:
+    #    print 'Warning: %i events did not fit due to a TypeError' % error_cnt
 
     return (disp_adj, disp_adj_conv, idx)
 
@@ -505,7 +505,7 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG, eve
     return (disp_adj, disp_adj_conv)
 
 
-def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, log=False):
+def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx, idx, log=False):
 
     pval = sp.zeros((gene_counts.shape[0], 1), dtype='float')
     pval.fill(sp.nan)
@@ -515,7 +515,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
         if log:
             log_progress(i, idx.shape[0])
 
-        if sp.isnan(disp_adj[i]):
+        if sp.isnan(disp_adj[i]) or not test_idx[i]:
             continue
 
         response = gene_counts[i, :].astype('int')
@@ -541,7 +541,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, idx, lo
     return (pval, idx)
 
 
-def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG):
+def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx):
 
     if CFG['verbose']:
         print 'Running the statistical test.'
@@ -555,7 +555,7 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG):
         idx_chunks = [sp.arange(x, min(x + binsize, gene_counts.shape[0])) for x in range(0, gene_counts.shape[0], binsize)]
 
         try:
-            result = [pool.apply_async(test_count_chunk, args=(gene_counts[cidx, :], disp_adj[cidx], sf, dmatrix0, dmatrix1, CFG, cidx,)) for cidx in idx_chunks]
+            result = [pool.apply_async(test_count_chunk, args=(gene_counts[cidx, :], disp_adj[cidx], sf, dmatrix0, dmatrix1, CFG, test_idx[cidx], cidx)) for cidx in idx_chunks]
             res_cnt = 0
             while result:
                 tmp = result.pop(0).get()
@@ -575,7 +575,7 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG):
             pool.join()
             sys.exit(1)
     else:        
-        (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
+        (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if CFG['verbose']:
         print ''
@@ -627,19 +627,19 @@ def calculate_varPrior(disp_raw, disp_fitted, idx, varLogDispSamp):
     return max(varPrior, 0.1)
 
 
-def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, r_idx=None):
+def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx, r_idx=None):
 
     ### estimate dispersion
-    (disp_raw, disp_raw_conv) = estimate_dispersion(cov, dmatrix1, sf, CFG, event_type)
+    (disp_raw, disp_raw_conv) = estimate_dispersion(cov, dmatrix1, sf, CFG, test_idx, event_type)
 
     ### fit dispersion
-    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, disp_raw_conv, sf, CFG, dmatrix1, event_type)
+    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, (disp_raw_conv[:, 0] & test_idx)[:, sp.newaxis], sf, CFG, dmatrix1, event_type)
 
     ### adjust dispersion estimates
     (disp_adj, disp_adj_conv) = adjust_dispersion(cov, dmatrix1, disp_raw, disp_fitted, disp_idx, sf, CFG, event_type)
 
     ### do test 
-    pvals = test_count(cov, disp_adj, sf, dmatrix0, dmatrix1, CFG)
+    pvals = test_count(cov, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx)
 
     ### revert from unique
     if r_idx is not None:
@@ -648,17 +648,29 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, r_idx=None):
     ### reshape and adjust p-values
     pvals = pvals.reshape((2, pvals.shape[0] / 2)).T
     m_idx = sp.zeros(shape=(pvals.shape[0],), dtype='int')
+    #for i in range(pvals.shape[0]):
+    #    if sp.all(sp.isnan(pvals[i, :])):
+    #        continue
+    #    elif sp.isnan(pvals[i, 0]):
+    #        m_idx[i] = 1
+    #    elif sp.isnan(pvals[i, 1]):
+    #        m_idx[i] = 0
+    #    else:
+    #        m_idx[i] = sp.argmin(pvals[i, :])
+    #pvals = 2 * sp.array([pvals[i, m_idx[i]] for i in range(pvals.shape[0])], dtype='float')
     for i in range(pvals.shape[0]):
         if sp.all(sp.isnan(pvals[i, :])):
             continue
         elif sp.isnan(pvals[i, 0]):
+            pvals[i, 1] = sp.nan
             m_idx[i] = 1
         elif sp.isnan(pvals[i, 1]):
+            pvals[i, 0] = sp.nan
             m_idx[i] = 0
         else:
-            m_idx[i] = sp.argmin(pvals[i, :])
-    #m_idx = sp.argmin(pvals, axis=1)
-    pvals = 2 * sp.array([pvals[i, m_idx[i]] for i in range(pvals.shape[0])], dtype='float')
+            m_idx[i] = sp.argmax(pvals[i, :])
+    pvals = sp.array([pvals[i, m_idx[i]] for i in range(pvals.shape[0])], dtype='float')
+
     offset = cov.shape[0] / 2
     cov_used = sp.array([cov[i, :] if m_idx[i] == 0 else cov[i + offset, :] for i in range(pvals.shape[0])], dtype=cov.dtype)
     disp_raw_used = sp.array([disp_raw[i] if m_idx[i] == 0 else disp_raw[i + offset] for i in range(pvals.shape[0])], dtype=disp_raw.dtype)
@@ -806,7 +818,7 @@ def main():
             CFG['fname_events'] = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, CFG['confidence_level']))
 
             ### quantify events
-            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1, idx2, event_type, CFG)
+            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1, idx2, event_type, CFG, gen_event_ids=False)
 
             ### estimate size factors
             sf_ev = get_size_factors(sp.vstack(cov), CFG)
@@ -825,14 +837,27 @@ def main():
             else:
                 ### filter all events that have too many 0 counts in inclusion or exclusion 
                 ### filter all events where inclusion and exclusion in 
-                mean1 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, idx1.shape[0]:], (cov[1] / sf_ev)[:, idx1.shape[0]:]], axis=1)
-                mean2 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, :idx1.shape[0]], (cov[1] / sf_ev)[:, :idx1.shape[0]]], axis=1)
-                k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) | \
-                                  (sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac'])) & \
-                                 (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) <= CFG['max_0_frac']) & \
-                                 (sp.mean(sp.c_[cov[0][:, idx1.shape[0]:], cov[1][:, idx1.shape[0]:]] == 0, axis=1) <= CFG['max_0_frac']) & \
-                                 ((mean1 >= 10) | (mean2 >= 10)))[0]
-                del mean1, mean2
+                #mean1 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, idx1.shape[0]:], (cov[1] / sf_ev)[:, idx1.shape[0]:]], axis=1)
+                #mean2 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, :idx1.shape[0]], (cov[1] / sf_ev)[:, :idx1.shape[0]]], axis=1)
+
+                #k_idx1 = ((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) & \
+                #          ((sp.mean(cov[0][:, idx1.shape[0]:] == 0, axis=1) <= CFG['max_0_frac']) | \
+                #           (sp.mean(cov[0][:, :idx1.shape[0]] == 0, axis=1) <= CFG['max_0_frac'])))
+                #k_idx2 = ((sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac']) & \
+                #          ((sp.mean(cov[1][:, idx1.shape[0]:] == 0, axis=1) <= CFG['max_0_frac']) | \
+                #           (sp.mean(cov[1][:, :idx1.shape[0]] == 0, axis=1) <= CFG['max_0_frac'])))
+                k_idx1 = ((sp.mean(cov[0][:, idx1.shape[0]:] <= 1, axis=1) <= CFG['max_0_frac']) | \
+                          (sp.mean(cov[0][:, :idx1.shape[0]] <= 1, axis=1) <= CFG['max_0_frac']))
+                k_idx2 = ((sp.mean(cov[1][:, idx1.shape[0]:] <= 1, axis=1) <= CFG['max_0_frac']) | \
+                          (sp.mean(cov[1][:, :idx1.shape[0]] <= 1, axis=1) <= CFG['max_0_frac']))
+
+                k_idx = sp.where(k_idx1 | k_idx2)[0]
+                #k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) | \
+                #                  (sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac'])) & \
+                #                 (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) <= CFG['max_0_frac']) & \
+                #                 (sp.mean(sp.c_[cov[0][:, idx1.shape[0]:], cov[1][:, idx1.shape[0]:]] == 0, axis=1) <= CFG['max_0_frac']) & \
+                #                 ((mean1 >= 10) | (mean2 >= 10)))[0]
+                #del mean1, mean2
 
             if CFG['verbose']:
                 print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
@@ -849,12 +874,15 @@ def main():
             gene_idx = gene_idx[k_idx]
             if not event_ids is None:
                 event_ids = [x[k_idx] for x in event_ids]
+            k_idx1 = k_idx1[k_idx]
+            k_idx2 = k_idx2[k_idx]
 
             cov[0] = sp.around(sp.hstack([cov[0], curr_gene_counts]))
             cov[1] = sp.around(sp.hstack([cov[1], curr_gene_counts]))
             cov = sp.vstack(cov)
             if not event_ids is None:
                 event_ids = sp.hstack(event_ids)
+            test_idx = sp.r_[k_idx1, k_idx2]
 
             tidx = sp.arange(idx1.shape[0])
 
@@ -880,7 +908,7 @@ def main():
             #dmatrix0 = dmatrix1[:, [0, 2, 3, 4]]
 
             if CFG['diagnose_plots']:
-                plot.count_histogram(counts=cov,
+                plot.count_histogram(counts=cov[test_idx, :],
                                      matrix=dmatrix1,
                                      figtitle='Count Distributions',
                                      filename=os.path.join(CFG['plot_dir'], 'count_distribution.%s.png' % event_type),
@@ -888,12 +916,13 @@ def main():
             ### make event splice forms unique to prevent unnecessary tests
             if not event_ids is None:
                 event_ids, u_idx, r_idx = sp.unique(event_ids, return_index=True, return_inverse=True)
+                test_idx = test_idx[u_idx]
                 if CFG['verbose']:
                     print 'Consider %i unique event splice forms for testing' % u_idx.shape[0]
 
             ### run testing
             #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, event_type, r_idx)
-            (pvals, cov_used, disp_raw_used, disp_adj_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type)
+            (pvals, cov_used, disp_raw_used, disp_adj_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx)
             pvals_adj = adj_pval(pvals, CFG) 
 
             if CFG['diagnose_plots']:

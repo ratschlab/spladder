@@ -179,7 +179,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     if not 'verbosity' in options:
         options['verbosity'] = True
     if not 'maxjobs' in options:
-        options['maxjobs'] = 5000
+        options['maxjobs'] = 800 #5000
     if not 'waitonfull' in options:
         options['waitonfull'] = True
     if not 'immediately' in options:

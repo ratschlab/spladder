@@ -151,7 +151,7 @@ def default_settings():
     CFG['output_confirmed_struc'] = False
     CFG['output_filtered_txt'] = False
     CFG['output_confirmed_tcga'] = False
-    CFG['output_confirmed_icgc'] = False
+    CFG['output_confirmed_icgc'] = True
     CFG['compress_text'] = True
 
     ### settings for truncation detection mode
@@ -166,7 +166,7 @@ def default_settings():
 
     ### edge limit for detecting events from a graph, if a graph has
     ### more edges, the gene will be ignored for event detection
-    CFG['detect_edge_limit'] = 2000
+    CFG['detect_edge_limit'] = 50 #2000
 
     return CFG
 
@@ -176,6 +176,8 @@ def parse_args(options, identity='main'):
     ### load all default settings
     CFG = default_settings()
 
+    ref_tag = ''
+    
     ### general options
     if options.verbose in ['n', 'y']:
         CFG['verbose'] = (options.verbose == 'y')
@@ -336,8 +338,6 @@ def parse_args(options, identity='main'):
         if options.refstrain != '-':
             CFG['reference_strain'] = options.refstrain
             ref_tag = '%s:' % options.refstrain
-        else:
-            ref_tag = ''
 
         ### rproc options
         if options.pyproc == 'y':
@@ -358,12 +358,33 @@ def parse_args(options, identity='main'):
         CFG['read_length'] = options.readlen
         CFG['confidence_level'] = options.confidence
 
+    if identity in ['main', 'test', 'viz']:
         if options.validate_sg in ['n', 'y']:
             CFG['validate_splicegraphs'] = (options.validate_sg == 'y')
         else:
-            print >> sys.stderr, 'ERROR: validate_sg matlab should have value y or n, but has %s' % options.validate_sg
+            print >> sys.stderr, 'ERROR: validate_sg should have value y or n, but has %s' % options.validate_sg
             sys.exit(1)
     
+    if identity == 'viz':
+        CFG['event_id'] = options.event_id
+
+        if options.transcripts in ['n', 'y']:
+            CFG['plot_transcripts'] = (options.transcripts == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: transcripts should have value y or n, but has %s' % options.transcripts
+            sys.exit(1)
+
+        if options.bams != '-':
+            CFG['bam_fnames'] = options.bams.strip(':').split(':')
+            for g, group in enumerate(CFG['bam_fnames']):
+                CFG['bam_fnames'][g] = group.strip(',').split(',')
+                ### check existence of files
+                for fname in CFG['bam_fnames'][g]:
+                    if not os.path.isfile(fname):
+                        print >> sys.stderr, 'ERROR: Input file %s can not be found\n\n' % fname
+                        sys.exit(2)
+
+
     if identity == 'test':
         CFG['multiTest'] = options.correction
         CFG['max_0_frac'] = options.max_0_frac
@@ -406,19 +427,33 @@ def parse_args(options, identity='main'):
         CFG['conditionB'] = [os.path.basename(x) for x in CFG['conditionB']]
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
-    if len(CFG['bam_fnames']) > 0 and CFG['bam_fnames'][0].split('.')[-1] == 'txt':
-        CFG['bam_fnames'] = [str(x) for x in sp.atleast_1d(sp.loadtxt(CFG['bam_fnames'][0], dtype='str'))]
+    if len(CFG['bam_fnames']) > 0:
+        if identity == 'main' and CFG['bam_fnames'][0].split('.')[-1] == 'txt':
+            CFG['bam_fnames'] = [str(x) for x in sp.atleast_1d(sp.loadtxt(CFG['bam_fnames'][0], dtype='str'))]
+        elif identity == 'viz':
+            for g, group in enumerate(CFG['bam_fnames']):
+                if group[0].split('.')[-1] == 'txt':
+                    CFG['bam_fnames'][g] = [str(x) for x in sp.atleast_1d(sp.loadtxt(group[0], dtype='str'))]
 
     ### assemble strain list
     CFG['samples'] = []
     CFG['strains'] = []
-    for i in range(len(CFG['bam_fnames'])):
-        if options.label != '-':
-            CFG['samples'].append('%s_%s' % (options.label, re.sub(r'(.bam|.hdf5)$', '', CFG['bam_fnames'][i].split('/')[-1])))
-        else:
-            CFG['samples'].append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', CFG['bam_fnames'][i].split('/')[-1]))
-        CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))
-    CFG['strains'] = sp.array(CFG['strains'])
+    if identity in ['viz']:
+        for g, group in enumerate(CFG['bam_fnames']):
+            CFG['strains'].append([]) 
+            CFG['samples'].append([])
+            for i in range(len(group)):
+                CFG['samples'][-1].append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', group[i].split('/')[-1]))
+                CFG['strains'][-1].append('%s%s' % (ref_tag, CFG['samples'][-1][-1]))
+            CFG['strains'][-1] = sp.array(CFG['strains'][-1])
+    else:
+        for i in range(len(CFG['bam_fnames'])):
+            if options.label != '-':
+                CFG['samples'].append('%s_%s' % (options.label, re.sub(r'(.bam|.hdf5)$', '', CFG['bam_fnames'][i].split('/')[-1])))
+            else:
+                CFG['samples'].append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', CFG['bam_fnames'][i].split('/')[-1]))
+            CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))
+        CFG['strains'] = sp.array(CFG['strains'])
 
     ### adapt graph validation requirement to max number of samples
     CFG['sg_min_edge_count'] = min(CFG['sg_min_edge_count'], len(CFG['samples']))

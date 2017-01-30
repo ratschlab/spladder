@@ -193,6 +193,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
                 PAR['fn_out'] = fn
                 PAR['CFG'] = CFG
                 jobinfo.append(rp.rproc('count_graph_coverage', PAR, 15000, CFG['options_rproc'], 60*12))
+                #jobinfo.append(rp.rproc('count_graph_coverage', PAR, 100000, CFG['options_rproc'], 60*72))
 
         rp.rproc_wait(jobinfo, 30, 1.0, -1)
         del genes

@@ -10,6 +10,7 @@ import matplotlib.patches as patches
 import cPickle
 import pdb
 
+import modules.settings as settings
 from modules.classes.gene import Gene
 from modules.viz.graph import *
 from modules.viz.coverage import *
@@ -35,15 +36,18 @@ def parse_options(argv):
     optional.add_option('-e', '--event_id', dest='event_id', metavar='STR', help='event to be plotted', default=None)
     optional.add_option('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
     optional.add_option('', '--zoom_x', dest='zoom_x', metavar='percent_left,percent_right', help='zoom x axis from percent_left to percent_right [0.0,1.0]', default='0.0,1.0')
-    optional.add_option('-V', '--validate_sg', dest='validate_sg', action='store_true', help='use validated splice graph [off]', default=False)
-    optional.add_option('-T', '--transcripts', dest='transcripts', action='store_true', help='plot annotated transcripts', default=False)
+    optional.add_option('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
+    optional.add_option('-T', '--transcripts', dest='transcripts', metavar='y|n', help='plot annotated transcripts', default='n')
+    optional.add_option('--test-result', dest='test_result', metavar='INT', type='int', help='plot top k significant events from test', default=0)
+    optional.add_option('--test-labels', dest='test_labels', metavar='STR', type='str', help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
     optional.add_option('-t', '--event_types', dest='event_types', metavar='EVENT1,EVENT2,...', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
-    optional.add_option('-v', '--verbose', dest='verbose', action='store_true', help='verbosity', default=False)
+    optional.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
+    optional.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(optional)
 
     (options, args) = parser.parse_args()
-    options.event_types = options.event_types.strip(',').split(',')
+    #options.event_types = options.event_types.strip(',').split(',')
 
     if len(argv) < 2:
         parser.print_help()
@@ -52,16 +56,15 @@ def parse_options(argv):
     options.parser = parser
     return options
 
-def get_plot_len(options):
+def get_plot_len(CFG):
     """Identifies the number of rows we need in our plot"""
 
     rows = 3 # splicing graph + events + segments
-    if options.bams != '-':
-        samples = options.bams.strip(':').split(':')
-        rows += len(samples)
-        if len(samples) > 1:
+    if len(CFG['bam_fnames']) > 0:
+        rows += len(CFG['bam_fnames'])
+        if len(CFG['bam_fnames']) > 1:
             rows += 1
-    rows += int(options.transcripts)
+    rows += int(CFG['plot_transcripts'])
 
     return rows
 
@@ -72,7 +75,10 @@ def spladder_viz():
     
     ### parse command line parameters
     options = parse_options(sys.argv)
-    
+
+    ### parse parameters from options object
+    CFG = settings.parse_args(options, identity='viz')
+   
     ### create plot directory if it does not exist yet
     if not os.path.exists(os.path.join(options.outdir, 'plots')):
         os.mkdir(os.path.join(options.outdir, 'plots'))
@@ -82,16 +88,16 @@ def spladder_viz():
             import mpld3
             from mpld3 import plugins
         except ImportError:
-            sys.stderr.write("ERROR: missing package for format d3. Package mpld3 required")
+            sys.stderr.write("ERROR: missing package for output format d3. Package mpld3 required")
             sys.exit(1)
 
     ### load gene information
-    genes = load_genes(options)
+    genes = load_genes(CFG)
 
-    rows = get_plot_len(options)
+    rows = get_plot_len(CFG)
     gs = gridspec.GridSpec(rows, 1)
 
-    ### get coloring
+    ### set color maps
     cmap_cov = plt.get_cmap('jet')
     cmap_edg = plt.get_cmap('jet')
 
@@ -104,19 +110,44 @@ def spladder_viz():
     ### did we get any labels?
     if options.labels != '-':
         options.labels = options.labels.strip(',').split(',')
-        assert len(options.labels) == len(options.bams.strip(':').split(':')), "The number of given labels (%i) needs to match the number of given bam file groups (%i)" % (len(options.labels), len(options.bams.strip(':').split(':')))
+        assert len(options.labels) == len(CFG['bam_fnames']), "The number of given labels (%i) needs to match the number of given bam file groups (%i)" % (len(options.labels), len(CFG['bam_fnames']))
 
-    ### the user specified a gene to plot
+    ### the user chose a specific gene for plotting
     if options.gene_name is not None:
         gid = sp.where(sp.array([x.name.split('.')[0] for x in genes]) == options.gene_name.split('.')[0])[0]
         if gid.shape[0] == 0:
             sys.stderr.write('ERROR: provided gene ID %s could not be found, please check for correctness\n' % options.gene_name)
             sys.exit(1)
-        gids = [sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0][0]]
+        gids = [[sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0][0], None]]
+    ### the plotting happens on the results of spladder test
+    ### the user chooses to plot the top k significant events
+    ### this requires the event type to be specified
+    elif options.test_result > 0:
+        gene_names = []
+        for event_type in CFG['event_types']:
+            ### the testing script should generate a setup file for the test
+            ### SETUP is structured as follows:
+            ###  [gene_strains, event_strains, dmatrix0, dmatrix1, event_type, options, CFG]
+            labels = options.test_labels.split(':')
+            SETUP = cPickle.load(open(os.path.join(CFG['out_dirname'], 'testing_%s_vs_%s' % (labels[0], labels[1]), 'test_setup_C%i_%s.pickle' % (CFG['confidence_level'], event_type)), 'r'))
+
+            ### get strains to plot
+            idx1 = sp.where(sp.in1d(SETUP[0], SETUP[6]['conditionA']))[0]
+            idx2 = sp.where(sp.in1d(SETUP[0], SETUP[6]['conditionB']))[0]
+    
+            ### load test results
+            for l, line in enumerate(open(os.path.join(CFG['out_dirname'], 'testing_%s_vs_%s' % (labels[0], labels[1]), 'test_results_C%i_%s.tsv' % (CFG['confidence_level'], event_type)), 'r')):
+                if l == 0:
+                    continue
+                if l > options.test_result:
+                    break
+                sl = line.strip().split('\t')
+                gene_names.append([sl[1], sl[0]])
+        gids = get_gene_ids(CFG, gene_names)
     ### no gene specified but result provided - plot all genes with confirmed events
     ### if an event_id is provided, only the associated gene will be plotted
     else:
-        gids = get_gene_ids(options)
+        gids = get_gene_ids(CFG)
         
     ### iterate over genes to plot
     for gid in gids:
@@ -127,8 +158,9 @@ def spladder_viz():
         axes = []
 
         ### gather information about the gene we plot
-        gene = get_gene(genes[gid])
-        if options.verbose:
+        gene = get_gene(genes[gid[0]])
+        gene.from_sparse()
+        if CFG['verbose']:
             print 'plotting information for gene %s' % gene.name
 
         ### plot splicing graph
@@ -138,27 +170,33 @@ def spladder_viz():
         axes[-1].set_title('Splicing graph for %s' % gene.name)
 
         ### plot annotated transcripts
-        if options.transcripts:
+        if CFG['plot_transcripts']:
             axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
             multiple(gene.exons, ax=axes[-1], x_range=xlim)
             axes[-1].set_title('Annotated Transcripts')
 
-        ### plot coverage information for a set of samples
-        if options.bams != '-':
-            samples = options.bams.strip(':').split(':')
-            plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg)
+        ### plot coverage information for a set of given samples
+        if len(CFG['bam_fnames']) > 0:
+            plot_bam(options, gene, CFG['bam_fnames'], fig, axes, gs, xlim, cmap_cov, cmap_edg)
            
             ### plot all the samples in a single plot
-            if len(samples) > 1:
-                plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, single=False)
+            if len(CFG['bam_fnames']) > 1:
+                plot_bam(options, gene, CFG['bam_fnames'], fig, axes, gs, xlim, cmap_cov, cmap_edg, single=False)
 
         ### plot segment counts
-        (segments, edges, edge_idx) = get_seg_counts(options, gid)
+        (segments, edges, edge_idx, strains) = get_seg_counts(CFG, gid[0])
+        seg_sample_idx = None
+        if len(CFG['strains']) > 0:
+            seg_sample_idx = []
+            for group in CFG['strains']:
+                seg_sample_idx.append(sp.where(sp.in1d(strains, group))[0])
+        if options.test_result > 0:
+            seg_sample_idx = [idx1, idx2]
         axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
         if identity() == 'matlab':
             cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='F')
         else:
-            cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='C')
+            cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
         axes[-1].set_title('Segment counts')
 
 
@@ -166,17 +204,22 @@ def spladder_viz():
         #if options.event_id is not None:
         axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
 
-        ### user defined event to plot
-        if options.event_id is not None:
-            event_info = [x[::-1] for x in re.split(r'[._]', options.event_id[::-1], maxsplit=1)[::-1]]
+        ### event to plot is specified with the gene id list
+        if gid[1] is not None:
+            event_info = [x[::-1] for x in re.split(r'[._]', gid[1][::-1], maxsplit=1)[::-1]]
             event_info[1] = int(event_info[1]) - 1
             event_info = sp.array(event_info, dtype='str')[sp.newaxis, :]
-            event_tag = '.%s' % options.event_id
+            event_tag = '.%s' % gid[1]
+        #if options.event_id is not None:
+        #    event_info = [x[::-1] for x in re.split(r'[._]', options.event_id[::-1], maxsplit=1)[::-1]]
+        #    event_info[1] = int(event_info[1]) - 1
+        #    event_info = sp.array(event_info, dtype='str')[sp.newaxis, :]
+        #    event_tag = '.%s' % options.event_id
         ### get all significant events of the current gene
         else:
-            event_info = get_conf_events(options, gid)
+            event_info = get_conf_events(CFG, gid[0])
             
-        plot_event(options, event_info, axes[-1], xlim)
+        plot_event(CFG, event_info, axes[-1], xlim)
 
         ### we only need to adapt the xoom for one axis object - as we share the x
         zoom_x = [float(x) for x in options.zoom_x.split(',')]
@@ -199,7 +242,7 @@ def spladder_viz():
 
 def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, single=True):
 
-    min_sample_size = min(20, min([len(x.split(',')) for x in options.bams.strip(':').split(':')]))
+    min_sample_size = min(20, min([len(x) for x in samples]))
     start = gene.splicegraph.vertices.min()
     stop = gene.splicegraph.vertices.max()
 
@@ -207,8 +250,7 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
     caxes = []
     labels = []
 
-    for s, sample in enumerate(samples):
-        bams = sample.split(',')
+    for s, bams in enumerate(samples):
 
         if options.labels != '-':
             label = options.labels[s]
@@ -237,13 +279,12 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
         plt.legend(caxes, labels)
  
 
-def plot_event(options, event_info, ax, xlim):
-    """This function takes the event_id given in the options object and 
+def plot_event(CFG, event_info, ax, xlim):
+    """This function takes the event_id given in the CFG object and 
     plots it into ax."""
 
     ### plot it
-    event_list = [_ for event in load_events(options, event_info) for _ in [event.exons1, event.exons2]]
-    #event_list = sp.array([[event.exons1, event.exons2] for event in load_events(options, event_info)]).ravel()
+    event_list = [_ for event in load_events(CFG, event_info) for _ in [event.exons1, event.exons2]]
     multiple(event_list, ax=ax, x_range=xlim, color='green') 
     ax.set_title('Alt event structure') # of %s' % options.event_id)
 

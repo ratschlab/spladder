@@ -1,6 +1,7 @@
 """This libray contains a collection of useful plot functions regarding coverage."""
 
 import scipy as sp
+import scipy.stats as spst
 import numpy.random as npr
 import pysam
 import sys
@@ -130,35 +131,49 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
     produce a coverage overview plot."""
 
     if sample_idx is None:
-        sample_idx = sp.arange(seg_counts.shape[1])
+        sample_idx = [sp.arange(seg_counts.shape[1])]
 
-    norm = plt.Normalize(0, sample_idx.shape[0])
+    norm = plt.Normalize(0, len(sample_idx))
 
     if cmap_seg is None:
-        cmap_seg = plt.get_cmap('jet')
+        cmap_seg = plt.get_cmap('jet') 
     if cmap_edg is None:
         cmap_edg = plt.get_cmap('jet')
 
-    ### iterate over samples
-    for ii,i in enumerate(sample_idx):
-        ### collect count information and add segment patches
-        for j in range(gene.segmentgraph.segments.shape[1]):
-            s = gene.segmentgraph.segments[:, j]
+    ### iterate over segments
+    for j in range(gene.segmentgraph.segments.shape[1]):
+        s = gene.segmentgraph.segments[:, j]
+        ### iterate over samples
+        for c, curr_idx in enumerate(sample_idx):
+            #for i in curr_idx:
             if log:
-                counts = sp.log10(seg_counts[j, i] + 1)
+                counts = sp.log10(seg_counts[j, curr_idx] + 1)
             else:
-                counts = seg_counts[j, i]
-            #ax.add_patch(patches.Rectangle((s[0], 0), s[1] - s[0], counts, fill=cmap_seg(norm(ii)),
-            #             edgecolor='none', alpha=0.5))
-            ax.plot(s, [counts, counts], '-', color=cmap_seg(norm(ii)), linewidth=2)
+                counts = seg_counts[j, curr_idx]
 
-        for j in range(edge_idx.shape[0]):
+            ### plot segment over all samples (including uncertainty region)
+            if counts.shape[0] == 1:
+                ax.plot(s, [counts[0], counts[0]], '-', color=cmap_seg(norm(c)), linewidth=2)
+            elif counts.shape[0] > 1:
+                stderr = spst.sem(counts)
+                mean = sp.mean(counts)
+                ax.fill_between(s, mean, mean+stderr, color=cmap_seg(norm(c)), alpha=0.3)
+                ax.fill_between(s, mean, mean-stderr, color=cmap_seg(norm(c)), alpha=0.3)
+                ax.plot(s, [mean, mean], '-', color=cmap_seg(norm(c)), linewidth=2)
+                ax.plot(s, [mean+stderr, mean+stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
+                ax.plot(s, [mean-stderr, mean-stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
+
+    ### iterate over intron edges
+    for j in range(edge_idx.shape[0]):
+        ### iterate over samples
+        for c, curr_idx in enumerate(sample_idx):
             [s, t] = sp.unravel_index(edge_idx[j], gene.segmentgraph.seg_edges.shape, order=order) 
             if log:
-                counts = sp.log10(edge_counts[j, i] + 1)
+                counts = sp.log10(edge_counts[j, curr_idx] + 1)
             else:
-                counts = edge_counts[j, i]
-            add_intron_patch2(ax, gene.segmentgraph.segments[1, s], gene.segmentgraph.segments[0, t], counts, color=cmap_edg(norm(ii)))
+                counts = edge_counts[j, curr_idx]
+            mean = sp.mean(counts)
+            add_intron_patch2(ax, gene.segmentgraph.segments[1, s], gene.segmentgraph.segments[0, t], mean, color=cmap_edg(norm(c)))
 
     if xlim is not None:
         ax.set_xlim(xlim)

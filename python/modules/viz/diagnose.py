@@ -51,7 +51,8 @@ def qq_plot(pvals, figtitle, filename, CFG):
     create a quantile quantile plot for the given p-values
     '''
 
-    exp = sp.linspace(0, 1, num=pvals.shape[0])
+    idx = sp.where(~sp.isnan(pvals))[0]
+    exp = sp.linspace(0, 1, num=idx.shape[0])
 
     ### plot no log
     fig = plt.figure(figsize=(10, 10), dpi=100)
@@ -60,7 +61,7 @@ def qq_plot(pvals, figtitle, filename, CFG):
     ax.set_title(figtitle)
     ax.set_ylabel("Oberserved P-Value")
     ax.set_xlabel("Expected P-Value")
-    ax.plot(exp, sp.sort(pvals), 'bo') 
+    ax.plot(exp, sp.sort(pvals[idx]), 'bo') 
     ax.set_xlim([0, 1.0])
     ax.set_ylim([0, 1.0])
     ax.plot([0, 1.0], [0, 1.0], 'r--')
@@ -74,7 +75,7 @@ def qq_plot(pvals, figtitle, filename, CFG):
     ax.set_title(figtitle)
     ax.set_ylabel("Oberserved P-Value (-log10)")
     ax.set_xlabel("Expected P-Value (-log10)")
-    ax.plot(-sp.log10(exp), -sp.log10(sp.sort(pvals)), 'bo') 
+    ax.plot(-sp.log10(exp), -sp.log10(sp.sort(pvals[idx])), 'bo') 
     maxlim = max(ax.get_xlim()[1], ax.get_ylim()[1])
     ax.set_xlim([0, maxlim])
     ax.set_ylim([0, maxlim])

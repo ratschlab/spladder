@@ -712,21 +712,26 @@ def get_event_ids(IN, event_type, event_idx, CFG):
     ### we are not operating on matlab hdf5 files
     else:
         gene_idx = IN['gene_idx'][:].astype('int')
-        gene_chr = IN['gene_chr'][:][gene_idx]
+        gene_chr = IN['gene_chr'][:][gene_idx][event_idx]
+        event_pos = IN['event_pos'][:][event_idx, :].astype('str')
         if event_type in ['exon_skip', 'mult_exon_skip']:
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [0, 1, 3, 4]].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :].astype('str'))) for i in event_idx], dtype='str')
+            tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 3, 4]]]
+            tmp2 = sp.c_[gene_chr, event_pos]
         elif event_type == 'intron_retention':
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [1, 2]].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :].astype('str'))) for i in event_idx], dtype='str')
+            tmp1 = sp.c_[gene_chr, event_pos[:, [1, 2]]]
+            tmp2 = sp.c_[gene_chr, event_pos]
         elif event_type in ['alt_3prime', 'alt_5prime']:
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [0, 1, 6, 7]].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, [2, 3, 4, 5]].astype('str'))) for i in event_idx], dtype='str')
+            tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 6, 7]]]
+            tmp2 = sp.c_[gene_chr, event_pos[:, [2, 3, 4, 5]]]
         elif event_type == 'mutex_exons':
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :, [0, 1, 3]].T.ravel().astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][i, :, [0, 2, 3]].T.ravel().astype('str'))) for i in event_idx], dtype='str')
+            tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 3]]]
+            tmp2 = sp.c_[gene_chr, event_pos[:, [0, 2, 3]]]
         else:
             raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
+
+        event_ids0 = sp.array([':'.join(tmp1[i, :]) for i in range(tmp1.shape[0])], dtype='str')
+        event_ids1 = sp.array([':'.join(tmp2[i, :]) for i in range(tmp2.shape[0])], dtype='str')
+        del tmp1, tmp2
             
     return [event_ids0, event_ids1]
 
