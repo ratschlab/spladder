@@ -196,6 +196,10 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         dirctry = os.getcwd()
     else:
         dirctry = options['start_dir'] 
+    if not 'log_dir' in options:
+        log_dir = os.path.join(dirctry, 'tmp_spl_parallel')
+    else:
+        log_dir = options['log_dir']
     if not 'resubmit' in options:
         options['resubmit'] = False
         options['time_req_resubmit'] = []
@@ -219,40 +223,9 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     jobinfo.data_size = options['data_size']
     jobinfo.hard_time_limit = options['hard_time_limit']
 
-    if not os.path.exists(os.path.join(os.environ['HOME'], 'tmp', '.sge')):
-        username = os.environ['USER']
-        base_dir = os.path.join(home_str, '.sge.', 'tmp', username)
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
-        tmp_dir = os.path.join(home_str, '.sge', 'tmp', username, 'tmp')
-        if not os.path.exists(tmp_dir):
-            os.makedirs(tmp_dir)
-
-        sge_dir = os.path.join(home_str, '.sge', 'tmp', username, 'sge')
-        if not os.path.exists(sge_dir):
-            os.makedirs(sge_dir)
-
-        if not os.path.exists(os.path.join(os.environ['HOME'], 'tmp')):
-            os.makedirs(os.path.join(os.environ['HOME'], 'tmp'))
-
-        if not os.path.exists(os.path.join(os.environ['HOME'], 'tmp', '.sge')):
-            ### TODO this does not exist anywhere: sge_tmp_dir
-            os.symlink(sge_tmp_dir, os.path.join(os.environ['HOME'], 'tmp', '.sge'))
-
-    assert(os.path.exists(os.path.join(os.environ['HOME'],'tmp', '.sge')))
-
-    if not os.path.exists(os.path.join(dirctry, '.sge')):
-        username = os.environ['USER']
-        ### TODO make this configurable
-        sge_base_dir = dirctry.replace(os.path.join('cluster', 'home', username), os.path.join(home_str, '.sge', 'tmp', username))
-        if not os.path.exists(sge_base_dir):
-            os.makedirs(sge_base_dir)
-
-        sge_dir = os.path.join(sge_base_dir, 'sge')
-        os.makedirs(sge_dir)
-        
-        os.symlink(sge_dir, os.path.join(dirctry, '.sge'))
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    assert os.path.exists(log_dir)
 
     ### assembly option string
     if use_reservation:
@@ -305,23 +278,22 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
 
     cc = random.randint(0, 100000)
     prefix = '%s%i-%1.10f' % (identifier, cc, time.time())
-    rproc_dir = '%s/tmp/.sge' % os.environ['HOME']
-    mat_fname = os.path.join(rproc_dir, '%s.pickle' % prefix) 
-    data_fname = os.path.join(rproc_dir, '%s_data.pickle' % prefix) 
-    result_fname = os.path.join(rproc_dir, '%s_result.pickle' % prefix)
-    m_fname = os.path.join(rproc_dir, '%s.sh' % prefix)
+    mat_fname = os.path.join(log_dir, '%s.pickle' % prefix) 
+    data_fname = os.path.join(log_dir, '%s_data.pickle' % prefix) 
+    result_fname = os.path.join(log_dir, '%s_result.pickle' % prefix)
+    m_fname = os.path.join(log_dir, '%s.sh' % prefix)
     while os.path.exists(mat_fname) or os.path.exists(result_fname) or os.path.exists(m_fname):
         cc = random.randint(0, 100000)
         prefix = '%s%i-%1.10f' % (identifier, cc, time.time())
-        mat_fname = os.path.join(rproc_dir, '%s.pickle' % prefix) 
-        data_fname = os.path.join(rproc_dir, '%s_data.pickle' % prefix) 
-        result_fname = os.path.join(rproc_dir, '%s_result.pickle' % prefix)
-        m_fname = os.path.join(rproc_dir, '%s.sh' % prefix)
+        mat_fname = os.path.join(log_dir, '%s.pickle' % prefix) 
+        data_fname = os.path.join(log_dir, '%s_data.pickle' % prefix) 
+        result_fname = os.path.join(log_dir, '%s_result.pickle' % prefix)
+        m_fname = os.path.join(log_dir, '%s.sh' % prefix)
 
     if 'log_fname' in options:
         log_fname = options['log_fname']
     else:
-        log_fname = os.path.join(dirctry, '.sge', '%s_%s.rproc' % (prefix, time.strftime('%d-%b-%Y_%H_%M')))
+        log_fname = os.path.join(log_dir, '%s_%s.rproc' % (prefix, time.strftime('%d-%b-%Y_%H_%M')))
     qsublog_fname = '%s.qsubout' % log_fname
 
     jobinfo.prefix = prefix 
