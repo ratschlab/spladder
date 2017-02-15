@@ -184,6 +184,7 @@ def spladder_viz():
                 plot_bam(options, gene, CFG['bam_fnames'], fig, axes, gs, xlim, cmap_cov, cmap_edg, single=False)
 
         ### plot segment counts
+        print 'get segment counts'
         (segments, edges, edge_idx, strains) = get_seg_counts(CFG, gid[0])
         seg_sample_idx = None
         if len(CFG['strains']) > 0:
@@ -193,6 +194,7 @@ def spladder_viz():
         if options.test_result > 0:
             seg_sample_idx = [idx1, idx2]
         axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
+        print 'plot segment counts'
         if identity() == 'matlab':
             cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='F')
         else:
@@ -218,7 +220,7 @@ def spladder_viz():
         ### get all significant events of the current gene
         else:
             event_info = get_conf_events(CFG, gid[0])
-            
+        
         plot_event(CFG, event_info, axes[-1], xlim)
 
         ### we only need to adapt the xoom for one axis object - as we share the x
@@ -235,7 +237,10 @@ def spladder_viz():
             plugins.connect(fig, plugins.Zoom(enabled=True))
             mpld3.save_html(fig, open(out_fname, 'w'))
         else:
-            out_fname = os.path.join(options.outdir, 'plots', 'gene_overview_C%i_%s%s%s.%s' % (options.confidence, gene.name, event_tag, log_tag, options.format))
+            if options.test_result > 0:
+                out_fname = os.path.join(options.outdir, 'plots', 'gene_overview_C%i_%s%s%s.%s' % (options.confidence, gene.name, event_tag, log_tag, options.format))
+            else:
+                out_fname = os.path.join(options.outdir, 'plots', 'gene_overview_C%i_%s%s%s.%s' % (options.confidence, gene.name, event_tag, log_tag, options.format))
             plt.savefig(out_fname, format=options.format, bbox_inches='tight')
         plt.close(fig)
 
