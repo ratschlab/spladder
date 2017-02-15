@@ -390,10 +390,18 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     
     ### get indices of confident events
     if CFG['is_matlab']:
-        event_idx = IN['conf_idx'][:].astype('int') - 1
+        conf_idx = IN['conf_idx'][:].astype('int') - 1
+        if 'filter_idx' in IN.keys():
+            event_idx = IN['filter_idx'][:].astype('int')
+        else:
+            event_idx = conf_idx.copy()
         event_features = IN['event_features'][:]
     else:
-        event_idx = IN['conf_idx'][:].astype('int')
+        conf_idx = IN['conf_idx'][:].astype('int')
+        if 'filter_idx' in IN.keys():
+            event_idx = IN['filter_idx'][:].astype('int')
+        else:
+            event_idx = conf_idx.copy()
         event_features = IN['event_features'][event_type][:]
 
     ### arrays to collect exon coordinates for length normalization
@@ -470,7 +478,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
 
     ### init coverage matrix
-    cov = [sp.zeros((event_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float'), sp.zeros((event_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float')]
+    cov = [sp.zeros((conf_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float'), sp.zeros((conf_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float')]
 
     for c in pos0e:
         assert(sp.all((c[:, 1] - c[:, 0]) >= 0))
@@ -489,18 +497,18 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
             print 'Collecting exon segment expression values'
         if CFG['is_matlab']:
             for f, ff in enumerate(fidx0e):
-                cov[0][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][event_idx, :] * (pos0e[f][1, event_idx] - pos0e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
-                cov[0][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][event_idx, :] * (pos0e[f][1, event_idx] - pos0e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][conf_idx, :] * (pos0e[f][1, conf_idx] - pos0e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][conf_idx, :] * (pos0e[f][1, conf_idx] - pos0e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
             for f, ff in enumerate(fidx1e):
-                cov[1][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][event_idx, :] * (pos1e[f][1, event_idx] - pos1e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
-                cov[1][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][event_idx, :] * (pos1e[f][1, event_idx] - pos1e[f][0, event_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][conf_idx, :] * (pos1e[f][1, conf_idx] - pos1e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][conf_idx, :] * (pos1e[f][1, conf_idx] - pos1e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
         else:
             for f, ff in enumerate(fidx0e):
-                cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, event_idx].T * (pos0e[f][event_idx, 1].T - pos0e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
-                cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, event_idx].T * (pos0e[f][event_idx, 1].T - pos0e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
             for f, ff in enumerate(fidx1e):
-                cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, event_idx].T * (pos1e[f][event_idx, 1].T - pos1e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
-                cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, event_idx].T * (pos1e[f][event_idx, 1].T - pos1e[f][event_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+                cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
 
     ### get counts for introns
     if CFG['verbose']:
@@ -511,30 +519,30 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     if CFG['is_matlab']:
         gene_idx = IN['gene_idx'][:].astype('int') - 1
         for f in fidx0i:
-            cov[0][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][event_idx, :]
-            cov[0][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][event_idx, :]
+            cov[0][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][conf_idx, :]
+            cov[0][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][conf_idx, :]
         for f in fidx1i:
-            cov[1][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][event_idx, :]
-            cov[1][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][event_idx, :]
+            cov[1][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][conf_idx, :]
+            cov[1][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][conf_idx, :]
     else:
         gene_idx = IN['gene_idx'][:].astype('int')
         cnt1 = []
         cnt2 = []
         for f in fidx0i:
-            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T)
-            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T)
-            #cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
-            #cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
+            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
+            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
+            #cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
+            #cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
         if len(fidx0i) > 0:
             cov[0][:, :idx1_len] += sp.array(cnt1).min(axis=0)
             cov[0][:, idx1_len:] += sp.array(cnt2).min(axis=0)
         cnt1 = []
         cnt2 = []
         for f in fidx1i:
-            #cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T
-            #cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T
-            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, event_idx].T)
-            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, event_idx].T)
+            #cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
+            #cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
+            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
+            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
         if len(fidx1i) > 0:
             cov[1][:, :idx1_len] += sp.array(cnt1).min(axis=0)
             cov[1][:, idx1_len:] += sp.array(cnt2).min(axis=0)
@@ -556,12 +564,12 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     ### get list of event IDs - we will use these to make event forms unique
     event_ids = None
     if gen_event_ids:
-        event_ids = get_event_ids(IN, event_type, event_idx, CFG)
+        event_ids = get_event_ids(IN, event_type, conf_idx, CFG)
 
     IN.close()
 
     ### only keep confident events
-    gene_idx = gene_idx[event_idx]
+    gene_idx = gene_idx[conf_idx]
 
     ### round to the closest int
     cov[0] = sp.floor(cov[0])
