@@ -402,6 +402,12 @@ def parse_args(options, identity='main'):
             print >> sys.stderr, 'ERROR: option matlab should have value y or n, but has %s' % options.matlab
             sys.exit(1)
 
+        if options.cap_exp_outliers in ['n', 'y']:
+            CFG['cap_exp_outliers'] = (options.cap_exp_outliers == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option cap_exp_outliers should have value y or n, but has %s' % options.cap_exp_outliers
+            sys.exit(1)
+
         if options.conditionA == '-':
             print >> sys.stderr, 'ERROR: At least one sample for condition A required'
             sys.exit(1)

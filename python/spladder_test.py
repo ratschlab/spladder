@@ -12,7 +12,7 @@ import time
 import datetime
 from scipy.optimize import minimize_scalar
 from scipy.special import polygamma 
-from scipy.stats import chi2,nbinom
+from scipy.stats import chi2,nbinom,scoreatpercentile
 import numpy.random as npr
 
 from modules.classes.gene import Gene
@@ -56,6 +56,7 @@ def parse_options(argv):
     testing.add_option('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
     testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)
     testing.add_option('-i', '--min_count', dest='min_count', metavar='INT', help='min read count sum over all samples for an event isoform to be tested [10]', default=10)
+    testing.add_option('--cap_exp_outliers', dest='cap_exp_outliers', metavar='y|n', help='replace expression outliers with a max value [y]', default='y')
     output = OptionGroup(parser, 'OUTPUT OPTIONS')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
     output.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
@@ -177,6 +178,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 
     if CFG['verbose']:
         sys.stdout.write('\n... done.\n')
+            
 
     ### write results to hdf5
     if fn_out is not None:
@@ -662,13 +664,16 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx, r_idx=No
         if sp.all(sp.isnan(pvals[i, :])):
             continue
         elif sp.isnan(pvals[i, 0]):
-            pvals[i, 1] = sp.nan
+            #pvals[i, 1] = sp.nan
             m_idx[i] = 1
         elif sp.isnan(pvals[i, 1]):
-            pvals[i, 0] = sp.nan
+            #pvals[i, 0] = sp.nan
             m_idx[i] = 0
         else:
             m_idx[i] = sp.argmax(pvals[i, :])
+            #m_idx[i] = sp.argmin(pvals[i, :])
+            #pvals[i, m_idx[i]] = min(1, 2*pvals[i, m_idx[i]])
+
     pvals = sp.array([pvals[i, m_idx[i]] for i in range(pvals.shape[0])], dtype='float')
 
     offset = cov.shape[0] / 2
@@ -798,16 +803,28 @@ def main():
         idx1 = sp.where(sp.in1d(gene_strains, CFG['conditionA']))[0]
         idx2 = sp.where(sp.in1d(gene_strains, CFG['conditionB']))[0]
 
-        ### for TESTING
-        #setsize = 100
-        #idx1 = sp.arange(0, setsize / 2)
-        #idx2 = sp.arange(setsize / 2, setsize)
-
         ### subset expression counts to tested samples
         gene_counts = gene_counts[:, sp.r_[idx1, idx2]]
         gene_strains = gene_strains[sp.r_[idx1, idx2]]
         sf_ge = sf_ge[sp.r_[idx1, idx2]]
-        #sf = sp.r_[sf, sf]
+
+        ### handle outliers (mask with capped value)
+        if CFG['cap_exp_outliers']:
+            outlier_cnt = 0
+            for gidx in range(gene_counts.shape[0]):
+                log_counts = sp.log2(gene_counts[gidx, :] / sf_ge + 1)
+                p25 = scoreatpercentile(log_counts, 25)
+                p75 = scoreatpercentile(log_counts, 75)
+                iqr = (p75 - p25)
+                if iqr > 0:
+                    o_idx = sp.where(log_counts > p75+(1.5*iqr))[0]
+                    if o_idx.shape[0] > 0:
+                        cap = 2**(p75+(1.5*iqr))-1
+                        gene_counts[gidx, o_idx] = (cap * sf_ge[o_idx])
+                        outlier_cnt += o_idx.shape[0]
+            if outlier_cnt > 0:
+                total_cnt = gene_counts.shape[0] * gene_counts.shape[1]
+                sys.stdout.write('\nCapped %i/%i outlier expression counts (%.2f percent)\n' % (outlier_cnt, total_cnt, float(outlier_cnt) / total_cnt * 100))
 
         ### test each event type individually
         for event_type in CFG['event_types']:
@@ -831,33 +848,24 @@ def main():
             curr_gene_counts = gene_counts[gene_idx, :]
 
             ### filter for min expression
-            if event_type == 'intron_retention':
-                k_idx = sp.where((sp.mean(cov[0] == 0, axis=1) < CFG['max_0_frac']) | \
-                                 (sp.mean(cov[1] == 0, axis=1) < CFG['max_0_frac']))[0]
-            else:
-                ### filter all events that have too many 0 counts in inclusion or exclusion 
-                ### filter all events where inclusion and exclusion in 
-                #mean1 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, idx1.shape[0]:], (cov[1] / sf_ev)[:, idx1.shape[0]:]], axis=1)
-                #mean2 = sp.mean(sp.c_[(cov[0] / sf_ev)[:, :idx1.shape[0]], (cov[1] / sf_ev)[:, :idx1.shape[0]]], axis=1)
+            #k_idx1 = ((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) & \
+            #          ((sp.mean(cov[0][:, idx1.shape[0]:] == 0, axis=1) <= CFG['max_0_frac']) | \
+            #           (sp.mean(cov[0][:, :idx1.shape[0]] == 0, axis=1) <= CFG['max_0_frac'])))
+            #k_idx2 = ((sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac']) & \
+            #          ((sp.mean(cov[1][:, idx1.shape[0]:] == 0, axis=1) <= CFG['max_0_frac']) | \
+            #           (sp.mean(cov[1][:, :idx1.shape[0]] == 0, axis=1) <= CFG['max_0_frac'])))
+            k_idx1 = ((sp.mean(cov[0][:, idx1.shape[0]:] <= 1, axis=1) <= CFG['max_0_frac']) | \
+                      (sp.mean(cov[0][:, :idx1.shape[0]] <= 1, axis=1) <= CFG['max_0_frac']))
+            k_idx2 = ((sp.mean(cov[1][:, idx1.shape[0]:] <= 1, axis=1) <= CFG['max_0_frac']) | \
+                      (sp.mean(cov[1][:, :idx1.shape[0]] <= 1, axis=1) <= CFG['max_0_frac']))
 
-                #k_idx1 = ((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) & \
-                #          ((sp.mean(cov[0][:, idx1.shape[0]:] == 0, axis=1) <= CFG['max_0_frac']) | \
-                #           (sp.mean(cov[0][:, :idx1.shape[0]] == 0, axis=1) <= CFG['max_0_frac'])))
-                #k_idx2 = ((sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac']) & \
-                #          ((sp.mean(cov[1][:, idx1.shape[0]:] == 0, axis=1) <= CFG['max_0_frac']) | \
-                #           (sp.mean(cov[1][:, :idx1.shape[0]] == 0, axis=1) <= CFG['max_0_frac'])))
-                k_idx1 = ((sp.mean(cov[0][:, idx1.shape[0]:] <= 1, axis=1) <= CFG['max_0_frac']) | \
-                          (sp.mean(cov[0][:, :idx1.shape[0]] <= 1, axis=1) <= CFG['max_0_frac']))
-                k_idx2 = ((sp.mean(cov[1][:, idx1.shape[0]:] <= 1, axis=1) <= CFG['max_0_frac']) | \
-                          (sp.mean(cov[1][:, :idx1.shape[0]] <= 1, axis=1) <= CFG['max_0_frac']))
-
-                k_idx = sp.where(k_idx1 | k_idx2)[0]
-                #k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) | \
-                #                  (sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac'])) & \
-                #                 (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) <= CFG['max_0_frac']) & \
-                #                 (sp.mean(sp.c_[cov[0][:, idx1.shape[0]:], cov[1][:, idx1.shape[0]:]] == 0, axis=1) <= CFG['max_0_frac']) & \
-                #                 ((mean1 >= 10) | (mean2 >= 10)))[0]
-                #del mean1, mean2
+            k_idx = sp.where(k_idx1 | k_idx2)[0]
+            #k_idx = sp.where(((sp.mean(cov[0] == 0, axis=1) <= CFG['max_0_frac']) | \
+            #                  (sp.mean(cov[1] == 0, axis=1) <= CFG['max_0_frac'])) & \
+            #                 (sp.mean(sp.c_[cov[0][:, :idx1.shape[0]], cov[1][:, :idx1.shape[0]]] == 0, axis=1) <= CFG['max_0_frac']) & \
+            #                 (sp.mean(sp.c_[cov[0][:, idx1.shape[0]:], cov[1][:, idx1.shape[0]:]] == 0, axis=1) <= CFG['max_0_frac']) & \
+            #                 ((mean1 >= 10) | (mean2 >= 10)))[0]
+            #del mean1, mean2
 
             if CFG['verbose']:
                 print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
@@ -865,8 +873,6 @@ def main():
                 print 'All events of type %s were filtered out due to low coverage. Please try re-running with less stringent filter criteria' % event_type
                 continue
 
-           # k_idx = sp.where((sp.mean(sp.c_[cov[0], cov[1]], axis=1) > 2))[0]
-           # k_idx = sp.where((sp.mean(cov[0], axis=1) > 2) & (sp.mean(cov[1], axis=1) > 2))[0]
             cov[0] = cov[0][k_idx, :]
             cov[1] = cov[1][k_idx, :]
             curr_gene_counts = curr_gene_counts[k_idx, :]
@@ -925,6 +931,16 @@ def main():
             (pvals, cov_used, disp_raw_used, disp_adj_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx)
             pvals_adj = adj_pval(pvals, CFG) 
 
+            ### compute means and fold changes
+            s = event_strains.shape[0]
+            m_ev1 = sp.nanmean(cov_used[:, :idx1.shape[0]] / sf_ev[:idx1.shape[0]], axis=1)
+            m_ev2 = sp.nanmean(cov_used[:, idx1.shape[0]:s] / sf_ev[idx1.shape[0]:], axis=1)
+            fc_ev = sp.log2(m_ev1) - sp.log2(m_ev2)
+            m_ge1 = sp.nanmean(cov_used[:, s:s+idx1.shape[0]] / sf_ge[:idx1.shape[0]], axis=1)
+            m_ge2 = sp.nanmean(cov_used[:, s+idx1.shape[0]:] / sf_ge[idx1.shape[0]:], axis=1)
+            fc_ge = sp.log2(m_ge1) - sp.log2(m_ge2)
+            m_all = sp.c_[m_ev1, m_ev2, fc_ev, m_ge1, m_ge2, fc_ge]
+
             if CFG['diagnose_plots']:
                 plot.qq_plot(pvals=pvals_adj,
                              figtitle='Quantile-Quantile Plot (Adjusted)',
@@ -934,6 +950,13 @@ def main():
                              figtitle='Quantile-Quantile Plot',
                              filename=os.path.join(CFG['plot_dir'], 'qq_plot_%s.png' % event_type),
                              CFG=CFG)
+                plot.ma_plot(pvals=pvals_adj,
+                             counts=sp.nanmean(sp.c_[m_ev1, m_ev2], axis=1),
+                             fc=(fc_ev - fc_ge),
+                             figtitle='MA Plot',
+                             filename=os.path.join(CFG['plot_dir'], 'ma_plot_%s.png' % event_type),
+                             CFG=CFG)
+
 
             ### 
             ### OUTPUT
@@ -969,17 +992,7 @@ def main():
                 print 'Writing extended test results to %s' % out_fname
             header_long = sp.r_[header, ['mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'], ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains], ['disp_raw', 'disp_adj']]
 
-            ### compute means
-            s = event_strains.shape[0]
-            m_ev1 = sp.nanmean(cov_used[:, :idx1.shape[0]] / sf_ev[:idx1.shape[0]], axis=1)
-            m_ev2 = sp.nanmean(cov_used[:, idx1.shape[0]:s] / sf_ev[idx1.shape[0]:], axis=1)
-            fc_ev = sp.log2(m_ev1) - sp.log2(m_ev2)
-            m_ge1 = sp.nanmean(cov_used[:, s:s+idx1.shape[0]] / sf_ge[:idx1.shape[0]], axis=1)
-            m_ge2 = sp.nanmean(cov_used[:, s+idx1.shape[0]:] / sf_ge[idx1.shape[0]:], axis=1)
-            fc_ge = sp.log2(m_ge1) - sp.log2(m_ge2)
-            m_all = sp.c_[m_ev1, m_ev2, fc_ev, m_ge1, m_ge2, fc_ge]
-
-            data_out = sp.c_[data_out, m_all[s_idx, :], (cov_used[s_idx, :] / sf).astype('str'), disp_raw_used.astype('str'), disp_adj_used.astype('str')]
+            data_out = sp.c_[data_out, m_all[s_idx, :], (cov_used[s_idx, :] / sf).astype('str'), disp_raw_used[s_idx].astype('str'), disp_adj_used[s_idx].astype('str')]
             sp.savetxt(out_fname, sp.r_[header_long[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
             ### write output unique over genes
