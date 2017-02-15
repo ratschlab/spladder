@@ -38,10 +38,21 @@ def load_events(CFG, event_info):
 
     event_list = []
     for event_type in sp.unique(event_info[:, 0]):
-        events = cPickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'r'))
+        event_file = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level']))
+        event_db_file = re.sub(r'.pickle$', '', event_file) + '.db.pickle'
+        event_idx_file = re.sub(r'.pickle$', '', event_file) + '.idx.pickle'
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
-        for e in s_idx:
-            event_list.append(events[int(event_info[e, 1])])
+        if not os.path.exists(event_db_file):
+            events = cPickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'r'))
+            for e in s_idx:
+                event_list.append(events[int(event_info[e, 1])])
+        else:
+            offsets = cPickle.load(open(event_idx_file, 'r'))
+            events_handle = open(event_db_file, 'r')
+            for e in s_idx:
+                events_handle.seek(offsets[int(event_info[e, 1])], 0)
+                event_list.append(cPickle.load(events_handle))
+
 
     return event_list
 
@@ -89,10 +100,10 @@ def get_seg_counts(CFG, gid):
 
     IN = h5py.File(os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % (CFG['confidence_level'])), 'r')
     idx = sp.where(IN['gene_ids_edges'][:] == gid)[0]
-    edges = IN['edges'][:][idx, :]
+    edges = IN['edges'][idx, :]
     edge_idx = IN['edge_idx'][:][idx]
     idx = sp.where(IN['gene_ids_segs'][:] == gid)[0]
-    segments = IN['segments'][:][idx]
+    segments = IN['segments'][idx, :]
     strains = IN['strains'][:]
     IN.close()
 
