@@ -156,4 +156,21 @@ def count_histogram(counts, matrix, figtitle, filename, CFG):
     plt.savefig(re.sub(r'.png$', '', filename) + '.log10.png', format='png', bbox_inches='tight')
     plt.close(fig)
 
+def ma_plot(pvals, counts, fc, figtitle, filename, CFG, alpha=0.05):
+    '''
+    create an MA plot summarizing coverage, log fold changes and significant values
+    '''
+
+    fig = plt.figure(figsize=(10, 10), dpi=100)
+    ax = fig.add_subplot(111)
+    ax.set_title(figtitle)
+    ax.set_ylabel("Fold change (log2)")
+    ax.set_xlabel("Mean normalized counts (log 10)")
+    idx = sp.where(pvals > alpha)[0]
+    ax.plot(sp.log10(counts[idx] + 1), fc[idx], 'ko')
+    idx = sp.where(pvals <= alpha)[0]
+    ax.plot(sp.log10(counts[idx] + 1), fc[idx], 'ro')
+    plt.savefig(filename, format='png', bbox_inches='tight')
+    plt.close(fig)
+
 
