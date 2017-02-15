@@ -6,7 +6,8 @@ import numpy.random as npr
 import pysam
 import sys
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 import math
 import pdb
 
@@ -140,6 +141,9 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
     if cmap_edg is None:
         cmap_edg = plt.get_cmap('jet')
 
+    line_patches = []
+    fill_patches = []
+
     ### iterate over segments
     for j in range(gene.segmentgraph.segments.shape[1]):
         s = gene.segmentgraph.segments[:, j]
@@ -153,15 +157,24 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
 
             ### plot segment over all samples (including uncertainty region)
             if counts.shape[0] == 1:
-                ax.plot(s, [counts[0], counts[0]], '-', color=cmap_seg(norm(c)), linewidth=2)
+                ax.plot(s, [counts[0], counts[0]], '-', color=cmap_seg(norm(c)), linewidth=0.5)
+                #line_patches.append(mlines.Line2D(s, [counts[0], counts[0]], color=cmap_seg(norm(c)), linewidth=2, transform=None))
             elif counts.shape[0] > 1:
                 stderr = spst.sem(counts)
                 mean = sp.mean(counts)
-                ax.fill_between(s, mean, mean+stderr, color=cmap_seg(norm(c)), alpha=0.3)
-                ax.fill_between(s, mean, mean-stderr, color=cmap_seg(norm(c)), alpha=0.3)
-                ax.plot(s, [mean, mean], '-', color=cmap_seg(norm(c)), linewidth=2)
-                ax.plot(s, [mean+stderr, mean+stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
-                ax.plot(s, [mean-stderr, mean-stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
+                #ax.fill_between(s, mean, mean+stderr, color=cmap_seg(norm(c)), alpha=0.3)
+                ax.fill_between(s, mean-stderr, mean+stderr, color=cmap_seg(norm(c)), alpha=0.2, edgecolor='none', linewidth=0)
+                #fill_patches.append(mpatches.Rectangle(s, mean-stderr, mean+stderr, color=cmap_seg(norm(c)), alpha=0.3, transform=None))
+                ax.plot(s, [mean, mean], '-', color=cmap_seg(norm(c)), linewidth=0.5)
+                #line_patches.append(mlines.Line2D(s, [mean, mean], color=cmap_seg(norm(c)), linewidth=2, transform=None))
+
+                #ax.plot(s, [mean+stderr, mean+stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
+                #ax.plot(s, [mean-stderr, mean-stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
+
+    #for line in line_patches:
+    #    ax.add_line(line)
+    #for patch in fill_patches:
+    #    ax.add_patch(patch)
 
     ### iterate over intron edges
     for j in range(edge_idx.shape[0]):
@@ -316,9 +329,9 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
 
     if return_legend_handle:
         if label is not None:
-            return patches.Patch(color=color_cov, alpha=0.5, label=label)
+            return mpatches.Patch(color=color_cov, alpha=0.5, label=label)
         else:
-            return patches.Patch(color=color_cov, alpha=0.5, label='Expression')
+            return mpatches.Patch(color=color_cov, alpha=0.5, label='Expression')
 
 def add_intron_patch(ax, start, stop, cnt):
 
@@ -335,7 +348,7 @@ def add_intron_patch(ax, start, stop, cnt):
 
     codes, verts = zip(*pdata)
     path = mpath.Path(verts, codes)
-    patch = patches.PathPatch(path, facecolor='g', alpha=0.5)
+    patch = mpatches.PathPatch(path, facecolor='g', alpha=0.5)
     ax.add_patch(patch)
 
 def add_intron_patch2(ax, start, stop, cnt, color='green'):
