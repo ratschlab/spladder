@@ -427,8 +427,8 @@ def parse_args(options, identity='main'):
             CFG['conditionA'] = [str(x) for x in sp.loadtxt(CFG['conditionA'][0], dtype='str')]
         if len(CFG['conditionB']) > 0 and CFG['conditionB'][0].lower().endswith('txt'):
             CFG['conditionB'] = [str(x) for x in sp.loadtxt(CFG['conditionB'][0], dtype='str')]
-        CFG['conditionA'] = [re.sub(r'.bam$', '', x) for x in CFG['conditionA']]
-        CFG['conditionB'] = [re.sub(r'.bam$', '', x) for x in CFG['conditionB']]
+        CFG['conditionA'] = [re.sub(r'.[bB][aA][mM]|.[hH][dD][fF]5)$', '', x) for x in CFG['conditionA']]
+        CFG['conditionB'] = [re.sub(r'.[bB][aA][mM]|.[hH][dD][fF]5)$', '', x) for x in CFG['conditionB']]
         CFG['conditionA'] = [os.path.basename(x) for x in CFG['conditionA']]
         CFG['conditionB'] = [os.path.basename(x) for x in CFG['conditionB']]
 
