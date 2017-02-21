@@ -118,7 +118,7 @@ def spladder_viz():
         if gid.shape[0] == 0:
             sys.stderr.write('ERROR: provided gene ID %s could not be found, please check for correctness\n' % options.gene_name)
             sys.exit(1)
-        gids = [[sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0][0], None]]
+        gids = [[sp.where(sp.array([x.name for x in genes]) == options.gene_name)[0][0], options.event_id]]
     ### the plotting happens on the results of spladder test
     ### the user chooses to plot the top k significant events
     ### this requires the event type to be specified
