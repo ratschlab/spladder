@@ -694,8 +694,12 @@ def main():
     CFG = settings.parse_args(options, identity='test')
     CFG['use_exon_counts'] = False
 
+    non_alt_tag = ''
+    if CFG['non_alt_norm']:
+        non_alt_tag = '.non_alt'
+
     ### generate output directory
-    outdir = os.path.join(options.outdir, 'testing')
+    outdir = os.path.join(options.outdir, 'testing%s' % non_alt_tag)
     if options.timestamp == 'y':
         outdir = '%s_%s' % (outdir, str(datetime.datetime.now()).replace(' ', '_'))
     if options.labelA != 'condA' and options.labelB != 'condB':
@@ -769,7 +773,7 @@ def main():
             CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
             CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
 
-        CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
+        CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, non_alt_tag))
         if os.path.exists(CFG['fname_exp_hdf5']):
             if CFG['verbose']:
                 print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
@@ -782,7 +786,7 @@ def main():
             condition_strains = None
             if options.subset_samples == 'y':
                 condition_strains = sp.unique(sp.r_[sp.array(CFG['conditionA']), sp.array(CFG['conditionB'])])
-                CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, hash(tuple(sp.unique(condition_strains))) * -1))
+                CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, non_alt_tag, hash(tuple(sp.unique(condition_strains))) * -1))
             if os.path.exists(CFG['fname_exp_hdf5']):
                 if CFG['verbose']:
                     print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
