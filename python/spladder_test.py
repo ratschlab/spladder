@@ -330,6 +330,10 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG, test_idx, event_type):
     else:        
         (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, test_idx, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
+    if sp.sum(disp_raw_conv) == 0:
+        print >> sys.stderr, '\nERROR: None of the dispersion estimates converged. Exiting.'
+        sys.exit(1)
+
     if CFG['diagnose_plots']:
         plot.mean_variance_plot(counts=gene_counts,
                                 disp=disp_raw,
