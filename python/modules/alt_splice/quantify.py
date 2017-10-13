@@ -386,7 +386,8 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         CFG = PAR['CFG']
 
     ### read count_data from event HDF5
-    IN = h5py.File(event_fn, 'r', driver='core')
+    #IN = h5py.File(event_fn, 'r', driver='core')
+    IN = h5py.File(event_fn, 'r', driver='core', backing_store=False)
     
     ### get indices of confident events
     if CFG['is_matlab']:
@@ -560,6 +561,9 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     cov[0][:, idx1_len:] = cov[0][:, idx1_len:][:, s_idx]
     cov[1][:, idx1_len:] = cov[1][:, idx1_len:][:, s_idx]
     strains = sp.r_[strains1, strains2]
+
+    if strains[0].endswith('npz'):
+        strains = sp.array([re.sub(r'.[nN][pP][zZ]$', '', x) for x in strains])
 
     ### get list of event IDs - we will use these to make event forms unique
     event_ids = None
