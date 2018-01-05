@@ -162,7 +162,7 @@ def spladder():
         ### convert input BAMs to sparse arrays - filtered case
         if CFG['bam_to_sparse']:
             for bfn in CFG['bam_fnames']:
-                if bfn.endswith('bam') and not os.path.exists(re.sub(r'.bam$', '', bfn) + '.filt.hdf5'):
+                if bfn.endswith('bam') and not os.path.exists(re.sub(r'.bam$', '', bfn) + '.conf_%i' % CFG['confidence_level'] + '.filt.hdf5'):
                     #cnts = dict()
 
                     if not 'chrm_lookup' in CFG:
@@ -170,7 +170,7 @@ def spladder():
                         CFG = append_chrms([x['SN'] for x in parse_header(IN.text)['SQ']], CFG)
                         IN.close()
 
-                    OUT = h5py.File(re.sub(r'.bam$', '', bfn) + '.filt.hdf5', 'w')
+                    OUT = h5py.File(re.sub(r'.bam$', '', bfn) + '.conf_%i' % CFG['confidence_level'] + '.filt.hdf5', 'w')
                     if CFG['parallel'] > 1:
                         import multiprocessing as mp
                         pool = mp.Pool(processes=CFG['parallel'])
