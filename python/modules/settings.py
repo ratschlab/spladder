@@ -162,11 +162,15 @@ def default_settings():
     CFG['psi_min_reads'] = 10
     CFG['diagnose_plots'] = False
 
-    CFG['filter_overlapping_genes'] = True
+    CFG['filter_overlapping_genes'] = False
+    CFG['filter_overlapping_exons'] = False
+    CFG['filter_overlapping_transcripts'] = False
 
     ### edge limit for detecting events from a graph, if a graph has
     ### more edges, the gene will be ignored for event detection
     CFG['detect_edge_limit'] = 50 #2000
+
+    CFG['introns_unstranded'] = False
 
     return CFG
 

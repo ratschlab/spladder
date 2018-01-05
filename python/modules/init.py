@@ -3,6 +3,8 @@ import cPickle
 import os
 import pysam
 import scipy as sp
+import h5py
+import re
 
 if __package__ is None:
     __package__ = 'modules'
@@ -305,7 +307,7 @@ def parse_header(header_string):
             hd[sl[0].strip('@')] = [td]
     return hd
 
-def init_regions(fn_bams, CFG=None):
+def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
     # regions=init_regions(fn_bams)
 
     regions = []
@@ -319,28 +321,52 @@ def init_regions(fn_bams, CFG=None):
         if not os.path.exists(fn_bams[i]):
             continue
         else:
-            ### load bamfile
-            IN = pysam.Samfile(fn_bams[i], 'rb')
-            #header_info = IN.header['SQ']
-            header_info = parse_header(IN.text)['SQ']
-            
-            CFG = append_chrms([x['SN'] for x in header_info], CFG)
+            if sparse_bam:
+                ### load bamfile
+                IN = h5py.File(re.sub(r'.bam$', '', fn_bams[i]) + '.conf_%i' % conf + '.filt.hdf5', 'r')
+                
+                strands = ['+', '-']
+                for k in IN.keys():
+                    if not k.endswith('_reads_shp'):
+                        continue
+                    chrm = re.sub(r'_reads_shp$', '', k)
+                    lens = IN[k][:][1]
+                    if not (chrm, lens) in processed:
+                        for s in strands:
+                            region = Region()
+                            region.chr = chrm
+                            CFG = append_chrms([chrm], CFG)
+                            region.chr_num = CFG['chrm_lookup'][region.chr]
+                            region.strand = s
+                            region.start = 1
+                            region.stop = lens
+                            region.id = cnt
+                            regions.append(region)
+                            cnt += 1
+                        processed.append((chrm, lens))
+            else:
+                ### load bamfile
+                IN = pysam.Samfile(fn_bams[i], 'rb')
+                #header_info = IN.header['SQ']
+                header_info = parse_header(IN.text)['SQ']
+                
+                CFG = append_chrms([x['SN'] for x in header_info], CFG)
 
-            strands = ['+', '-']
-            for c in range(len(header_info)):
-                if not (header_info[c]['SN'], header_info[c]['LN']) in processed:
-                    for s in strands:
-                        region = Region()
-                        region.chr = header_info[c]['SN']
-                        region.chr_num = CFG['chrm_lookup'][region.chr]
-                        region.strand = s
-                        region.start = 1
-                        region.stop = header_info[c]['LN']
-                        region.id = cnt
-                        regions.append(region)
-                        cnt += 1
-                    processed.append((header_info[c]['SN'], header_info[c]['LN']))
-            IN.close()
+                strands = ['+', '-']
+                for c in range(len(header_info)):
+                    if not (header_info[c]['SN'], header_info[c]['LN']) in processed:
+                        for s in strands:
+                            region = Region()
+                            region.chr = header_info[c]['SN']
+                            region.chr_num = CFG['chrm_lookup'][region.chr]
+                            region.strand = s
+                            region.start = 1
+                            region.stop = header_info[c]['LN']
+                            region.id = cnt
+                            regions.append(region)
+                            cnt += 1
+                        processed.append((header_info[c]['SN'], header_info[c]['LN']))
+                IN.close()
         break
 
     return (sp.array(regions, dtype = 'object'), CFG)
@@ -365,17 +391,18 @@ def check_annotation(CFG, genes):
         genes = genes[k_idx]
 
     ### check whether we run unstranded analysis and have to exclude overlapping gene annotations
-    ### TODO: make this also work for stranded analysis and only exclude genes overlapping on the same strand
     if CFG['filter_overlapping_genes']:
         rm_ids = []
         chrms = sp.array([x.chr for x in genes])
+        strands = sp.array([x.strand for x in genes])
         starts = sp.array([x.start for x in genes], dtype='int')
         stops = sp.array([x.stop for x in genes], dtype='int')
         for c in sp.unique(chrms):
-            c_idx = sp.where(chrms == c)[0]
-            for i in c_idx:
-                if sp.sum((starts[i] <= stops[c_idx]) & (stops[i] >= starts[c_idx])) > 1:
-                    rm_ids.append(genes[i].name)
+            for s in sp.unique(strands):
+                c_idx = sp.where((chrms == c) & (strands == s))[0]
+                for i in c_idx:
+                    if sp.sum((starts[i] <= stops[c_idx]) & (stops[i] >= starts[c_idx])) > 1:
+                        rm_ids.append(genes[i].name)
         if len(rm_ids) > 0:
             rm_ids = sp.unique(rm_ids)
             print >> sys.stderr, 'WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0]
@@ -386,43 +413,45 @@ def check_annotation(CFG, genes):
             genes = genes[k_idx]
 
     ### check whether exons are part of multiple genes
-    exon_map = dict()
-    for i, g in enumerate(genes):
-        for t in range(len(g.exons)):
-            for e in range(g.exons[t].shape[0]):
-                k = frozenset(g.exons[t][e, :])
-                if k in exon_map:
-                    exon_map[k].append(g.name)
-                else:
-                    exon_map[k] = [g.name]
-    rm_ids = []
-    for exon in exon_map:
-        if sp.unique(exon_map[exon]).shape[0] > 1:
-            rm_ids.extend(exon_map[exon])
-    if len(rm_ids) > 0:
-        rm_ids = sp.unique(rm_ids)
-        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that share exact exon coordines:' % rm_ids.shape[0]
-        print >> sys.stderr, 'list of excluded exons written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_shared')
-        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
-        gene_names = sp.array([x.name for x in genes], dtype='str')
-        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
-        genes = genes[k_idx]
+    if CFG['filter_overlapping_exons']:
+        exon_map = dict()
+        for i, g in enumerate(genes):
+            for t in range(len(g.exons)):
+                for e in range(g.exons[t].shape[0]):
+                    k = ':'.join([g.chr, str(g.exons[t][e, 0]), str(g.exons[t][e, 1])])
+                    if k in exon_map:
+                        exon_map[k].append(g.name)
+                    else:
+                        exon_map[k] = [g.name]
+        rm_ids = []
+        for exon in exon_map:
+            if sp.unique(exon_map[exon]).shape[0] > 1:
+                rm_ids.extend(exon_map[exon])
+        if len(rm_ids) > 0:
+            rm_ids = sp.unique(rm_ids)
+            print >> sys.stderr, 'WARNING: removing %i genes from given annotation that share exact exon coordinates:' % rm_ids.shape[0]
+            print >> sys.stderr, 'list of excluded exons written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_shared')
+            sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
+            gene_names = sp.array([x.name for x in genes], dtype='str')
+            k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+            genes = genes[k_idx]
 
     ### check whether exons within the same transcript overlap
-    rm_ids = []
-    for i, g in enumerate(genes):
-        for t in range(len(g.exons)):
-            for e in range(g.exons[t].shape[0] - 1):
-                if sp.any(g.exons[t][e+1:, 0] < g.exons[t][e, 1]):
-                    rm_ids.append(g.name)
-    if len(rm_ids) > 0:
-        rm_ids = sp.unique(rm_ids)
-        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that have at least one transcript with overlapping exons.' % rm_ids.shape[0]
-        print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_overlap')
-        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
-        gene_names = sp.array([x.name for x in genes], dtype='str')
-        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
-        genes = genes[k_idx]
+    if CFG['filter_overlapping_transcripts']:
+        rm_ids = []
+        for i, g in enumerate(genes):
+            for t in range(len(g.exons)):
+                for e in range(g.exons[t].shape[0] - 1):
+                    if sp.any(g.exons[t][e+1:, 0] < g.exons[t][e, 1]):
+                        rm_ids.append(g.name)
+        if len(rm_ids) > 0:
+            rm_ids = sp.unique(rm_ids)
+            print >> sys.stderr, 'WARNING: removing %i genes from given annotation that have at least one transcript with overlapping exons.' % rm_ids.shape[0]
+            print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_overlap')
+            sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
+            gene_names = sp.array([x.name for x in genes], dtype='str')
+            k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+            genes = genes[k_idx]
 
     ### do we have any genes left?
     if genes.shape[0] == 0:
