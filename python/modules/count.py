@@ -63,7 +63,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
                 if CFG['bam_to_sparse'] and (fn_bam[f].endswith('npz') or os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz')):
                     ### make sure that we query the right contig from cache
                     assert(gg.chr == contig)
-                    (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, types=['exon_track','intron_list'], filter=None, cache=bam_cache)
+                    (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, CFG['confidence_level'], types=['exon_track','intron_list'], filter=None, cache=bam_cache)
                 else:
                     ### add RNA-seq evidence to the gene structure
                     (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);

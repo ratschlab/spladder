@@ -269,7 +269,7 @@ def insert_intron_retentions(genes, CFG):
     strands = ['+', '-']
 
     ### form all possible combinations of contigs and strands --> regions
-    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
+    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG['confidence_level'], CFG, sparse_bam=CFG['bam_to_sparse'])
 
     ### ignore contigs not present in bam files 
     # TODO
@@ -290,7 +290,7 @@ def insert_intron_retentions(genes, CFG):
             for i in cidx:
 
                 if CFG['verbose'] and (c+1) % 100 == 0:
-                    print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested introns, %2.1f%%)' % (c+1, genes.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
+                    print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested eligible introns, %2.1f%%)' % (c+1, genes.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
 
                 gg = genes[i]
                 assert(gg.strand == s)
@@ -298,11 +298,11 @@ def insert_intron_retentions(genes, CFG):
 
                 if CFG['bam_to_sparse']:
                     if isinstance(CFG['bam_fnames'], str):
-                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
                         for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:
@@ -318,22 +318,27 @@ def insert_intron_retentions(genes, CFG):
 
                 ### check for all vertex-pairs, if respective intron can be retained
                 new_retention = sp.zeros(gg.splicegraph.edges.shape, dtype='int') 
-                for k in range(gg.splicegraph.edges.shape[0]):
-                    for l in range(k + 1, gg.splicegraph.edges.shape[0]):
-                        if gg.splicegraph.edges[k, l] == 1:
-                            num_introns += 1
-                            idx = sp.arange(gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]) - gg.start
-                            icov = sp.sum(tracks[:, idx], axis=0) 
-                            if sp.median(icov) > CFG['intron_retention']['min_retention_cov'] and \
-                                sp.mean(icov > (0.5 * sp.mean(icov))) > CFG['intron_retention']['min_retention_region'] and  \
-                                max(exon_coverage[k], exon_coverage[l]) / (1e-6 + min(exon_coverage[k], exon_coverage[l])) <= CFG['intron_retention']['min_retention_max_exon_fold_diff'] and \
-                                sp.mean(icov) >= CFG['intron_retention']['min_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0 and \
-                                sp.mean(icov) <= CFG['intron_retention']['max_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0:
+                #for k in range(gg.splicegraph.edges.shape[0]):
+                #    for l in range(k + 1, gg.splicegraph.edges.shape[0]):
+                #        if gg.splicegraph.edges[k, l] == 1:
+                for k,l in sp.array(sp.where(sp.triu(gg.splicegraph.edges))).T:
+                    ### ignore introns that include at least one complete exon
+                    if sp.sum((gg.splicegraph.vertices[0, :] > gg.splicegraph.vertices[1, k]) & (gg.splicegraph.vertices[1, :] < gg.splicegraph.vertices[0, l])) > 0:
+                        continue
 
-                                new_retention[k, l] = 1
-                                inserted += 1
-                            #	fprintf(log_fd, '%s\tintron_retention\t%c\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%2.1f\n', gg.chr, gg.strand, gg.splicegraph{1}(1,k), gg.splicegraph{1}(2,k), gg.splicegraph{1}(1,l), gg.splicegraph{1}(2,l), ...
-                            #			floor(median(icov(1,:)+icov(2,:))), floor(gg.exon_coverage(k)), floor(gg.exon_coverage(l)), 100*mean(icov(1,:)+icov(2,:)>0)) ;
+                    num_introns += 1
+                    idx = sp.arange(gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]) - gg.start
+                    icov = sp.sum(tracks[:, idx], axis=0) 
+                    if sp.median(icov) > CFG['intron_retention']['min_retention_cov'] and \
+                        sp.mean(icov > (0.5 * sp.mean(icov))) > CFG['intron_retention']['min_retention_region'] and  \
+                        max(exon_coverage[k], exon_coverage[l]) / (1e-6 + min(exon_coverage[k], exon_coverage[l])) <= CFG['intron_retention']['min_retention_max_exon_fold_diff'] and \
+                        sp.mean(icov) >= CFG['intron_retention']['min_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0 and \
+                        sp.mean(icov) <= CFG['intron_retention']['max_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0:
+
+                        new_retention[k, l] = 1
+                        inserted += 1
+                    #	fprintf(log_fd, '%s\tintron_retention\t%c\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%2.1f\n', gg.chr, gg.strand, gg.splicegraph{1}(1,k), gg.splicegraph{1}(2,k), gg.splicegraph{1}(1,l), gg.splicegraph{1}(2,l), ...
+                    #			floor(median(icov(1,:)+icov(2,:))), floor(gg.exon_coverage(k)), floor(gg.exon_coverage(l)), 100*mean(icov(1,:)+icov(2,:)>0)) ;
                 any_added = False
                 if False:
                     if sp.sum(new_retention.ravel()) > 0:
@@ -550,11 +555,11 @@ def insert_intron_edges(genes, CFG):
 
                         if CFG['bam_to_sparse']:
                             if isinstance(CFG['bam_fnames'], str):
-                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
                                 for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
@@ -646,11 +651,11 @@ def insert_intron_edges(genes, CFG):
 
                         if CFG['bam_to_sparse']:
                             if isinstance(CFG['bam_fnames'], str):
-                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
                                 for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
@@ -739,7 +744,7 @@ def insert_intron_edges(genes, CFG):
                 continue
             
             ### both idx1 and idx2 are not empty and are both shorter than 4
-            ### insert exon skips
+            ### insert exon skips     TODO this is not always a skipped exon, can also reconnect alternative ends, etc.
             for idx1_ in idx1:
                 for idx2_ in idx2:
                     if genes[i].splicegraph.edges[idx1_, idx2_] == 0:
@@ -826,7 +831,7 @@ def insert_cassette_exons(genes, CFG):
     strands = ['+', '-']
 
     ### form all possible combinations of contigs and strands --> regions
-    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
+    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG['confidence_level'], CFG, sparse_bam=CFG['bam_to_sparse'])
 
     ### ignore contigs not present in bam files 
     # TODO TODO
@@ -845,7 +850,6 @@ def insert_cassette_exons(genes, CFG):
             cidx = sp.where((contigs == contig) & (gene_strands == s))[0]
 
             for i in cidx:
-
                 if CFG['verbose'] and (c+1) % 100 == 0:
                     print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c+1, genes.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
 
@@ -855,11 +859,11 @@ def insert_cassette_exons(genes, CFG):
 
                 if CFG['bam_to_sparse']:
                     if isinstance(CFG['bam_fnames'], str):
-                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
                         for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:
