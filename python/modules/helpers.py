@@ -1,5 +1,6 @@
 import scipy as sp
 import warnings
+import intervaltree as it
 
 if __package__ is None:
     __package__ = 'modules'
@@ -7,7 +8,6 @@ if __package__ is None:
 from .reads import *
 
 def make_introns_feasible(introns, genes, CFG):
-# introns = make_introns_feasible(introns, genes, CFG)
 
     tmp1 = sp.array([x.shape[0] for x in introns[:, 0]])
     tmp2 = sp.array([x.shape[0] for x in introns[:, 1]])
@@ -25,7 +25,7 @@ def make_introns_feasible(introns, genes, CFG):
         tmp_introns = get_intron_list(genes[unfeas], CFG)
         introns[unfeas, :] = tmp_introns
 
-        ### stil unfeasible?
+        ### still unfeasible?
         tmp1 = sp.array([x.shape[0] for x in introns[:, 0]])
         tmp2 = sp.array([x.shape[0] for x in introns[:, 1]])
 
@@ -37,6 +37,44 @@ def make_introns_feasible(introns, genes, CFG):
         unfeas = still_unfeas;
 
     return introns
+
+
+### remove introns overlapping to more than one gene
+def filter_introns(introns, genes, CFG):
+    
+    ### build interval trees of all genes starts and ends
+    chrms = sp.array([_.strand for _ in genes])
+    strands = sp.array([_.chr for _ in genes])
+    gene_trees = dict()
+    for c in sp.unique(chrms):
+        for s in sp.unique(strands):
+            gene_trees[(c, s)] = it.IntervalTree()
+            c_idx = sp.where((chrms == c) & (strands == s))[0]
+            for i in c_idx:
+                gene_trees[(c, s)][genes[i].start:genes[i].stop] = i
+
+    ### match all introns agains trees and remove elements overlapping
+    ### more than one gene on the same chr/strand
+    cnt_tot = 0
+    cnt_rem = 0
+    strand_list = ['+', '-']
+    offset = CFG['intron_edges']['append_new_terminal_exons_len']
+    for si, s in enumerate(strand_list):
+        for i in range(introns.shape[0]):
+            if introns[i, si].shape[0] == 0:
+                continue
+            k_idx = []
+            cnt_tot += introns[i, si].shape[0]
+            for j in range(introns[i, si].shape[0]):
+                if len(gene_trees[(s, genes[i].chr)].search(introns[i, si][j, 0] - offset, introns[i, si][j, 1] + offset)) == 1:
+                    k_idx.append(j)
+            if len(k_idx) < introns[i, si].shape[0]:
+                cnt_rem += (introns[i, si].shape[0] - len(k_idx))
+                introns[i, si] = introns[i, si][k_idx, :]
+    print  'removed %i of %i (%.2f percent) introns overlapping to no or multiple genes' % (cnt_rem, cnt_tot, cnt_rem / float(cnt_tot) * 100)
+
+    return introns
+
 
 ### determine count output file
 def get_filename(which, CFG, sample_idx=None):

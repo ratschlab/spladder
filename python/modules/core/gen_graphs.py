@@ -72,15 +72,18 @@ def gen_graphs(genes, CFG=None):
     s_idx = sp.argsort([x.chr for x in genes], kind='mergesort')
     genes = genes[s_idx]
 
-    #s_idx = sp.argsort([x.name for x in genes])
-    #genes = genes[s_idx]
-
     # append list of introns supported by RNA-seq data to 
     # the genes structure (only in case we want to augment the graph)
     ##############################################################################%%
     if (CFG['do_insert_cassette_exons'] or CFG['do_insert_intron_retentions'] or CFG['do_insert_intron_edges']): 
         print >> CFG['fd_log'], 'Loading introns from file ...'
         introns = get_intron_list(genes, CFG)
+        print >> CFG['fd_log'], '...done.\n'
+
+        ### clean intron list
+        ### remove all introns that overlap more than one gene on the same strand
+        print >> CFG['fd_log'], 'Filtering introns for ambiguity ...'
+        introns = filter_introns(introns, genes, CFG)
         print >> CFG['fd_log'], '...done.\n'
 
         ### check feasibility
@@ -177,6 +180,8 @@ def gen_graphs(genes, CFG=None):
 
     print >> CFG['fd_log'], 'Re-labeleling new alternative genes ...'
     for ix in range(genes.shape[0]):
+        genes[ix].start = genes[ix].splicegraph.vertices.min()
+        genes[ix].stop = genes[ix].splicegraph.vertices.max()
         genes[ix].label_alt()
     print >> CFG['fd_log'], '... done.\n'
 
