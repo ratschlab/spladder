@@ -121,7 +121,7 @@ def make_unique_by_event(event_list):
     # function event_list = make_unique_by_event(event_list)
     #
     # This script removes all events that share the sam alternative evnt coordinates
-    # but differ in the flanking size. The longest of several equal events is kept.
+    # but differ in the flanking size. The shortes of several equal events is kept.
 
     rm_idx = []
     last_kept = 0
@@ -140,11 +140,11 @@ def make_unique_by_event(event_list):
             assert(event_list[last_kept].chr == event_list[i].chr)
             assert(event_list[last_kept].strand == event_list[i].strand)
             
-            ### check, which event is longer -> keep longer event
+            ### check, which event is longer -> keep shorter event
             len1 = event_list[last_kept].get_len()
             len2 = event_list[i].get_len()
 
-            if len1 > len2:
+            if len1 < len2:
                 keep_idx = last_kept
                 not_keep_idx = i
             else:
