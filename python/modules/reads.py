@@ -13,7 +13,7 @@ if __package__ is None:
 from utils import *
 from init import *
 
-def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped = True, spliced = True, var_aware = None, collapse = False, primary_only=False, no_mm=False):
+def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=True, spliced=True, var_aware=None, collapse=False, primary_only=False, no_mm=False):
     
     infile = pysam.Samfile(fname, 'rb')
 
@@ -22,7 +22,9 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
     j = []
 
     read_cnt = 0
-    introns = []
+    introns_p = dict()
+    introns_m = dict()
+
     if collapse:
         read_matrix = sp.zeros((1, stop - start), dtype='int')
     else:
@@ -39,15 +41,30 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
         ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
         for read in infile.fetch(chr_name, start, stop, until_eof=True):
             
-            ### check if we skip this reads
+            ### check if we skip this read
             if filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, no_mm):
                 continue
 
+            tags = dict(read.tags)
+            curr_read_stranded = ('XS' in tags)
+            is_minus = False
+            if curr_read_stranded:
+                is_minus = (tags['XS'] == '-')
+ 
             ### get introns and covergae
             p = read.pos 
             for o in read.cigar:
                 if o[0] == 3:
-                    introns.append([p, p + o[1]])
+                    if is_minus:
+                        try:
+                            introns_m[(p, p + o[1])] += 1
+                        except KeyError:
+                            introns_m[(p, p + o[1])] = 1
+                    else:
+                        try:
+                            introns_p[(p, p + o[1])] += 1
+                        except KeyError:
+                            introns_p[(p, p + o[1])] = 1
                 if o[0] in [0, 2]:
                     _start = int(max(p-start, 0))
                     _stop = int(min(p + o[1] - start, stop - start))
@@ -96,19 +113,22 @@ def get_reads(fname, chr_name, start, stop, strand = None, filter = None, mapped
                     read_matrix += scipy.sparse.coo_matrix((sp.ones(_l - _k), (i[_k:_l], j[_k:_l])), shape = (read_cnt, stop - start), dtype='bool')                
                     _k = _l
 
-    ### construct introns
-    if len(introns) > 0:
-        introns = sp.array(introns, dtype='int')
+    ### convert introns into scipy array
+    if len(introns_p) >= 1:
+        introns_p = sp.array([[k[0], k[1], v] for k, v in introns_p.iteritems()], dtype='uint32')
+        introns_p = sort_rows(introns_p)
     else:
-        introns = sp.zeros((0, 2), dtype='int')
+        introns_p = sp.zeros(shape=(0, 3), dtype='uint32')
+    if len(introns_m) >= 1:
+        introns_m = sp.array([[k[0], k[1], v] for k, v in introns_m.iteritems()], dtype='uint32')
+        introns_m = sort_rows(introns_m)
+    else:
+        introns_m = sp.zeros(shape=(0, 3), dtype='uint32')
 
-    #if collapse:
-    #    return (read_matrix.sum(axis = 0), introns)
-    #else:
-    return (read_matrix, introns)
+    return (read_matrix, introns_p, introns_m)
 
 
-def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, primary_only=False, no_mm=False):
+def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, primary_only=False, no_mm=False, unstranded=True):
     # blocks coordinates are assumed to be in closed intervals
 
     #if filter is None:
@@ -132,7 +152,8 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
 
     for b in range(blocks.shape[0]):
 
-        introns = None
+        introns_p = None
+        introns_m = None
 
         if verbose and  b % 10 == 0:
             print '\radd_exon_track_from_bam: %i(%i)' % (b, blocks.shape[0])
@@ -140,21 +161,23 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
 
         ## get data from bam
         if 'exon_track' in types:
-            (introns, coverage) = get_all_data(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
+            (introns_p, introns_m, coverage) = get_all_data(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
         if 'mapped_exon_track' in types:
-            (introns, mapped_coverage) = get_all_data(blocks[b], filenames, spliced=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
+            (introns_p, introns_m, mapped_coverage) = get_all_data(blocks[b], filenames, spliced=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
         if 'spliced_exon_track' in types:
-            (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
+            (introns_p, introns_m, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
         if 'polya_signal_track' in types:
-            (introns, polya_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, clipped=True, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
+            (introns_p, introns_m, polya_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, clipped=True, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
         if 'end_signal_track' in types:
-            (introns, read_end_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
+            (introns_p, introns_m, read_end_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
 
         if 'intron_list' in types or 'intron_track' in types:
-            if introns is None:
-                (introns, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
-        if not introns is None:
-            introns = sort_rows(introns)
+            if introns_p is None:
+                (introns_p, introns_m, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
+        if not introns_p is None:
+            introns_p = sort_rows(introns_p)
+        if not introns_m is None:
+            introns_m = sort_rows(introns_m)
 
         # add requested data to block
         tracks = sp.zeros((0, block_len))
@@ -176,44 +199,48 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
             ##############################################################################
             elif ttype == 'intron_track':
                 intron_coverage = sp.zeros((1, block_len))
-                if introns.shape[0] > 0:
-                    for k in range(introns.shape[0]):
-                        from_pos = max(0, introns[k, 0])
-                        to_pos = min(block_len, intron_list[k, 1])
-                        intron_coverage[from_pos:to_pos] += 1
+                if introns_p.shape[0] > 0:
+                    for k in range(introns_p.shape[0]):
+                        from_pos = max(0, introns_p[k, 0])
+                        to_pos = min(block_len, introns_p[k, 1])
+                        intron_coverage[from_pos:to_pos] += introns_p[k, 2]
+                if introns_m.shape[0] > 0:
+                    for k in range(introns_m.shape[0]):
+                        from_pos = max(0, introns_m[k, 0])
+                        to_pos = min(block_len, introns_m[k, 1])
+                        intron_coverage[from_pos:to_pos] += introns_m[k, 2]
                 tracks = sp.r_[tracks, intron_coverage] 
             ## compute intron list
             ##############################################################################
             elif ttype == 'intron_list':
-                if introns.shape[0] > 0:
-                    ### compute number of occurences
-                    introns = sort_rows(introns)
-                    num_introns = introns.shape[0]
-                    (introns, fidx) = unique_rows(introns, index=True)
-                    lidx = sp.r_[fidx[1:] - 1, num_introns - 1]
-                    introns = sp.c_[introns, lidx - fidx + 1]
+                if introns_p.shape[0] > 0 or introns_m.shape[0] > 0:
 
                     ### filter introns for location relative to block
                     ### this is legacy behavior for matlab versions!
                     ### TODO - Think about keeping this? Make it a parameter?
-                    k_idx = sp.where((introns[:, 0] > blocks[0].start) & (introns[:, 1] < blocks[0].stop))[0]
-                    introns = introns[k_idx, :]
+                    k_idx = sp.where((introns_p[:, 0] > blocks[0].start) & (introns_p[:, 1] < blocks[0].stop))[0]
+                    introns_p = introns_p[k_idx, :]
+                    k_idx = sp.where((introns_m[:, 0] > blocks[0].start) & (introns_m[:, 1] < blocks[0].stop))[0]
+                    introns_m = introns_m[k_idx, :]
 
-                    if introns.shape[0] > 0:
-                        s_idx = sp.argsort(introns[:, 0])
-                        introns = introns[s_idx, :]
+                    if unstranded:
+                        introns = sort_rows(sp.r_[introns_p, introns_m])
+                    else:
+                        if blocks[0].strand == '-':
+                            introns = introns_m
+                        else:
+                            introns = introns_p
                     
-                    #if not filter is None and 'mincount' in filter:
                     if filter is not None and 'mincount' in filter:
                         take_idx = sp.where(introns[:, 2] >= filter['mincount'])[0]
                         if take_idx.shape[0] > 0:
                             intron_list.append(introns[take_idx, :])
                         else:
-                            intron_list.append(sp.zeros((0, 3), dtype='int'))
+                            intron_list.append(sp.zeros((0, 3), dtype='uint32'))
                     else:
                         intron_list.append(introns)
                 else:
-                    intron_list.append(sp.zeros((0, 3), dtype='int'))
+                    intron_list.append(sp.zeros((0, 3), dtype='uint32'))
             ## add polya signal track
             ##############################################################################
             elif ttype == 'polya_signal_track':
@@ -240,7 +267,7 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
     else:
         return tracks
 
-def add_reads_from_sparse_bam(gg, fname, contig, types=None, filter=None, cache=None, unstranded=False):
+def add_reads_from_sparse_bam(gg, fname, contig, conf, types=None, filter=None, cache=None, unstranded=False):
 
     if cache is None or len(cache) == 0:
         ### load counts from summary file
@@ -248,7 +275,7 @@ def add_reads_from_sparse_bam(gg, fname, contig, types=None, filter=None, cache=
             IN = h5py.File(fname, 'r')
         else:
             if not filter is None:
-                IN = h5py.File(re.sub(r'bam$', '', fname) + 'filt.' + 'hdf5', 'r')
+                IN = h5py.File(re.sub(r'bam$', '', fname) + 'conf_%i.' % conf + 'filt.' + 'hdf5', 'r')
             else:
                 IN = h5py.File(re.sub(r'bam$', '', fname) + 'hdf5')
 
@@ -271,9 +298,9 @@ def add_reads_from_sparse_bam(gg, fname, contig, types=None, filter=None, cache=
 
     if 'intron_list' in types:
         if unstranded:
-            intron_list = sp.r_[get_intron_range(cache['introns_p'], gg.start, gg.stop), get_intron_range(cache['introns_m'], gg.start, gg.stop)]
+            intron_list = sort_rows(sp.r_[get_intron_range(cache['introns_p'], gg.start, gg.stop), get_intron_range(cache['introns_m'], gg.start, gg.stop)])
         else:
-            if (cache['introns_m'].shape[0] > 0) and (gg.strand == '-'):
+            if gg.strand == '-':
                 intron_list = get_intron_range(cache['introns_m'], gg.start, gg.stop)
             else:
                 intron_list = get_intron_range(cache['introns_p'], gg.start, gg.stop)
@@ -291,7 +318,8 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
     block_len = block.stop - block.start
     # get all data from bam file
     coverage = sp.zeros((1, block_len))
-    introns = None
+    introns_p = None
+    introns_m = None
 
     if isinstance(filenames, str):
         filenames = [filenames]
@@ -311,7 +339,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
         else:
             collapse = True
         ### get reads from bam file
-        (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm)
+        (coverage_tmp, introns_p_tmp, introns_m_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm)
 
         ### compute total coverages
         if not filter is None and 'maps' in filter:
@@ -335,12 +363,16 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
         else:
             coverage += coverage_tmp
 
-        if introns is None:
-            introns = introns_tmp
+        if introns_p is None:
+            introns_p = introns_p_tmp
         else:
-            introns = sp.r_[introns, introns_tmp]
+            introns_p = sp.r_[introns_p, introns_p_tmp]
+        if introns_m is None:
+            introns_m = introns_m_tmp
+        else:
+            introns_m = sp.r_[introns_m, introns_m_tmp]
 
-    return (introns, coverage)
+    return (introns_p, introns_m, coverage)
 
 #function [introns, coverage, pair_cov] = get_all_data_uncollapsed(block, mapped, spliced, filenames, filter, var_aware) 
 def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=None, var_aware=False, primary_only=False, no_mm=False):
@@ -348,7 +380,6 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
     block_len = block.stop - block.start
     # get all data from bam file
     coverage = sp.zeros((1, block_len))
-    introns = None
 
     for j in range(lenfilenames):
         fname = filenames[j]
@@ -360,10 +391,10 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
         contig_name = block.chr
         strand = block.strand
         collapse = False
-        (coverage_tmp, introns_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm)
+        (coverage_tmp, _, _) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm)
         coverage = sp.r_[coverage, coverage_tmp]
 
-    return (introns, coverage)
+    return (None, coverage)
 
 def get_intron_list(genes, CFG):
 
@@ -371,7 +402,7 @@ def get_intron_list(genes, CFG):
     introns[:] = None
 
     ### collect all possible combinations of contigs and strands
-    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG)
+    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG['confidence_level'], CFG, sparse_bam=CFG['bam_to_sparse'])
 
     ### form chunks for quick sorting
     strands = ['+', '-']
@@ -406,11 +437,11 @@ def get_intron_list(genes, CFG):
 
                 if CFG['bam_to_sparse']:
                     if isinstance(CFG['bam_fnames'], str):
-                        [intron_list_tmp] = add_reads_from_sparse_bam(gg[0], CFG['bam_fnames'], contig, types=['intron_list'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                        [intron_list_tmp] = add_reads_from_sparse_bam(gg[0], CFG['bam_fnames'], contig, CFG['confidence_level'], types=['intron_list'], filter=CFG['read_filter'], cache=bam_cache, unstranded=CFG['introns_unstranded'])
                     else:
                         intron_list_tmp = None
                         for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg[0], fname, contig, types=['intron_list'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                            [tmp_] = add_reads_from_sparse_bam(gg[0], fname, contig, CFG['confidence_level'], types=['intron_list'], filter=CFG['read_filter'], cache=bam_cache, unstranded=CFG['introns_unstranded'])
                             if intron_list_tmp is None:
                                 intron_list_tmp = tmp_
                             else:
@@ -428,7 +459,7 @@ def get_intron_list(genes, CFG):
                                 k_idx = sp.setdiff1d(sp.arange(intron_list_tmp.shape[0]), rm_idx)
                                 intron_list_tmp = intron_list_tmp[k_idx, :]
                 else:
-                    [intron_list_tmp] = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'])
+                    [intron_list_tmp] = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'], unstranded=CFG['introns_unstranded'])
                 num_introns_filtered += intron_list_tmp.shape[0]
                 introns[i, si] = sort_rows(intron_list_tmp)
 
@@ -465,15 +496,13 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
         if var_aware:
             if filter['mismatch'] < (tags['XM'] + tags['XG']):
                 return True
-        else:
-            if no_mm:
-                return False
-            else:
-                try:
-                    return filter['mismatch'] < tags['NM']
-                except KeyError:
-                    print >> sys.stderr, 'SplAdder expects the NM tag to be present in all input alignment files. If you are unable to provide this information in the input files, please restart SplAdder with the option --ignore_mismatches y.'
-                    sys.exit(1)
+        elif not no_mm:
+            try:
+                if filter['mismatch'] < tags['NM']:
+                    return True
+            except KeyError:
+                print >> sys.stderr, 'SplAdder expects the NM tag to be present in all input alignment files. If you are unable to provide this information in the input files, please restart SplAdder with the option --ignore_mismatches y.'
+                sys.exit(1)
 
         if is_spliced:
             ### handle min segment length
@@ -495,12 +524,11 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
     return False
 
 
-def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, spliced=True):
+def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, spliced=True, unstranded=True):
 
     infile = pysam.Samfile(fname, 'rb')
     introns_p = dict()
     introns_m = dict()
-    stranded = False
 
     if CFG['verbose']:
         print >> sys.stdout, 'Summarizing contig %s of file %s' % (chr_name, fname)
@@ -526,7 +554,6 @@ def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, s
             curr_read_stranded = ('XS' in tags)
             is_minus = False
             if curr_read_stranded:
-                stranded = True
                 is_minus = (tags['XS'] == '-')
                     
             ### get introns and covergae
@@ -559,9 +586,10 @@ def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, s
         introns_m = sort_rows(introns_m)
     else:
         introns_m = sp.zeros(shape=(0, 3), dtype='uint32')
+
     ### make read matrix sparse
-    if not stranded:
-        read_matrix = scipy.sparse.coo_matrix(read_matrix[[0], :], dtype='uint32')
+    if unstranded:
+        read_matrix = scipy.sparse.coo_matrix(sp.sum(read_matrix, axis=0)[sp.newaxis, :], dtype='uint32')
     else:
         read_matrix = scipy.sparse.coo_matrix(read_matrix, dtype='uint32')
 
