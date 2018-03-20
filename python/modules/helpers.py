@@ -117,8 +117,10 @@ def compute_psi(counts, event_type, CFG):
     
     ### collect count data based on event type
     if event_type == 'exon_skip':
-        a = counts[:, 4] + counts[:, 5]
-        b = 2 * counts[:, 6]
+        #a = counts[:, 4] + counts[:, 5]
+        #b = 2 * counts[:, 6]
+        a = sp.c_[counts[:, 4], counts[:, 5]].min(axis=1)
+        b = counts[:, 6]
     elif event_type == 'intron_retention':
         a = counts[:, 1] # intron cov
         b = counts[:, 4] # intron conf
@@ -143,7 +145,7 @@ def compute_psi(counts, event_type, CFG):
     n_idx = sp.where((a + b) < CFG['psi_min_reads'])
     psi[n_idx] = sp.nan
 
-    return psi
+    return (psi, a, b)
 
 
 def log_progress(idx, total, bins=50):
