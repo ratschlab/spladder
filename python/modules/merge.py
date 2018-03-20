@@ -336,6 +336,13 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
 
     for g in genes:
         g.to_sparse()
+
+
+    ### re-sort genes by position - makes quantification more efficient
+    s1_idx = sp.argsort([x.start for x in genes])
+    s2_idx = sp.argsort([x.chr for x in genes[s1_idx]], kind='mergesort')
+    genes = genes[s1_idx[s2_idx]]
+
     print 'Store genes at: %s' % fn_out
     cPickle.dump((genes, inserted), open(fn_out, 'w'), -1)
 
