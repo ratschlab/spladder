@@ -128,26 +128,38 @@ def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
             print '\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit)
             continue
         
-        introns  = []
+        #introns  = []
+        introns = sp.zeros((0, 2), dtype='int')
         for exon_idx in range(num_exons - 1):  # start of intron
             idx = sp.where(edges[exon_idx, exon_idx + 1 : num_exons] == 1)[0]
             if idx.shape[0] == 0:
                 continue
             idx += (exon_idx + 1)
             for exon_idx2 in idx: # end of intron
-                is_intron_reten = False
-                for exon_idx1 in range(num_exons): # exon
-                    # check that the exon covers the intron
-                    if (vertices[1, exon_idx] > vertices[0, exon_idx1]) and (vertices[0, exon_idx2] < vertices[1, exon_idx1]):
-                        is_intron_reten = True
-                        long_exon = exon_idx1 
-                        for l in range(len(introns)):
-                            if (vertices[1, exon_idx] == introns[l][0]) and (vertices[0, exon_idx2] == introns[l][1]):
-                                is_intron_reten = False
-                if is_intron_reten:
+                #is_intron_reten = False
+                if sp.sum((introns[:, 0] == vertices[1, exon_idx]) & (introns[:, 1] == vertices[0, exon_idx2])) > 0:
+                    continue
+
+                ### find shortest fully overlapping exon
+                iidx = sp.where((vertices[0, :] < vertices[1, exon_idx]) & (vertices[1, :] > vertices[0, exon_idx2]))[0]
+                if len(iidx) > 0:
+                    iidx = iidx[sp.argmin(vertices[1, iidx] - vertices[0, iidx])]
                     idx_intron_reten.append(ix)
-                    intron_intron_reten.append([exon_idx, exon_idx2, long_exon])
-                    introns.append([vertices[1, exon_idx], vertices[0, exon_idx2]])
+                    intron_intron_reten.append([exon_idx, exon_idx2, iidx])
+                    introns = sp.r_[introns, [[vertices[1, exon_idx], vertices[0, exon_idx2]]]]
+
+                #for exon_idx1 in range(num_exons): # exon
+                #    # check that the exon covers the intron
+                #    if (vertices[1, exon_idx] > vertices[0, exon_idx1]) and (vertices[0, exon_idx2] < vertices[1, exon_idx1]):
+                #        is_intron_reten = True
+                #        long_exon = exon_idx1 
+                #        for l in range(len(introns)):
+                #            if (vertices[1, exon_idx] == introns[l][0]) and (vertices[0, exon_idx2] == introns[l][1]):
+                #                is_intron_reten = False
+                #if is_intron_reten:
+                #    idx_intron_reten.append(ix)
+                #    intron_intron_reten.append([exon_idx, exon_idx2, long_exon])
+                #    introns.append([vertices[1, exon_idx], vertices[0, exon_idx2]])
 
     if log:
         print '\nNumber of intron retentions:\t\t\t\t\t%d' % len(idx_intron_reten)
