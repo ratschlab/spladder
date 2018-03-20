@@ -172,6 +172,10 @@ def default_settings():
 
     CFG['introns_unstranded'] = False
 
+    CFG['plot_transcripts'] = False
+    CFG['plot_splicegraph'] = False
+    CFG['plot_labels'] = ''
+
     return CFG
 
 
