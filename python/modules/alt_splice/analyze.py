@@ -110,19 +110,23 @@ def analyze_events(CFG, event_type, sample_idx=None):
                         ev.verified = []
 
                     psi = sp.empty((counts.shape[0], counts.shape[2]), dtype='float')
+                    iso1 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
+                    iso2 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                     for i in xrange(counts.shape[2]):
-                        psi[:, i] = compute_psi(counts[:, :, i], event_type, CFG) 
+                        (psi[:, i], iso1[:, i], iso2[:, i])  = compute_psi(counts[:, :, i], event_type, CFG)
 
                     OUT = h5py.File(fn_out_count, 'w')
                     OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
                     OUT.create_dataset(name='psi', data=psi, compression='gzip')
+                    OUT.create_dataset(name='iso1', data=iso1, compression='gzip')
+                    OUT.create_dataset(name='iso2', data=iso2, compression='gzip')
                     OUT.create_dataset(name='gene_idx', data=sp.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
                     OUT.create_dataset(name='verified', data=verified, compression='gzip')
                     _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=sample_idx)
                 else:
                     jobinfo = []
                     PAR = dict()
-                    chunk_size_events = 1000
+                    chunk_size_events = 5000
                     chunk_size_strains = 500
                     for i in range(0, events_all.shape[0], chunk_size_events):
                         idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
@@ -139,8 +143,10 @@ def analyze_events(CFG, event_type, sample_idx=None):
                             if os.path.exists(PAR['out_fn']):
                                 print 'Chunk event %i, strain %i already completed' % (i, j)
                             else:
-                                print 'Submitting job %i, event chunk %i, strain chunk %i' % (len(jobinfo) + 1, i, j)
-                                jobinfo.append(rproc('verify_all_events', PAR, 30000, CFG['options_rproc'], 60 * 5))
+                                print 'Submitting job %i, event chunk %i/%i, strain chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j)
+                                #jobinfo.append(rproc('verify_all_events', PAR, 30000, CFG['options_rproc'], 60 * 4))
+                                jobinfo.append(rproc('verify_all_events', PAR, 10000, CFG['options_rproc'], 60 * 12))
+                                #verify_all_events(PAR)
                     
                     rproc_wait(jobinfo, 20, 1.0, 1)
                     
@@ -169,14 +175,19 @@ def analyze_events(CFG, event_type, sample_idx=None):
                                 counts = sp.r_[counts, counts_]
                                 for jj in range(len(ev_)):
                                     verified_[jj] = sp.r_[verified_[jj], ev_[jj].verified]
+                                del counts_
                                     
                         psi = sp.empty((counts.shape[0], counts.shape[2]), dtype='float')
+                        iso1 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
+                        iso2 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                         for j in xrange(counts.shape[2]):
-                            psi[:, j] = compute_psi(counts[:, :, j], event_type, CFG) 
+                            (psi[:, j], iso1[:, j], iso2[:, j]) = compute_psi(counts[:, :, j], event_type, CFG) 
 
                         if i == 0:
                             OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(CFG['strains']), len(event_features[event_type]), None), compression='gzip')
                             OUT.create_dataset(name='psi', data=sp.atleast_2d(psi), maxshape=(psi.shape[0], None), compression='gzip')
+                            OUT.create_dataset(name='iso1', data=sp.atleast_2d(iso1), maxshape=(iso1.shape[0], None), compression='gzip')
+                            OUT.create_dataset(name='iso2', data=sp.atleast_2d(iso2), maxshape=(iso2.shape[0], None), compression='gzip')
                         else:
                             tmp = OUT['event_counts'].shape
                             OUT['event_counts'].resize((tmp[0], tmp[1], tmp[2] + len(ev)))
@@ -184,9 +195,16 @@ def analyze_events(CFG, event_type, sample_idx=None):
                             tmp = OUT['psi'].shape
                             OUT['psi'].resize((tmp[0], tmp[1] + len(ev)))
                             OUT['psi'][:, tmp[1]:] = psi
+                            tmp = OUT['iso1'].shape
+                            OUT['iso1'].resize((tmp[0], tmp[1] + len(ev)))
+                            OUT['iso1'][:, tmp[1]:] = iso1
+                            tmp = OUT['iso2'].shape
+                            OUT['iso2'].resize((tmp[0], tmp[1] + len(ev)))
+                            OUT['iso2'][:, tmp[1]:] = iso2
                         verified.extend(verified_)
                         collect_ids.extend(collect_ids_)
                         gene_idx_ = sp.r_[gene_idx_, [x.gene_idx for x in ev]]
+                        del iso1, iso2, psi, counts, ev, ev_
 
                     verified = sp.array(verified, dtype='bool')
 
