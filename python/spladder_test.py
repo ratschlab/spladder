@@ -56,6 +56,7 @@ def parse_options(argv):
     testing.add_option('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
     testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)
     testing.add_option('-i', '--min_count', dest='min_count', metavar='INT', help='min read count sum over all samples for an event isoform to be tested [10]', default=10)
+    testing.add_option('--cap_outliers', dest='cap_outliers', metavar='y|n', help='replace splice outliers with a max value [n]', default='n')
     testing.add_option('--cap_exp_outliers', dest='cap_exp_outliers', metavar='y|n', help='replace expression outliers with a max value [y]', default='y')
     output = OptionGroup(parser, 'OUTPUT OPTIONS')
     output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
@@ -64,6 +65,7 @@ def parse_options(argv):
     output.add_option('--timestamp', dest='timestamp', metavar='y|n', help='add timestamp to output directory [n]', default='n')
     output.add_option('--labelA', dest='labelA', metavar='STRING', help='label for condition A (used for output naming)', default='condA')
     output.add_option('--labelB', dest='labelB', metavar='STRING', help='label for condition B (used for output naming)', default='condB')
+    output.add_option('--out-tag', dest='out_tag', metavar='STRING', help='additional tag to label out directory', default='-')
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
     experimental.add_option('', '--non_alt_norm', dest='non_alt_norm', metavar='y|n', help='only use non alternative exon segments for gene expression counting [n]', default='n')
@@ -171,7 +173,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
             if seg_idx.shape[0] > 1:
                 gene_counts[gidx, :] = sp.squeeze(sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx])) / CFG['read_length']
             else:
-                gene_counts[gidx, :] = IN['segments'][seg_idx, :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
+                gene_counts[gidx, :] = IN['segments'][seg_idx[0], :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
             #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
@@ -708,6 +710,8 @@ def main():
         outdir = '%s_%s' % (outdir, str(datetime.datetime.now()).replace(' ', '_'))
     if options.labelA != 'condA' and options.labelB != 'condB':
         outdir = '%s_%s_vs_%s' % (outdir, options.labelA, options.labelB)
+    if options.out_tag != '-':
+        outdir += '_%s' % options.out_tag
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if CFG['diagnose_plots']:
@@ -844,6 +848,22 @@ def main():
 
             ### quantify events
             (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1, idx2, event_type, CFG, gen_event_ids=False)
+
+            if CFG['cap_outliers']:
+                log_counts = sp.log2(cov[0] + 1)
+                p25 = scoreatpercentile(log_counts, 25, axis=1)
+                p75 = scoreatpercentile(log_counts, 75, axis=1)
+                iqr = (p75 - p25)
+                cap = 2**(p75 + (3*iqr)) - 1
+                for c in sp.where(iqr > 0)[0]:
+                    cov[0][c, log_counts[c, :] > (p75[c] + 3*iqr[c])] = cap[c]
+                log_counts = sp.log2(cov[1] + 1)
+                p25 = scoreatpercentile(log_counts, 25, axis=1)
+                p75 = scoreatpercentile(log_counts, 75, axis=1)
+                iqr = (p75 - p25)
+                cap = 2**(p75 + (3*iqr)) - 1
+                for c in sp.where(iqr > 0)[0]:
+                    cov[1][c, log_counts[c, :] > (p75[c] + 3*iqr[c])] = cap[c]
 
             ### estimate size factors
             sf_ev = get_size_factors(sp.vstack(cov), CFG)
@@ -982,25 +1002,25 @@ def main():
 
             ### write test results
             s_idx = sp.argsort(pvals)
-            header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj']) 
+            header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp']) 
             event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
 
             out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
                 print 'Writing test results to %s' % out_fname
             if CFG['is_matlab']:
-                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), m_all[s_idx, :]]
             else:
-                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str')]
+                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), m_all[s_idx, :]]
             sp.savetxt(out_fname, sp.r_[header[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
             ### write extended output
             out_fname = os.path.join(outdir, 'test_results_extended_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
                 print 'Writing extended test results to %s' % out_fname
-            header_long = sp.r_[header, ['mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'], ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains], ['disp_raw', 'disp_adj']]
+            header_long = sp.r_[header, ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains], ['disp_raw', 'disp_adj']]
 
-            data_out = sp.c_[data_out, m_all[s_idx, :], (cov_used[s_idx, :] / sf).astype('str'), disp_raw_used[s_idx].astype('str'), disp_adj_used[s_idx].astype('str')]
+            data_out = sp.c_[data_out, (cov_used[s_idx, :] / sf).astype('str'), disp_raw_used[s_idx].astype('str'), disp_adj_used[s_idx].astype('str')]
             sp.savetxt(out_fname, sp.r_[header_long[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
             ### write output unique over genes
@@ -1021,9 +1041,9 @@ def main():
             ks_idx = sp.array(ks_idx)
 
             if CFG['is_matlab']:
-                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx], 0], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str')]
+                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx], 0], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), m_all[ks_idx, :]]
             else:
-                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str')]
+                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), m_all[ks_idx, :]]
             data_out = sp.r_[header[sp.newaxis, :], data_out]
             sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 
