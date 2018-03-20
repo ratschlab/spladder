@@ -168,7 +168,7 @@ def default_settings():
 
     ### edge limit for detecting events from a graph, if a graph has
     ### more edges, the gene will be ignored for event detection
-    CFG['detect_edge_limit'] = 50 #2000
+    CFG['detect_edge_limit'] = 500 #2000
 
     CFG['introns_unstranded'] = False
 
@@ -353,6 +353,8 @@ def parse_args(options, identity='main'):
             CFG['options_rproc']['priority'] = 100
             CFG['options_rproc']['addpaths'] = CFG['paths']
 
+        CFG['detect_edge_limit'] = options.detect_edge_limit
+
 
     if identity in ['main', 'test']:
         ### parallel processing
@@ -377,6 +379,14 @@ def parse_args(options, identity='main'):
         else:
             print >> sys.stderr, 'ERROR: transcripts should have value y or n, but has %s' % options.transcripts
             sys.exit(1)
+
+        if options.splicegraph in ['n', 'y']:
+            CFG['plot_splicegraph'] = (options.splicegraph == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: splicegraph should have value y or n, but has %s' % options.splicegraph
+            sys.exit(1)
+
+        CFG['plot_labels'] = options.labels
 
         if options.bams != '-':
             CFG['bam_fnames'] = options.bams.strip(':').split(':')
@@ -410,6 +420,12 @@ def parse_args(options, identity='main'):
             CFG['cap_exp_outliers'] = (options.cap_exp_outliers == 'y')
         else:
             print >> sys.stderr, 'ERROR: option cap_exp_outliers should have value y or n, but has %s' % options.cap_exp_outliers
+            sys.exit(1)
+
+        if options.cap_outliers in ['n', 'y']:
+            CFG['cap_outliers'] = (options.cap_outliers == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option cap_outliers should have value y or n, but has %s' % options.cap_outliers
             sys.exit(1)
 
         if options.conditionA == '-':
