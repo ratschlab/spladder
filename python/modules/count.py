@@ -60,7 +60,11 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
                 counts[f, i] = Counts(gg.segmentgraph.segments.shape[1])
 
-                if CFG['bam_to_sparse'] and (fn_bam[f].endswith('npz') or os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz')):
+                if CFG['bam_to_sparse'] and \
+                  (fn_bam[f].endswith('npz') or \
+                   os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz') or \
+                   fn_bam[f].endswith('hdf5') or \
+                   os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'hdf5')):
                     ### make sure that we query the right contig from cache
                     assert(gg.chr == contig)
                     (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, CFG['confidence_level'], types=['exon_track','intron_list'], filter=None, cache=bam_cache)
@@ -166,7 +170,10 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
         h5fid.close()
     else:
         ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
-        chunksize = int(max(1, math.floor(10000 / len(CFG['strains']))))
+        if CFG['bam_to_sparse']:
+            chunksize = int(max(1, math.floor(1000000 / len(CFG['strains']))))
+        else:
+            chunksize = int(max(1, math.floor(100000 / len(CFG['strains']))))
 
         jobinfo = []
 
@@ -192,7 +199,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
                 PAR['fn_bam'] = CFG['bam_fnames']
                 PAR['fn_out'] = fn
                 PAR['CFG'] = CFG
-                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 15000, CFG['options_rproc'], 60*12))
+                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 15000, CFG['options_rproc'], 60*48))
+                #count_graph_coverage(PAR)
                 #jobinfo.append(rp.rproc('count_graph_coverage', PAR, 100000, CFG['options_rproc'], 60*72))
 
         rp.rproc_wait(jobinfo, 30, 1.0, -1)
