@@ -17,18 +17,56 @@ def get_gene(gene):
 
     return copy.deepcopy(gene)
 
-### load the gene list in the right format
-def load_genes(CFG):
-    """This is a helper function to load the gene data from file"""
+
+def _get_gene_fname(CFG):
 
     if CFG['validate_splicegraphs']:
-        gene_fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%s.merge_graphs.validated.pickle' % CFG['confidence_level'])
+        gene_file = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%s.merge_graphs.validated.pickle' % CFG['confidence_level'])
     else:
-        gene_fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%s.merge_graphs.pickle' % CFG['confidence_level'])
+        gene_file = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%s.merge_graphs.pickle' % CFG['confidence_level'])
+    return gene_file
 
-    if CFG['verbose']:
-        print 'loading annotation information from %s' % gene_fname
-    (genes, events) = cPickle.load(open(gene_fname, 'r'))
+
+def get_gene_names(CFG):
+    """Return the list of gene names used in this run"""
+    
+    gene_file = _get_gene_fname(CFG)
+    gene_name_file = re.sub(r'.pickle$', '', gene_file) + '.names.pickle'
+    gene_names = cPickle.load(open(gene_name_file, 'r'))
+
+    return gene_names
+
+
+### load the gene list in the right format
+def load_genes(CFG, idx=None, genes=None):
+    """This is a helper function to load the gene data from file"""
+
+    if not genes is None:
+        if not idx is None:
+            return copy.deepcopy(genes[idx])
+    else:
+        gene_file = _get_gene_fname(CFG)
+
+        if CFG['verbose']:
+            print 'loading annotation information from %s' % gene_file
+        if idx is None:
+            (genes, events) = cPickle.load(open(gene_file, 'r'))
+        else:
+            gene_db_file = re.sub(r'.pickle$', '', gene_file) + '.db.pickle'
+            gene_idx_file = re.sub(r'.pickle$', '', gene_file) + '.idx.pickle'
+            if os.path.exists(gene_idx_file):
+                genes = []
+                offsets = cPickle.load(open(gene_idx_file, 'r'))
+                gene_handle = open(gene_db_file, 'r')
+                if not hasattr(idx, '__iter__'):
+                    idx = [idx]
+                for e in idx:
+                    gene_handle.seek(offsets[e], 0)
+                    genes.append(cPickle.load(gene_handle))
+                genes = sp.array(genes)
+            else:
+                (genes, events) = cPickle.load(open(gene_file, 'r'))
+                genes = genes[idx]
 
     return genes
 
@@ -98,7 +136,10 @@ def get_conf_events(CFG, gid):
 
 def get_seg_counts(CFG, gid):
 
-    IN = h5py.File(os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % (CFG['confidence_level'])), 'r')
+    if CFG['validate_splicegraphs']:
+        IN = h5py.File(os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.merge_graphs.validated.count.hdf5' % (CFG['confidence_level'])), 'r')
+    else:
+        IN = h5py.File(os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % (CFG['confidence_level'])), 'r')
     idx = sp.where(IN['gene_ids_edges'][:] == gid)[0]
     edges = IN['edges'][idx, :]
     edge_idx = IN['edge_idx'][:][idx]
