@@ -35,7 +35,7 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
     #print >> sys.stderr, 'querying %s:%i-%i' % (chr_name, start, stop)
     ### TODO THIS IS A HACK
     if chr_name == 'MT':
-        return (read_matrix, sp.zeros((0, 2), dtype='int'))
+        return (read_matrix, sp.zeros(shape=(0, 3), dtype='uint32'), sp.zeros(shape=(0, 3), dtype='uint32'))
 
     if infile.gettid(chr_name) > -1:
         ### pysam query is zero based in position (results are as well), all intervals are pythonic half open
