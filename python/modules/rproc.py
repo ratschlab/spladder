@@ -389,6 +389,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         if ret != 0:
             print >> sys.stderr, 'submission failed:\n\tsubmission string: %s\n\treturn code: %i' % (callstr, ret)
         jobinfo.submission_time = time.time()
+        p1.communicate()
       
         ### grab job ID from submission log file
         if not options['immediately'] and not options['immediately_bg']:
