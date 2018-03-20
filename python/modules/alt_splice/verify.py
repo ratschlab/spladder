@@ -448,14 +448,17 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
             gene_ids_segs = cPickle.load(open(fn_count + '.quick_ids_segs', 'r'))
         else:
             gene_ids_segs = IN['gene_ids_segs'][:]
+            cPickle.dump(gene_ids_segs, open(fn_count + '.quick_ids_segs', 'w'), -1)
         if os.path.exists(fn_count + '.quick_ids_edges'):
             gene_ids_edges = cPickle.load(open(fn_count + '.quick_ids_edges', 'r'))
         else:
             gene_ids_edges = IN['gene_ids_edges'][:]
+            cPickle.dump(gene_ids_edges, open(fn_count + '.quick_ids_edges', 'w'), -1)
         if os.path.exists(fn_count + '.quick_edge_idx'):
             edge_idx = cPickle.load(open(fn_count + '.quick_edge_idx', 'r'))
         else:
             edge_idx = IN['edge_idx'][:]
+            cPickle.dump(edge_idx, open(fn_count + '.quick_edge_idx', 'w'), -1)
 
         ### sort events by gene idx
         s_idx = sp.argsort([x.gene_idx for x in ev])
@@ -465,10 +468,10 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         counts = []
         for i in range(ev.shape[0]):
             
-            #sys.stdout.write('.')
-            #if i > 0 and i % 50 == 0:
-            #    sys.stdout.write('%i (%i)\n' % (i, ev.shape[0]))
-            #sys.stdout.flush()
+            sys.stdout.write('.')
+            if i > 0 and i % 50 == 0:
+                sys.stdout.write('%i (%i)\n' % (i, ev.shape[0]))
+            sys.stdout.flush()
         
             g_idx = ev[i].gene_idx
             ev[i].verified = [] ### TODO: maybe solve that differently
