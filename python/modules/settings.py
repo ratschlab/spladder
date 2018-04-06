@@ -410,6 +410,12 @@ def parse_args(options, identity='main'):
             print >> sys.stderr, 'ERROR: option non_alt_norm should have value y or n, but has %s' % options.non_alt_norm
             sys.exit(1)
 
+        if options.low_memory in ['n', 'y']:
+            CFG['low_memory'] = (options.low_memory == 'y')
+        else:
+            print >> sys.stderr, 'ERROR: option low_memory should have value y or n, but has %s' % options.low_memory
+            sys.exit(1)
+
         if options.matlab in ['n', 'y']:
             CFG['is_matlab'] = (options.matlab == 'y')
         else:

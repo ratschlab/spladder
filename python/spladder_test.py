@@ -69,6 +69,7 @@ def parse_options(argv):
     experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
     experimental.add_option('', '--non_alt_norm', dest='non_alt_norm', metavar='y|n', help='only use non alternative exon segments for gene expression counting [n]', default='n')
+    experimental.add_option('', '--low_memory', dest='low_memory', metavar='y|n', help='use less memory at the cost of longer running time [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
     parser.add_option_group(testing)
@@ -847,7 +848,7 @@ def main():
             CFG['fname_events'] = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, CFG['confidence_level']))
 
             ### quantify events
-            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1, idx2, event_type, CFG, gen_event_ids=False)
+            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1, idx2, event_type, CFG, gen_event_ids=False, low_mem=CFG['low_memory'])
 
             if CFG['cap_outliers']:
                 log_counts = sp.log2(cov[0] + 1)
