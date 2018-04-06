@@ -372,7 +372,7 @@ def quantify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
     return cov
 
 
-def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, event_type=None, CFG=None, out_fn=None, gen_event_ids=False):
+def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, event_type=None, CFG=None, out_fn=None, gen_event_ids=False, low_mem=False):
 
     ### set parameters if called by rproc
     if strain_idx1 is None:
@@ -386,8 +386,10 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         CFG = PAR['CFG']
 
     ### read count_data from event HDF5
-    #IN = h5py.File(event_fn, 'r', driver='core')
-    IN = h5py.File(event_fn, 'r', driver='core', backing_store=False)
+    if low_mem:
+        IN = h5py.File(event_fn, 'r')
+    else:
+        IN = h5py.File(event_fn, 'r', driver='core', backing_store=False)
     
     ### get indices of confident events
     if CFG['is_matlab']:
