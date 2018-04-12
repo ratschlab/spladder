@@ -18,6 +18,7 @@ of most Python package managers (e.g., [conda](http://conda.pydata.org/)):
 * pysam (version >= 0.7 required)
 * h5py (version >= 2.2.0 tested)
 * intervaltree (version >= 2.1.0 tested)
+
 SplAdder will not run without these packages installed. 
 
 Authors
