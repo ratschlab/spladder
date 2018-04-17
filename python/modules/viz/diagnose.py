@@ -89,6 +89,9 @@ def count_histogram(counts, matrix, figtitle, filename, CFG):
     create a histogram plot showing the count distributions
     '''
 
+    if CFG['verbose']:
+        print 'Plotting count distributions'
+
     ### generate 
     fig = plt.figure(figsize=(15, 10), dpi=300)
     fig.suptitle(figtitle, fontsize=12)
@@ -99,25 +102,25 @@ def count_histogram(counts, matrix, figtitle, filename, CFG):
     idxgb = sp.where(~matrix[:, 2] & matrix[:, 3])[0]
 
     ax = fig.add_subplot(gs[0, 0])
-    ax.hist(counts[:, idxa], 50, facecolor='blue', alpha=0.7)
+    ax.hist(counts[:, idxa].ravel(), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Event counts Condition 1')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin')
 
     ax = fig.add_subplot(gs[0, 1])
-    ax.hist(counts[:, idxb], 50, facecolor='blue', alpha=0.7)
+    ax.hist(counts[:, idxb].ravel(), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Event counts Condition 2')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin')
 
     ax = fig.add_subplot(gs[1, 0])
-    ax.hist(counts[:, idxga], 50, facecolor='blue', alpha=0.7)
+    ax.hist(counts[:, idxga].ravel(), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Gene Expression Counts Condition 1')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin')
 
     ax = fig.add_subplot(gs[1, 1])
-    ax.hist(counts[:, idxgb], 50, facecolor='blue', alpha=0.7)
+    ax.hist(counts[:, idxgb].ravel(), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Gene Expression Counts Condition 2')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin')
@@ -130,25 +133,25 @@ def count_histogram(counts, matrix, figtitle, filename, CFG):
     fig.suptitle(figtitle, fontsize=12)
 
     ax = fig.add_subplot(gs[0, 0])
-    ax.hist(sp.log10(counts[:, idxa] + 0.5), 50, facecolor='blue', alpha=0.7)
+    ax.hist(sp.log10(counts[:, idxa].ravel() + 0.5), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Event counts Condition 1')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin (log10)')
 
     ax = fig.add_subplot(gs[0, 1])
-    ax.hist(sp.log10(counts[:, idxb] + 0.5), 50, facecolor='blue', alpha=0.7)
+    ax.hist(sp.log10(counts[:, idxb].ravel() + 0.5), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Event counts Condition 2')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin (log10)')
 
     ax = fig.add_subplot(gs[1, 0])
-    ax.hist(sp.log10(counts[:, idxga] + 0.5), 50, facecolor='blue', alpha=0.7)
+    ax.hist(sp.log10(counts[:, idxga].ravel() + 0.5), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Gene Expression Counts Condition 1')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin (log10)')
 
     ax = fig.add_subplot(gs[1, 1])
-    ax.hist(sp.log10(counts[:, idxgb] + 0.5), 50, facecolor='blue', alpha=0.7)
+    ax.hist(sp.log10(counts[:, idxgb].ravel() + 0.5), 50, facecolor='blue', alpha=0.7)
     ax.set_title('Gene Expression Counts Condition 2')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Expression bin (log10)')

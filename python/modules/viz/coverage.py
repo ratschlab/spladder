@@ -2,6 +2,7 @@
 
 import scipy as sp
 import scipy.stats as spst
+import scipy.sparse as spsp
 import numpy.random as npr
 import pysam
 import sys
@@ -33,41 +34,72 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
     intron_list = [dict() for i in range(len(files))]
 
     for f_i, fn in enumerate(files):
-        if verbose:
-            print >> sys.stdout, "reading bam %i of %i" % (f_i + 1, len(files))  
-        try:
-            infile = pysam.Samfile(str(fn), "rb")
-        except ValueError:
-            print >> sys.stderr, 'Could not load file %s - skipping' % fn
-            continue
-        c_len = stop - start + 1
-
-        for line in infile.fetch(chr_name, start, stop):
-            if line.is_secondary:
+        if fn.lower().endswith('bam'):
+            if verbose:
+                print >> sys.stdout, "reading bam %i of %i" % (f_i + 1, len(files))  
+            try:
+                infile = pysam.Samfile(str(fn), "rb")
+            except ValueError:
+                print >> sys.stderr, 'Could not load file %s - skipping' % fn
                 continue
-            pos = line.pos
-            for o in line.cigar:
-                if o[0] in [0, 2, 3]:
-                    ### get segment overlap to current region
-                    seg_offset = max(0, start - pos)
-                    seg_len = o[1] - seg_offset
-                    if seg_len > 0:
-                        seg_start = max(pos - start, 0)
-                        if o[0] in [0, 2]:
-                            counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1 
-                        elif (intron_cov or intron_cnt) and o[0] == 3:
-                            if pos >= start and (pos + o[1]) <= stop:
-                                if intron_cov:
-                                    intron_counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1
-                                if intron_cnt and (seg_start + seg_len < c_len):
-                                    try:
-                                        intron_list[f_i][(seg_start, seg_len)] += 1
-                                    except KeyError:
-                                        intron_list[f_i][(seg_start, seg_len)] = 1
-                                        
-                if not o[0] in [1, 4, 5]:
-                    pos += o[1]
-    
+            c_len = stop - start + 1
+
+            for line in infile.fetch(chr_name, start, stop):
+                if line.is_secondary:
+                    continue
+                pos = line.pos
+                for o in line.cigar:
+                    if o[0] in [0, 2, 3]:
+                        ### get segment overlap to current region
+                        seg_offset = max(0, start - pos)
+                        seg_len = o[1] - seg_offset
+                        if seg_len > 0:
+                            seg_start = max(pos - start, 0)
+                            if o[0] in [0, 2]:
+                                counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1 
+                            elif (intron_cov or intron_cnt) and o[0] == 3:
+                                if pos >= start and (pos + o[1]) <= stop:
+                                    if intron_cov:
+                                        intron_counts[f_i, seg_start : min(seg_start + seg_len, c_len)] += 1
+                                    if intron_cnt and (seg_start + seg_len < c_len):
+                                        try:
+                                            intron_list[f_i][(seg_start, seg_len)] += 1
+                                        except KeyError:
+                                            intron_list[f_i][(seg_start, seg_len)] = 1
+                                            
+                    if not o[0] in [1, 4, 5]:
+                        pos += o[1]
+
+        elif fn.lower().endswith('npz'):
+
+            try:
+                infile = sp.load(str(fn))
+            except:
+                print >> sys.stderr, 'Could not load file %s - skipping' % fn
+                continue
+            c_len = stop - start + 1
+            bam_reads = spsp.coo_matrix((infile[chr_name + '_reads_dat'], (infile[chr_name + '_reads_row'], infile[chr_name + '_reads_col'])), shape=infile[chr_name + '_reads_shp'], dtype='uint32').tocsc()
+            bam_introns_m = infile[chr_name + '_introns_m']
+            bam_introns_p = infile[chr_name + '_introns_p']
+            counts[f_i, :] = sp.sum(bam_reads[:, start:stop + 1].todense(), axis=0)
+            if intron_cnt:
+                idx = sp.where((bam_introns_m[:, 0] > start) & (bam_introns_m[:, 1] < stop))[0]
+                for _i in idx:
+                    try:
+                        intron_list[f_i][(bam_introns_m[_i, 0] - start, bam_introns_m[_i, 1] - bam_introns_m[_i, 0])] += bam_introns_m[_i, 2]
+                    except KeyError:
+                        intron_list[f_i][(bam_introns_m[_i, 0] - start, bam_introns_m[_i, 1] - bam_introns_m[_i, 0])] = bam_introns_m[_i, 2]
+                    if intron_cov: 
+                        intron_counts[f_i,bam_introns_m[_i, 0]:bam_introns_m[_i, 1]] += bam_introns_m[_i, 2] 
+                idx = sp.where((bam_introns_p[:, 0] > start) & (bam_introns_p[:, 1] < stop))[0]
+                for _i in idx:
+                    try:
+                        intron_list[f_i][(bam_introns_p[_i, 0] - start, bam_introns_p[_i, 1] - bam_introns_p[_i, 0])] += bam_introns_p[_i, 2]
+                    except KeyError:
+                        intron_list[f_i][(bam_introns_p[_i, 0] - start, bam_introns_p[_i, 1] - bam_introns_p[_i, 0])] = bam_introns_p[_i, 2]
+                    if intron_cov: 
+                        intron_counts[f_i,bam_introns_p[_i, 0]:bam_introns_p[_i, 1]] += bam_introns_p[_i, 2] 
+
     if collapsed:
         counts = sp.sum(counts, axis=0)
         intron_counts = sp.sum(intron_counts, axis=0)
@@ -308,6 +340,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
     if xlim is not None:
         ax.set_xlim(xlim)
 
+    ax.autoscale(axis='y')
     ylim = ax.get_ylim()
     ax.set_ylim([0, ylim[1]])
 

@@ -179,7 +179,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     if not 'verbosity' in options:
         options['verbosity'] = True
     if not 'maxjobs' in options:
-        options['maxjobs'] = 800 #5000
+        options['maxjobs'] = 400 #5000
     if not 'waitonfull' in options:
         options['waitonfull'] = True
     if not 'immediately' in options:
@@ -1040,6 +1040,7 @@ def start_proc(fname, data_fname, rm_flag=True):
     retval2 = []
     try:
         if callfile[0] == '__main__':
+            sys.path.append(os.getcwd())
             exec('from %s import %s' % (re.sub(r'.py$', '', callfile[1]), ProcName))
         else:
             exec('from %s import %s' % (callfile[0], ProcName))
