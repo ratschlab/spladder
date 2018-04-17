@@ -71,7 +71,7 @@ def filter_introns(introns, genes, CFG):
             if len(k_idx) < introns[i, si].shape[0]:
                 cnt_rem += (introns[i, si].shape[0] - len(k_idx))
                 introns[i, si] = introns[i, si][k_idx, :]
-    print  'removed %i of %i (%.2f percent) introns overlapping to no or multiple genes' % (cnt_rem, cnt_tot, cnt_rem / float(cnt_tot) * 100)
+    print  'removed %i of %i (%.2f percent) introns overlapping to no or multiple genes' % (cnt_rem, cnt_tot, cnt_rem / float(max(cnt_tot, 1)) * 100)
 
     return introns
 
