@@ -366,9 +366,10 @@ def parse_args(options, identity='main'):
 
         CFG['merge_strategy'] = options.merge
         CFG['read_length'] = options.readlen
-        CFG['confidence_level'] = options.confidence
 
     if identity in ['main', 'test', 'viz']:
+        CFG['confidence_level'] = options.confidence
+
         if options.validate_sg in ['n', 'y']:
             CFG['validate_splicegraphs'] = (options.validate_sg == 'y')
         else:

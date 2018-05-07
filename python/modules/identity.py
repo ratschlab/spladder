@@ -32,7 +32,14 @@ def get_gene_names(CFG):
     
     gene_file = _get_gene_fname(CFG)
     gene_name_file = re.sub(r'.pickle$', '', gene_file) + '.names.pickle'
-    gene_names = cPickle.load(open(gene_name_file, 'r'))
+    if not os.path.exists(gene_name_file):
+        if CFG['verbose']:
+            print 'Generating list of gene names for easy access'
+        tmp_genes = load_genes(CFG)
+        gene_names = sp.array([x.name.split('.')[0] for x in tmp_genes])
+        cPickle.dump(gene_names, open(gene_name_file, 'w'), -1)
+    else:
+        gene_names = cPickle.load(open(gene_name_file, 'r'))
 
     return gene_names
 
