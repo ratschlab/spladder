@@ -62,4 +62,17 @@ class Event:
             else:
                 return sp.sort(sp.r_[self.exons1.ravel()[:4], self.exons2.ravel()[-4:]])
             
+    def get_introns(self):
         
+        _introns = sp.reshape(self.exons1.ravel()[1:-1], (self.exons1.shape[0] - 1, 2))
+        if len(self.exons2.shape) > 1:
+            _introns = sp.r_[_introns, sp.reshape(self.exons2.ravel()[1:-1], (self.exons2.shape[0] - 1, 2))]
+
+        return _introns
+
+
+    def get_intron_lens(self):
+
+        _introns = self.get_introns()
+        return _introns[:, 1] - _introns[:, 0]
+

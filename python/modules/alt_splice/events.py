@@ -41,16 +41,19 @@ def post_process_event_struct(events, CFG):
         return events
 
     ### filter out invalid coordinate projections
-    idx_valid = sp.zeros((events.shape[0],), dtype='int')
-    for i in range(events.shape[0]):
-        idx_valid[i] = sp.all(events[i].get_coords(trafo=True) > 0)
-    events = events[sp.where(idx_valid)[0]]
-   
+    is_valid = sp.array([sp.all(_.get_coords(trafo=True) > 0) for _ in events], dtype='bool')
+    events = events[is_valid]
+
     ### sort exons in events
     for e in events:
         e.exons1 = sort_rows(e.exons1) 
         e.exons2 = sort_rows(e.exons2) 
 
+    ### remove all events that have 0-length introns
+    print '\nRemove 0-length intron events'
+    is_valid = sp.array([_.get_intron_lens().min() > 0 for _ in events], dtype='bool')
+    events = events[is_valid]
+   
     ### sort events by all coordinates
     events = sort_events_full(events, CFG) 
     
