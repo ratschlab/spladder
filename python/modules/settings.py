@@ -179,6 +179,15 @@ def default_settings():
     return CFG
 
 
+def _check(options, field, is_bool=True):
+    
+    if is_bool and not getattr(options, field) in ['n', 'y']:
+        print >> sys.stderr, 'ERROR:\n\toption "%s" should have value "y" or "n", but has value "%s"' % (field, getattr(options, field))
+        sys.exit(1)
+
+    return True
+
+
 def parse_args(options, identity='main'):
 
     ### load all default settings
@@ -187,17 +196,10 @@ def parse_args(options, identity='main'):
     ref_tag = ''
     
     ### general options
-    if options.verbose in ['n', 'y']:
+    if _check(options, 'verbose'):
         CFG['verbose'] = (options.verbose == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option verbose should have value y or n, but has %s' % options.verbose
-        sys.exit(1)
-
-    if options.debug in ['n', 'y']:
+    if _check(options, 'debug'):
         CFG['debug'] = (options.debug == 'y')
-    else:
-        print >> sys.stderr, 'ERROR: option debug should have value y or n, but has %s' % options.debug
-        sys.exit(1)
 
     CFG['event_types'] = options.event_types.strip(',').split(',')
 
@@ -217,94 +219,50 @@ def parse_args(options, identity='main'):
 
     ### options specific for main program
     if identity == 'main':
-        if options.insert_ir in ['n', 'y']:
+        if _check(options, 'insert_ir'):
             CFG['do_insert_intron_retentions'] = (options.insert_ir == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option insert_ir should have value y or n, but has %s' % options.insert_ir
-            sys.exit(1)
-
-        if options.insert_es in ['n', 'y']:
+        if _check(options, 'insert_es'):
             CFG['do_insert_cassette_exons'] = (options.insert_es == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option insert_es should have value y or n, but has %s' % options.insert_es
-            sys.exit(1)
-
-        if options.insert_ni in ['n', 'y']:
+        if _check(options, 'insert_ni'):
             CFG['do_insert_intron_edges'] = (options.insert_ni == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option insert_ni should have value y or n, but has %s' % options.insert_ni
-            sys.exit(1)
-
-        if options.remove_se in ['n', 'y']:
+        if _check(options, 'remove_se'):
             CFG['do_remove_short_exons'] = (options.remove_se == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option remove_se should have value y or n, but has %s' % options.remove_se
-            sys.exit(1)
-
-        if options.infer_sg in ['n', 'y']:
+        if _check(options, 'infer_sg'):
             CFG['do_infer_splice_graph'] = (options.infer_sg == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option infer_sg should have value y or n, but has %s' % options.infer_sg
-            sys.exit(1)
-
-        if options.var_aware in ['n', 'y']:
+        if _check(options, 'var_aware'):
             CFG['var_aware'] = (options.var_aware == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option var_aware should have value y or n, but has %s' % options.var_aware
-            sys.exit(1)
-
-        if options.primary_only in ['n', 'y']:
+        if _check(options, 'primary_only'):
             CFG['primary_only'] = (options.primary_only == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option primary_only should have value y or n, but has %s' % options.primary_only
-            sys.exit(1)
-
-        if options.intron_cov in ['n', 'y']:
+        if _check(options, 'intron_cov'):
             CFG['count_intron_cov'] = (options.intron_cov == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option intron_cov should have value y or n, but has %s' % options.intron_cov
-
-        if options.quantify_graph in ['n', 'y']:
+        if _check(options, 'quantify_graph'):
             CFG['count_segment_graph'] = (options.quantify_graph == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option quantify_graph should have value y or n, but has %s' % options.quantify_graph
-
-        if options.ignore_mismatches in ['n', 'y']:
+        if _check(options, 'ignore_mismatches'):
             CFG['ignore_mismatch_tag'] = (options.ignore_mismatches == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option ignore mismatches bam should have value y or n, but has %s' % options.ignore_mismatches
-    
-        if options.output_struc in ['n', 'y']:
+        if _check(options, 'output_struc'):
             CFG['output_struc'] = (options.output_struc == 'y')
             CFG['output_confirmed_struc'] = (options.output_struc == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option output struc value y or n, but has %s' % options.output_struc
-
-        if options.filter_overlap_genes in ['n', 'y']:
+        if _check(options, 'filter_overlap_genes'):
             CFG['filter_overlapping_genes'] = (options.filter_overlap_genes == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option filter overlap genes should have value y or n, but has %s' % options.filter_overlap_genes
-    
-        if options.compress_text in ['n', 'y']:
+        if _check(options, 'compress_text'):
             CFG['compress_text'] = (options.compress_text == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option compress text should have value y or n, but has %s' % options.compress_text
-    
-        ### option to store sparse BAM representation
-        if options.sparse_bam in ['n', 'y']:
+        if _check(options, 'sparse_bam'):
             CFG['bam_to_sparse'] = (options.sparse_bam == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option sparse_bam should have value y or n, but has %s' % options.sparse_bam
 
         CFG['insert_intron_iterations'] = options.iterations
         if options.spladderfile != '-':
             CFG['spladder_infile'] = options.spladderfile
 
         ### settings for the alt splice part
-        CFG['same_genestruct_for_all_samples'] = (options.same_genome == 'y')
+        if _check(options, 'same_genome'):
+            CFG['same_genestruct_for_all_samples'] = (options.same_genome == 'y')
+        if _check(options, 'curate_alt_prime'):
+            CFG['curate_alt_prime_events'] = (options.curate_alt_prime == 'y')
+        if _check(options, 'extract_as'):
+            CFG['run_as_analysis'] = (options.extract_as == 'y')
+        
         if options.replicates != '-':
             CFG['replicate_idxs'] = [int(x) for x in options.replicates.split(',')]
-        CFG['curate_alt_prime_events'] = (options.curate_alt_prime == 'y')
 
         ### open log file, if specified
         if options.logfile != '-':
@@ -314,12 +272,6 @@ def parse_args(options, identity='main'):
             CFG['log_fname'] = 'stdout'
             CFG['fd_log'] = sys.stdout
 
-        #if options.user != '-':
-        #    CFG['user_settings'] = options.user
-
-        ### alt splice analysis
-        CFG['run_as_analysis'] = (options.extract_as == 'y')
-        
         ### mandatory parameters for main spladder
         if options.bams == '-':
             print >> sys.stderr, 'ERROR: please provide the mandatory parameter: bam files\n\n'
@@ -348,7 +300,7 @@ def parse_args(options, identity='main'):
             ref_tag = '%s:' % options.refstrain
 
         ### rproc options
-        if options.pyproc == 'y':
+        if _check(options, 'pyproc'):
             CFG['rproc'] = (options.pyproc == 'y')
             CFG['options_rproc'] = dict()
             CFG['options_rproc']['mem_req_resubmit']  = [30000, 60000, 80000]
@@ -370,26 +322,16 @@ def parse_args(options, identity='main'):
     if identity in ['main', 'test', 'viz']:
         CFG['confidence_level'] = options.confidence
 
-        if options.validate_sg in ['n', 'y']:
+        if _check(options, 'validate_sg'):
             CFG['validate_splicegraphs'] = (options.validate_sg == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: validate_sg should have value y or n, but has %s' % options.validate_sg
-            sys.exit(1)
     
     if identity == 'viz':
         CFG['event_id'] = options.event_id
 
-        if options.transcripts in ['n', 'y']:
+        if _check(options, 'transcripts'):
             CFG['plot_transcripts'] = (options.transcripts == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: transcripts should have value y or n, but has %s' % options.transcripts
-            sys.exit(1)
-
-        if options.splicegraph in ['n', 'y']:
+        if _check(options, 'splicegraph'):
             CFG['plot_splicegraph'] = (options.splicegraph == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: splicegraph should have value y or n, but has %s' % options.splicegraph
-            sys.exit(1)
 
         CFG['plot_labels'] = options.labels
 
@@ -403,53 +345,29 @@ def parse_args(options, identity='main'):
                         print >> sys.stderr, 'ERROR: Input file %s can not be found\n\n' % fname
                         sys.exit(2)
 
-
     if identity == 'test':
         CFG['multiTest'] = options.correction
         CFG['max_0_frac'] = options.max_0_frac
         CFG['min_count'] = options.min_count
         
-        if options.non_alt_norm in ['n', 'y']:
+        if _check(options, 'non_alt_norm'):
             CFG['non_alt_norm'] = (options.non_alt_norm == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option non_alt_norm should have value y or n, but has %s' % options.non_alt_norm
-            sys.exit(1)
-
-        if options.low_memory in ['n', 'y']:
+        if _check(options, 'low_memory'):
             CFG['low_memory'] = (options.low_memory == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option low_memory should have value y or n, but has %s' % options.low_memory
-            sys.exit(1)
-
-        if options.matlab in ['n', 'y']:
+        if _check(options, 'matlab'):
             CFG['is_matlab'] = (options.matlab == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option matlab should have value y or n, but has %s' % options.matlab
-            sys.exit(1)
-
-        if options.cap_exp_outliers in ['n', 'y']:
+        if _check(options, 'cap_exp_outliers'):
             CFG['cap_exp_outliers'] = (options.cap_exp_outliers == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option cap_exp_outliers should have value y or n, but has %s' % options.cap_exp_outliers
-            sys.exit(1)
-
-        if options.cap_outliers in ['n', 'y']:
+        if _check(options, 'cap_outliers'):
             CFG['cap_outliers'] = (options.cap_outliers == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option cap_outliers should have value y or n, but has %s' % options.cap_outliers
-            sys.exit(1)
+        if _check(options, 'diagnose_plots'):
+            CFG['diagnose_plots'] = (options.diagnose_plots == 'y')
 
         if options.conditionA == '-':
             print >> sys.stderr, 'ERROR: At least one sample for condition A required'
             sys.exit(1)
         if options.conditionB == '-':
             print >> sys.stderr, 'ERROR: At least one sample for condition B required'
-            sys.exit(1)
-
-        if options.diagnose_plots in ['n', 'y']:
-            CFG['diagnose_plots'] = (options.diagnose_plots == 'y')
-        else:
-            print >> sys.stderr, 'ERROR: option diagnose_plots should have value y or n, but has %s' % options.diagnose_plots
             sys.exit(1)
 
         CFG['conditionA'] = options.conditionA.strip(',').split(',')
