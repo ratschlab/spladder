@@ -115,11 +115,11 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     IN = h5py.File(CFG['fname_count_in'], 'r')
     strains = IN['strains'][:].astype('str')
     ### sort by strain ID
-    s_idx = sp.argsort(strains)
+    strain_idx_all = sp.argsort(strains)
     if strain_subset is None:
-        strain_idx = s_idx.copy()
+        strain_idx = strain_idx_all.copy()
     else:
-        strain_idx = s_idx[sp.in1d(strains[s_idx], strain_subset)]
+        strain_idx = strain_idx_all[sp.in1d(strains[strain_idx_all], strain_subset)]
     gene_counts = sp.zeros((numgenes, strain_idx.shape[0]), dtype='float')
     gene_names = sp.array([x.name for x in genes], dtype='str')
 
@@ -186,12 +186,13 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     ### write results to hdf5
     if fn_out is not None:
         OUT = h5py.File(fn_out, 'w')
+        OUT.create_dataset(name='all_strains', data=strains[strain_idx_all])
         OUT.create_dataset(name='strains', data=strains[strain_idx])
         OUT.create_dataset(name='genes', data=gene_names)
         OUT.create_dataset(name='raw_count', data=gene_counts, compression="gzip")
         OUT.close()
 
-    return (gene_counts, strains[strain_idx], gene_names)
+    return (gene_counts, strains[strain_idx_all], strains[strain_idx], gene_names)
 
 
 def get_size_factors(gene_counts, CFG):
@@ -783,43 +784,38 @@ def main():
             CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
 
         CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, non_alt_tag))
+
+        condition_strains = None
+        if options.subset_samples == 'y':
+            condition_strains = sp.unique(sp.r_[sp.array(CFG['conditionA']), sp.array(CFG['conditionB'])])
+            CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, non_alt_tag, hash(tuple(sp.unique(condition_strains))) * -1))
         if os.path.exists(CFG['fname_exp_hdf5']):
             if CFG['verbose']:
                 print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
             IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
             gene_counts = IN['raw_count'][:]
             gene_strains = IN['strains'][:]
+            gene_strains_all = IN['all_strains'][:]
             gene_ids = IN['genes'][:]
             IN.close()
         else:
-            condition_strains = None
-            if options.subset_samples == 'y':
-                condition_strains = sp.unique(sp.r_[sp.array(CFG['conditionA']), sp.array(CFG['conditionB'])])
-                CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, non_alt_tag, hash(tuple(sp.unique(condition_strains))) * -1))
-            if os.path.exists(CFG['fname_exp_hdf5']):
-                if CFG['verbose']:
-                    print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
-                IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
-                gene_counts = IN['raw_count'][:]
-                gene_strains = IN['strains'][:]
-                gene_ids = IN['genes'][:]
-                IN.close()
-            else:
-                gene_counts, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'], strain_subset=condition_strains)
+            gene_counts, gene_strains_all, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'], strain_subset=condition_strains)
 
         gene_strains = sp.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
-
-        ### estimate size factors for library size normalization
-        sf_ge = get_size_factors(gene_counts, CFG)
+        gene_strains_all = sp.array([x.split(':')[1] if ':' in x else x for x in gene_strains_all])
 
         ### get index of samples for difftest
         idx1 = sp.where(sp.in1d(gene_strains, CFG['conditionA']))[0]
         idx2 = sp.where(sp.in1d(gene_strains, CFG['conditionB']))[0]
+        idx1_all = sp.where(sp.in1d(gene_strains_all, CFG['conditionA']))[0]
+        idx2_all = sp.where(sp.in1d(gene_strains_all, CFG['conditionB']))[0]
 
         ### subset expression counts to tested samples
         gene_counts = gene_counts[:, sp.r_[idx1, idx2]]
         gene_strains = gene_strains[sp.r_[idx1, idx2]]
-        sf_ge = sf_ge[sp.r_[idx1, idx2]]
+
+        ### estimate size factors for library size normalization
+        sf_ge = get_size_factors(gene_counts, CFG)
 
         ### handle outliers (mask with capped value)
         if CFG['cap_exp_outliers']:
@@ -848,7 +844,7 @@ def main():
             CFG['fname_events'] = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, CFG['confidence_level']))
 
             ### quantify events
-            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1, idx2, event_type, CFG, gen_event_ids=False, low_mem=CFG['low_memory'])
+            (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(CFG['fname_events'], idx1_all, idx2_all, event_type, CFG, gen_event_ids=False, low_mem=CFG['low_memory'])
 
             if CFG['cap_outliers']:
                 log_counts = sp.log2(cov[0] + 1)
