@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 import sys
 import os
 import re
@@ -10,13 +10,12 @@ import matplotlib.patches as patches
 import cPickle
 import pdb
 
-import modules.settings as settings
-from modules.classes.gene import Gene
-from modules.viz.graph import *
-from modules.viz.coverage import *
-from modules.viz.genelets import *
-import modules.viz.axes as vax
-from modules.identity import *
+from . import settings
+from .viz.graph import *
+from .viz.coverage import *
+from .viz.genelets import *
+from .viz import axes as vax
+from .identity import *
 
 def parse_options(argv):
 
@@ -90,13 +89,13 @@ def _add_ax(fig, axes, gs):
 def spladder_viz():
 
     """Main visualization code"""
-    
+
     ### parse command line parameters
     options = parse_options(sys.argv)
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='viz')
-   
+
     ### create plot directory if it does not exist yet
     if options.testdir != '-':
         dirname = options.testdir
@@ -162,7 +161,7 @@ def spladder_viz():
             ### get strains to plot
             idx1 = sp.where(sp.in1d(SETUP[0], SETUP[6]['conditionA']))[0]
             idx2 = sp.where(sp.in1d(SETUP[0], SETUP[6]['conditionB']))[0]
-    
+
             ### load test results
             for l, line in enumerate(open(os.path.join(testdir, 'test_results_C%i_%s.tsv' % (CFG['confidence_level'], event_type)), 'r')):
                 if l == 0:
@@ -176,7 +175,7 @@ def spladder_viz():
     ### if an event_id is provided, only the associated gene will be plotted
     else:
         gids = get_gene_ids(CFG)
-        
+
     ### iterate over genes to plot
     for gid in gids:
 
@@ -231,7 +230,7 @@ def spladder_viz():
             ### plot coverage information for a set of given samples
             if len(CFG['bam_fnames']) > 0:
                 plot_bam(options, gene, CFG['bam_fnames'], fig, axes, gs, xlim, cmap_cov, cmap_edg)
-               
+
                 ### plot all the samples in a single plot
                 if len(CFG['bam_fnames']) > 1:
                     plot_bam(options, gene, CFG['bam_fnames'], fig, axes, gs, xlim, cmap_cov, cmap_edg, single=False)
@@ -291,7 +290,7 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
             label = options.labels[s]
         else:
             label = 'group %i' % (s + 1)
-            
+
         if single:
             axes.append(fig.add_subplot(gs[len(axes), 0], sharex=sharex))
             title = 'Expression (%s)' % label
@@ -309,7 +308,7 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
             color_cov = cmap_cov(norm(s))
             color_edg = cmap_edg(norm(s))
 
-        caxes.append(cov_from_bam(gene.chr, start, stop, bams, subsample=min_sample_size, ax=ax, intron_cnt=True, 
+        caxes.append(cov_from_bam(gene.chr, start, stop, bams, subsample=min_sample_size, ax=ax, intron_cnt=True,
                      log=options.log, title=title, xlim=xlim, color_cov=color_cov, color_intron_edge=color_edg,
                      grid=True, min_intron_cnt=options.mincount, return_legend_handle=True, label=label))
         labels.append(label)
@@ -317,14 +316,14 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
 
     if not single:
         ax.legend(caxes, labels)
- 
+
 
 def _plot_event(CFG, event_info, fig, ax, gs, xlim, padding=None):
-    """This function takes the event_id given in the CFG object and 
+    """This function takes the event_id given in the CFG object and
     plots it into ax."""
 
     event_list = [_ for event in load_events(CFG, event_info) for _ in [event.exons1, event.exons2]]
-    multiple(event_list, ax=ax, x_range=xlim, color='green', padding=padding) 
+    multiple(event_list, ax=ax, x_range=xlim, color='green', padding=padding)
     #ax.set_title('Alt event structure') # of %s' % options.event_id)
     vax.clean_axis(ax, allx=True)
 
@@ -354,6 +353,7 @@ def _plot_segments(CFG, gid, fig, axes, gs, options, seg_sample_idx=None):
     else:
         cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
     axes[-1].set_title('Segment counts')
+
 
 
 if __name__ == "__main__":

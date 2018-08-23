@@ -11,20 +11,19 @@ import warnings
 import time
 import datetime
 from scipy.optimize import minimize_scalar
-from scipy.special import polygamma 
+from scipy.special import polygamma
 from scipy.stats import chi2,nbinom,scoreatpercentile
 import numpy.random as npr
 
-from modules.classes.gene import Gene
-import modules.alt_splice.quantify as quantify
-import modules.testing.likelihood as likelihood
-import modules.settings as settings 
-import modules.viz.diagnose as plot
+from .alt_splice import quantify
+from .testing import likelihood
+from . import settings
+from .viz import diagnose as plot
 
-import multiprocessing as mp 
+import multiprocessing as mp
 import signal as sig
 
-from modules.helpers import log_progress 
+from .helpers import log_progress
 
 TIME0 = time.time()
 
@@ -102,7 +101,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 
     if CFG['verbose']:
         sys.stdout.write('Quantifying gene expression ...\n')
-    
+
     ### load gene information
     if CFG['is_matlab']:
         genes = scio.loadmat(CFG['fname_genes'], struct_as_record=False)['genes'][0, :]
@@ -138,9 +137,9 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     ### iterate over genes
     for gidx, iidx in enumerate(s_idx):
 
-        if CFG['verbose']:  
+        if CFG['verbose']:
             log_progress(gidx, numgenes, 100)
-            
+
         ### get idx of non alternative segments
         if CFG['is_matlab']:
             non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
@@ -181,7 +180,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 
     if CFG['verbose']:
         sys.stdout.write('\n... done.\n')
-            
+
 
     ### write results to hdf5
     if fn_out is not None:
@@ -296,7 +295,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, test_idx, idx, log=F
 
 
 def estimate_dispersion(gene_counts, matrix, sf, CFG, test_idx, event_type):
-    
+
     if CFG['verbose']:
         print 'Estimating raw dispersions'
 
@@ -330,7 +329,7 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG, test_idx, event_type):
             pool.terminate()
             pool.join()
             sys.exit(1)
-    else:        
+    else:
         (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, test_idx, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if sp.sum(disp_raw_conv) == 0:
@@ -439,7 +438,7 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
                     try:
                         res = minimize_scalar(adj_loglikelihood_shrink_scalar_onedisper, args=(dmatrix1, resp, yhat, disp_fitted[i], varPrior, sign), method='Bounded', bounds=(0, 10.0), tol=1e-5)
                     except TypeError:
-                        disp_adj[i] = disp 
+                        disp_adj[i] = disp
                         disp_adj_conv[i] = False
                         error_cnt += 1
                         break
@@ -500,7 +499,7 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG, eve
             pool.terminate()
             pool.join()
             sys.exit(1)
-    else:        
+    else:
         (disp_adj, disp_adj_conv, _) = adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, sf, CFG, sp.arange(counts.shape[0]), log=CFG['verbose'])
 
     if CFG['diagnose_plots']:
@@ -583,7 +582,7 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx):
             pool.terminate()
             pool.join()
             sys.exit(1)
-    else:        
+    else:
         (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if CFG['verbose']:
@@ -647,7 +646,7 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx, r_idx=No
     ### adjust dispersion estimates
     (disp_adj, disp_adj_conv) = adjust_dispersion(cov, dmatrix1, disp_raw, disp_fitted, disp_idx, sf, CFG, event_type)
 
-    ### do test 
+    ### do test
     pvals = test_count(cov, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx)
 
     ### revert from unique
@@ -768,7 +767,7 @@ def main():
         #sf = sp.ones((cov.shape[1], ), dtype='float')
 
         pvals = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, 'debug')
-        pvals_adj = adj_pval(pvals, CFG) 
+        pvals_adj = adj_pval(pvals, CFG)
         pdb.set_trace()
     else:
         val_tag = ''
@@ -958,7 +957,7 @@ def main():
             ### run testing
             #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, event_type, r_idx)
             (pvals, cov_used, disp_raw_used, disp_adj_used) = run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx)
-            pvals_adj = adj_pval(pvals, CFG) 
+            pvals_adj = adj_pval(pvals, CFG)
 
             ### compute means and fold changes
             s = event_strains.shape[0]
@@ -987,7 +986,7 @@ def main():
                              CFG=CFG)
 
 
-            ### 
+            ###
             ### OUTPUT
             ###
 
@@ -1003,7 +1002,7 @@ def main():
 
             ### write test results
             s_idx = sp.argsort(pvals)
-            header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp']) 
+            header = sp.array(['event_id', 'gene', 'p_val', 'p_val_adj', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'])
             event_ids = sp.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
 
             out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))

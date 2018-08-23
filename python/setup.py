@@ -28,7 +28,12 @@ setup(
     ],
     description="Tool for the detection and quantification of alternative splicing events from RNA-Seq data.",
     entry_points = {
-        'console_scripts': ['spladder=spladder.spladder:main'],
+        'console_scripts': [
+            'spladder=spladder.spladder:main',
+            'spladder-test=spladder.spladder_test:main',
+            'spladder-viz=spladder.spladder_viz:spladder_viz',
+        ],
+
     },
     install_requires=requirements,
     license="BSD license",
