@@ -14,6 +14,6 @@ then
 fi
 
 ### run visualization
-python spladder_viz.py -o ${basedir}/result_tiny -b $bams -c 3 -g AT1G21690 -T y -e exon_skip_1
-python spladder_viz.py -o ${basedir}/result_tiny -b $bams -c 3 -T y -v y
+python spladder_viz.py -o ${basedir}/result_tiny -b $bams -c 3 -g AT1G21690 -T y -e exon_skip_1 -u y
+python spladder_viz.py -o ${basedir}/result_tiny -b $bams -c 3 -T y -v y -u y
 

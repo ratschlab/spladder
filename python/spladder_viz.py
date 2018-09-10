@@ -44,6 +44,7 @@ def parse_options(argv):
     output.add_option('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
 
     user = OptionGroup(parser, 'USER')
+    user.add_option('-u', '--user', dest='user', metavar='y|n', help='apply user mode (experimental) [off]', default='n')
     user.add_option('-T', '--transcripts', dest='transcripts', metavar='y|n', help='plot annotated transcripts', default='n')
     user.add_option('-s', '--splicegraph', dest='splicegraph', metavar='y|n', help='plot splicegraph structure', default='n')
 
@@ -139,7 +140,7 @@ def spladder_viz():
     if options.gene_name is not None:
         #gid = sp.where(sp.array([x.split('.')[0] for x in gene_names]) == options.gene_name.split('.')[0])[0]
         gids = [[sp.where(sp.array(gene_names) == options.gene_name)[0][0], options.event_id]]
-        if gids.shape[0] == 0:
+        if len(gids) == 0:
             sys.stderr.write('ERROR: provided gene ID %s could not be found, please check for correctness\n' % options.gene_name)
             sys.exit(1)
     ### the plotting happens on the results of spladder test
@@ -216,10 +217,11 @@ def spladder_viz():
             else:
                 fig = plt.figure(figsize = (18, 3*rows), dpi=200)
 
+            xlim = None
             ### plot splicing graph
             if options.splicegraph == 'y':
                 _plot_splicegraph(gene, fig, axes, gs)
-                xlim = axes[-1].get_xlim()
+                xlim = axes[1].get_xlim()
 
             ### plot annotated transcripts
             if CFG['plot_transcripts']:
@@ -319,14 +321,15 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
         ax.legend(caxes, labels)
  
 
-def _plot_event(CFG, event_info, fig, ax, gs, xlim, padding=None):
+def _plot_event(CFG, event_info, fig, axes, gs, xlim, padding=None):
     """This function takes the event_id given in the CFG object and 
     plots it into ax."""
 
+    axes.append(fig.add_subplot(gs[len(axes), 0]))
     event_list = [_ for event in load_events(CFG, event_info) for _ in [event.exons1, event.exons2]]
-    multiple(event_list, ax=ax, x_range=xlim, color='green', padding=padding) 
+    multiple(event_list, ax=axes[-1], x_range=xlim, color='green', padding=padding) 
     #ax.set_title('Alt event structure') # of %s' % options.event_id)
-    vax.clean_axis(ax, allx=True)
+    vax.clean_axis(axes[-1], allx=True)
 
 
 def _plot_splicegraph(gene, fig, axes, gs):
