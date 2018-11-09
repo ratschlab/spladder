@@ -28,7 +28,12 @@ setup(
     ],
     description="Tool for the detection and quantification of alternative splicing events from RNA-Seq data.",
     entry_points = {
-        'console_scripts': ['spladder=spladder.spladder:main'],
+        'console_scripts': [
+            'spladder=spladder.spladder:main',
+            'spladder-test=spladder.spladder_test:main',
+            'spladder-viz=spladder.spladder_viz:spladder_viz',
+        ],
+
     },
     install_requires=requirements,
     license="BSD license",
@@ -41,6 +46,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ratschlab/spladder',
-    version='1.1.0',
+    version='1.2.0',
     zip_safe=False,
 )
