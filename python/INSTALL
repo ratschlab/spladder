@@ -1,7 +1,7 @@
 Installation and Dependencies
 -----------------------------
 
-The python version of SplAdder does not require any installation process. In can
+The python version of SplAdder does not require any installation process. It can
 be used as is, given that the following dependencies are fulfilled:
 
 * pysam
