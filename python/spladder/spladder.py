@@ -81,7 +81,7 @@ def parse_options(argv):
     experimental.add_option('', '--ignore_mismatches', dest='ignore_mismatches', metavar='y|n', help='ignore mismatches - does not filter by edit operations - does not require NM in BAM [n]', default='n')
     experimental.add_option('', '--output_struc', dest='output_struc', metavar='y|n', help='outputs events in structured splicing syntax similar to astalavista [n]', default='n')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
-    experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicilty set then -T is set [n]', default='n')
+    experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicilty set when -T is set [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
     parser.add_option_group(output)
@@ -89,7 +89,7 @@ def parse_options(argv):
     parser.add_option_group(splice)
     parser.add_option_group(experimental)
 
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(argv)
 
     if len(argv) < 2:
         parser.print_help()
@@ -99,10 +99,10 @@ def parse_options(argv):
     return options
 
 
-def spladder():
+def spladder(argv):
 
     ### get command line options
-    options = parse_options(sys.argv)
+    options = parse_options(argv)
 
     ### parse parameters from options object
     CFG = settings.parse_args(options)
@@ -319,8 +319,8 @@ def spladder():
                 else:
                     analyze_events(CFG, CFG['event_types'][e_idx])
 
-def main():
-    spladder()
+def main(argv):
+    spladder(argv)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
