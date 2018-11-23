@@ -1,5 +1,5 @@
-if __package__ is None:
-    __package__ ='modules'
+#if __package__ is None:
+#    __package__ ='modules'
 
 import cPickle
 import math

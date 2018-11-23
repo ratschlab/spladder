@@ -17,17 +17,16 @@ import scipy as sp
 import cPickle
 import h5py
 
-
-from modules import settings
-from modules.core.spladdercore import spladder_core
-from modules.alt_splice.collect import collect_events
-from modules.alt_splice.analyze import analyze_events
-from modules.count import count_graph_coverage_wrapper
-from modules.editgraph import filter_by_edgecount
-import modules.init as init
-import modules.rproc as rp
-from modules.merge import run_merge
-from modules.helpers import *
+from . import settings
+from .core.spladdercore import spladder_core
+from .alt_splice.collect import collect_events
+from .alt_splice.analyze import analyze_events
+from .count import count_graph_coverage_wrapper
+from .editgraph import filter_by_edgecount
+from . import init
+from . import rproc as rp
+from .merge import run_merge
+from .helpers import *
 
 def parse_options(argv):
 
@@ -326,6 +325,8 @@ def spladder():
                 else:
                     analyze_events(CFG, CFG['event_types'][e_idx])
 
+def main():
+    spladder()
 
 if __name__ == "__main__":
-    spladder()
+    main()
