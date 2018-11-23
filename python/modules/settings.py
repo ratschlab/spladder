@@ -299,6 +299,8 @@ def parse_args(options, identity='main'):
             CFG['reference_strain'] = options.refstrain
             ref_tag = '%s:' % options.refstrain
 
+        CFG['quantification_mode'] = options.qmode
+
         ### rproc options
         if _check(options, 'pyproc'):
             CFG['rproc'] = (options.pyproc == 'y')

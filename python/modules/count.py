@@ -111,7 +111,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
 
 
-def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
+def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmode='all'):
 
     (genes, inserted) = cPickle.load(open(fname_in, 'r'))
     for g in genes:
@@ -138,6 +138,9 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None):
         if CFG['merge_strategy'] == 'single':
             print '\nprocessing %s' % (CFG['samples'][sample_idx])
             counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][sample_idx], CFG)
+        elif CFG['merge_strategy'] == 'merge_graphs' and qmode == 'single':
+            print '\nquantifying merged graph in single mode (first file only) on %s' % CFG['samples'][0]
+            counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][0], CFG)
         else:
             for s_idx in range(CFG['strains'].shape[0]):
                 print '\n%i/%i' % (s_idx + 1, CFG['strains'].shape[0])

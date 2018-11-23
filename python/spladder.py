@@ -82,7 +82,8 @@ def parse_options(argv):
     experimental.add_option('', '--ignore_mismatches', dest='ignore_mismatches', metavar='y|n', help='ignore mismatches - does not filter by edit operations - does not require NM in BAM [n]', default='n')
     experimental.add_option('', '--output_struc', dest='output_struc', metavar='y|n', help='outputs events in structured splicing syntax similar to astalavista [n]', default='n')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
-    experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicilty set then -T is set [n]', default='n')
+    experimental.add_option('', '--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, all [all]', default='all')
+    experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicitly on when -T is set [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
     parser.add_option_group(output)
@@ -292,6 +293,9 @@ def spladder():
         if CFG['merge_strategy'] == 'single':
             fn_in_count = get_filename('fn_count_in', CFG, sample_idx=idx)
             fn_out_count = get_filename('fn_count_out', CFG, sample_idx=idx)
+        elif CFG['merge_strategy'] == 'merge_graphs' and CFG['quantification_mode'] == 'single':
+            fn_in_count = get_filename('fn_count_in', CFG)
+            fn_out_count = get_filename('fn_count_out', CFG, sample_idx=0)
         else:
             fn_in_count = get_filename('fn_count_in', CFG)
             fn_out_count = get_filename('fn_count_out', CFG)
@@ -301,6 +305,8 @@ def spladder():
             if not os.path.exists(fn_out_count):
                 if CFG['merge_strategy'] == 'single':
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG, sample_idx=idx)
+                elif CFG['merge_strategy'] == 'merge_graphs' and CFG['quantification_mode'] == 'single':
+                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG, qmode='single')
                 else:
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
 
