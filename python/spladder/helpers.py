@@ -94,10 +94,10 @@ def get_filename(which, CFG, sample_idx=None):
             if CFG['merge_strategy'] == 'single':
                 fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['samples'][sample_idx], prune_tag))
             else:
-                if CFG['validate_splicegraphs']:
-                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.validated.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
+                if CFG['quantification_mode'] == 'single' and which != 'fn_count_in':
+                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], CFG['samples'][sample_idx], prune_tag, validate_tag))
                 else:
-                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
+                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag, validate_tag))
         else:
             fname = CFG['spladder_infile']
         

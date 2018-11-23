@@ -21,12 +21,15 @@ from . import settings
 from .core.spladdercore import spladder_core
 from .alt_splice.collect import collect_events
 from .alt_splice.analyze import analyze_events
-from .count import count_graph_coverage_wrapper
+from .count import count_graph_coverage_wrapper, collect_single_quantification_results
 from .editgraph import filter_by_edgecount
 from . import init
 from . import rproc as rp
 from .merge import run_merge
 from .helpers import *
+
+from .classes.gene import Gene
+sys.modules['modules.classe.gene'] = Gene
 
 def parse_options(argv):
 
@@ -81,7 +84,7 @@ def parse_options(argv):
     experimental.add_option('', '--ignore_mismatches', dest='ignore_mismatches', metavar='y|n', help='ignore mismatches - does not filter by edit operations - does not require NM in BAM [n]', default='n')
     experimental.add_option('', '--output_struc', dest='output_struc', metavar='y|n', help='outputs events in structured splicing syntax similar to astalavista [n]', default='n')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
-    experimental.add_option('', '--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, all [all]', default='all')
+    experimental.add_option('', '--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, collect, all [all]', default='all')
     experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicitly on when -T is set [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
@@ -306,6 +309,8 @@ def spladder():
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG, sample_idx=idx)
                 elif CFG['merge_strategy'] == 'merge_graphs' and CFG['quantification_mode'] == 'single':
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG, qmode='single')
+                elif CFG['merge_strategy'] == 'merge_graphs' and CFG['quantification_mode'] == 'collect':
+                    collect_single_quantification_results(fn_out_count, idxs, CFG)
                 else:
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
 

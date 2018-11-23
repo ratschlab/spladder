@@ -9,9 +9,19 @@ import re
 
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
+from .helpers import *
 from reads import *
 from hdf5 import appendToHDF5
 import rproc as rp
+
+### intermediate fix to load pickle files stored under previous version
+import classes.gene
+import classes.splicegraph
+import classes.segmentgraph
+sys.modules['modules.classes.gene'] = classes.gene
+sys.modules['modules.classes.splicegraph'] = classes.splicegraph
+sys.modules['modules.classes.segmentgraph'] = classes.segmentgraph
+### end fix
 
 def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 # [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
@@ -253,5 +263,37 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                             h5fid.create_dataset(name='edge_idx', data=tmp[:, 0], chunks=True, compression='gzip', maxshape=(None,))
                             h5fid.create_dataset(name='gene_ids_edges', data=sp.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
                 del tmp, counts_tmp
+        h5fid.close()
+
+
+def collect_single_quantification_results(fname_out, sample_idxs, CFG):
+
+        ### merge results from single count files
+        if 'verbose' in CFG and CFG['verbose']:
+            print '\nCollecting count data from files quantified in single mode ...\n'
+            print 'writing data to %s' % fname_out
+
+        ### write data to hdf5 continuously
+        h5fid = h5py.File(fname_out, 'w')
+        for i, idx in enumerate(sample_idxs):
+            if i == 0:
+                h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
+                h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
+                h5fid.create_dataset(name='strains', data=CFG['strains'])
+
+            fname = get_filename('fn_count_out', CFG, sample_idx=idx)
+            if 'verbose' in CFG and CFG['verbose']:
+                print 'collecting counts from %s (%i/%i)' % (fname, i+1, len(sample_idxs))
+            if not os.path.exists(fname):
+                print >> sys.stderr, 'ERROR: Counts for sample %i cannot be loaded - %s is not present' % (i + 1, fname)
+                sys.exit(1)
+
+            CIN = h5py.File(fname, 'r')
+            if i == 0:
+                for k in ['segments', 'seq_pos', 'gene_ids_segs', 'edge_idx', 'gene_ids_edges']:
+                    h5fid.create_dataset(name=k, data=CIN[k][:], chunks=True, compression='gzip')
+                h5fid.create_dataset(name='edges', data=CIN['edges'][:], chunks=True, compression='gzip', maxshape=(CIN['edges'].shape[0], None))
+            else:
+                appendToHDF5(h5fid, CIN['edges'][:], 'edges')
         h5fid.close()
 
