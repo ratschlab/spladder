@@ -285,7 +285,7 @@ def spladder():
             elif CFG['verbose']:
                 print >> sys.stdout, 'Sparse BAM representation for %s already exists.' % bfn
 
-    if CFG['merge_strategy'] == 'single':
+    if CFG['merge_strategy'] == 'single' or CFG['quantification_mode'] == 'collect':
         idxs = range(len(CFG['samples']))
     else:
         idxs = [0]
@@ -299,7 +299,8 @@ def spladder():
             fn_in_count = get_filename('fn_count_in', CFG)
             fn_out_count = get_filename('fn_count_out', CFG, sample_idx=0)
         else:
-            fn_in_count = get_filename('fn_count_in', CFG)
+            if CFG['quantification_mode'] != 'collect':
+                fn_in_count = get_filename('fn_count_in', CFG)
             fn_out_count = get_filename('fn_count_out', CFG)
 
         ### count segment graph

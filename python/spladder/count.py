@@ -276,12 +276,8 @@ def collect_single_quantification_results(fname_out, sample_idxs, CFG):
         ### write data to hdf5 continuously
         h5fid = h5py.File(fname_out, 'w')
         for i, idx in enumerate(sample_idxs):
-            if i == 0:
-                h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
-                h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
-                h5fid.create_dataset(name='strains', data=CFG['strains'])
 
-            fname = get_filename('fn_count_out', CFG, sample_idx=idx)
+            fname = get_filename('fn_count_in', CFG, sample_idx=idx)
             if 'verbose' in CFG and CFG['verbose']:
                 print 'collecting counts from %s (%i/%i)' % (fname, i+1, len(sample_idxs))
             if not os.path.exists(fname):
@@ -290,10 +286,12 @@ def collect_single_quantification_results(fname_out, sample_idxs, CFG):
 
             CIN = h5py.File(fname, 'r')
             if i == 0:
-                for k in ['segments', 'seq_pos', 'gene_ids_segs', 'edge_idx', 'gene_ids_edges']:
+                for k in ['segments', 'seg_pos', 'gene_ids_segs', 'edge_idx', 'gene_ids_edges', 'gene_names', 'seg_len']:
                     h5fid.create_dataset(name=k, data=CIN[k][:], chunks=True, compression='gzip')
                 h5fid.create_dataset(name='edges', data=CIN['edges'][:], chunks=True, compression='gzip', maxshape=(CIN['edges'].shape[0], None))
+                h5fid.create_dataset(name='strains', data=CIN['strains'][:], chunks=True, compression='gzip', maxshape=(None,))
             else:
-                appendToHDF5(h5fid, CIN['edges'][:], 'edges')
+                appendToHDF5(h5fid, CIN['edges'][:], 'edges', faxis=1, daxis=1)
+                appendToHDF5(h5fid, CIN['strains'][:], 'strains', faxis=0, daxis=0)
         h5fid.close()
 

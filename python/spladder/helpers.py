@@ -94,7 +94,7 @@ def get_filename(which, CFG, sample_idx=None):
             if CFG['merge_strategy'] == 'single':
                 fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['samples'][sample_idx], prune_tag))
             else:
-                if CFG['quantification_mode'] == 'single' and which != 'fn_count_in':
+                if (CFG['quantification_mode'] == 'single' and which != 'fn_count_in') or (CFG['quantification_mode'] == 'collect' and which == 'fn_count_in'):
                     fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], CFG['samples'][sample_idx], prune_tag, validate_tag))
                 else:
                     fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag, validate_tag))
@@ -102,7 +102,10 @@ def get_filename(which, CFG, sample_idx=None):
             fname = CFG['spladder_infile']
         
         if which == 'fn_count_in':
-            return fname
+            if CFG['quantification_mode'] == 'collect':
+                return fname.replace('.pickle', '') + '.count.hdf5'
+            else:
+                return fname
         elif which == 'fn_count_out':
             return fname.replace('.pickle', '') + '.count.hdf5'
     elif which == 'fn_out_merge':
