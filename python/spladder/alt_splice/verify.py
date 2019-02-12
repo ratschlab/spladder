@@ -491,6 +491,9 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                 ev[i].verified = sp.array(ev[i].verified, dtype='bool')
                 continue
 
+            if isinstance(strain_idx, int):
+                strain_idx = [strain_idx]
+
             ### laod relevant count data from HDF5
             segments = sp.atleast_2d(IN['segments'][gr_idx_segs, :])[:, strain_idx]
             seg_pos = sp.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, strain_idx]
@@ -498,7 +501,6 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
             curr_edge_idx = edge_idx[gr_idx_edges]
 
             for s_idx in range(len(strain_idx)):
-                #sys.stdout.write('.')
                 #if s_idx > 0 and s_idx % 50 == 0:
                 #    sys.stdout.write('%i (%i)\n' % (s_idx, len(strain_idx)))
                # ev_tmp.subset_strain(s_idx) ### TODO 
