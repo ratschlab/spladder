@@ -13,9 +13,9 @@ from spladder import spladder
 
 
 def _compare_hdf5(expected, actual):
-    for k in list(expected.keys()):
+    for k in expected:
         if isinstance(expected[k], h5py._hl.group.Group):
-            for l in list(expected[k].keys()):
+            for l in expected[k]:
                 assert sp.all(expected[k][l][:] == actual[k][l][:])
         else:
             assert sp.all(expected[k][:] == actual[k][:])

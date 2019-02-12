@@ -168,7 +168,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                 continue
             tmp = sp.hstack(tmp)
             if tmp.shape[0] > 0:
-                counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, list(range(1, tmp.shape[1], 2))]])
+                counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, sp.arange(1, tmp.shape[1], 2)]])
                 counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * c)
 
         ### write result data to hdf5
@@ -258,11 +258,11 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                     tmp = sp.hstack(tmp)
                     if tmp.shape[0] > 0:
                         if 'edges' in h5fid:
-                            appendToHDF5(h5fid, tmp[:, list(range(1, tmp.shape[1], 2))], 'edges')
+                            appendToHDF5(h5fid, tmp[:, sp.arange(1, tmp.shape[1], 2)], 'edges')
                             appendToHDF5(h5fid, tmp[:, 0], 'edge_idx')
                             appendToHDF5(h5fid, sp.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), 'gene_ids_edges')
                         else:
-                            h5fid.create_dataset(name='edges', data=tmp[:, list(range(1, tmp.shape[1], 2))], chunks=True, compression='gzip', maxshape=(None, tmp.shape[1] / 2))
+                            h5fid.create_dataset(name='edges', data=tmp[:, sp.arange(1, tmp.shape[1], 2)], chunks=True, compression='gzip', maxshape=(None, tmp.shape[1] / 2))
                             h5fid.create_dataset(name='edge_idx', data=tmp[:, 0], chunks=True, compression='gzip', maxshape=(None,))
                             h5fid.create_dataset(name='gene_ids_edges', data=sp.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
                 del tmp, counts_tmp

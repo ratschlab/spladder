@@ -379,6 +379,7 @@ def add_intron_patch(ax, start, stop, cnt):
              (Path.CURVE3, (start, 0)), \
              (Path.CLOSEPOLY, (start, 0)), ]
 
+    ### TODO: need to fix the following line after python 2->3
     codes, verts = list(zip(*pdata))
     path = mpath.Path(verts, codes)
     patch = mpatches.PathPatch(path, facecolor='g', alpha=0.5)

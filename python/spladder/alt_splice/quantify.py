@@ -394,14 +394,14 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     ### get indices of confident events
     if CFG['is_matlab']:
         conf_idx = IN['conf_idx'][:].astype('int') - 1
-        if 'filter_idx' in list(IN.keys()):
+        if 'filter_idx' in IN:
             event_idx = IN['filter_idx'][:].astype('int')
         else:
             event_idx = conf_idx.copy()
         event_features = IN['event_features'][:]
     else:
         conf_idx = IN['conf_idx'][:].astype('int')
-        if 'filter_idx' in list(IN.keys()):
+        if 'filter_idx' in IN:
             event_idx = IN['filter_idx'][:].astype('int')
         else:
             event_idx = conf_idx.copy()

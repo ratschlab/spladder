@@ -75,7 +75,7 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
                     if collapse:
                         read_matrix[0, _start:_stop] += 1
                     else:
-                        r = list(range(_start, _stop))
+                        r = sp.arange(_start, _stop)
                         i.extend([read_cnt] * len(r))
                         j.extend(r)
                         #for pp in range(p, p + o[1]):
@@ -247,7 +247,7 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
                 ### get only end positions of reads
                 shp = polya_signals
                 end_idx = shp[0] - 1 - polya_signals[:, ::-1].argmax(axis = 1)
-                polya_signals = scipy.sparse.coo_matrix((sp.ones((shp[1],)), (sp.array(list(range(shp[1]))), end_idx)), shape = shp)
+                polya_signals = scipy.sparse.coo_matrix((sp.ones((shp[1],)), (sp.arange(shp[1]), end_idx)), shape = shp)
                 tracks = sp.r_[tracks, polya_signals.sum(axis = 0)]
             ## add end signal track
             ##############################################################################
@@ -255,7 +255,7 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
                 ### get only end positions of reads
                 shp = end_signals
                 end_idx = shp[0] - 1 - end_signals[:, ::-1].argmax(axis = 1)
-                end_signals = scipy.sparse.coo_matrix((sp.ones((shp[1],)), (sp.array(list(range(shp[1]))), end_idx)), shape = shp)
+                end_signals = scipy.sparse.coo_matrix((sp.ones((shp[1],)), (sp.arange(shp[1]), end_idx)), shape = shp)
                 tracks = sp.r_[tracks, end_signals.sum(axis = 0)]
             else: 
                 print('ERROR: unknown type of data requested: %s' % ttype, file=sys.stderr)

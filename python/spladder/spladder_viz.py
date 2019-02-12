@@ -157,7 +157,7 @@ def spladder_viz():
                 testdir = dirname
             else:
                 testdir = os.path.join(dirname, 'testing_%s_vs_%s' % (labels[0], labels[1]))
-            SETUP = pickle.load(open(os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (CFG['confidence_level'], event_type)), 'r'))
+            SETUP = pickle.load(open(os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (CFG['confidence_level'], event_type)), 'rb'))
 
             ### get strains to plot
             idx1 = sp.where(sp.in1d(SETUP[0], SETUP[6]['conditionA']))[0]

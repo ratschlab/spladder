@@ -170,7 +170,7 @@ def merge_genes_by_isoform(CFG):
     for i in range(genes.shape[0]):
         if len(genes[i].transcripts) > max_num_isoforms:
             print('Subsample for gene %i from %i transcripts.' % (i, len(genes[i].transcripts)))
-            for r_idx in sorted(random.sample(list(range(len(genes[i].transcripts))), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
+            for r_idx in sorted(random.sample(sp.arange(len(genes[i].transcripts)), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
                 del genes[i].transcripts[r_idx]
                 del genes[i].exons[r_idx]
             genes[i].start = min(genes[i].start, genes[i].exons[0][:, 0].min())
@@ -397,7 +397,7 @@ def run_merge(CFG):
                             continue
                         else:
                             print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + chunksize)))
-                            chunk_idx = list(range(c_idx, min(len(merge_list), c_idx + chunksize)))
+                            chunk_idx = sp.arange(c_idx, min(len(merge_list), c_idx + chunksize))
                             PAR['merge_list'] = merge_list[chunk_idx]
                             PAR['fn_out'] = fn
                             jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, CFG['options_rproc'], 40*60))

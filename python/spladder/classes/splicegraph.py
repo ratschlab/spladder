@@ -275,7 +275,7 @@ class Splicegraph:
                 self.edges[j, :] = self.edges[j-1, :] | self.edges[j, :]
                 rm_idx.append(j - 1)
 
-        keep_idx = sp.where(~sp.in1d(sp.array(list(range(self.vertices.shape[1]))), rm_idx))[0]
+        keep_idx = sp.where(~sp.in1d(sp.array(sp.arange(self.vertices.shape[1])), rm_idx))[0]
         self.vertices = self.vertices[:, keep_idx]
         self.edges = self.edges[keep_idx, :][:, keep_idx]
         self.terminals = self.terminals[:, keep_idx]

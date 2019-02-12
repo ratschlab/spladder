@@ -107,7 +107,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         genes = scio.loadmat(CFG['fname_genes'], struct_as_record=False)['genes'][0, :]
         numgenes = len(genes)
     else:
-        genes = pickle.load(open(CFG['fname_genes'], 'r'))[0]
+        genes = pickle.load(open(CFG['fname_genes'], 'rb'))[0]
         numgenes = genes.shape[0]
 
     ### open hdf5 file containing graph count information
@@ -234,7 +234,7 @@ def re_quantify_events(CFG):
                     if (i + 1) % 100 == 0:
                         sys.stderr.write('%i/%i\n' % (i + 1, shp + 1))
                 tmp = Dummy()
-                for k in list(IN.keys()):
+                for k in IN:
                     if IN[k].shape[0] == shp:
                         exec('tmp.%s = IN[\'%s\'][%i]' % (k, k, i))
                     elif IN[k].shape[1] == shp:
@@ -247,7 +247,7 @@ def re_quantify_events(CFG):
             IN.close()
             ev = sp.array(ev, dtype='object')
     else:
-        ev = pickle.load(open(CFG['fname_events'], 'r'))[0]
+        ev = pickle.load(open(CFG['fname_events'], 'rb'))[0]
 
     cov = quantify.quantify_from_graph(ev, sp.arange(1000), 'exon_skip', CFG, fn_merge=sys.argv[1])
 
@@ -994,7 +994,7 @@ def main():
                           event_type,
                           options,
                           CFG),
-                         open(os.path.join(outdir, 'test_setup_C%i_%s.pickle' % (options.confidence, event_type)), 'w'), -1)
+                         open(os.path.join(outdir, 'test_setup_C%i_%s.pickle' % (options.confidence, event_type)), 'wb'), -1)
 
             ### write test results
             s_idx = sp.argsort(pvals)
