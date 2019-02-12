@@ -17,11 +17,11 @@ do
 done
 
 ### merging splice graphs
-testcases="pos"
+testcases="pos neg"
 for testcase in $testcases
 do
     outdir=tests/testcase_${testname}/results_single_${testcase}
     mkdir -p $outdir
-    python -m spladder.spladder -o ${outdir} -a ${datadir}/annotation_${testcase}.gtf -b ${datadir}/align/${testcase}_1.bam -T y -t exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip -n 15
+    python -m spladder.spladder -o ${outdir} -a ${datadir}/annotation_${testcase}.gtf -b ${datadir}/align/${testcase}_1.bam -T y -t exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip -n 15 --merge_strat single
 done
 
