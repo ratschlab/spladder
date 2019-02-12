@@ -104,7 +104,10 @@ def analyze_events(CFG, event_type, sample_idx=None):
             else:
                 if not CFG['rproc']:
                     # TODO handle replicate setting
-                    (events_all, counts) = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
+                    if CFG['merge_strategy'] == 'single':
+                        (events_all, counts) = verify_all_events(events_all, sample_idx, CFG['bam_fnames'], event_type, CFG)
+                    else:
+                        (events_all, counts) = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
                     verified = sp.array([x.verified for x in events_all], dtype='bool')
                     for ev in events_all:
                         ev.verified = []
@@ -278,6 +281,11 @@ def analyze_events(CFG, event_type, sample_idx=None):
         else:
             print '\nReporting confirmed %s events:' % event_type
 
+        if isinstance(sample_idx, int):
+            sample_idx = [sample_idx]
+        elif sample_idx is None:
+            sample_idx = sp.arange(CFG['strains'].shape[0])
+
         if CFG['output_confirmed_gff3']:
             if os.path.exists(fn_out_conf_gff3):
                 print '%s already exists' % fn_out_conf_gff3
@@ -288,7 +296,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
             if os.path.exists(fn_out_conf_txt):
                 print '%s already exists' % fn_out_conf_txt
             else:
-                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+                write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_confirmed_bed']:
             if os.path.exists(fn_out_conf_bed):
@@ -306,13 +314,13 @@ def analyze_events(CFG, event_type, sample_idx=None):
             if os.path.exists(fn_out_conf_tcga):
                 print '%s already exists' % fn_out_conf_tcga
             else:
-                write_events_tcga(fn_out_conf_tcga, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+                write_events_tcga(fn_out_conf_tcga, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_confirmed_icgc']:
             if os.path.exists(fn_out_conf_icgc):
                 print '%s already exists' % fn_out_conf_icgc
             else:
-                write_events_icgc(fn_out_conf_icgc, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx)
+                write_events_icgc(fn_out_conf_icgc, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_filtered_txt']:
             fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
@@ -321,7 +329,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
             else:
                 print '\nWriting filtered events (sample freq 0.05):'
                 cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * CFG['strains'].shape[0]))[0]
-                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+                write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
 
             fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
             if os.path.exists(fn_out_conf_txt):
@@ -329,4 +337,4 @@ def analyze_events(CFG, event_type, sample_idx=None):
             else:
                 print '\nWriting filtered events (sample freq 0.01):'
                 cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * CFG['strains'].shape[0]))[0]
-                write_events_txt(fn_out_conf_txt, CFG['strains'], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+                write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
