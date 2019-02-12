@@ -1,4 +1,4 @@
-import cPickle
+import pickle
 import scipy as sp
 import os
 import pdb
@@ -103,12 +103,12 @@ def collect_events(CFG):
             if do_mutex_exons:
                 mutex_exons_pos[ridx, i] = []
 
-            print '\nconfidence %i / sample %i / replicate %i' % (CFG['confidence_level'], i, ridx)
+            print('\nconfidence %i / sample %i / replicate %i' % (CFG['confidence_level'], i, ridx))
 
             if os.path.exists(genes_fnames):
-                print 'Loading gene structure from %s ...' % genes_fnames
-                (genes, inserted) = cPickle.load(open(genes_fnames, 'r'))
-                print '... done.'
+                print('Loading gene structure from %s ...' % genes_fnames)
+                (genes, inserted) = pickle.load(open(genes_fnames, 'r'))
+                print('... done.')
                 
                 if not 'chrm_lookup' in CFG:
                     CFG = append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), CFG)
@@ -129,7 +129,7 @@ def collect_events(CFG):
                                 exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                                 exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
-                                print 'skipping non-mappable intron retention event'
+                                print('skipping non-mappable intron retention event')
                                 continue
 
                             ### build intron retention data structure
@@ -146,7 +146,7 @@ def collect_events(CFG):
                             #event.transcript_type = sp.array([gene.transcript_type])
                             intron_reten_pos[ridx, i].append(event)
                     else:
-                        print '%s already exists' % fn_out_ir
+                        print('%s already exists' % fn_out_ir)
 
                 ### detect exon_skips from splicegraph
                 if do_exon_skip:
@@ -164,7 +164,7 @@ def collect_events(CFG):
                                 exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                                 exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
-                                print 'skipping non-mappable exon_skip event'
+                                print('skipping non-mappable exon_skip event')
                                 continue
 
                             ### build exon skip data structure
@@ -179,7 +179,7 @@ def collect_events(CFG):
                             #event.transcript_type = sp.array([gene.transcript_type])
                             exon_skip_pos[ridx, i].append(event)
                     else:
-                        print '%s already exists' % fn_out_es
+                        print('%s already exists' % fn_out_es)
 
                 ### detect alternative intron_ends from splicegraph
                 if do_alt_3prime or do_alt_5prime:
@@ -198,7 +198,7 @@ def collect_events(CFG):
                                 exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                                 exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
-                                print 'skipping non-mappable alt 5-prime event'
+                                print('skipping non-mappable alt 5-prime event')
                                 continue
                             
                             for k1 in range(len(exon_alt_end_5prime[k]['fiveprimesites']) - 1):
@@ -248,7 +248,7 @@ def collect_events(CFG):
                                 exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                                 exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
-                                print 'skipping non-mappable alt 3-prime event'
+                                print('skipping non-mappable alt 3-prime event')
                                 continue
 
                             for k1 in range(len(exon_alt_end_3prime[k]['threeprimesites']) - 1):
@@ -286,7 +286,7 @@ def collect_events(CFG):
                                     if do_alt_3prime:
                                         alt_end_3prime_pos[ridx, i].append(event)
                     else:
-                        print '%s and %s already exists' % (fn_out_a5, fn_out_a3)
+                        print('%s and %s already exists' % (fn_out_a5, fn_out_a3))
 
                 ### detect multiple_exon_skips from splicegraph
                 if do_mult_exon_skip:
@@ -304,7 +304,7 @@ def collect_events(CFG):
                                 exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                                 exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
                             if exons_col.shape != exons_col_pos.shape: 
-                                print 'skipping non-mappable multiple exon skip event'
+                                print('skipping non-mappable multiple exon skip event')
                                 continue
 
                             ### build multiple exon skip data structure
@@ -319,7 +319,7 @@ def collect_events(CFG):
                             #event.transcript_type = sp.array([gene.transcript_type])
                             mult_exon_skip_pos[ridx, i].append(event)
                     else:
-                        print '%s already exists' % fn_out_mes
+                        print('%s already exists' % fn_out_mes)
 
                 ### detect mutually exclusive exons from splicegraph
                 if do_mutex_exons:
@@ -339,7 +339,7 @@ def collect_events(CFG):
                                     exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
 
                                 if exons_col.shape != exons_col_pos.shape: 
-                                    print 'skipping non-mappable mutex exons event'
+                                    print('skipping non-mappable mutex exons event')
                                     continue
 
                                 ### build data structure for mutually exclusive exons
@@ -354,11 +354,11 @@ def collect_events(CFG):
                                 #event.transcript_type = sp.array([gene.transcript_type])
                                 mutex_exons_pos[ridx, i].append(event)
                     else:
-                        print '%s already exists' % fn_out_mex
+                        print('%s already exists' % fn_out_mex)
 
             ### genes file does not exist
             else:
-                print 'result file not found: %s' % genes_fnames
+                print('result file not found: %s' % genes_fnames)
 
     ### combine events for all samples
     for ridx in CFG['replicate_idxs']:
@@ -374,10 +374,10 @@ def collect_events(CFG):
                 events_all = post_process_event_struct(intron_reten_pos_all, CFG)
 
                 ### store intron retentions
-                print 'saving intron retentions to %s' % fn_out_ir
-                cPickle.dump(events_all, open(fn_out_ir, 'w'), -1)
+                print('saving intron retentions to %s' % fn_out_ir)
+                pickle.dump(events_all, open(fn_out_ir, 'w'), -1)
             else:
-                print '%s already exists' % fn_out_ir
+                print('%s already exists' % fn_out_ir)
         
         ################################################%
         ### COMBINE EXON SKIPS
@@ -390,10 +390,10 @@ def collect_events(CFG):
                 events_all = post_process_event_struct(exon_skip_pos_all, CFG)
 
                 ### store exon skip events
-                print 'saving exon skips to %s' % fn_out_es
-                cPickle.dump(events_all, open(fn_out_es, 'w'), -1)
+                print('saving exon skips to %s' % fn_out_es)
+                pickle.dump(events_all, open(fn_out_es, 'w'), -1)
             else:
-                print '%s already exists' % fn_out_es
+                print('%s already exists' % fn_out_es)
 
         ################################################%
         ### COMBINE MULTIPLE EXON SKIPS
@@ -406,10 +406,10 @@ def collect_events(CFG):
                 events_all = post_process_event_struct(mult_exon_skip_pos_all, CFG)
 
                 ### store multiple exon skip events
-                print 'saving multiple exon skips to %s' % fn_out_mes
-                cPickle.dump(events_all, open(fn_out_mes, 'w'), -1)
+                print('saving multiple exon skips to %s' % fn_out_mes)
+                pickle.dump(events_all, open(fn_out_mes, 'w'), -1)
             else:
-                print '%s already exists' % fn_out_mes
+                print('%s already exists' % fn_out_mes)
 
         ################################################%
         ### COMBINE ALT FIVE PRIME EVENTS
@@ -428,10 +428,10 @@ def collect_events(CFG):
                     events_all = curate_alt_prime(events_all, CFG)
 
                 ### store alt 5 prime events
-                print 'saving alt 5 prime events to %s' % fn_out_a5
-                cPickle.dump(events_all, open(fn_out_a5, 'w'), -1)
+                print('saving alt 5 prime events to %s' % fn_out_a5)
+                pickle.dump(events_all, open(fn_out_a5, 'w'), -1)
             else:
-                print '%s already exists' % fn_out_a5
+                print('%s already exists' % fn_out_a5)
 
         ################################################%
         ### COMBINE ALT THREE PRIME EVENTS
@@ -449,10 +449,10 @@ def collect_events(CFG):
                     events_all = curate_alt_prime(events_all, CFG)
 
                 ### store alt 3 prime events
-                print 'saving alt 3 prime events to %s' % fn_out_a3
-                cPickle.dump(events_all, open(fn_out_a3, 'w'), -1)
+                print('saving alt 3 prime events to %s' % fn_out_a3)
+                pickle.dump(events_all, open(fn_out_a3, 'w'), -1)
             else:
-                print '%s already exists' % fn_out_a3
+                print('%s already exists' % fn_out_a3)
 
         ################################################%
         ### COMBINE MUTUALLY EXCLUSIVE EXONS
@@ -465,9 +465,9 @@ def collect_events(CFG):
                 events_all = post_process_event_struct(mutex_exons_pos_all, CFG)
 
                 ### store multiple exon skip events
-                print 'saving mutually exclusive exons to %s' % fn_out_mex
-                cPickle.dump(events_all, open(fn_out_mex, 'w'), -1)
+                print('saving mutually exclusive exons to %s' % fn_out_mex)
+                pickle.dump(events_all, open(fn_out_mex, 'w'), -1)
             else:
-                print '%s already exists' % fn_out_mex
+                print('%s already exists' % fn_out_mex)
 
 

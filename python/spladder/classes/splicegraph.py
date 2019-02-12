@@ -64,7 +64,7 @@ class Splicegraph:
                     self.new_edge()
             ### more than one exon in the transcript
             else:
-                for exon_idx in xrange(exon_start_end.shape[0] - 1):
+                for exon_idx in range(exon_start_end.shape[0] - 1):
                     exon1_start = exon_start_end[exon_idx , 0]
                     exon1_end = exon_start_end[exon_idx, 1]
                     exon2_start = exon_start_end[exon_idx + 1, 0]
@@ -275,7 +275,7 @@ class Splicegraph:
                 self.edges[j, :] = self.edges[j-1, :] | self.edges[j, :]
                 rm_idx.append(j - 1)
 
-        keep_idx = sp.where(~sp.in1d(sp.array(range(self.vertices.shape[1])), rm_idx))[0]
+        keep_idx = sp.where(~sp.in1d(sp.array(list(range(self.vertices.shape[1]))), rm_idx))[0]
         self.vertices = self.vertices[:, keep_idx]
         self.edges = self.edges[keep_idx, :][:, keep_idx]
         self.terminals = self.terminals[:, keep_idx]

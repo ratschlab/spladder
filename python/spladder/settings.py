@@ -182,7 +182,7 @@ def default_settings():
 def _check(options, field, is_bool=True):
     
     if is_bool and not getattr(options, field) in ['n', 'y']:
-        print >> sys.stderr, 'ERROR:\n\toption "%s" should have value "y" or "n", but has value "%s"' % (field, getattr(options, field))
+        print('ERROR:\n\toption "%s" should have value "y" or "n", but has value "%s"' % (field, getattr(options, field)), file=sys.stderr)
         sys.exit(1)
 
     return True
@@ -204,16 +204,16 @@ def parse_args(options, identity='main'):
     CFG['event_types'] = options.event_types.strip(',').split(',')
 
     if options.outdir == '-':
-        print >> sys.stderr, 'ERROR: please provide the mandatory parameter: out directory\n\n'
+        print('ERROR: please provide the mandatory parameter: out directory\n\n', file=sys.stderr)
         options.parser.print_help()
         sys.exit(2)
     else:
         if not os.path.exists(options.outdir):
-            print >> sys.stderr, 'WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir
+            print('WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir, file=sys.stderr)
             try:
                 os.makedirs(options.outdir)
             except OSError:
-                print >> sys.stderr, 'ERROR: Output directory %s can not be created.\n\n' % options.outdir
+                print('ERROR: Output directory %s can not be created.\n\n' % options.outdir, file=sys.stderr)
                 sys.exit(2)
         CFG['out_dirname'] = options.outdir
 
@@ -274,7 +274,7 @@ def parse_args(options, identity='main'):
 
         ### mandatory parameters for main spladder
         if options.bams == '-':
-            print >> sys.stderr, 'ERROR: please provide the mandatory parameter: bam files\n\n'
+            print('ERROR: please provide the mandatory parameter: bam files\n\n', file=sys.stderr)
             options.parser.print_help()
             sys.exit(2)
         else:
@@ -282,15 +282,15 @@ def parse_args(options, identity='main'):
             ### check existence of files
             for fname in CFG['bam_fnames']:
                 if not os.path.isfile(fname):
-                    print >> sys.stderr, 'ERROR: Input file %s can not be found\n\n' % fname
+                    print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                     sys.exit(2)
 
         if options.annotation == '-':
-            print >> sys.stderr, 'ERROR: please provide the mandatory parameter: annotation\n\n'
+            print('ERROR: please provide the mandatory parameter: annotation\n\n', file=sys.stderr)
             options.parser.print_help()
             sys.exit(2)
         elif not os.path.isfile(options.annotation):
-            print >> sys.stderr, 'ERROR: Annotation file %s can not be found\n\n' % options.annotation
+            print('ERROR: Annotation file %s can not be found\n\n' % options.annotation, file=sys.stderr)
             sys.exit(2)
         else:
             CFG['anno_fname'] = options.annotation
@@ -344,7 +344,7 @@ def parse_args(options, identity='main'):
                 ### check existence of files
                 for fname in CFG['bam_fnames'][g]:
                     if not os.path.isfile(fname):
-                        print >> sys.stderr, 'ERROR: Input file %s can not be found\n\n' % fname
+                        print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                         sys.exit(2)
 
     if identity == 'test':
@@ -366,10 +366,10 @@ def parse_args(options, identity='main'):
             CFG['diagnose_plots'] = (options.diagnose_plots == 'y')
 
         if options.conditionA == '-':
-            print >> sys.stderr, 'ERROR: At least one sample for condition A required'
+            print('ERROR: At least one sample for condition A required', file=sys.stderr)
             sys.exit(1)
         if options.conditionB == '-':
-            print >> sys.stderr, 'ERROR: At least one sample for condition B required'
+            print('ERROR: At least one sample for condition B required', file=sys.stderr)
             sys.exit(1)
 
         CFG['conditionA'] = options.conditionA.strip(',').split(',')

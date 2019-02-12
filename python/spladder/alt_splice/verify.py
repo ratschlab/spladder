@@ -1,5 +1,5 @@
 import scipy as sp
-import cPickle
+import pickle
 import h5py
 import sys
 import os
@@ -296,7 +296,7 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
             seg_diff = sp.setdiff1d(segs_exon21, segs_exon11)
         seg_const = sp.intersect1d(segs_exon21, segs_exon11)
     else:
-        print >> sys.stderr, "ERROR: both exons differ in alt prime event in verify_alt_prime"
+        print("ERROR: both exons differ in alt prime event in verify_alt_prime", file=sys.stderr)
         sys.exit(1)
     seg_const = sp.r_[seg_exon_const, seg_const]
 
@@ -436,29 +436,29 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
             validate_tag = '.validated'
 
         if CFG['merge_strategy'] == 'single':
-            (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][strain_idx], validate_tag, prune_tag)))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][strain_idx], validate_tag, prune_tag)))
             fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][strain_idx], validate_tag, prune_tag)
         else:
-            (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
             fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
 
         ### load count index data from hdf5
         IN = h5py.File(fn_count, 'r')
         if os.path.exists(fn_count + '.quick_ids_segs'):
-            gene_ids_segs = cPickle.load(open(fn_count + '.quick_ids_segs', 'r'))
+            gene_ids_segs = pickle.load(open(fn_count + '.quick_ids_segs', 'r'))
         else:
             gene_ids_segs = IN['gene_ids_segs'][:]
-            cPickle.dump(gene_ids_segs, open(fn_count + '.quick_ids_segs', 'w'), -1)
+            pickle.dump(gene_ids_segs, open(fn_count + '.quick_ids_segs', 'w'), -1)
         if os.path.exists(fn_count + '.quick_ids_edges'):
-            gene_ids_edges = cPickle.load(open(fn_count + '.quick_ids_edges', 'r'))
+            gene_ids_edges = pickle.load(open(fn_count + '.quick_ids_edges', 'r'))
         else:
             gene_ids_edges = IN['gene_ids_edges'][:]
-            cPickle.dump(gene_ids_edges, open(fn_count + '.quick_ids_edges', 'w'), -1)
+            pickle.dump(gene_ids_edges, open(fn_count + '.quick_ids_edges', 'w'), -1)
         if os.path.exists(fn_count + '.quick_edge_idx'):
-            edge_idx = cPickle.load(open(fn_count + '.quick_edge_idx', 'r'))
+            edge_idx = pickle.load(open(fn_count + '.quick_edge_idx', 'r'))
         else:
             edge_idx = IN['edge_idx'][:]
-            cPickle.dump(edge_idx, open(fn_count + '.quick_edge_idx', 'w'), -1)
+            pickle.dump(edge_idx, open(fn_count + '.quick_edge_idx', 'w'), -1)
 
         ### sort events by gene idx
         s_idx = sp.argsort([x.gene_idx for x in ev])
@@ -529,7 +529,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
     counts = counts[:, :, old_idx]
 
     if out_fn is not None:
-        cPickle.dump((ev, counts), open(out_fn, 'w'), -1)
+        pickle.dump((ev, counts), open(out_fn, 'w'), -1)
 
     return (ev, counts)
 

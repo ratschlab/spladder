@@ -244,7 +244,7 @@ def create_bam_file(data_dir, seed=1):
         expr_arr = np.zeros(len(ts))
         expr_list.append(expr_arr)
         ts_dict[ts_name] = ts
-        for ipos in pos_counter.keys():
+        for ipos in list(pos_counter.keys()):
             expr_arr[ipos:ipos+reads_L] += pos_counter[ipos]
         expr_arr = [str(int(i_expr)) for i_expr in expr_arr]
         new_line = ts_name + '\t' + '\t'.join(expr_arr) + '\n'

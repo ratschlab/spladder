@@ -6,9 +6,9 @@ import pdb
 if __package__ is None:
     __package__ = 'modules'
 
-from utils import *
-from init import *
-from reads import *
+from .utils import *
+from .init import *
+from .reads import *
 
 def remove_short_exons(genes, CFG):
     # [genes] = remove_short_exons(genes, terminal_short_extend, terminal_short_len, short_exon_skipped, short_exon_removed)
@@ -19,7 +19,7 @@ def remove_short_exons(genes, CFG):
     rm_idx = []
     for i in range(len(genes)):
         if CFG['verbose'] and (i+1) % 1000 == 0:
-            print >> CFG['log_fd'], '%i' % (i+1)
+            print('%i' % (i+1), file=CFG['log_fd'])
 
         ### remove genes with no exons
         if genes[i].splicegraph.vertices.shape[0] == 0:
@@ -61,15 +61,15 @@ def remove_short_exons(genes, CFG):
                         short_exon_skipped += 1
             j += 1
       
-        keep_idx = sp.where(~sp.in1d(sp.array(range(genes[i].splicegraph.vertices.shape[1])), exons_remove_idx))[0]
+        keep_idx = sp.where(~sp.in1d(sp.array(list(range(genes[i].splicegraph.vertices.shape[1]))), exons_remove_idx))[0]
         genes[i].splicegraph.subset(keep_idx)
     
-    keep_idx = sp.where(~sp.in1d(range(len(genes[i])), rm_idx))[0]
+    keep_idx = sp.where(~sp.in1d(list(range(len(genes[i]))), rm_idx))[0]
     genes = genes[keep_idx]
 
     if CFG['verbose']:
-        print >> CFG['log_fd'], 'short_exon_removed: %i' % short_exon_removed
-        print >> CFG['log_fd'], 'short_exon_skipped: %i' % short_exon_skipped
+        print('short_exon_removed: %i' % short_exon_removed, file=CFG['log_fd'])
+        print('short_exon_skipped: %i' % short_exon_skipped, file=CFG['log_fd'])
 
     return genes
 
@@ -94,7 +94,7 @@ def reduce_splice_graph(genes):
         edges = genes[gene_idx].splicegraph.edges
       
         if gene_idx % 1000 == 0:
-            print '%d' % gene_idx
+            print('%d' % gene_idx)
       
         ### no vertices in the splice graph
         if vertices.shape[0] == 0:
@@ -108,7 +108,7 @@ def reduce_splice_graph(genes):
         for ix1 in range(vertices.shape[1] - 1):
             for ix2 in range(1, vertices.shape[1]):
                 if edges[ix1, ix2] == 1:
-                    intron_loc.extend(range(vertices[1, ix1], vertices[0, ix2]))
+                    intron_loc.extend(list(range(vertices[1, ix1], vertices[0, ix2])))
         intron_loc = sp.unique(intron_loc)
         
         ### if one or two vertices (one or no edge) exist 
@@ -125,7 +125,7 @@ def reduce_splice_graph(genes):
                         if (vertices[0, exon_idx] <= vertices[0, test_exon_idx]) and (vertices[1, exon_idx] >= vertices[1, test_exon_idx]):
       
                              ### keep longer exon
-                             new_index = sp.r_[range(test_exon_idx), range(test_exon_idx + 1, vertices.shape[1])]
+                             new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
                              vertices = vertices[:, new_index]
                   
                              changed = True
@@ -160,12 +160,12 @@ def reduce_splice_graph(genes):
                             ###              <--- test_exon ---->           <---- test_exon ---->>>>>>>>>>>>
                             if ((vertices[1, exon_idx] >= vertices[0, test_exon_idx]) and (vertices[0, exon_idx] <= vertices[0, test_exon_idx])) or \
                                ((vertices[1, test_exon_idx] >= vertices[0, exon_idx]) and (vertices[0, test_exon_idx] <= vertices[0, exon_idx])) and \
-                               (sp.sum(sp.in1d(range(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
+                               (sp.sum(sp.in1d(list(range(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), max(vertices[1, exon_idx], vertices[1, test_exon_idx]))), intron_loc)) == 0):
       
                                 ### merge exons if they overlap and they do not span any intronic position
                                 vertices[0, exon_idx] = min(vertices[0, exon_idx], vertices[0, test_exon_idx])
                                 vertices[1, exon_idx] = max(vertices[1, exon_idx], vertices[1, test_exon_idx])
-                                new_index = sp.r_[range(test_exon_idx), range(test_exon_idx + 1, vertices.shape[1])]
+                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
                               
                                 vertices = vertices[:, new_index]
                                 edges = edges[new_index, :][:, new_index] # no need to combine any adges, as both exons have a degree of 0
@@ -179,11 +179,11 @@ def reduce_splice_graph(genes):
                             ###   ----- exon -----<
                             ###   --- test_exon --<
                             if (vertices[1, exon_idx] == vertices[1, test_exon_idx]) and \
-                               (sp.sum(sp.in1d(range(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), vertices[1, exon_idx]), intron_loc)) == 0):
+                               (sp.sum(sp.in1d(list(range(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), vertices[1, exon_idx])), intron_loc)) == 0):
                                 
                                 ### merge exons if they share the same right boundary and do not span intronic positions
                                 vertices[0, exon_idx] = min(vertices[0, exon_idx], vertices[0, test_exon_idx])
-                                new_index = sp.r_[range(test_exon_idx), range(test_exon_idx + 1, vertices.shape[1])]
+                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
                               
                                 vertices = vertices[:, new_index]
                                 edges[exon_idx, :] = edges[exon_idx, :] | edges[test_exon_idx, :]
@@ -199,11 +199,11 @@ def reduce_splice_graph(genes):
                             ###   >---- exon ------
                             ###   >-- test_exon ---
                             if (vertices[0, exon_idx] == vertices[0, test_exon_idx]) and \
-                               (sp.sum(sp.in1d(range(vertices[0, exon_idx], max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
+                               (sp.sum(sp.in1d(list(range(vertices[0, exon_idx], max(vertices[1, exon_idx], vertices[1, test_exon_idx]))), intron_loc)) == 0):
                                 
                                 ### merge exons if they share the same left boundary and do not span intronic positions
                                 vertices[1, exon_idx] = max(vertices[1, exon_idx], vertices[1, test_exon_idx])
-                                new_index = sp.r_[range(test_exon_idx), range(test_exon_idx + 1, vertices.shape[1])]
+                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
                               
                                 vertices = vertices[:, new_index]
                                 edges[exon_idx, :] = edges[exon_idx, :] | edges[test_exon_idx, :]
@@ -221,7 +221,7 @@ def reduce_splice_graph(genes):
                             if (vertices[0, exon_idx] == vertices[0, test_exon_idx]) and (vertices[1, exon_idx] == vertices[1, test_exon_idx]):
                               
                                 ### collapse identical exons into one node
-                                new_index = sp.r_[range(test_exon_idx), range(test_exon_idx + 1, vertices.shape[1])]
+                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
                               
                                 vertices = vertices[:, new_index]
                                 edges[exon_idx, :] = edges[exon_idx, :] | edges[test_exon_idx, :]
@@ -292,7 +292,7 @@ def insert_intron_retentions(genes, CFG):
             for i in cidx:
 
                 if CFG['verbose'] and (c+1) % 100 == 0:
-                    print >> sys.stdout, '\r %i(%i) genes done (found %i new retentions in %i tested eligible introns, %2.1f%%)' % (c+1, genes.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns)))
+                    print('\r %i(%i) genes done (found %i new retentions in %i tested eligible introns, %2.1f%%)' % (c+1, genes.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns))), file=sys.stdout)
 
                 gg = genes[i]
                 assert(gg.strand == s)
@@ -435,7 +435,7 @@ def insert_intron_edges(genes, CFG):
     for i in range(genes.shape[0]):
     
         if CFG['verbose'] and (i+1) % 1000 == 0:
-            print >> CFG['fd_log'], '%i of %i genes' % (i+1, genes.shape[0])
+            print('%i of %i genes' % (i+1, genes.shape[0]), file=CFG['fd_log'])
 
         if CFG['bam_to_sparse'] and genes[i].chr != last_chr:
             bam_cache = dict()
@@ -448,7 +448,7 @@ def insert_intron_edges(genes, CFG):
 
         unused_introns = []
         if CFG['debug']:
-            print >> CFG['fd_log'], 'processing gene %i; with %i introns' % (i, len(genes[i].introns[s]))
+            print('processing gene %i; with %i introns' % (i, len(genes[i].introns[s])), file=CFG['fd_log'])
             ### TODO timing
 
         for j in range(genes[i].introns[s].shape[0]):
@@ -497,9 +497,9 @@ def insert_intron_edges(genes, CFG):
                         assert(sp.all(genes[i].splicegraph.vertices[0, :] <= genes[i].splicegraph.vertices[1, :]))
 
                         if CFG['debug']:
-                            print >> CFG['fd_log'], '%s\tintron_retention_exon\t%c\t%i\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[0, -2],
+                            print('%s\tintron_retention_exon\t%c\t%i\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[0, -2],
                                                                                                          genes[i].splicegraph.vertices[1, -2], genes[i].splicegraph.vertices[0, -1], 
-                                                                                                         genes[i].splicegraph.vertices[1, -1])
+                                                                                                         genes[i].splicegraph.vertices[1, -1]), file=CFG['fd_log'])
                         intron_used = True
 
                 if not intron_used:
@@ -600,8 +600,8 @@ def insert_intron_edges(genes, CFG):
                                 inserted['alt_53_prime'] += 1
                                 if CFG['debug']:
                                     for idx2_ in idx2:
-                                        print >> CFG['fd_log'], '%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph,vertices[1, idx1_], 
-                                                                                                                 genes[i].splicegraph.vertices[1, -1], genes[i].splicegraph.vertices[0, idx2_])
+                                        print('%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph,vertices[1, idx1_], 
+                                                                                                                 genes[i].splicegraph.vertices[1, -1], genes[i].splicegraph.vertices[0, idx2_]), file=CFG['fd_log'])
                                 intron_used = True
 
                 ### if no proximal exon was found, insert new terminal exon, if wished
@@ -696,8 +696,8 @@ def insert_intron_edges(genes, CFG):
 
                                 if CFG['debug']:
                                     for idx1_ in idx1:
-                                        print >> CFG['fd_log'], '%s\talternative_53_prime2\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[1, idx1_], 
-                                                                                                                 genes[i].splicegraph.vertices[0, -1], genes[i].splicegraph.vertices[0, idx2_])
+                                        print('%s\talternative_53_prime2\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[1, idx1_], 
+                                                                                                                 genes[i].splicegraph.vertices[0, -1], genes[i].splicegraph.vertices[0, idx2_]), file=CFG['fd_log'])
                                 intron_used = True
 
                 ### if no proximal exon was found, insert new terminal exon, if wished
@@ -770,13 +770,13 @@ def insert_intron_edges(genes, CFG):
         idx_unused = sp.where((genes[i].introns[s][unused_introns, 1] >= genes[i].start) & (genes[i].introns[s][unused_introns, 0] <= genes[i].stop))[0]
         unused_introns = unused_introns[idx_unused]
         if CFG['debug'] and unused_introns.shape[0] > 0:
-            print 'Warning: unused introns: %s' % str(unused_introns)
+            print('Warning: unused introns: %s' % str(unused_introns))
         num_unused_introns[i] += unused_introns.shape[0]
 
     if print_intermediates:
-        print 'one missing: %s' % str(one_missing)
-        print 'multi: %s' % str(multi)
-        print 'num_unused_introns: $i' % sp.sum(num_unused_introns)
+        print('one missing: %s' % str(one_missing))
+        print('multi: %s' % str(multi))
+        print('num_unused_introns: $i' % sp.sum(num_unused_introns))
 
     merge_idx = unique_rows(merge_idx)
     rm_map = sp.zeros_like(genes, dtype='int')
@@ -853,7 +853,7 @@ def insert_cassette_exons(genes, CFG):
 
             for i in cidx:
                 if CFG['verbose'] and (c+1) % 100 == 0:
-                    print '\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c+1, genes.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons)))
+                    print('\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c+1, genes.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons))))
 
                 gg = genes[i]
                 assert(gg.strand == s)
@@ -965,12 +965,12 @@ def infer_splice_graph_caller(genes):
       
     MISALIGN = 5
 
-    print 'Number of genes:%d' % genes.shape[0]
+    print('Number of genes:%d' % genes.shape[0])
 
     #####################################################################
     # Some simple merging to reduce exons
     #####################################################################
-    print 'Merging some genes'
+    print('Merging some genes')
     genes = reduce_splice_graph(genes)
 
 
@@ -988,12 +988,12 @@ def infer_splice_graph_caller(genes):
     #
     #####################################################################
 
-    print 'performing inference'
+    print('performing inference')
 
     for gene_idx in range(genes.shape[0]):
 
         if gene_idx % 1000 ==0:
-            print '%d ' % gene_idx
+            print('%d ' % gene_idx)
       
         #####################################################################
         # For each gene, we consider each pair of exons in the splicegraph.

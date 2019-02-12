@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 from matplotlib.collections import PatchCollection
-import cPickle
+import pickle
 import sys
 import scipy as sp
 import pdb

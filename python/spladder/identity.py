@@ -1,7 +1,7 @@
 """ This module is concerned with functions that are specific to our identity (matlab vs python)"""
 
 import copy
-import cPickle
+import pickle
 import os
 import h5py
 import scipy as sp
@@ -34,12 +34,12 @@ def get_gene_names(CFG):
     gene_name_file = re.sub(r'.pickle$', '', gene_file) + '.names.pickle'
     if not os.path.exists(gene_name_file):
         if CFG['verbose']:
-            print 'Generating list of gene names for easy access'
+            print('Generating list of gene names for easy access')
         tmp_genes = load_genes(CFG)
         gene_names = sp.array([x.name.split('.')[0] for x in tmp_genes])
-        cPickle.dump(gene_names, open(gene_name_file, 'w'), -1)
+        pickle.dump(gene_names, open(gene_name_file, 'w'), -1)
     else:
-        gene_names = cPickle.load(open(gene_name_file, 'r'))
+        gene_names = pickle.load(open(gene_name_file, 'r'))
 
     return gene_names
 
@@ -55,24 +55,24 @@ def load_genes(CFG, idx=None, genes=None):
         gene_file = _get_gene_fname(CFG)
 
         if CFG['verbose']:
-            print 'loading annotation information from %s' % gene_file
+            print('loading annotation information from %s' % gene_file)
         if idx is None:
-            (genes, events) = cPickle.load(open(gene_file, 'r'))
+            (genes, events) = pickle.load(open(gene_file, 'r'))
         else:
             gene_db_file = re.sub(r'.pickle$', '', gene_file) + '.db.pickle'
             gene_idx_file = re.sub(r'.pickle$', '', gene_file) + '.idx.pickle'
             if os.path.exists(gene_idx_file):
                 genes = []
-                offsets = cPickle.load(open(gene_idx_file, 'r'))
+                offsets = pickle.load(open(gene_idx_file, 'r'))
                 gene_handle = open(gene_db_file, 'r')
                 if not hasattr(idx, '__iter__'):
                     idx = [idx]
                 for e in idx:
                     gene_handle.seek(offsets[e], 0)
-                    genes.append(cPickle.load(gene_handle))
+                    genes.append(pickle.load(gene_handle))
                 genes = sp.array(genes)
             else:
-                (genes, events) = cPickle.load(open(gene_file, 'r'))
+                (genes, events) = pickle.load(open(gene_file, 'r'))
                 genes = genes[idx]
 
     return genes
@@ -88,15 +88,15 @@ def load_events(CFG, event_info):
         event_idx_file = re.sub(r'.pickle$', '', event_file) + '.idx.pickle'
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
         if not os.path.exists(event_db_file):
-            events = cPickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'r'))
+            events = pickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'r'))
             for e in s_idx:
                 event_list.append(events[int(event_info[e, 1])])
         else:
-            offsets = cPickle.load(open(event_idx_file, 'r'))
+            offsets = pickle.load(open(event_idx_file, 'r'))
             events_handle = open(event_db_file, 'r')
             for e in s_idx:
                 events_handle.seek(offsets[int(event_info[e, 1])], 0)
-                event_list.append(cPickle.load(events_handle))
+                event_list.append(pickle.load(events_handle))
 
 
     return event_list

@@ -2,7 +2,7 @@ import os
 import sys
 import random
 import time
-import cPickle
+import pickle
 import subprocess
 import math
 import pdb
@@ -127,7 +127,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         callframe = sys._getframe(1)
         if not ProcName in callframe.f_locals:
             if not ProcName in callframe.f_globals:
-                print >> sys.stderr, 'ERROR: Could find no definition for %s in local or global context of calling function. Use kword callfile to specify file where %s is defined. Use the relative path to the location of the calling function!' % (ProcName, ProcName)
+                print('ERROR: Could find no definition for %s in local or global context of calling function. Use kword callfile to specify file where %s is defined. Use the relative path to the location of the calling function!' % (ProcName, ProcName), file=sys.stderr)
                 return 
             else:
                 callfile = (callframe.f_globals[ProcName].__module__, inspect.getfile(callframe.f_globals[ProcName]))
@@ -145,7 +145,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         Mem = 300
 
     if Mem < 100:
-        print >> sys.stderr, 'WARNING: You specified to allocate less than 100Mb memory for your job. This might not be enough to start. Re-setting to 100Mb'
+        print('WARNING: You specified to allocate less than 100Mb memory for your job. This might not be enough to start. Re-setting to 100Mb', file=sys.stderr)
         Mem = 100
 
     if options is None:
@@ -306,13 +306,13 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     jobinfo.callfile = callfile
 
     ### save the call information
-    cPickle.dump((ProcName, dirctry, options, callfile), open(mat_fname, 'wb'), -1)
-    cPickle.dump(P1, open(data_fname, 'wb'), -1)
+    pickle.dump((ProcName, dirctry, options, callfile), open(mat_fname, 'wb'), -1)
+    pickle.dump(P1, open(data_fname, 'wb'), -1)
 
     evalstring = '%s %s %s %s' % (bin_str, rproc_path, mat_fname, data_fname)
     evalstring = 'cd %s; %s; exit' % (dirctry, evalstring)
     fd = open(m_fname, 'w')
-    print >> fd, '%s' % evalstring
+    print('%s' % evalstring, file=fd)
     fd.close()
 
     if 'envstr' in options:
@@ -348,7 +348,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
                 #num_queued = int(subprocess.check_output('bjobs -u' + os.environ['USER'] + '2> /dev/null | grep ' + os.environ['USER'] + '| wc -l | tr -d " "', shell=True).strip())
                 num_queued = int(subprocess.check_output(SCHED_GET_JOB_NUMBER.substitute(user=os.environ['USER']), shell=True).strip())
             except:
-                print >> sys.stderr, 'WARNING: could not determine how many jobs are scheduled'
+                print('WARNING: could not determine how many jobs are scheduled', file=sys.stderr)
                 break
             
             # keep 50 spare jobs if multiple rprocs are scheduling...
@@ -356,14 +356,14 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
                 break
             else:
                 if options['verbosity']:
-                    print >> sys.stdout, 'queue full, sleeping 60 seconds (%i/%i)' %(num_queued, options['maxjobs'])
+                    print('queue full, sleeping 60 seconds (%i/%i)' %(num_queued, options['maxjobs']), file=sys.stdout)
                 time.sleep(60)
 
     if options['submit_now']:
         if options['immediately'] and options['verbosity']:
-            print >> sys.stdout, 'immediatedly starting job on local machine'
+            print('immediatedly starting job on local machine', file=sys.stdout)
         if options['immediately_bg'] and options['verbosity']:
-            print >> sys.stdout, 'immediatedly starting job on local machine in background'
+            print('immediatedly starting job on local machine in background', file=sys.stdout)
 
         if options['immediately_bg']:
             while True:
@@ -376,7 +376,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
                 cpu_load = float(str_[idx+8:].split(',')[0])
                 if cpu_load > 13:
                     if options['verbosity']:
-                        print 'load too high: %1.2f' % cpu_load
+                        print('load too high: %1.2f' % cpu_load)
                     time.sleep(10)
                 else:
                     break
@@ -387,7 +387,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         p2.communicate()
         ret = p2.returncode
         if ret != 0:
-            print >> sys.stderr, 'submission failed:\n\tsubmission string: %s\n\treturn code: %i' % (callstr, ret)
+            print('submission failed:\n\tsubmission string: %s\n\treturn code: %i' % (callstr, ret), file=sys.stderr)
         jobinfo.submission_time = time.time()
         p1.communicate()
       
@@ -402,13 +402,13 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
                 try:
                     jobinfo.jobid = int(items[0])
                 except:
-                    print >> sys.stderr, callstr
-                    print >> sys.stderr, 'ERROR: submission failed: %s' % s
+                    print(callstr, file=sys.stderr)
+                    print('ERROR: submission failed: %s' % s, file=sys.stderr)
                     sys.exit(1)
                 fd.close()
                 rproc_register('submit', jobinfo)
             else:
-                print  >> sys.stderr, '%s does not exist' % log_fname
+                print('%s does not exist' % log_fname, file=sys.stderr)
         else:
             jobinfo.jobid = 0 
     else:
@@ -419,20 +419,20 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
 
 def finish():
 
-    print 'rproc finishing'
+    print('rproc finishing')
 
     global MATLAB_RETURN_VALUE
 
     if MATLAB_RETURN_VALUE is not None:
-        print 'exit code %i' % MATLAB_RETURN_VALUE
+        print('exit code %i' % MATLAB_RETURN_VALUE)
         try:
             rf = os.environ['MATLAB_RETURN_FILE']
             fd = fopen(rf, 'w+')
             if fd:
-                print >> fd, '%i', MATLAB_RETURN_VALUE[0]
+                print('%i', MATLAB_RETURN_VALUE[0], file=fd)
             fclose(fd) ;
         except KeyError:
-            print >> sys.stderr, 'WARNING: environment MATLAB_RETURN_FILE not defined'
+            print('WARNING: environment MATLAB_RETURN_FILE not defined', file=sys.stderr)
 
 def rproc_clean_register():
 
@@ -468,7 +468,7 @@ def rproc_clean_register():
 
     for i in range(len(idx)):
         if not parent_jobids[idx[i]] in running_jobids and parent_jobids[idx[i]] != -1:
-            print >> sys.stderr, 'job %i is still running, but the parent job %i not' % (jobids[idx[i]], parent_jobids[idx[i]])
+            print('job %i is still running, but the parent job %i not' % (jobids[idx[i]], parent_jobids[idx[i]]), file=sys.stderr)
 
 def rproc_cleanup(jobinfo):
   
@@ -564,7 +564,7 @@ def rproc_reached_timelimit(jobinfo):
         return (False, -1) 
 
     if not (jobwalltime > 0 and jobwalltime < 36000000): # sanity checks
-        print >> sys.stderr, 'WARNING: invalid output from qacct'
+        print('WARNING: invalid output from qacct', file=sys.stderr)
         return (False, -1) 
 
     if jobwalltime > (jobinfo.time * 60):
@@ -583,11 +583,11 @@ def rproc_register(action, jobinfo):
 
     if not os.path.exists(rproc_log_fname):
       fd = open(rproc_log_fname, 'a+')
-      print >> fd, '# prefix\taction\tparent jobid\tjobid\tfunction\ttime'
+      print('# prefix\taction\tparent jobid\tjobid\tfunction\ttime', file=fd)
       fd.close()
 
     fd = open(rproc_log_fname, 'a+')
-    print >> fd, '%i\t%s\t%s\t%i\t%s\t%s' % (jobinfo.jobid, jobinfo.prefix, action, this_jobid, jobinfo.ProcName, time.asctime()) #time.strftime('%a_%b_%d_%Y_%H:%M:%S'))
+    print('%i\t%s\t%s\t%i\t%s\t%s' % (jobinfo.jobid, jobinfo.prefix, action, this_jobid, jobinfo.ProcName, time.asctime()), file=fd) #time.strftime('%a_%b_%d_%Y_%H:%M:%S'))
     fd.close()
 
 def rproc_rerun(mess=''):
@@ -618,16 +618,16 @@ def rproc_resubmit(jobinfo, force=True):
 
     if jobinfo.retries >= 3:
         if jobinfo.options['verbosity'] >= 0:
-            print >> sys.stderr, 'Warning: job has already been submitted %i times' % jobinfo.retries
+            print('Warning: job has already been submitted %i times' % jobinfo.retries, file=sys.stderr)
         if jobinfo.options['verbosity'] > 0:
-            print 'check file %s' % jobinfo.log_fname
+            print('check file %s' % jobinfo.log_fname)
         return jobinfo
 
     if (jobinfo.retries >= 0):
         (still_running, qstat_line, start_time, status) = rproc_still_running(jobinfo)
         if still_running: 
             if jobinfo.options['verbosity'] > 0:
-                print >> sys.stdout, '.',
+                print('.', end=' ', file=sys.stdout)
             jobinfo2 = jobinfo
             jobinfo2.time_of_loss = None
             return jobinfo2
@@ -655,13 +655,13 @@ def rproc_result(jobinfo, read_attempts=None):
     if not os.path.exists(jobinfo.result_fname):
         att = 1
         while not os.path.exists(jobinfo.result_fname):
-            print >> sys.stdout, 'Job not finished yet. Waiting for result file to appear.'
+            print('Job not finished yet. Waiting for result file to appear.', file=sys.stdout)
             if read_attempts is not None and att > read_attempts:
                 error('Unable to load result from %s', jobinfo.result_fname);
             time.sleep(10)
             att += 1 
 
-    (retval1, retval2) = cPickle.load(open(jobinfo.result_fname, 'r'))
+    (retval1, retval2) = pickle.load(open(jobinfo.result_fname, 'r'))
 
     return (retval1, retval2)
 
@@ -699,11 +699,11 @@ def rproc_still_running(jobinfo):
             rproc_nqstat_time = curtime
         except subprocess.CalledProcessError as e:
             if e.returncode == 130:
-                print >> sys.stderr, 'rproc_still_running interupted by user'
+                print('rproc_still_running interupted by user', file=sys.stderr)
                 status = -1
                 line = ''
                 start_time = ''
-            print >> sys.stderr, 'WARNING: qstat failed'
+            print('WARNING: qstat failed', file=sys.stderr)
             text = ''
     else:
         text = rproc_nqstat_output
@@ -790,14 +790,14 @@ def rproc_submit_and_wait(jobinfo, finish_frac, jobtimeout):
             else:
                 if jobinfo[id].created == 1:
                     if rproc_time_since_submission(jobinfo[id]) > jobtimeout:
-                        print >> sys.stderr, 'WARNING: job took longer than timeout. Killing and restarting it'
+                        print('WARNING: job took longer than timeout. Killing and restarting it', file=sys.stderr)
                         rproc_kill(jobinfo[id])
                     jobinfo[id] = rproc_resubmit(jobinfo[id], 1)
-        print 'waiting for jobs to finish: %i/%i  \r' % (num_finished, num_jobs)
+        print('waiting for jobs to finish: %i/%i  \r' % (num_finished, num_jobs))
         if (num_finished / float(num_jobs) < finish_frac):
             time.sleep(10)
 
-    print ''
+    print('')
 
 def rproc_submit_batch(jobinfo, blocksize):
     # [jobinfo, meta_jobinfo] = rproc_submit_many(jobinfo, blocksize) 
@@ -808,7 +808,7 @@ def rproc_submit_batch(jobinfo, blocksize):
 
     time_per_metajob = [0 for i in range(int(math.ceil(len(jobinfo) / float(blocksize))))]
     metablockassignment = [0 for i in range(len(jobinfo))]
-    s_idx = sorted(range(len(jobinfo)), key=(lambda x: -jobinfo[x].time))
+    s_idx = sorted(list(range(len(jobinfo))), key=(lambda x: -jobinfo[x].time))
     for i in sidx:
         step = (time_per_submission * length(time_per_metajob)) / (len(time_per_metajob) - 1)
         span = [-time_per_submission * len(time_per_metajob) + (ii * step) for ii in range(len(time_per_metajob))]
@@ -832,7 +832,7 @@ def rproc_submit_batch(jobinfo, blocksize):
         options.verbosity = 1
         memory_MB = max([x.Mem for x in jobinfo_])
         minutes = sum([int(x.time) for x in jobinfo_])
-        print 'submitting job %i/%i (%i subjobs) \r' % (i, int(math.ceil(len(jobinfo) / float(blocksize))), len(idx))
+        print('submitting job %i/%i (%i subjobs) \r' % (i, int(math.ceil(len(jobinfo) / float(blocksize))), len(idx)))
         meta_jobinfo[meta_i] = rproc('rproc_submit_batch_helper', jobinfo_, memory_MB, options, minutes)
         
         for j in range(len(idx)):
@@ -840,23 +840,23 @@ def rproc_submit_batch(jobinfo, blocksize):
             jobinfo[idx[j]].jobid = meta_jobinfo[meta_i].jobid
             jobinfo[idx[j]].submission_time = meta_jobinfo[meta_i].submission_time
         meta_i += 1
-    print ''
+    print('')
 
     return (jobinfo, meta_jobinfo)
 
 def rproc_submit_batch_helper(parameters):
     # x = rproc_submit_batch_helper(parameters)
 
-    print 'Executing a batch of %i jobs in a super-job' % len(parameters) 
+    print('Executing a batch of %i jobs in a super-job' % len(parameters)) 
     pp = os.getcwd()
     for i in range(len(parameters)):
         os.chdir(pp)
-        print 'starting job %i in file %s'  %(i, parameters[i].mat_fname)
-        print '========================================='
+        print('starting job %i in file %s'  %(i, parameters[i].mat_fname))
+        print('=========================================')
         try:
             start_proc(parameters[i].mat_fname, parameters[i].data_fname, 0)
         except:
-            print >> sys.stderr, 'execution of start_proc failed'
+            print('execution of start_proc failed', file=sys.stderr)
 
     # remove files
     for i in range(len(parameters)):
@@ -880,11 +880,11 @@ def rproc_wait(jobinfo, pausetime=120, frac_finished=1.0, resub_on=1, verbosity=
     rproc_wait_jobinfo = jobinfo
 
     if resub_on == 1:
-        print '\n\ncrashed jobs will be resubmitted by rproc_wait'
+        print('\n\ncrashed jobs will be resubmitted by rproc_wait')
     elif resub_on == -1:
-        print '\n\ncrashed jobs may be resubmitted by rproc_wait'
+        print('\n\ncrashed jobs may be resubmitted by rproc_wait')
     else:
-        print '\n\ncrashed jobs will not be resubmitted by rproc_wait'
+        print('\n\ncrashed jobs will not be resubmitted by rproc_wait')
 
     if not isinstance(jobinfo, list):
         jobinfo = [jobinfo]
@@ -894,7 +894,7 @@ def rproc_wait(jobinfo, pausetime=120, frac_finished=1.0, resub_on=1, verbosity=
     for i in range(len(jobinfo)):
         if jobinfo[i].created == 1:
             if jobinfo[i].time is None:
-                print >> sys.stderr, 'WARNING: job created but not submitted yet. ignoring'
+                print('WARNING: job created but not submitted yet. ignoring', file=sys.stderr)
                 jobinfo[i].created = 0
             else:
                 num_jobs += 1
@@ -928,32 +928,32 @@ def rproc_wait(jobinfo, pausetime=120, frac_finished=1.0, resub_on=1, verbosity=
                         (reachedlimit, jobwalltime) = rproc_reached_timelimit(jobinfo[id])
                         if reachedlimit: # check whether the job has been killed because it reached the time limit
                             if verbosity >= 1:
-                                print 'job has been canceled because it used %1.0fs, but time limit was %1.0fs walltime.\nhence, we increase the time limit to %1.0fs.\n' % (jobwalltime, jobinfo[id].time * 60, max(jobinfo[id].time, jobwalltime) * 2)
+                                print('job has been canceled because it used %1.0fs, but time limit was %1.0fs walltime.\nhence, we increase the time limit to %1.0fs.\n' % (jobwalltime, jobinfo[id].time * 60, max(jobinfo[id].time, jobwalltime) * 2))
                             jobinfo[id].time = max(jobinfo[id].time, jobwalltime / 60) * 2
                     elif resub_on == -1:
                         jobinfo[id].time = jobinfo[id].time_req_resubmit[min(jobinfo[id].retries + 1, len(jobinfo[id].time_req_resubmit) - 1)]
                         jobinfo[id].Mem = jobinfo[id].mem_req_resubmit[min(jobinfo[id].retries + 1, len(jobinfo[id].mem_req_resubmit) - 1)] 
                         jobinfo[id].start_time = []
                         if verbosity >= 1:
-                            print 'resubmitting job (%i) with new time and memory limitations: %iMb and %i minutes (retry #%i)\n' % (jobinfo[id].jobid, jobinfo[id].Mem, jobinfo[id].time, jobinfo[id].retries + 1)
+                            print('resubmitting job (%i) with new time and memory limitations: %iMb and %i minutes (retry #%i)\n' % (jobinfo[id].jobid, jobinfo[id].Mem, jobinfo[id].time, jobinfo[id].retries + 1))
                     if verbosity >= 2:
-                        print 'log file of previous attempt %s\n' % jobinfo[id].log_fname
+                        print('log file of previous attempt %s\n' % jobinfo[id].log_fname)
                     jobinfo[id] = rproc_resubmit(jobinfo[id]) 
                     jobinfo[id].crashed_time = None 
                     num_finished -= 1
             else:
                 if verbosity >= 2:
-                    print '%s' % qstat_line
+                    print('%s' % qstat_line)
             ### hard_time_limit in minutes
             if len(jobinfo[id].start_time) > 0 and 24 * 60 * (time.time() - jobinfo[id].start_time) > jobinfo[id].hard_time_limit:
-                print 'delete job (%i) because hard time limit (%imin) was reached\n' % (jobinfo[id].jobid, jobinfo[id].hard_time_limit)
+                print('delete job (%i) because hard time limit (%imin) was reached\n' % (jobinfo[id].jobid, jobinfo[id].hard_time_limit))
                 #SCHED_DELETE_JOB
                 subprocess.call(['qdel', str(jobinfo[id].jobid)])
         if verbosity >= 1:
-            print '\n%i of %i jobs finished (%i of them crashed) \n' % (num_finished, num_jobs, num_crashed)
+            print('\n%i of %i jobs finished (%i of them crashed) \n' % (num_finished, num_jobs, num_crashed))
         if verbosity >= 2:
             if len(crashed_files.strip().split('\n')) > 0:
-                print '%s\n' % crashed_files
+                print('%s\n' % crashed_files)
         if resub_on == 0 and num_finished == num_jobs * frac_finished:
             break
         if resub_on == -1 and num_finished == num_jobs * frac_finished:
@@ -974,15 +974,15 @@ def start_proc(fname, data_fname, rm_flag=True):
     THIS_IS_A_RPROC_PROCESS = True
 
     ### load and create environment
-    (ProcName, dirctry, options, callfile) = cPickle.load(open(fname, 'r'))
+    (ProcName, dirctry, options, callfile) = pickle.load(open(fname, 'r'))
     os.chdir(dirctry)
 
-    print '%s on %s started (in %s; from %s %s)' % (ProcName, os.environ['HOSTNAME'], dirctry, fname, data_fname)
-    print '### job started %s' % time.strftime('%Y-%m-%d %H:%S')
+    print('%s on %s started (in %s; from %s %s)' % (ProcName, os.environ['HOSTNAME'], dirctry, fname, data_fname))
+    print('### job started %s' % time.strftime('%Y-%m-%d %H:%S'))
 
     if 'rmpaths' in options:
         for i in range(len(options['rmpaths'])):
-            print 'removing path %s' % options['rmpaths'][i]
+            print('removing path %s' % options['rmpaths'][i])
             while options['rmpaths'][i] in sys.path:
                 r_idx = sys.path.index(options['rmpaths'][i])
                 del sys.path[r_idx]
@@ -990,7 +990,7 @@ def start_proc(fname, data_fname, rm_flag=True):
     if 'addpaths' in options:
         for i in range(len(options['addpaths'])):
             if not options['addpaths'][i] in sys.path:
-                print 'adding path %s' % options['addpaths'][i]
+                print('adding path %s' % options['addpaths'][i])
                 sys.path.append(options['addpaths'][i])
 
     if 'rm_flag' in options:
@@ -1026,7 +1026,7 @@ def start_proc(fname, data_fname, rm_flag=True):
                             if f is not None:
                                 f.close()
                     except ImportError:
-                        print >> sys.stderr, 'Module %s could not be found' % '.'.join(mod_sl[:m+1])
+                        print('Module %s could not be found' % '.'.join(mod_sl[:m+1]), file=sys.stderr)
                         imported = False
                 else:
                     imported = False
@@ -1034,7 +1034,7 @@ def start_proc(fname, data_fname, rm_flag=True):
                 exec('%s = %s' % (mod, module[0]))
                 
     ### load data into environment
-    P1 = cPickle.load(open(data_fname, 'r'))
+    P1 = pickle.load(open(data_fname, 'r'))
 
     retval1 = []
     retval2 = []
@@ -1058,23 +1058,23 @@ def start_proc(fname, data_fname, rm_flag=True):
             retval1 = retval
 
         if not ('no_result_file' in options and options['no_result_file']):
-            print 'saving results to %s_result.pickle' % os.path.splitext(fname)[0]
-            cPickle.dump((retval1, retval2), open('%s_result.pickle' % os.path.splitext(fname)[0], 'wb'), -1) 
+            print('saving results to %s_result.pickle' % os.path.splitext(fname)[0])
+            pickle.dump((retval1, retval2), open('%s_result.pickle' % os.path.splitext(fname)[0], 'wb'), -1) 
     except (NameError, TypeError) as e:
-        print >> sys.stderr, 'execution of %s failed' % ProcName
-        print >> sys.stderr, '%s' % str(e)
+        print('execution of %s failed' % ProcName, file=sys.stderr)
+        print('%s' % str(e), file=sys.stderr)
         global MATLAB_RETURN_VALUE
         MATLAB_RETURN_VALUE = -1
         rm_flag = False
     except RprocRerun as e:
         # if we rerun, then we should not cleanup
-        print >> sys.stderr, 'job is marked for rerunning. exiting without finished computations'
+        print('job is marked for rerunning. exiting without finished computations', file=sys.stderr)
     else:
         if rm_flag:
             os.remove(fname) # data file
             os.remove('%ssh' % fname.strip('pickle')) # script file
 
-    print '### job finished %s' % time.strftime('%Y-%m-%d %H:%S')
+    print('### job finished %s' % time.strftime('%Y-%m-%d %H:%S'))
 
 def split_walltime(time_str):
     """ Transform wallclock time string into integer of seconds
@@ -1093,7 +1093,7 @@ def split_walltime(time_str):
         if i < len(factors):
             seconds += (int(sl[i]) * factors[j])
         else:
-            print >> sys.stderr, 'WARNING: walltime computation exceeds max value'
+            print('WARNING: walltime computation exceeds max value', file=sys.stderr)
     return seconds
 
 def get_subpaths(sl):

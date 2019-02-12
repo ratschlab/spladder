@@ -6,7 +6,7 @@ import h5py
 import sys
 import os
 import pdb
-import cPickle
+import pickle
 import warnings
 import time
 import datetime
@@ -107,7 +107,7 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         genes = scio.loadmat(CFG['fname_genes'], struct_as_record=False)['genes'][0, :]
         numgenes = len(genes)
     else:
-        genes = cPickle.load(open(CFG['fname_genes'], 'r'))[0]
+        genes = pickle.load(open(CFG['fname_genes'], 'r'))[0]
         numgenes = genes.shape[0]
 
     ### open hdf5 file containing graph count information
@@ -197,13 +197,13 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 def get_size_factors(gene_counts, CFG):
 
     if CFG['verbose']:
-        print 'Estimating size factors'
+        print('Estimating size factors')
 
     ### take geometric mean of counts
     gmean = sp.exp(sp.mean(sp.log(gene_counts + 1), axis=1))
 
     size_factors = []
-    for i in xrange(gene_counts.shape[1]):
+    for i in range(gene_counts.shape[1]):
         idx = gene_counts[:, i] > 0
         size_factors.append(sp.median(gene_counts[idx, i] / gmean[idx]))
 
@@ -221,7 +221,7 @@ def re_quantify_events(CFG):
             try:
                 ev = scio.loadmat(CFG['fname_events'], struct_as_record=False)['events_all'][0, :]
             except NotImplementedError:
-                print >> sys.stderr, 'The event file in matlab format is too big to be loaded with python correctly. Please use the script events_to_hdf5.m in the matlab/src part of SplAdder to convert your event file to HDF5 and use it here instead.'
+                print('The event file in matlab format is too big to be loaded with python correctly. Please use the script events_to_hdf5.m in the matlab/src part of SplAdder to convert your event file to HDF5 and use it here instead.', file=sys.stderr)
                 sys.exit(1)
         else:
             ev = []
@@ -234,7 +234,7 @@ def re_quantify_events(CFG):
                     if (i + 1) % 100 == 0:
                         sys.stderr.write('%i/%i\n' % (i + 1, shp + 1))
                 tmp = Dummy()
-                for k in IN.keys():
+                for k in list(IN.keys()):
                     if IN[k].shape[0] == shp:
                         exec('tmp.%s = IN[\'%s\'][%i]' % (k, k, i))
                     elif IN[k].shape[1] == shp:
@@ -247,7 +247,7 @@ def re_quantify_events(CFG):
             IN.close()
             ev = sp.array(ev, dtype='object')
     else:
-        ev = cPickle.load(open(CFG['fname_events'], 'r'))[0]
+        ev = pickle.load(open(CFG['fname_events'], 'r'))[0]
 
     cov = quantify.quantify_from_graph(ev, sp.arange(1000), 'exon_skip', CFG, fn_merge=sys.argv[1])
 
@@ -298,7 +298,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, test_idx, idx, log=F
 def estimate_dispersion(gene_counts, matrix, sf, CFG, test_idx, event_type):
 
     if CFG['verbose']:
-        print 'Estimating raw dispersions'
+        print('Estimating raw dispersions')
 
     if CFG['parallel'] > 1:
         disp_raw = sp.empty((gene_counts.shape[0], 1), dtype='float')
@@ -322,11 +322,11 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG, test_idx, event_type):
                     disp_raw_conv[j] = tmp[1][i]
             if CFG['verbose']:
                 log_progress(gene_counts.shape[0], gene_counts.shape[0])
-                print ''
+                print('')
             pool.terminate()
             pool.join()
         except KeyboardInterrupt:
-            print >> sys.stderr, 'Keyboard Interrupt - exiting'
+            print('Keyboard Interrupt - exiting', file=sys.stderr)
             pool.terminate()
             pool.join()
             sys.exit(1)
@@ -334,7 +334,7 @@ def estimate_dispersion(gene_counts, matrix, sf, CFG, test_idx, event_type):
         (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, CFG, test_idx, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if sp.sum(disp_raw_conv) == 0:
-        print >> sys.stderr, '\nERROR: None of the dispersion estimates converged. Exiting.'
+        print('\nERROR: None of the dispersion estimates converged. Exiting.', file=sys.stderr)
         sys.exit(1)
 
     if CFG['diagnose_plots']:
@@ -370,7 +370,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, CFG, dmatrix1, event_type):
     disp_fitted[ok_idx] = Lambda[0] / mean_count[ok_idx] + Lambda[1]
 
     if sp.sum(disp_fitted > 0) > 0:
-        print "Found dispersion fit"
+        print("Found dispersion fit")
 
     if CFG['diagnose_plots']:
         plot.mean_variance_plot(counts=counts,
@@ -454,7 +454,7 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
                 disp_adj_conv[i] = False
     if log:
         log_progress(idx.shape[0], idx.shape[0])
-        print ''
+        print('')
 
     #if error_cnt > 0:
     #    print 'Warning: %i events did not fit due to a TypeError' % error_cnt
@@ -465,7 +465,7 @@ def adjust_dispersion_chunk(counts, dmatrix1, disp_raw, disp_fitted, varPrior, s
 def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG, event_type):
 
     if CFG['verbose']:
-        print 'Estimating adjusted dispersions.'
+        print('Estimating adjusted dispersions.')
 
     varLogDispSamp = polygamma(1, (dmatrix1.shape[0] - dmatrix1.shape[1] ) / 2) ## number of samples - number of coefficients
     varPrior = calculate_varPrior(disp_raw, disp_fitted, idx, varLogDispSamp)
@@ -492,11 +492,11 @@ def adjust_dispersion(counts, dmatrix1, disp_raw, disp_fitted, idx, sf, CFG, eve
                     disp_adj_conv[j] = tmp[1][i]
             if CFG['verbose']:
                 log_progress(counts.shape[0], counts.shape[0])
-                print ''
+                print('')
             pool.terminate()
             pool.join()
         except KeyboardInterrupt:
-            print >> sys.stderr, 'Keyboard Interrupt - exiting'
+            print('Keyboard Interrupt - exiting', file=sys.stderr)
             pool.terminate()
             pool.join()
             sys.exit(1)
@@ -519,7 +519,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_id
     pval = sp.zeros((gene_counts.shape[0], 1), dtype='float')
     pval.fill(sp.nan)
 
-    for i in xrange(idx.shape[0]):
+    for i in range(idx.shape[0]):
 
         if log:
             log_progress(i, idx.shape[0])
@@ -537,7 +537,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_id
             result0 = modNB0.fit()
             result1 = modNB1.fit()
         except:
-            print >> sys.stderr, '\nWARNING: SVD did not converge - skipping'
+            print('\nWARNING: SVD did not converge - skipping', file=sys.stderr)
             #traceback.print_exc(file=sys.stderr)
             continue
 
@@ -545,7 +545,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_id
 
     if log:
         log_progress(idx.shape[0], idx.shape[0])
-        print ''
+        print('')
 
     return (pval, idx)
 
@@ -553,7 +553,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_id
 def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx):
 
     if CFG['verbose']:
-        print 'Running the statistical test.'
+        print('Running the statistical test.')
 
     if CFG['parallel'] > 1:
         pval = sp.zeros((gene_counts.shape[0], 1), dtype='float')
@@ -575,11 +575,11 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx):
                     pval[j] = tmp[0][i]
             if CFG['verbose']:
                 log_progress(gene_counts.shape[0], gene_counts.shape[0])
-                print ''
+                print('')
             pool.terminate()
             pool.join()
         except KeyboardInterrupt:
-            print >> sys.stderr, 'Keyboard Interrupt - exiting'
+            print('Keyboard Interrupt - exiting', file=sys.stderr)
             pool.terminate()
             pool.join()
             sys.exit(1)
@@ -587,7 +587,7 @@ def test_count(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx):
         (pval, _) = test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_idx, sp.arange(gene_counts.shape[0]), log=CFG['verbose'])
 
     if CFG['verbose']:
-        print ''
+        print('')
 
     return pval
 
@@ -722,7 +722,7 @@ def main():
 
     if CFG['debug']:
 
-        print "Generating simulated dataset"
+        print("Generating simulated dataset")
 
         npr.seed(23)
         CFG['is_matlab'] = False
@@ -790,7 +790,7 @@ def main():
             CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%i.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, non_alt_tag, hash(tuple(sp.unique(condition_strains))) * -1))
         if os.path.exists(CFG['fname_exp_hdf5']):
             if CFG['verbose']:
-                print 'Loading expression counts from %s' % CFG['fname_exp_hdf5']
+                print('Loading expression counts from %s' % CFG['fname_exp_hdf5'])
             IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
             gene_counts = IN['raw_count'][:]
             gene_strains = IN['strains'][:]
@@ -838,7 +838,7 @@ def main():
         for event_type in CFG['event_types']:
 
             if CFG['verbose']:
-                print 'Testing %s events' % event_type
+                print('Testing %s events' % event_type)
 
             CFG['fname_events'] = os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, CFG['confidence_level']))
 
@@ -892,9 +892,9 @@ def main():
             #del mean1, mean2
 
             if CFG['verbose']:
-                print 'Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100)
+                print('Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100))
             if k_idx.shape[0] == 0:
-                print 'All events of type %s were filtered out due to low coverage. Please try re-running with less stringent filter criteria' % event_type
+                print('All events of type %s were filtered out due to low coverage. Please try re-running with less stringent filter criteria' % event_type)
                 continue
 
             cov[0] = cov[0][k_idx, :]
@@ -948,7 +948,7 @@ def main():
                 event_ids, u_idx, r_idx = sp.unique(event_ids, return_index=True, return_inverse=True)
                 test_idx = test_idx[u_idx]
                 if CFG['verbose']:
-                    print 'Consider %i unique event splice forms for testing' % u_idx.shape[0]
+                    print('Consider %i unique event splice forms for testing' % u_idx.shape[0])
 
             ### run testing
             #pvals = run_testing(cov[u_idx, :], dmatrix0, dmatrix1, sf, CFG, event_type, r_idx)
@@ -987,7 +987,7 @@ def main():
             ###
 
             ### write test summary (what has been tested, which bam files, etc. ...)
-            cPickle.dump((gene_strains,
+            pickle.dump((gene_strains,
                           event_strains,
                           dmatrix0,
                           dmatrix1,
@@ -1003,7 +1003,7 @@ def main():
 
             out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
-                print 'Writing test results to %s' % out_fname
+                print('Writing test results to %s' % out_fname)
             if CFG['is_matlab']:
                 data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), m_all[s_idx, :]]
             else:
@@ -1013,7 +1013,7 @@ def main():
             ### write extended output
             out_fname = os.path.join(outdir, 'test_results_extended_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
-                print 'Writing extended test results to %s' % out_fname
+                print('Writing extended test results to %s' % out_fname)
             header_long = sp.r_[header, ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains], ['disp_raw', 'disp_adj']]
 
             data_out = sp.c_[data_out, (cov_used[s_idx, :] / sf).astype('str'), disp_raw_used[s_idx].astype('str'), disp_adj_used[s_idx].astype('str')]
@@ -1022,7 +1022,7 @@ def main():
             ### write output unique over genes
             out_fname = os.path.join(outdir, 'test_results_C%i_%s.gene_unique.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
-                print 'Writing gene unique test results to %s' % out_fname
+                print('Writing gene unique test results to %s' % out_fname)
             ks_idx = []
             taken = set()
             for i in s_idx:

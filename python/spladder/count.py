@@ -1,7 +1,7 @@
 #if __package__ is None:
 #    __package__ ='modules'
 
-import cPickle
+import pickle
 import math
 import h5py
 import scipy as sp
@@ -10,14 +10,14 @@ import re
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
 from .helpers import *
-from reads import *
-from hdf5 import appendToHDF5
-import rproc as rp
+from .reads import *
+from .hdf5 import appendToHDF5
+from . import rproc as rp
 
 ### intermediate fix to load pickle files stored under previous version
-import classes.gene
-import classes.splicegraph
-import classes.segmentgraph
+from . import classes.gene
+from . import classes.splicegraph
+from . import classes.segmentgraph
 sys.modules['modules.classes.gene'] = classes.gene
 sys.modules['modules.classes.splicegraph'] = classes.splicegraph
 sys.modules['modules.classes.segmentgraph'] = classes.segmentgraph
@@ -56,7 +56,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
         for contig in sp.unique(contigs):
             contig_idx = sp.where(contigs == contig)[0]
             bam_cache = dict()
-            print '\ncounting %i genes on contig %s' % (contig_idx.shape[0], contig)
+            print('\ncounting %i genes on contig %s' % (contig_idx.shape[0], contig))
             for ii,i in enumerate(contig_idx):
                 sys.stdout.write('.')
                 if ii > 0 and ii % 50 == 0:
@@ -115,7 +115,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
                             counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))]
 
     if fn_out is not None:
-        cPickle.dump(counts, open(fn_out, 'w'), -1)
+        pickle.dump(counts, open(fn_out, 'w'), -1)
     else:
         return counts
 
@@ -123,7 +123,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
 def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmode='all'):
 
-    (genes, inserted) = cPickle.load(open(fname_in, 'r'))
+    (genes, inserted) = pickle.load(open(fname_in, 'r'))
     for g in genes:
         g.from_sparse()
     
@@ -131,7 +131,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         for g in genes:
             g.segmentgraph = Segmentgraph(g)
             g.to_sparse()
-        cPickle.dump((genes, inserted), open(fname_in, 'w'), -1)
+        pickle.dump((genes, inserted), open(fname_in, 'w'), -1)
         for g in genes:
             g.from_sparse()
 
@@ -146,14 +146,14 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
 
     if not CFG['rproc']:
         if CFG['merge_strategy'] == 'single':
-            print '\nprocessing %s' % (CFG['samples'][sample_idx])
+            print('\nprocessing %s' % (CFG['samples'][sample_idx]))
             counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][sample_idx], CFG)
         elif CFG['merge_strategy'] == 'merge_graphs' and qmode == 'single':
-            print '\nquantifying merged graph in single mode (first file only) on %s' % CFG['samples'][0]
+            print('\nquantifying merged graph in single mode (first file only) on %s' % CFG['samples'][0])
             counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][0], CFG)
         else:
             for s_idx in range(CFG['strains'].shape[0]):
-                print '\n%i/%i' % (s_idx + 1, CFG['strains'].shape[0])
+                print('\n%i/%i' % (s_idx + 1, CFG['strains'].shape[0]))
                 if s_idx == 0:
                     counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][s_idx], CFG)
                 else:
@@ -168,7 +168,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                 continue
             tmp = sp.hstack(tmp)
             if tmp.shape[0] > 0:
-                counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, range(1, tmp.shape[1], 2)]])
+                counts['edges'].append(sp.c_[tmp[:, 0], tmp[:, list(range(1, tmp.shape[1], 2))]])
                 counts['gene_ids_edges'].append(sp.ones((tmp.shape[0], 1), dtype='int') * c)
 
         ### write result data to hdf5
@@ -205,7 +205,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
             if os.path.exists(fn):
                 continue
             else:
-                print 'submitting chunk %i to %i (%i)' % (c_idx, cc_idx, s_idx.shape[0])
+                print('submitting chunk %i to %i (%i)' % (c_idx, cc_idx, s_idx.shape[0]))
                 PAR['genes'] = genes[s_idx][c_idx:cc_idx]
                 for gg in PAR['genes']:
                     gg.to_sparse()
@@ -221,8 +221,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
 
         ### merge results from count chunks
         if 'verbose' in CFG and CFG['verbose']:
-            print '\nCollecting count data from chunks ...\n'
-            print 'writing data to %s' % fname_out
+            print('\nCollecting count data from chunks ...\n')
+            print('writing data to %s' % fname_out)
 
         ### write data to hdf5 continuously
         h5fid = h5py.File(fname_out, 'w')
@@ -232,13 +232,13 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         for c_idx in range(0, s_idx.shape[0], chunksize):
             cc_idx = min(s_idx.shape[0], c_idx + chunksize)
             if 'verbose' in CFG and CFG['verbose']:
-                print 'collecting chunk %i-%i (%i)' % (c_idx, cc_idx, s_idx.shape[0])
+                print('collecting chunk %i-%i (%i)' % (c_idx, cc_idx, s_idx.shape[0]))
             fn = re.sub(r'.hdf5$', '', fname_out) + '.chunk_%i_%i.pickle' % (c_idx, cc_idx)
             if not os.path.exists(fn):
-                print >> sys.stderr, 'ERROR: Not all chunks in counting graph coverage completed!'
+                print('ERROR: Not all chunks in counting graph coverage completed!', file=sys.stderr)
                 sys.exit(1)
             else:
-                counts_tmp = cPickle.load(open(fn, 'r'))
+                counts_tmp = pickle.load(open(fn, 'r'))
                 for c in range(counts_tmp.shape[1]):
                     if 'segments' in h5fid:
                         appendToHDF5(h5fid, sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), 'segments')
@@ -255,11 +255,11 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                     tmp = sp.hstack(tmp)
                     if tmp.shape[0] > 0:
                         if 'edges' in h5fid:
-                            appendToHDF5(h5fid, tmp[:, range(1, tmp.shape[1], 2)], 'edges')
+                            appendToHDF5(h5fid, tmp[:, list(range(1, tmp.shape[1], 2))], 'edges')
                             appendToHDF5(h5fid, tmp[:, 0], 'edge_idx')
                             appendToHDF5(h5fid, sp.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), 'gene_ids_edges')
                         else:
-                            h5fid.create_dataset(name='edges', data=tmp[:, range(1, tmp.shape[1], 2)], chunks=True, compression='gzip', maxshape=(None, tmp.shape[1] / 2))
+                            h5fid.create_dataset(name='edges', data=tmp[:, list(range(1, tmp.shape[1], 2))], chunks=True, compression='gzip', maxshape=(None, tmp.shape[1] / 2))
                             h5fid.create_dataset(name='edge_idx', data=tmp[:, 0], chunks=True, compression='gzip', maxshape=(None,))
                             h5fid.create_dataset(name='gene_ids_edges', data=sp.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
                 del tmp, counts_tmp
@@ -270,8 +270,8 @@ def collect_single_quantification_results(fname_out, sample_idxs, CFG):
 
         ### merge results from single count files
         if 'verbose' in CFG and CFG['verbose']:
-            print '\nCollecting count data from files quantified in single mode ...\n'
-            print 'writing data to %s' % fname_out
+            print('\nCollecting count data from files quantified in single mode ...\n')
+            print('writing data to %s' % fname_out)
 
         ### write data to hdf5 continuously
         h5fid = h5py.File(fname_out, 'w')
@@ -279,9 +279,9 @@ def collect_single_quantification_results(fname_out, sample_idxs, CFG):
 
             fname = get_filename('fn_count_in', CFG, sample_idx=idx)
             if 'verbose' in CFG and CFG['verbose']:
-                print 'collecting counts from %s (%i/%i)' % (fname, i+1, len(sample_idxs))
+                print('collecting counts from %s (%i/%i)' % (fname, i+1, len(sample_idxs)))
             if not os.path.exists(fname):
-                print >> sys.stderr, 'ERROR: Counts for sample %i cannot be loaded - %s is not present' % (i + 1, fname)
+                print('ERROR: Counts for sample %i cannot be loaded - %s is not present' % (i + 1, fname), file=sys.stderr)
                 sys.exit(1)
 
             CIN = h5py.File(fname, 'r')
