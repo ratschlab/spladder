@@ -23,9 +23,9 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
         print('writing %s events in flat txt format to %s' % (events[0].event_type, fn_out_txt))
 
     if fn_out_txt.endswith('.gz'):
-        fd = gzip.open(fn_out_txt, 'w+')
+        fd = gzip.open(fn_out_txt, 'wt', encoding='utf-8')
     else:
-        fd = open(fn_out_txt, 'w+')
+        fd = open(fn_out_txt, 'wt', encoding='utf-8')
 
     if anno_fn is not None:
         gene_header = '\tgene_start\tgene_end'
@@ -70,7 +70,7 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
 
         ev = events[i]
         counts = IN['event_counts'][:, :, i]
-	psi = IN['psi'][:,i]
+        psi = IN['psi'][:,i]
         if ev.event_type == 'exon_skip':
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons2[0, 0] + 1, ev.exons2[0, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1], ev.exons2[2, 0] + 1, ev.exons2[2, 1]))
             for j in range(len(strains)):
@@ -139,9 +139,9 @@ def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
     IN = h5py.File(fn_counts, 'r')
 
     if fn_out.endswith('.gz'):
-        fd = gzip.open(fn_out, 'w')
+        fd = gzip.open(fn_out, 'wt', encoding='utf-8')
     else:
-        fd = open(fn_out, 'w')
+        fd = open(fn_out, 'wt', encoding='utf-8')
     fd.write('event_id\tevent_type\tevent_chr\tevent_coordinates\talt_region_coordinates\tgene_name')
     for s in strains:
         fd.write('\t%s' % s)
@@ -210,9 +210,9 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
     IN = h5py.File(fn_counts, 'r')
 
     if fn_out.endswith('.gz'):
-        fd = gzip.open(fn_out, 'w+')
+        fd = gzip.open(fn_out, 'wt', encoding='utf-8')
     else:
-        fd = open(fn_out, 'w+')
+        fd = open(fn_out, 'wt', encoding='utf-8')
 
     print('gene\teventtype\tcoordinates', end=' ', file=fd)
     for s in strains:

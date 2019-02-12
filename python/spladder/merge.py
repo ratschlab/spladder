@@ -91,7 +91,7 @@ def merge_genes_by_isoform(CFG):
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print('Loading %s ...' % merge_list[i])
-        (genes, inserted) = pickle.load(open(merge_list[i]), 'r')
+        (genes, inserted) = pickle.load(open(merge_list[i]), 'rb')
         for g in genes:
             g.from_sparse()
         print('... done')
@@ -163,7 +163,7 @@ def merge_genes_by_isoform(CFG):
     print('Store genes at: %s' % fn)
     for g in genes:
         g.to_sparse()
-    pickle.dump((genes, inserted), open(fn, 'w'), -1)
+    pickle.dump((genes, inserted), open(fn, 'wb'), -1)
 
     ### subsample transcripts if neccessary 
     print('Subsample genes ...')
@@ -180,7 +180,7 @@ def merge_genes_by_isoform(CFG):
 
     fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms_subsampled.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
     print('Store subsampled genes at: %s' % fn)
-    pickle.dump((genes, inserted), open(fn, 'w'), -1)       
+    pickle.dump((genes, inserted), open(fn, 'wb'), -1)       
 
 
 def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
@@ -212,7 +212,7 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     for i in range(len(merge_list)):
         ### load gene structure from sample i
         print('Loading %s ...' % merge_list[i])
-        (genes, inserted) = pickle.load(open(merge_list[i], 'r'))
+        (genes, inserted) = pickle.load(open(merge_list[i], 'rb'))
         for g in genes:
             g.from_sparse()
         print('... done (%i / %i)' % (i + 1, len(merge_list)))
@@ -345,7 +345,7 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     genes = genes[s1_idx[s2_idx]]
 
     print('Store genes at: %s' % fn_out)
-    pickle.dump((genes, inserted), open(fn_out, 'w'), -1)
+    pickle.dump((genes, inserted), open(fn_out, 'wb'), -1)
 
 
 def run_merge(CFG):

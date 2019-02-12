@@ -11,13 +11,13 @@ if __name__ == "__main__":
 from .verify import *
 from .write import *
 from ..rproc import rproc, rproc_wait
-from ..helpers import compute_psi
+from ..helpers import compute_psi, codeUTF8
 
 def _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=None):
     
     ### load gene info
     if 'spladder_infile' in CFG and os.path.exists(CFG['spladder_infile']):
-        (genes, inserted) = pickle.load(open(CFG['spladder_infile']))
+        (genes, inserted) = pickle.load(open(CFG['spladder_infile']), 'rb')
     else:
         prune_tag = ''
         if CFG['do_prune']:
@@ -26,18 +26,18 @@ def _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=None):
         if CFG['validate_splicegraphs']:
             validate_tag = '.validated'
         if not sample_idx is None:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][sample_idx], validate_tag, prune_tag)))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][sample_idx], validate_tag, prune_tag), 'rb'))
         else:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag), 'rb'))
 
     ### write strain and gene indices to hdf5
-    OUT.create_dataset(name='strains', data=CFG['strains'])
+    OUT.create_dataset(name='strains', data=codeUTF8(CFG['strains']))
     feat = OUT.create_group(name='event_features')
     for f in event_features:
-        feat.create_dataset(name=f, data=sp.array(event_features[f], dtype='str'))
-    OUT.create_dataset(name='gene_names', data=sp.array([x.name for x in genes], dtype='str'))
-    OUT.create_dataset(name='gene_chr', data=sp.array([x.chr for x in genes], dtype='str'))
-    OUT.create_dataset(name='gene_strand', data=sp.array([x.strand for x in genes], dtype='str'))
+        feat.create_dataset(name=f, data=codeUTF8(sp.array(event_features[f], dtype='str')))
+    OUT.create_dataset(name='gene_names', data=codeUTF8(sp.array([x.name for x in genes], dtype='str')))
+    OUT.create_dataset(name='gene_chr', data=codeUTF8(sp.array([x.chr for x in genes], dtype='str')))
+    OUT.create_dataset(name='gene_strand', data=codeUTF8(sp.array([x.strand for x in genes], dtype='str')))
     OUT.create_dataset(name='gene_pos', data=sp.array([[x.start, x.stop] for x in genes], dtype='int'))
 
 
@@ -91,7 +91,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
         ### check, if confirmed version exists
         if not os.path.exists(fn_out_count):
 
-            events_all = pickle.load(open(fn_out, 'r'))
+            events_all = pickle.load(open(fn_out, 'rb'))
             events_all_strains = CFG['strains']
 
             ### handle case where we did not find any event of this type
@@ -168,7 +168,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                             if not os.path.exists(out_fn):
                                 print('ERROR: not finished %s' % out_fn, file=sys.stderr)
                                 sys.exit(1)
-                            ev_, counts_ = pickle.load(open(out_fn, 'r'))
+                            ev_, counts_ = pickle.load(open(out_fn, 'rb'))
                             if j == 0:
                                 ev = ev_
                                 counts = counts_
@@ -250,12 +250,12 @@ def analyze_events(CFG, event_type, sample_idx=None):
     
             ### save events
             #cPickle.dump((events_all_info, events_all_strains), open(fn_out_info, 'w'), -1)
-            pickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)
+            pickle.dump(confirmed_idx, open(fn_out_conf, 'wb'), -1)
 
         else:
             print('\nLoading event data from %s' % fn_out)
-            events_all = pickle.load(open(fn_out, 'r'))
-            confirmed_idx = pickle.load(open(fn_out_conf, 'r'))
+            events_all = pickle.load(open(fn_out, 'rb'))
+            confirmed_idx = pickle.load(open(fn_out_conf, 'rb'))
 
         if events_all.shape[0] == 0:
             print('\nNo %s event could be found. - Nothing to report' % event_type)

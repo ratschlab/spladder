@@ -157,7 +157,7 @@ def spladder(argv):
 
         ### add anotation contigs into lookup table
         if not 'genes' in CFG:
-            genes = pickle.load(open(CFG['anno_fname'], 'r'))
+            genes = pickle.load(open(CFG['anno_fname'], 'rb'), encoding='latin1')
         else:
             genes = CFG['genes']
         CFG = init.append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), CFG)
@@ -243,9 +243,9 @@ def spladder(argv):
             run_merge(CFG)
 
     if not 'spladder_infile' in CFG and CFG['merge_strategy'] == 'merge_graphs' and CFG['validate_splicegraphs'] and not os.path.exists(fn_out_merge_val):
-        (genes, inserted) = pickle.load(open(fn_out_merge, 'r'))
+        (genes, inserted) = pickle.load(open(fn_out_merge, 'rb'))
         genes = filter_by_edgecount(genes, CFG)
-        pickle.dump((genes, inserted), open(fn_out_merge_val, 'w'), -1)
+        pickle.dump((genes, inserted), open(fn_out_merge_val, 'wb'), -1)
         del genes
 
     ### convert input BAMs to sparse arrays - unfiltered case

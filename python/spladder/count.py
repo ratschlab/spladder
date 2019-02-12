@@ -15,12 +15,12 @@ from .hdf5 import appendToHDF5
 from . import rproc as rp
 
 ### intermediate fix to load pickle files stored under previous version
-from . import classes.gene
-from . import classes.splicegraph
-from . import classes.segmentgraph
-sys.modules['modules.classes.gene'] = classes.gene
-sys.modules['modules.classes.splicegraph'] = classes.splicegraph
-sys.modules['modules.classes.segmentgraph'] = classes.segmentgraph
+from .classes import gene as cgene
+from .classes import splicegraph as csplicegraph
+from .classes import segmentgraph as csegmentgraph
+sys.modules['modules.classes.gene'] = cgene
+sys.modules['modules.classes.splicegraph'] = csplicegraph
+sys.modules['modules.classes.segmentgraph'] = csegmentgraph
 ### end fix
 
 def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
@@ -115,7 +115,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
                             counts[f, i].edges = sp.r_[counts[f, i].edges, sp.atleast_2d(sp.array([sp.ravel_multi_index([k[m], l[m]], gg.segmentgraph.seg_edges.shape), 0]))]
 
     if fn_out is not None:
-        pickle.dump(counts, open(fn_out, 'w'), -1)
+        pickle.dump(counts, open(fn_out, 'wb'), -1)
     else:
         return counts
 
@@ -123,7 +123,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
 def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmode='all'):
 
-    (genes, inserted) = pickle.load(open(fname_in, 'r'))
+    (genes, inserted) = pickle.load(open(fname_in, 'rb'))
     for g in genes:
         g.from_sparse()
     
@@ -131,7 +131,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         for g in genes:
             g.segmentgraph = Segmentgraph(g)
             g.to_sparse()
-        pickle.dump((genes, inserted), open(fname_in, 'w'), -1)
+        pickle.dump((genes, inserted), open(fname_in, 'wb'), -1)
         for g in genes:
             g.from_sparse()
 
@@ -177,9 +177,12 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         counts['edge_idx'] = counts['edges'][:, 0] if len(counts['edges']) > 0 else sp.array([])
         counts['edges'] = counts['edges'][:, 1:] if len(counts['edges']) > 0 else sp.array([])
         h5fid = h5py.File(fname_out, 'w')
-        h5fid.create_dataset(name='strains', data=CFG['strains'])
+        h5fid.create_dataset(name='strains', data=codeUTF8(CFG['strains']))
         for key in counts:
-            h5fid.create_dataset(name=key, data=counts[key])
+            if sp.issubdtype(counts[key].dtype, sp.str_):
+                h5fid.create_dataset(name=key, data=codeUTF8(counts[key]))
+            else:
+                h5fid.create_dataset(name=key, data=counts[key])
         h5fid.close()
     else:
         ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
@@ -228,7 +231,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         h5fid = h5py.File(fname_out, 'w')
         h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
         h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
-        h5fid.create_dataset(name='strains', data=CFG['strains'])
+        h5fid.create_dataset(name='strains', data=codeUTF8(CFG['strains']))
         for c_idx in range(0, s_idx.shape[0], chunksize):
             cc_idx = min(s_idx.shape[0], c_idx + chunksize)
             if 'verbose' in CFG and CFG['verbose']:
@@ -238,7 +241,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                 print('ERROR: Not all chunks in counting graph coverage completed!', file=sys.stderr)
                 sys.exit(1)
             else:
-                counts_tmp = pickle.load(open(fn, 'r'))
+                counts_tmp = pickle.load(open(fn, 'rb'))
                 for c in range(counts_tmp.shape[1]):
                     if 'segments' in h5fid:
                         appendToHDF5(h5fid, sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), 'segments')
