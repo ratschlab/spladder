@@ -1,15 +1,15 @@
 import sys
 import os
 import scipy as sp
-import cPickle
+import pickle
 import h5py
 
 if __name__ == "__main__":
     __package__ = "modules.alt_splice"
 
 ### local imports
-from verify import *
-from write import *
+from .verify import *
+from .write import *
 from ..rproc import rproc, rproc_wait
 from ..helpers import compute_psi
 
@@ -17,7 +17,7 @@ def _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=None):
     
     ### load gene info
     if 'spladder_infile' in CFG and os.path.exists(CFG['spladder_infile']):
-        (genes, inserted) = cPickle.load(open(CFG['spladder_infile']))
+        (genes, inserted) = pickle.load(open(CFG['spladder_infile']))
     else:
         prune_tag = ''
         if CFG['do_prune']:
@@ -26,9 +26,9 @@ def _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=None):
         if CFG['validate_splicegraphs']:
             validate_tag = '.validated'
         if not sample_idx is None:
-            (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][sample_idx], validate_tag, prune_tag)))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][sample_idx], validate_tag, prune_tag)))
         else:
-            (genes, inserted) = cPickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)))
 
     ### write strain and gene indices to hdf5
     OUT.create_dataset(name='strains', data=CFG['strains'])
@@ -48,7 +48,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
 
     for replicate in CFG['replicate_idxs']:
         
-        print 'confidence %i / replicate %i' % (CFG['confidence_level'], replicate)
+        print('confidence %i / replicate %i' % (CFG['confidence_level'], replicate))
 
         if len(CFG['replicate_idxs']) > 1:
             rep_tag = '_R%i' % r_idx
@@ -78,7 +78,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
 
         ### check if there is anything to do
         if os.path.exists(fn_out_txt) and os.path.exists(fn_out_conf_txt) and os.path.exists(fn_out_conf_tcga) and os.path.exists(fn_out_conf_icgc) and os.path.exists(fn_out_conf_gff3):
-            print 'All output files for %s exist.\n' % event_type
+            print('All output files for %s exist.\n' % event_type)
             continue
 
         event_features = {'mult_exon_skip': ['valid', 'exon_pre_cov', 'exons_cov', 'exon_aft_cov', 'exon_pre_exon_conf', 'exon_exon_aft_conf', 'exon_pre_exon_aft_conf', 'sum_inner_exon_conf', 'num_inner_exon', 'len_inner_exon'],
@@ -91,7 +91,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
         ### check, if confirmed version exists
         if not os.path.exists(fn_out_count):
 
-            events_all = cPickle.load(open(fn_out, 'r'))
+            events_all = pickle.load(open(fn_out, 'r'))
             events_all_strains = CFG['strains']
 
             ### handle case where we did not find any event of this type
@@ -107,7 +107,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                     if CFG['merge_strategy'] == 'single':
                         (events_all, counts) = verify_all_events(events_all, sample_idx, CFG['bam_fnames'], event_type, CFG)
                     else:
-                        (events_all, counts) = verify_all_events(events_all, range(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
+                        (events_all, counts) = verify_all_events(events_all, list(range(len(CFG['strains']))), CFG['bam_fnames'], event_type, CFG)
                     verified = sp.array([x.verified for x in events_all], dtype='bool')
                     for ev in events_all:
                         ev.verified = []
@@ -115,7 +115,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                     psi = sp.empty((counts.shape[0], counts.shape[2]), dtype='float')
                     iso1 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                     iso2 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
-                    for i in xrange(counts.shape[2]):
+                    for i in range(counts.shape[2]):
                         (psi[:, i], iso1[:, i], iso2[:, i])  = compute_psi(counts[:, :, i], event_type, CFG)
 
                     OUT = h5py.File(fn_out_count, 'w')
@@ -144,9 +144,9 @@ def analyze_events(CFG, event_type, sample_idx=None):
                             PAR['event_type'] = event_type
                             PAR['CFG'] = CFG
                             if os.path.exists(PAR['out_fn']):
-                                print 'Chunk event %i, strain %i already completed' % (i, j)
+                                print('Chunk event %i, strain %i already completed' % (i, j))
                             else:
-                                print 'Submitting job %i, event chunk %i/%i, strain chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j)
+                                print('Submitting job %i, event chunk %i/%i, strain chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j))
                                 #jobinfo.append(rproc('verify_all_events', PAR, 30000, CFG['options_rproc'], 60 * 4))
                                 jobinfo.append(rproc('verify_all_events', PAR, 10000, CFG['options_rproc'], 60 * 12))
                                 #verify_all_events(PAR)
@@ -157,18 +157,18 @@ def analyze_events(CFG, event_type, sample_idx=None):
                     verified = []
                     collect_ids = []
 
-                    print 'Collecting results from chunks ...'
+                    print('Collecting results from chunks ...')
                     OUT = h5py.File(fn_out_count, 'w')
                     for i in range(0, events_all.shape[0], chunk_size_events):
                         idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
                         for j in range(0, len(CFG['strains']), chunk_size_strains):
                             idx_strains = sp.arange(j, min(j + chunk_size_strains, len(CFG['strains'])))
-                            print '\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(CFG['strains']))
+                            print('\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(CFG['strains'])))
                             out_fn = '%s/event_count_chunks/%s_%i_%i_R%i_C%i.pickle' % (CFG['out_dirname'], event_type, i, j, replicate, CFG['confidence_level'])
                             if not os.path.exists(out_fn):
-                                print >> sys.stderr, 'ERROR: not finished %s' % out_fn
+                                print('ERROR: not finished %s' % out_fn, file=sys.stderr)
                                 sys.exit(1)
-                            ev_, counts_ = cPickle.load(open(out_fn, 'r'))
+                            ev_, counts_ = pickle.load(open(out_fn, 'r'))
                             if j == 0:
                                 ev = ev_
                                 counts = counts_
@@ -183,7 +183,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                         psi = sp.empty((counts.shape[0], counts.shape[2]), dtype='float')
                         iso1 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                         iso2 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
-                        for j in xrange(counts.shape[2]):
+                        for j in range(counts.shape[2]):
                             (psi[:, j], iso1[:, j], iso2[:, j]) = compute_psi(counts[:, :, j], event_type, CFG) 
 
                         if i == 0:
@@ -250,36 +250,36 @@ def analyze_events(CFG, event_type, sample_idx=None):
     
             ### save events
             #cPickle.dump((events_all_info, events_all_strains), open(fn_out_info, 'w'), -1)
-            cPickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)
+            pickle.dump(confirmed_idx, open(fn_out_conf, 'w'), -1)
 
         else:
-            print '\nLoading event data from %s' % fn_out
-            events_all = cPickle.load(open(fn_out, 'r'))
-            confirmed_idx = cPickle.load(open(fn_out_conf, 'r'))
+            print('\nLoading event data from %s' % fn_out)
+            events_all = pickle.load(open(fn_out, 'r'))
+            confirmed_idx = pickle.load(open(fn_out_conf, 'r'))
 
         if events_all.shape[0] == 0:
-            print '\nNo %s event could be found. - Nothing to report' % event_type
+            print('\nNo %s event could be found. - Nothing to report' % event_type)
             continue
         else:
-            print '\nReporting complete %s events:' % event_type
+            print('\nReporting complete %s events:' % event_type)
 
         if CFG['output_txt']:
             if os.path.exists(fn_out_txt):
-                print '%s already exists' % fn_out_txt
+                print('%s already exists' % fn_out_txt)
             else:
                 write_events_txt(fn_out_txt, events_all, fn_out_count)
 
         if CFG['output_struc']:
             if os.path.exists(fn_out_struc):
-                print '%s already exists' % fn_out_struc
+                print('%s already exists' % fn_out_struc)
             else:
                 write_events_structured(fn_out_struc, events_all, fn_out_count)
 
         if confirmed_idx.shape[0] == 0:
-            print '\nNo %s event could be confirmed. - Nothing to report.' % event_type
+            print('\nNo %s event could be confirmed. - Nothing to report.' % event_type)
             continue
         else:
-            print '\nReporting confirmed %s events:' % event_type
+            print('\nReporting confirmed %s events:' % event_type)
 
         if isinstance(sample_idx, int):
             sample_idx = [sample_idx]
@@ -288,53 +288,53 @@ def analyze_events(CFG, event_type, sample_idx=None):
 
         if CFG['output_confirmed_gff3']:
             if os.path.exists(fn_out_conf_gff3):
-                print '%s already exists' % fn_out_conf_gff3
+                print('%s already exists' % fn_out_conf_gff3)
             else:
                 write_events_gff3(fn_out_conf_gff3, events_all, confirmed_idx)
 
         if CFG['output_confirmed_txt']:
             if os.path.exists(fn_out_conf_txt):
-                print '%s already exists' % fn_out_conf_txt
+                print('%s already exists' % fn_out_conf_txt)
             else:
                 write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_confirmed_bed']:
             if os.path.exists(fn_out_conf_bed):
-                print '%s already exists' % fn_out_conf_bed
+                print('%s already exists' % fn_out_conf_bed)
             else:
                 write_events_bed(fn_out_conf_bed, events_all, idx=confirmed_idx)
 
         if CFG['output_confirmed_struc']:
             if os.path.exists(fn_out_conf_struc):
-                print '%s already exists' % fn_out_conf_struc
+                print('%s already exists' % fn_out_conf_struc)
             else:
                 write_events_structured(fn_out_conf_struc, events_all, fn_out_count, confirmed_idx)
 
         if CFG['output_confirmed_tcga']:
             if os.path.exists(fn_out_conf_tcga):
-                print '%s already exists' % fn_out_conf_tcga
+                print('%s already exists' % fn_out_conf_tcga)
             else:
                 write_events_tcga(fn_out_conf_tcga, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_confirmed_icgc']:
             if os.path.exists(fn_out_conf_icgc):
-                print '%s already exists' % fn_out_conf_icgc
+                print('%s already exists' % fn_out_conf_icgc)
             else:
                 write_events_icgc(fn_out_conf_icgc, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
         if CFG['output_filtered_txt']:
             fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
             if os.path.exists(fn_out_conf_txt):
-                print '%s already exists' % fn_out_conf_txt
+                print('%s already exists' % fn_out_conf_txt)
             else:
-                print '\nWriting filtered events (sample freq 0.05):'
+                print('\nWriting filtered events (sample freq 0.05):')
                 cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * CFG['strains'].shape[0]))[0]
                 write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
 
             fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
             if os.path.exists(fn_out_conf_txt):
-                print '%s already exists' %  fn_out_conf_txt
+                print('%s already exists' %  fn_out_conf_txt)
             else:
-                print '\nWriting filtered events (sample freq 0.01):'
+                print('\nWriting filtered events (sample freq 0.01):')
                 cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * CFG['strains'].shape[0]))[0]
                 write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])

@@ -1,7 +1,7 @@
 import random
 import os
 import sys
-import cPickle
+import pickle
 import math
 
 if __package__ is None:
@@ -10,7 +10,7 @@ if __package__ is None:
 from .utils import *
 from .count import count_graph_coverage_wrapper
 from .editgraph import filter_by_edgecount
-import rproc as rp
+from . import rproc as rp
 
 
 def merge_duplicate_exons(genes, CFG):
@@ -19,7 +19,7 @@ def merge_duplicate_exons(genes, CFG):
     num_removed = 0
     for i in range(genes.shape[0]):
         if CFG['verbose'] and i % 100 == 0: 
-            print '%i\r' % i
+            print('%i\r' % i)
 
         ### check if there are non unique exons
         if unique_rows(genes[i].splicegraph.vertices.T).shape[0] == genes[i].splicegraph.vertices.shape[1]:
@@ -60,7 +60,7 @@ def merge_duplicate_exons(genes, CFG):
         num_removed += sum(remove)
 
     if CFG['verbose']:
-        print '\n... removed %i duplicate exons ...' % num_removed
+        print('\n... removed %i duplicate exons ...' % num_removed)
 
     return genes
 
@@ -90,11 +90,11 @@ def merge_genes_by_isoform(CFG):
 
     for i in range(len(merge_list)):
         ### load gene structure from sample i
-        print 'Loading %s ...' % merge_list[i]
-        (genes, inserted) = cPickle.load(open(merge_list[i]), 'r')
+        print('Loading %s ...' % merge_list[i])
+        (genes, inserted) = pickle.load(open(merge_list[i]), 'r')
         for g in genes:
             g.from_sparse()
-        print '... done'
+        print('... done')
 
         ### sort
         name_list = sp.array([x.name for x in genes])
@@ -118,12 +118,12 @@ def merge_genes_by_isoform(CFG):
 
         ### iterate over current genes
         g_idx = 0
-        print 'Processing ...'
+        print('Processing ...')
         for j in range(genes.shape[0]):
             if j % 100 == 0:
-                print '.',
+                print('.', end=' ')
                 if j % 1000 == 0:
-                    print '%i/%i' % (j + 1, genes.shape[0])
+                    print('%i/%i' % (j + 1, genes.shape[0]))
             g_idx_ = g_idx
 
             while genes2[g_idx].name < genes[j].name:
@@ -153,34 +153,34 @@ def merge_genes_by_isoform(CFG):
                 g_idx = g_idx_
                 genes2 = sp.c_[genes2, genes[j]]
                 appended = True
-        print '... done\n'
+        print('... done\n')
         del genes
 
     genes = genes2
     del genes2
 
     fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
-    print 'Store genes at: %s' % fn
+    print('Store genes at: %s' % fn)
     for g in genes:
         g.to_sparse()
-    cPickle.dump((genes, inserted), open(fn, 'w'), -1)
+    pickle.dump((genes, inserted), open(fn, 'w'), -1)
 
     ### subsample transcripts if neccessary 
-    print 'Subsample genes ...'
+    print('Subsample genes ...')
     for i in range(genes.shape[0]):
         if len(genes[i].transcripts) > max_num_isoforms:
-            print 'Subsample for gene %i from %i transcripts.' % (i, len(genes[i].transcripts))
-            for r_idx in sorted(random.sample(range(len(genes[i].transcripts)), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
+            print('Subsample for gene %i from %i transcripts.' % (i, len(genes[i].transcripts)))
+            for r_idx in sorted(random.sample(list(range(len(genes[i].transcripts))), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
                 del genes[i].transcripts[r_idx]
                 del genes[i].exons[r_idx]
             genes[i].start = min(genes[i].start, genes[i].exons[0][:, 0].min())
             genes[i].stop = max(genes[i].stop, genes[i].exons[-1][:, 1].max())
             genes.splicegraph = Splicegraph(genes[i])
-    print '... done\n'
+    print('... done\n')
 
     fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms_subsampled.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
-    print 'Store subsampled genes at: %s' % fn
-    cPickle.dump((genes, inserted), open(fn, 'w'), -1)       
+    print('Store subsampled genes at: %s' % fn)
+    pickle.dump((genes, inserted), open(fn, 'w'), -1)       
 
 
 def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
@@ -211,11 +211,11 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     appended = False
     for i in range(len(merge_list)):
         ### load gene structure from sample i
-        print 'Loading %s ...' % merge_list[i]
-        (genes, inserted) = cPickle.load(open(merge_list[i], 'r'))
+        print('Loading %s ...' % merge_list[i])
+        (genes, inserted) = pickle.load(open(merge_list[i], 'r'))
         for g in genes:
             g.from_sparse()
-        print '... done (%i / %i)' % (i + 1, len(merge_list))
+        print('... done (%i / %i)' % (i + 1, len(merge_list)))
 
         ### sort genes by name
         name_list = sp.array([x.name for x in genes])
@@ -244,12 +244,12 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
 
         ### iterate over current genes
         g_idx = 0
-        print 'Processing ...'
+        print('Processing ...')
         for j in range(genes.shape[0]):
             if j % 100 == 0:
-                print '.',
+                print('.', end=' ')
                 if j % 1000 == 0:
-                    print '%i/%i' % (j, genes.shape[0])
+                    print('%i/%i' % (j, genes.shape[0]))
             g_idx_ = g_idx
             while (g_idx <= genes2.shape[0] and genes2[g_idx].name < genes[j].name):
                 g_idx += 1
@@ -272,7 +272,7 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
                 s2_len = genes2[g_idx].splicegraph.vertices.shape[1]
 
                 if s2_len > 10000:
-                    print 'Do not further merge into gene %i, has more than 10000 vertices!' % g_idx
+                    print('Do not further merge into gene %i, has more than 10000 vertices!' % g_idx)
                     ### still count edges that can be confirmed
                     tmp, c_idx, a_idx = intersect_rows(genes2[g_idx].splicegraph.vertices.T, genes[j].splicegraph.vertices.T, index=True)
                     if c_idx.shape[0] > 0:
@@ -307,7 +307,7 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
                         edgecnt2_ = edgecnt2
 
                     if not sp.all(splice1_.shape == splice2_.shape):
-                        print >> sys.stderr, 'ERROR: splice1_ and splice2_ differ in size!'
+                        print('ERROR: splice1_ and splice2_ differ in size!', file=sys.stderr)
                         sys.exit(1)
 
                     genes2[g_idx].splicegraph.edges = (splice1_ | splice2_)
@@ -323,7 +323,7 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
                 genes2 = sp.c_[genes2, genes[j]]
                 genes2[-1].edge_count = genes[j].splicegraph.edges
                 appended = True
-        print '... done\n'
+        print('... done\n')
         del genes
 
     genes = genes2.copy()
@@ -344,8 +344,8 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     s2_idx = sp.argsort([x.chr for x in genes[s1_idx]], kind='mergesort')
     genes = genes[s1_idx[s2_idx]]
 
-    print 'Store genes at: %s' % fn_out
-    cPickle.dump((genes, inserted), open(fn_out, 'w'), -1)
+    print('Store genes at: %s' % fn_out)
+    pickle.dump((genes, inserted), open(fn_out, 'w'), -1)
 
 
 def run_merge(CFG):
@@ -380,7 +380,7 @@ def run_merge(CFG):
                 levels = int(math.ceil(math.log(len(CFG['samples']), chunksize)))
                 level_files = dict()
                 for level in range(1, levels + 1):
-                    print 'merging files on level %i' % level
+                    print('merging files on level %i' % level)
                     if level == 1:
                         merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], x, prune_tag) for x in CFG['samples']])
                     else:
@@ -396,8 +396,8 @@ def run_merge(CFG):
                         if os.path.exists(fn):
                             continue
                         else:
-                            print 'submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + chunksize))
-                            chunk_idx = range(c_idx, min(len(merge_list), c_idx + chunksize))
+                            print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + chunksize)))
+                            chunk_idx = list(range(c_idx, min(len(merge_list), c_idx + chunksize)))
                             PAR['merge_list'] = merge_list[chunk_idx]
                             PAR['fn_out'] = fn
                             jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, CFG['options_rproc'], 40*60))
@@ -408,7 +408,7 @@ def run_merge(CFG):
                 jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000, CFG['options_rproc'], 40*60))
                 rp.rproc_wait(jobinfo, 30, 1.0, -1)
     else:
-        print 'File %s already exists!' % fn_out
+        print('File %s already exists!' % fn_out)
 
     ### generate validated version of splice graph
     #if CFG['validate_splicegraphs'] and not os.path.exists(fn_out_val):
@@ -432,4 +432,4 @@ def run_merge(CFG):
                 jobinfo = [rp.rproc('merge_genes_by_isoform', PAR, 10000, CFG['options_rproc'], 40*60)]
                 rp.rproc_wait(jobinfo, 30, 1.0, 1)
         else:
-            print 'File %s already exists!' % fn_out
+            print('File %s already exists!' % fn_out)

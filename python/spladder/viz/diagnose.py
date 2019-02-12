@@ -90,7 +90,7 @@ def count_histogram(counts, matrix, figtitle, filename, CFG):
     '''
 
     if CFG['verbose']:
-        print 'Plotting count distributions'
+        print('Plotting count distributions')
 
     ### generate 
     fig = plt.figure(figsize=(15, 10), dpi=300)

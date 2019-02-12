@@ -34,7 +34,7 @@ def gen_graphs(genes, CFG=None):
 
     # build splice graph for all genes 
     ##############################################################################%%
-    print >> CFG['fd_log'], 'Generating splice graph ...'
+    print('Generating splice graph ...', file=CFG['fd_log'])
     ### merge exons if possible / reduce graph
     ### originially implemented for ESTs, reduces complexity, 
     ### but removes alternative transcript starts and ends !
@@ -49,10 +49,10 @@ def gen_graphs(genes, CFG=None):
     for ix in range(genes.shape[0]):
         genes[ix].label_alt()
     if CFG['verbose']:
-        print >> CFG['fd_log'],'\nTotal genes:\t\t\t\t\t\t\t%d' % genes.shape[0]
-        print >> CFG['fd_log'],'Total genes with alternative isoforms:\t\t\t\t%d' % sp.sum([x.is_alt for x in genes])
-        print >> CFG['fd_log'],'Total genes alternatively spliced:\t\t\t\t%d' % sp.sum([x.is_alt_spliced for x in genes])
-        print >> CFG['fd_log'],'Total constitutively spliced:\t\t\t\t\t%d' % (genes.shape[0] - sp.sum([x.is_alt_spliced for x in genes]))
+        print('\nTotal genes:\t\t\t\t\t\t\t%d' % genes.shape[0], file=CFG['fd_log'])
+        print('Total genes with alternative isoforms:\t\t\t\t%d' % sp.sum([x.is_alt for x in genes]), file=CFG['fd_log'])
+        print('Total genes alternatively spliced:\t\t\t\t%d' % sp.sum([x.is_alt_spliced for x in genes]), file=CFG['fd_log'])
+        print('Total constitutively spliced:\t\t\t\t\t%d' % (genes.shape[0] - sp.sum([x.is_alt_spliced for x in genes])), file=CFG['fd_log'])
 
     ### update terminals, start terminals in row 1, end terminals in row 2
     for i in range(genes.shape[0]):
@@ -62,7 +62,7 @@ def gen_graphs(genes, CFG=None):
     for i in range(genes.shape[0]):
         genes[i].start = min([x.min() for x in genes[i].exons])
         genes[i].stop = max([x.max() for x in genes[i].exons])
-    print >> CFG['fd_log'], '...done.\n'
+    print('...done.\n', file=CFG['fd_log'])
 
     ### sort genes by positions
     s_idx = sp.argsort([x.stop for x in genes])
@@ -76,27 +76,27 @@ def gen_graphs(genes, CFG=None):
     # the genes structure (only in case we want to augment the graph)
     ##############################################################################%%
     if (CFG['do_insert_cassette_exons'] or CFG['do_insert_intron_retentions'] or CFG['do_insert_intron_edges']): 
-        print >> CFG['fd_log'], 'Loading introns from file ...'
+        print('Loading introns from file ...', file=CFG['fd_log'])
         introns = get_intron_list(genes, CFG)
-        print >> CFG['fd_log'], '...done.\n'
+        print('...done.\n', file=CFG['fd_log'])
 
         ### clean intron list
         ### remove all introns that overlap more than one gene on the same strand
-        print >> CFG['fd_log'], 'Filtering introns for ambiguity ...'
+        print('Filtering introns for ambiguity ...', file=CFG['fd_log'])
         introns = filter_introns(introns, genes, CFG)
-        print >> CFG['fd_log'], '...done.\n'
+        print('...done.\n', file=CFG['fd_log'])
 
         ### check feasibility
         ### TODO when working exclusively with sparse bam, we need to skip this ...
-        print >> CFG['fd_log'], 'Testing for infeasible genes ...'
+        print('Testing for infeasible genes ...', file=CFG['fd_log'])
         introns = make_introns_feasible(introns, genes, CFG)
-        print >> CFG['fd_log'], '...done.\n'
+        print('...done.\n', file=CFG['fd_log'])
 
         for i in range(genes.shape[0]):
             genes[i].introns = introns[i, :]
 
     if CFG['do_insert_cassette_exons']:
-        print >> CFG['fd_log'], 'Inserting cassette exons ...'
+        print('Inserting cassette exons ...', file=CFG['fd_log'])
         CFG_ = dict()
         if 'cassette_exon' in CFG and 'read_filter' in CFG['cassette_exon']:
             CFG_['read_filter'] = CFG['read_filter'].copy()
@@ -105,10 +105,10 @@ def gen_graphs(genes, CFG=None):
         inserted['cassette_exon'] = inserted_
         for key in CFG_:
             CFG[key] = CFG_[key].copy()
-        print >> CFG['fd_log'], '\n... inserted %i casette exons ....\n... done.\n' % inserted['cassette_exon']
+        print('\n... inserted %i casette exons ....\n... done.\n' % inserted['cassette_exon'], file=CFG['fd_log'])
 
     if CFG['do_insert_intron_retentions']:
-        print >> CFG['fd_log'], 'Inserting intron retentions ...'
+        print('Inserting intron retentions ...', file=CFG['fd_log'])
         CFG_ = dict()
         if 'read_filter' in CFG['intron_retention']:
             CFG_['read_filter'] = CFG['read_filter'].copy()
@@ -117,15 +117,15 @@ def gen_graphs(genes, CFG=None):
         inserted['intron_retention'] = inserted_
         for key in CFG_:
             CFG[key] = CFG_[key].copy()
-        print >> CFG['fd_log'], '\n... inserted %i new intron retentions ...\n...done.\n' % inserted['intron_retention']
+        print('\n... inserted %i new intron retentions ...\n...done.\n' % inserted['intron_retention'], file=CFG['fd_log'])
 
     if CFG['do_remove_short_exons']:
-        print >> CFG['fd_log'], 'Removing short exons ...'
+        print('Removing short exons ...', file=CFG['fd_log'])
         genes = remove_short_exons(genes, CFG)
         for i in range(genes.shape[0]):
             if sp.any(genes[i].splicegraph.vertices[:, 1] - genes[i].splicegraph.vertices[:, 0] < CFG['remove_exons']['min_exon_len_remove']):
-                print >> sys.stderr, 'WARNING: could not remove all short exons'
-        print >> CFG['fd_log'], '... done.\n'
+                print('WARNING: could not remove all short exons', file=sys.stderr)
+        print('... done.\n', file=CFG['fd_log'])
 
 
     # test all exons if the reading frame is larger if exon is skipped
@@ -146,7 +146,7 @@ def gen_graphs(genes, CFG=None):
         for i in range(genes.shape[0]):
             genes[i].introns = introns[i, :]
 
-        print >> CFG['fd_log'], 'Inserting new intron edges ...'
+        print('Inserting new intron edges ...', file=CFG['fd_log'])
         chrms = sp.array([x.chr for x in genes], dtype='str')
         for chr_idx in sp.unique(chrms):
             genes_before = genes[sp.where(chrms == chr_idx)[0]]
@@ -156,7 +156,7 @@ def gen_graphs(genes, CFG=None):
             if not 'insert_intron_iterations' in CFG:
                 CFG['insert_intron_iterations'] = 5
             for iter in range(1, CFG['insert_intron_iterations'] + 1):
-                print >> CFG['fd_log'], '... chr %s - iteration %i/%i\n' % (chr_idx, iter, CFG['insert_intron_iterations'])
+                print('... chr %s - iteration %i/%i\n' % (chr_idx, iter, CFG['insert_intron_iterations']), file=CFG['fd_log'])
 
                 genes_mod, inserted_ = insert_intron_edges(tmp_genes, CFG)
 
@@ -167,7 +167,7 @@ def gen_graphs(genes, CFG=None):
                 inserted['new_terminal_exon'] += inserted_['new_terminal_exon']
 
                 # in case any exon was inserted that already existed, we merge them into one exon 
-                print >> CFG['fd_log'], '... removing duplicate exons ...'
+                print('... removing duplicate exons ...', file=CFG['fd_log'])
                 genes_mod = merge_duplicate_exons(genes_mod, CFG)
 
                 # inserted
@@ -176,19 +176,19 @@ def gen_graphs(genes, CFG=None):
                 tmp_genes = genes_mod
             chrms = sp.array([x.chr for x in genes], dtype='str')
             genes[sp.where(chrms == chr_idx)[0]] = copy.deepcopy(genes_mod)
-        print >> CFG['fd_log'], '... done.\n'
+        print('... done.\n', file=CFG['fd_log'])
 
-    print >> CFG['fd_log'], 'Re-labeleling new alternative genes ...'
+    print('Re-labeleling new alternative genes ...', file=CFG['fd_log'])
     for ix in range(genes.shape[0]):
         genes[ix].start = genes[ix].splicegraph.vertices.min()
         genes[ix].stop = genes[ix].splicegraph.vertices.max()
         genes[ix].label_alt()
-    print >> CFG['fd_log'], '... done.\n'
+    print('... done.\n', file=CFG['fd_log'])
 
     ### print summary to log file
-    print >> CFG['fd_log'], 'Inserted:'
+    print('Inserted:', file=CFG['fd_log'])
     for fn in inserted:
-        print >> CFG['fd_log'], '\t%s:\t%i' % (fn, inserted[fn])
+        print('\t%s:\t%i' % (fn, inserted[fn]), file=CFG['fd_log'])
 
     if CFG['fd_log'] != sys.stdout:
         CFG['fd_log'].close()

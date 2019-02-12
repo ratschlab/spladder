@@ -1,5 +1,5 @@
 import sys
-import cPickle
+import pickle
 import os
 import pysam
 import scipy as sp
@@ -41,11 +41,11 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
     from .classes.splicegraph import Splicegraph
 
     if CFG is not None and CFG['verbose']:
-        print >> sys.stderr, "Parsing annotation from %s ..." % infile
+        print("Parsing annotation from %s ..." % infile, file=sys.stderr)
     
     ### initial run to get the transcript to gene mapping
     if CFG is not None and CFG['verbose']:
-        print >> sys.stderr, "... init structure"
+        print("... init structure", file=sys.stderr)
 
     genes = dict()
     chrms = []
@@ -122,9 +122,9 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
 
                 warn_infer_count += 1
                 if warn_infer_count < 5:
-                    print >> sys.stderr, 'WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (infile, trans_id)
+                    print('WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (infile, trans_id), file=sys.stderr)
                 elif warn_infer_count == 5:
-                    print >> sys.stderr, 'WARNING: too many warnings for inferred tags'
+                    print('WARNING: too many warnings for inferred tags', file=sys.stderr)
                     
                 genes[gene_id] = Gene(name=gene_id, start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
                 t_idx = len(genes[gene_id].transcripts)
@@ -134,7 +134,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
 
     ### post-process in case we have inferred genes
     if warn_infer_count >= 5:
-        print >> sys.stderr, '\nWARNING: a total of %i cases had no gene level information annotated - information has been inferred from tags' % warn_infer_count
+        print('\nWARNING: a total of %i cases had no gene level information annotated - information has been inferred from tags' % warn_infer_count, file=sys.stderr)
     if inferred_genes:
         for gene in genes:
             if len(genes[gene].exons) == 0:
@@ -153,16 +153,16 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
     genes = check_annotation(CFG, genes)
 
     if CFG is not None and CFG['verbose']:
-        print >> sys.stderr, "... done"
+        print("... done", file=sys.stderr)
 
     if outfile is not None:
         if CFG is not None and CFG['verbose']:
-            print >> sys.stderr, "Storing gene structure in %s ..." % outfile
+            print("Storing gene structure in %s ..." % outfile, file=sys.stderr)
 
-        cPickle.dump(genes, open(outfile, 'w'), -1)
+        pickle.dump(genes, open(outfile, 'w'), -1)
 
         if CFG is not None and CFG['verbose']:
-            print >> sys.stderr, "... done"
+            print("... done", file=sys.stderr)
 
     return (genes, CFG)
 
@@ -193,11 +193,11 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
     from .classes.splicegraph import Splicegraph
 
     if CFG is not None and CFG['verbose']:
-        print >> sys.stderr, "Parsing annotation from %s ..." % infile
+        print("Parsing annotation from %s ..." % infile, file=sys.stderr)
     
     ### initial run to get the transcript to gene mapping
     if CFG is not None and CFG['verbose']:
-        print >> sys.stderr, "... init structure"
+        print("... init structure", file=sys.stderr)
 
     trans2gene = dict() ### dict with: keys = transcript IDs, values = gene IDs
     genes = dict()
@@ -278,16 +278,16 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
     genes = check_annotation(CFG, genes)
 
     if CFG is not None and CFG['verbose']:
-        print >> sys.stderr, "... done"
+        print("... done", file=sys.stderr)
 
     if outfile is not None:
         if CFG is not None and CFG['verbose']:
-            print >> sys.stderr, "Storing gene structure in %s ..." % outfile
+            print("Storing gene structure in %s ..." % outfile, file=sys.stderr)
 
-        cPickle.dump(genes, open(outfile, 'w'), -1)
+        pickle.dump(genes, open(outfile, 'w'), -1)
 
         if CFG is not None and CFG['verbose']:
-            print >> sys.stderr, "... done"
+            print("... done", file=sys.stderr)
 
     return (genes, CFG)
 
@@ -326,7 +326,7 @@ def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
                 IN = h5py.File(re.sub(r'.bam$', '', fn_bams[i]) + '.conf_%i' % conf + '.filt.hdf5', 'r')
                 
                 strands = ['+', '-']
-                for k in IN.keys():
+                for k in list(IN.keys()):
                     if not k.endswith('_reads_shp'):
                         continue
                     chrm = re.sub(r'_reads_shp$', '', k)
@@ -375,7 +375,7 @@ def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
 def check_annotation(CFG, genes):
     
     if CFG['verbose']:
-        print '\n... checking annotation'
+        print('\n... checking annotation')
 
     ### check whether genes have no exons annotated
     rm_ids = []
@@ -383,8 +383,8 @@ def check_annotation(CFG, genes):
         if len(gene.exons) == 0:
             rm_ids.append(gene.name)
     if len(rm_ids) > 0:
-        print >> sys.stderr, 'WARNING: removing %i genes from given annotation that had no exons annotated:' % len(rm_ids)
-        print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_no_exons')
+        print('WARNING: removing %i genes from given annotation that had no exons annotated:' % len(rm_ids), file=sys.stderr)
+        print('list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_no_exons'), file=sys.stderr)
         sp.savetxt(CFG['anno_fname'] + '.genes_excluded_no_exons', rm_ids, fmt='%s', delimiter='\t')
         gene_names = sp.array([x.name for x in genes], dtype='str')
         k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
@@ -405,8 +405,8 @@ def check_annotation(CFG, genes):
                         rm_ids.append(genes[i].name)
         if len(rm_ids) > 0:
             rm_ids = sp.unique(rm_ids)
-            print >> sys.stderr, 'WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0]
-            print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_gene_overlap')
+            print('WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0], file=sys.stderr)
+            print('list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_gene_overlap'), file=sys.stderr)
             sp.savetxt(CFG['anno_fname'] + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
             gene_names = sp.array([x.name for x in genes], dtype='str')
             k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
@@ -429,8 +429,8 @@ def check_annotation(CFG, genes):
                 rm_ids.extend(exon_map[exon])
         if len(rm_ids) > 0:
             rm_ids = sp.unique(rm_ids)
-            print >> sys.stderr, 'WARNING: removing %i genes from given annotation that share exact exon coordinates:' % rm_ids.shape[0]
-            print >> sys.stderr, 'list of excluded exons written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_shared')
+            print('WARNING: removing %i genes from given annotation that share exact exon coordinates:' % rm_ids.shape[0], file=sys.stderr)
+            print('list of excluded exons written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_shared'), file=sys.stderr)
             sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
             gene_names = sp.array([x.name for x in genes], dtype='str')
             k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
@@ -446,8 +446,8 @@ def check_annotation(CFG, genes):
                         rm_ids.append(g.name)
         if len(rm_ids) > 0:
             rm_ids = sp.unique(rm_ids)
-            print >> sys.stderr, 'WARNING: removing %i genes from given annotation that have at least one transcript with overlapping exons.' % rm_ids.shape[0]
-            print >> sys.stderr, 'list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_overlap')
+            print('WARNING: removing %i genes from given annotation that have at least one transcript with overlapping exons.' % rm_ids.shape[0], file=sys.stderr)
+            print('list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_overlap'), file=sys.stderr)
             sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
             gene_names = sp.array([x.name for x in genes], dtype='str')
             k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
@@ -455,7 +455,7 @@ def check_annotation(CFG, genes):
 
     ### do we have any genes left?
     if genes.shape[0] == 0:
-        print >> sys.stderr, '\nERROR: there are no valid genes left in the input. Please verify correctnes of input annotation.\n'
+        print('\nERROR: there are no valid genes left in the input. Please verify correctnes of input annotation.\n', file=sys.stderr)
         sys.exit(1)
 
     return genes

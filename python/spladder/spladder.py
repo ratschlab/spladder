@@ -14,7 +14,7 @@
 import sys
 import os
 import scipy as sp
-import cPickle
+import pickle
 import h5py
 
 from . import settings
@@ -127,7 +127,7 @@ def spladder(argv):
     if not 'spladder_infile' in CFG and not os.path.exists(fn_out_merge):
         ### iterate over files, if merge strategy is single
         if CFG['merge_strategy'] in ['single', 'merge_graphs']:
-            idxs = range(len(CFG['samples']))
+            idxs = list(range(len(CFG['samples'])))
         else:
             idxs = [0]
         
@@ -151,13 +151,13 @@ def spladder(argv):
                 elif CFG['anno_fname'].split('.')[-1].lower() in ['gtf']:
                     (genes, CFG) = init.init_genes_gtf(CFG['anno_fname'], CFG, CFG['anno_fname'] + '.pickle')
                 else:
-                    print >> sys.stderr, 'ERROR: Unknown annotation format. File needs to end in gtf or gff/gff3\nCurrent file: %s' % CFG['anno_fname']
+                    print('ERROR: Unknown annotation format. File needs to end in gtf or gff/gff3\nCurrent file: %s' % CFG['anno_fname'], file=sys.stderr)
                     sys.exit(1)
             CFG['anno_fname'] += '.pickle'
 
         ### add anotation contigs into lookup table
         if not 'genes' in CFG:
-            genes = cPickle.load(open(CFG['anno_fname'], 'r'))
+            genes = pickle.load(open(CFG['anno_fname'], 'r'))
         else:
             genes = CFG['genes']
         CFG = init.append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), CFG)
@@ -199,7 +199,7 @@ def spladder(argv):
                             OUT.create_dataset(name=(chrm + '_introns_p'), data=tmp[3], compression='gzip')
                     OUT.close()
                 elif CFG['verbose']:
-                    print >> sys.stdout, 'Filtered sparse BAM representation for %s already exists.' % bfn
+                    print('Filtered sparse BAM representation for %s already exists.' % bfn, file=sys.stdout)
 
         ### build individual graphs
         for idx in idxs:
@@ -221,7 +221,7 @@ def spladder(argv):
                 fn_out = re.sub('.pickle$', '_with_isoforms.pickle', fn_out)
     
             if os.path.exists(fn_out):
-                print >> sys.stdout, '%s - All result files already exist.' % fn_out
+                print('%s - All result files already exist.' % fn_out, file=sys.stdout)
             else:
                 if CFG['rproc']:
                     jobinfo.append(rp.rproc('spladder_core', CFG, 15000, CFG['options_rproc'], 60*60))
@@ -243,9 +243,9 @@ def spladder(argv):
             run_merge(CFG)
 
     if not 'spladder_infile' in CFG and CFG['merge_strategy'] == 'merge_graphs' and CFG['validate_splicegraphs'] and not os.path.exists(fn_out_merge_val):
-        (genes, inserted) = cPickle.load(open(fn_out_merge, 'r'))
+        (genes, inserted) = pickle.load(open(fn_out_merge, 'r'))
         genes = filter_by_edgecount(genes, CFG)
-        cPickle.dump((genes, inserted), open(fn_out_merge_val, 'w'), -1)
+        pickle.dump((genes, inserted), open(fn_out_merge_val, 'w'), -1)
         del genes
 
     ### convert input BAMs to sparse arrays - unfiltered case
@@ -283,10 +283,10 @@ def spladder(argv):
                         OUT.create_dataset(name=(chrm + '_introns_p'), data=tmp[3], compression='gzip')
                 OUT.close()
             elif CFG['verbose']:
-                print >> sys.stdout, 'Sparse BAM representation for %s already exists.' % bfn
+                print('Sparse BAM representation for %s already exists.' % bfn, file=sys.stdout)
 
     if CFG['merge_strategy'] == 'single' or CFG['quantification_mode'] == 'collect':
-        idxs = range(len(CFG['samples']))
+        idxs = list(range(len(CFG['samples'])))
     else:
         idxs = [0]
 

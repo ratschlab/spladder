@@ -50,7 +50,7 @@ def post_process_event_struct(events, CFG):
         e.exons2 = sort_rows(e.exons2) 
 
     ### remove all events that have 0-length introns
-    print '\nRemove 0-length intron events'
+    print('\nRemove 0-length intron events')
     is_valid = sp.array([_.get_intron_lens().min() > 0 for _ in events], dtype='bool')
     events = events[is_valid]
    
@@ -58,14 +58,14 @@ def post_process_event_struct(events, CFG):
     events = sort_events_full(events, CFG) 
     
     ### make events unique by strain
-    print '\nMake %s events unique by strain' % events[0].event_type
+    print('\nMake %s events unique by strain' % events[0].event_type)
     events = make_unique_by_strain(events)
 
     ### sort events by event coordinates
     events = sort_events_by_event(events, CFG) 
     
     ### make events unique by event
-    print '\nMake %s events unique by event' % events[0].event_type
+    print('\nMake %s events unique by event' % events[0].event_type)
     events = make_unique_by_event(events)
 
     ### count detected strains
@@ -82,9 +82,9 @@ def make_unique_by_strain(event_list):
     rm_idx = []
     for i in range(1, event_list.shape[0]):
         if i % 1000 == 0:
-            print '.',
+            print('.', end=' ')
             if i % 10000 == 0:
-                print '%i' % i
+                print('%i' % i)
 
         old_coords = event_list[i-1].get_coords(trafo=True)
         curr_coords = event_list[i].get_coords(trafo=True) 
@@ -113,7 +113,7 @@ def make_unique_by_strain(event_list):
                     event_list[i].gene_name = sp.r_[event_list[i-1].gene_name, [event_list[i].gene_name[0]]]
             rm_idx.append(i - 1)
 
-    print 'events dropped: %i' % len(rm_idx)
+    print('events dropped: %i' % len(rm_idx))
     keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0]), rm_idx))[0]
     event_list = event_list[keep_idx]
 
@@ -130,9 +130,9 @@ def make_unique_by_event(event_list):
     last_kept = 0
     for i in range(1, event_list.shape[0]):
         if i % 1000 == 0:
-            print '.',
+            print('.', end=' ')
             if i % 10000 == 0:
-                print '%i' % i
+                print('%i' % i)
         
         old_coords = event_list[last_kept].get_inner_coords(trafo=True)
         curr_coords = event_list[i].get_inner_coords(trafo=True) 
@@ -166,7 +166,7 @@ def make_unique_by_event(event_list):
         else:
             last_kept = i
 
-    print 'events dropped: %i' % len(rm_idx)
+    print('events dropped: %i' % len(rm_idx))
     keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0]), rm_idx))[0]
     event_list = event_list[keep_idx]
 
@@ -215,7 +215,7 @@ def curate_alt_prime(event_list, CFG):
         keep_idx = sp.where(~sp.in1d(sp.arange(event_list.shape[0]), rm_idx))[0]
         event_list = event_list[keep_idx]
 
-    print 'Corrected %i events' % corr_count
-    print 'Removed %i events' % len(rm_idx)
+    print('Corrected %i events' % corr_count)
+    print('Removed %i events' % len(rm_idx))
 
     return event_list

@@ -7,7 +7,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
-import cPickle
+import pickle
 import pdb
 
 from . import settings
@@ -157,7 +157,7 @@ def spladder_viz():
                 testdir = dirname
             else:
                 testdir = os.path.join(dirname, 'testing_%s_vs_%s' % (labels[0], labels[1]))
-            SETUP = cPickle.load(open(os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (CFG['confidence_level'], event_type)), 'r'))
+            SETUP = pickle.load(open(os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (CFG['confidence_level'], event_type)), 'r'))
 
             ### get strains to plot
             idx1 = sp.where(sp.in1d(SETUP[0], SETUP[6]['conditionA']))[0]
@@ -183,7 +183,7 @@ def spladder_viz():
         ### gather information about the gene we plot
         gene = load_genes(CFG, idx=[gid[0]])[0]
         if CFG['verbose']:
-            print 'plotting information for gene %s' % gene.name
+            print('plotting information for gene %s' % gene.name)
         gene.from_sparse()
 
         ### event to plot is specified with the gene id list
@@ -342,7 +342,7 @@ def _plot_splicegraph(gene, fig, axes, gs):
 
 def _plot_segments(CFG, gid, fig, axes, gs, options, seg_sample_idx=None):
 
-    print 'get segment counts'
+    print('get segment counts')
     (segments, edges, edge_idx, strains) = get_seg_counts(CFG, gid[0])
     seg_sample_idx = None
     if len(CFG['strains']) > 0:
@@ -350,7 +350,7 @@ def _plot_segments(CFG, gid, fig, axes, gs, options, seg_sample_idx=None):
         for group in CFG['strains']:
             seg_sample_idx.append(sp.where(sp.in1d(strains, group))[0])
     axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
-    print 'plot segment counts'
+    print('plot segment counts')
     if identity() == 'matlab':
         cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='F')
     else:

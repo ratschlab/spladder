@@ -1,6 +1,6 @@
 import scipy as sp
 import scipy.io as scio
-import cPickle
+import pickle
 import h5py
 import sys
 import os
@@ -279,7 +279,7 @@ def quantify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
             if seg_diff.shape[0] == 0:
                 seg_diff = sp.setdiff1d(segs_exon21, segs_exon11)
         else:
-            print >> sys.stderr, "ERROR: both exons differ in alt prime event in verify_alt_prime"
+            print("ERROR: both exons differ in alt prime event in verify_alt_prime", file=sys.stderr)
             sys.exit(1)
 
         # exon_diff_cov
@@ -394,14 +394,14 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     ### get indices of confident events
     if CFG['is_matlab']:
         conf_idx = IN['conf_idx'][:].astype('int') - 1
-        if 'filter_idx' in IN.keys():
+        if 'filter_idx' in list(IN.keys()):
             event_idx = IN['filter_idx'][:].astype('int')
         else:
             event_idx = conf_idx.copy()
         event_features = IN['event_features'][:]
     else:
         conf_idx = IN['conf_idx'][:].astype('int')
-        if 'filter_idx' in IN.keys():
+        if 'filter_idx' in list(IN.keys()):
             event_idx = IN['filter_idx'][:].astype('int')
         else:
             event_idx = conf_idx.copy()
@@ -497,7 +497,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     ### get counts for exon segments
     if CFG['use_exon_counts']:
         if CFG['verbose']:
-            print 'Collecting exon segment expression values'
+            print('Collecting exon segment expression values')
         if CFG['is_matlab']:
             for f, ff in enumerate(fidx0e):
                 cov[0][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][conf_idx, :] * (pos0e[f][1, conf_idx] - pos0e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
@@ -515,7 +515,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
 
     ### get counts for introns
     if CFG['verbose']:
-        print 'Collecting intron confirmation values'
+        print('Collecting intron confirmation values')
 
 
     ### get gene index
@@ -604,7 +604,7 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
         genes = scio.loadmat(fn_merge, struct_as_record=False)['genes'][0, :]
         fn_count = fn_merge.replace('mat', 'count.mat')
     else:
-        genes = cPickle.load(open(fn_merge_val, 'r'))[0]
+        genes = pickle.load(open(fn_merge_val, 'r'))[0]
         fn_count = fn_merge.replace('pickle', 'count.hdf5')
 
     ### load count index data from hdf5
@@ -691,7 +691,7 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
     counts = counts[:, :, old_idx]
 
     if out_fn is not None:
-        cPickle.dump((ev, counts), open(out_fn, 'w'))
+        pickle.dump((ev, counts), open(out_fn, 'w'))
 
     return (ev, counts)
 
@@ -699,7 +699,7 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
 def get_event_ids(IN, event_type, event_idx, CFG):
 
     if CFG['verbose']:
-        print 'Constructing event IDs'
+        print('Constructing event IDs')
     
     if CFG['is_matlab']:
         gene_idx = IN['gene_idx'][:].astype('int') - 1

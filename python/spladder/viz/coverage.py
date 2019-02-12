@@ -36,11 +36,11 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
     for f_i, fn in enumerate(files):
         if fn.lower().endswith('bam'):
             if verbose:
-                print >> sys.stdout, "reading bam %i of %i" % (f_i + 1, len(files))  
+                print("reading bam %i of %i" % (f_i + 1, len(files)), file=sys.stdout)  
             try:
                 infile = pysam.Samfile(str(fn), "rb")
             except ValueError:
-                print >> sys.stderr, 'Could not load file %s - skipping' % fn
+                print('Could not load file %s - skipping' % fn, file=sys.stderr)
                 continue
             c_len = stop - start + 1
 
@@ -75,7 +75,7 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
             try:
                 infile = sp.load(str(fn))
             except:
-                print >> sys.stderr, 'Could not load file %s - skipping' % fn
+                print('Could not load file %s - skipping' % fn, file=sys.stderr)
                 continue
             c_len = stop - start + 1
             bam_reads = spsp.coo_matrix((infile[chr_name + '_reads_dat'], (infile[chr_name + '_reads_row'], infile[chr_name + '_reads_col'])), shape=infile[chr_name + '_reads_shp'], dtype='uint32').tocsc()
@@ -266,7 +266,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
         if intron_cov:
             intron_counts = intron_counts[col_idx]
         if intron_cnt:
-            print >> sys.stderr, 'ERROR: column subsetting is currently not implemented for intron edges'
+            print('ERROR: column subsetting is currently not implemented for intron edges', file=sys.stderr)
             sys.exit(1)
 
     ### bin counts according to options
@@ -277,14 +277,14 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
         if col_idx is not None:
             counts_x = sp.arange(col_idx.shape[0])
         else:
-            counts_x = range(start, stop + 1)
+            counts_x = list(range(start, stop + 1))
     else:
         if verbose:
-            print >> sys.stdout, '... binning counts ...'
+            print('... binning counts ...', file=sys.stdout)
         bin_counts = sp.zeros((bins,))
         bin_intron_counts = sp.zeros((bins, ))
         binsize = int(sp.ceil(float(counts.shape[0]) / bins))
-        for ii, i in enumerate(xrange(0, counts.shape[0], binsize)):
+        for ii, i in enumerate(range(0, counts.shape[0], binsize)):
             bin_counts[ii] = sp.sum(counts[i:min(i + binsize, counts.shape[0] - 1)]) / binsize
             if intron_cov:
                 bin_intron_counts[ii] = sp.sum(intron_counts[i:min(i + binsize, intron_counts.shape[0] - 1)]) / binsize
@@ -379,7 +379,7 @@ def add_intron_patch(ax, start, stop, cnt):
              (Path.CURVE3, (start, 0)), \
              (Path.CLOSEPOLY, (start, 0)), ]
 
-    codes, verts = zip(*pdata)
+    codes, verts = list(zip(*pdata))
     path = mpath.Path(verts, codes)
     patch = mpatches.PathPatch(path, facecolor='g', alpha=0.5)
     ax.add_patch(patch)
