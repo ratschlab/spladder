@@ -17,11 +17,7 @@ def _compare_hdf5(expected, actual):
             for l in expected[k].keys():
                 assert sp.all(expected[k][l][:] == actual[k][l][:])
         else:
-            try:
-                assert sp.all(expected[k][:] == actual[k][:])
-            except:
-                import pdb
-                pdb.set_trace()
+            assert sp.all(expected[k][:] == actual[k][:])
 
 
 def _assert_files_equal(expected_path, actual_path):
@@ -38,19 +34,19 @@ def _assert_files_equal(expected_path, actual_path):
             if expected_path.endswith('.hdf5'):
                 _compare_hdf5(e, a)
             else:
-                assert e.read() == a.read()
+                assert e.read() == a.read(), 'actual and expected content differ!\nactual path: %s\nexpected path: %s\n' % (expected_path, actual_path)
 
 
-def _check_files(event_type, result_dir, out_dir):
+def _check_files(result_dir, out_dir, prefix):
     files = []
     for event_type in ['exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime']:
-        files.append('merge_graphs_{}_C3.confirmed.pickle'.format(event_type))
-        files.append('merge_graphs_{}_C3.counts.hdf5'.format(event_type))
-        files.append('merge_graphs_{}_C3.pickle'.format(event_type))
-        if os.path.exists(os.path.join(result_dir, 'merge_graphs_{}_C3.confirmed.gff3'.format(event_type))):
-            files.append('merge_graphs_{}_C3.confirmed.gff3'.format(event_type))
-        if os.path.exists(os.path.join(result_dir, 'merge_graphs_{}_C3.confirmed.txt.gz'.format(event_type))):
-            files.append('merge_graphs_{}_C3.confirmed.txt.gz'.format(event_type))
+        files.append('{}_{}_C3.confirmed.pickle'.format(prefix, event_type))
+        files.append('{}_{}_C3.counts.hdf5'.format(prefix, event_type))
+        files.append('{}_{}_C3.pickle'.format(prefix, event_type))
+        if os.path.exists(os.path.join(result_dir, '{}_{}_C3.confirmed.gff3'.format(prefix, event_type))):
+            files.append('{}_{}_C3.confirmed.gff3'.format(prefix, event_type))
+        if os.path.exists(os.path.join(result_dir, '{}_{}_C3.confirmed.txt.gz'.format(prefix, event_type))):
+            files.append('{}_{}_C3.confirmed.txt.gz'.format(prefix, event_type))
 
     for fname in files:
         _assert_files_equal(
@@ -62,8 +58,6 @@ def _check_files(event_type, result_dir, out_dir):
     ['new', 'pos'],
     ['new', 'neg']
 ])
-
-
 def test_end_to_end_merge(test_id, case, tmpdir):
     data_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'data')
     result_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'results_merged_{}'.format(case))
@@ -81,8 +75,12 @@ def test_end_to_end_merge(test_id, case, tmpdir):
     spladder.main(my_args)
 
     ### check that files are identical
-    _check_files(event_type, result_dir, out_dir) 
+    _check_files(result_dir, out_dir, prefix='merge_graphs') 
 
+@pytest.mark.parametrize("test_id,case", [
+    ['new', 'pos'],
+    ['new', 'neg']
+])
 def test_end_to_end_single(test_id, case, tmpdir):
     data_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'data')
     result_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'results_single_{}'.format(case))
@@ -92,13 +90,14 @@ def test_end_to_end_single(test_id, case, tmpdir):
     my_args = ['spladder',
                '-a', os.path.join(data_dir, 'annotation_{}.gtf'.format(case)),
                '-o', out_dir,
-               '-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
-               '--merge_strat', 'merge_graphs',
+               '-b', os.path.join(data_dir, 'align', '{}_1.bam'.format(case)),
+               '--merge_strat', 'single',
                '-T', 'y',
                '-n', '15']
+               #'-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
 
     spladder.main(my_args)
 
     ### check that files are identical
-    _check_files(event_type, result_dir, out_dir) 
+    _check_files(result_dir, out_dir, prefix='{}_1'.format(case)) 
 
