@@ -104,7 +104,7 @@ class Gene:
                     term_alt_idx.append(i)
       
         ### further only consider exons that are neither init_alt nor term_alt
-        take_idx = sp.where(~sp.in1d(list(range(num_exons)), [init_alt_idx, term_alt_idx]))[0]
+        take_idx = sp.where(~sp.in1d(sp.arange(num_exons), [init_alt_idx, term_alt_idx]))[0]
         if take_idx.shape[0] > 0:
             vertices = self.splicegraph.vertices[:, take_idx]
             edges = self.splicegraph.edges[take_idx, :][:, take_idx]

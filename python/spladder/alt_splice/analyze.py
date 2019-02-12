@@ -107,7 +107,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                     if CFG['merge_strategy'] == 'single':
                         (events_all, counts) = verify_all_events(events_all, sample_idx, CFG['bam_fnames'], event_type, CFG)
                     else:
-                        (events_all, counts) = verify_all_events(events_all, list(range(len(CFG['strains']))), CFG['bam_fnames'], event_type, CFG)
+                        (events_all, counts) = verify_all_events(events_all, sp.arange(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
                     verified = sp.array([x.verified for x in events_all], dtype='bool')
                     for ev in events_all:
                         ev.verified = []

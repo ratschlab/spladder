@@ -61,10 +61,10 @@ def remove_short_exons(genes, CFG):
                         short_exon_skipped += 1
             j += 1
       
-        keep_idx = sp.where(~sp.in1d(sp.array(list(range(genes[i].splicegraph.vertices.shape[1]))), exons_remove_idx))[0]
+        keep_idx = sp.where(~sp.in1d(sp.array(sp.arange(genes[i].splicegraph.vertices.shape[1])), exons_remove_idx))[0]
         genes[i].splicegraph.subset(keep_idx)
     
-    keep_idx = sp.where(~sp.in1d(list(range(len(genes[i]))), rm_idx))[0]
+    keep_idx = sp.where(~sp.in1d(sp.arange(len(genes[i])), rm_idx))[0]
     genes = genes[keep_idx]
 
     if CFG['verbose']:
@@ -108,7 +108,7 @@ def reduce_splice_graph(genes):
         for ix1 in range(vertices.shape[1] - 1):
             for ix2 in range(1, vertices.shape[1]):
                 if edges[ix1, ix2] == 1:
-                    intron_loc.extend(list(range(vertices[1, ix1], vertices[0, ix2])))
+                    intron_loc.extend(sp.arange(vertices[1, ix1], vertices[0, ix2]))
         intron_loc = sp.unique(intron_loc)
         
         ### if one or two vertices (one or no edge) exist 
@@ -125,7 +125,7 @@ def reduce_splice_graph(genes):
                         if (vertices[0, exon_idx] <= vertices[0, test_exon_idx]) and (vertices[1, exon_idx] >= vertices[1, test_exon_idx]):
       
                              ### keep longer exon
-                             new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
+                             new_index = sp.r_[sp.arange(test_exon_idx), sp.arange(test_exon_idx + 1, vertices.shape[1])]
                              vertices = vertices[:, new_index]
                   
                              changed = True
@@ -160,12 +160,12 @@ def reduce_splice_graph(genes):
                             ###              <--- test_exon ---->           <---- test_exon ---->>>>>>>>>>>>
                             if ((vertices[1, exon_idx] >= vertices[0, test_exon_idx]) and (vertices[0, exon_idx] <= vertices[0, test_exon_idx])) or \
                                ((vertices[1, test_exon_idx] >= vertices[0, exon_idx]) and (vertices[0, test_exon_idx] <= vertices[0, exon_idx])) and \
-                               (sp.sum(sp.in1d(list(range(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), max(vertices[1, exon_idx], vertices[1, test_exon_idx]))), intron_loc)) == 0):
+                               (sp.sum(sp.in1d(sp.arange(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
       
                                 ### merge exons if they overlap and they do not span any intronic position
                                 vertices[0, exon_idx] = min(vertices[0, exon_idx], vertices[0, test_exon_idx])
                                 vertices[1, exon_idx] = max(vertices[1, exon_idx], vertices[1, test_exon_idx])
-                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
+                                new_index = sp.r_[sp.arange(test_exon_idx), sp.arange(test_exon_idx + 1, vertices.shape[1])]
                               
                                 vertices = vertices[:, new_index]
                                 edges = edges[new_index, :][:, new_index] # no need to combine any adges, as both exons have a degree of 0
@@ -179,11 +179,11 @@ def reduce_splice_graph(genes):
                             ###   ----- exon -----<
                             ###   --- test_exon --<
                             if (vertices[1, exon_idx] == vertices[1, test_exon_idx]) and \
-                               (sp.sum(sp.in1d(list(range(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), vertices[1, exon_idx])), intron_loc)) == 0):
+                               (sp.sum(sp.in1d(sp.arange(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), vertices[1, exon_idx]), intron_loc)) == 0):
                                 
                                 ### merge exons if they share the same right boundary and do not span intronic positions
                                 vertices[0, exon_idx] = min(vertices[0, exon_idx], vertices[0, test_exon_idx])
-                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
+                                new_index = sp.r_[sp.arange(test_exon_idx), sp.arange(test_exon_idx + 1, vertices.shape[1])]
                               
                                 vertices = vertices[:, new_index]
                                 edges[exon_idx, :] = edges[exon_idx, :] | edges[test_exon_idx, :]
@@ -199,11 +199,11 @@ def reduce_splice_graph(genes):
                             ###   >---- exon ------
                             ###   >-- test_exon ---
                             if (vertices[0, exon_idx] == vertices[0, test_exon_idx]) and \
-                               (sp.sum(sp.in1d(list(range(vertices[0, exon_idx], max(vertices[1, exon_idx], vertices[1, test_exon_idx]))), intron_loc)) == 0):
+                               (sp.sum(sp.in1d(sp.arange(vertices[0, exon_idx], max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
                                 
                                 ### merge exons if they share the same left boundary and do not span intronic positions
                                 vertices[1, exon_idx] = max(vertices[1, exon_idx], vertices[1, test_exon_idx])
-                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
+                                new_index = sp.r_[sp.arange(test_exon_idx), sp.arange(test_exon_idx + 1, vertices.shape[1])]
                               
                                 vertices = vertices[:, new_index]
                                 edges[exon_idx, :] = edges[exon_idx, :] | edges[test_exon_idx, :]
@@ -221,7 +221,7 @@ def reduce_splice_graph(genes):
                             if (vertices[0, exon_idx] == vertices[0, test_exon_idx]) and (vertices[1, exon_idx] == vertices[1, test_exon_idx]):
                               
                                 ### collapse identical exons into one node
-                                new_index = sp.r_[list(range(test_exon_idx)), list(range(test_exon_idx + 1, vertices.shape[1]))]
+                                new_index = sp.r_[sp.arange(test_exon_idx), sp.arange(test_exon_idx + 1, vertices.shape[1])]
                               
                                 vertices = vertices[:, new_index]
                                 edges[exon_idx, :] = edges[exon_idx, :] | edges[test_exon_idx, :]

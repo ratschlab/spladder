@@ -326,7 +326,7 @@ def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
                 IN = h5py.File(re.sub(r'.bam$', '', fn_bams[i]) + '.conf_%i' % conf + '.filt.hdf5', 'r')
                 
                 strands = ['+', '-']
-                for k in list(IN.keys()):
+                for k in IN:
                     if not k.endswith('_reads_shp'):
                         continue
                     chrm = re.sub(r'_reads_shp$', '', k)
