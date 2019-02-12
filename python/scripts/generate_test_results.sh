@@ -2,7 +2,7 @@
 
 set -e
 
-testname="new"
+testname="basic"
 
 datadir=tests/testcase_${testname}/data
 

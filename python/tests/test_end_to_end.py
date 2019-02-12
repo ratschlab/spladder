@@ -55,8 +55,8 @@ def _check_files(result_dir, out_dir, prefix):
         )
 
 @pytest.mark.parametrize("test_id,case", [
-    ['new', 'pos'],
-    ['new', 'neg']
+    ['basic', 'pos'],
+    ['basic', 'neg']
 ])
 def test_end_to_end_merge(test_id, case, tmpdir):
     data_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'data')
@@ -78,8 +78,8 @@ def test_end_to_end_merge(test_id, case, tmpdir):
     _check_files(result_dir, out_dir, prefix='merge_graphs') 
 
 @pytest.mark.parametrize("test_id,case", [
-    ['new', 'pos'],
-    ['new', 'neg']
+    ['basic', 'pos'],
+    ['basic', 'neg']
 ])
 def test_end_to_end_single(test_id, case, tmpdir):
     data_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'data')

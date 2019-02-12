@@ -2,7 +2,7 @@
 
 set -e
 
-testname='testcase_new'
+testname='testcase_basic'
 
 test_data_dir=../tests/${testname}/data
 mkdir -p $test_data_dir
