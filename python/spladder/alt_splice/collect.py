@@ -107,7 +107,7 @@ def collect_events(CFG):
 
             if os.path.exists(genes_fnames):
                 print('Loading gene structure from %s ...' % genes_fnames)
-                (genes, inserted) = pickle.load(open(genes_fnames, 'r'))
+                (genes, inserted) = pickle.load(open(genes_fnames, 'rb'))
                 print('... done.')
                 
                 if not 'chrm_lookup' in CFG:
@@ -375,7 +375,7 @@ def collect_events(CFG):
 
                 ### store intron retentions
                 print('saving intron retentions to %s' % fn_out_ir)
-                pickle.dump(events_all, open(fn_out_ir, 'w'), -1)
+                pickle.dump(events_all, open(fn_out_ir, 'wb'), -1)
             else:
                 print('%s already exists' % fn_out_ir)
         
@@ -391,7 +391,7 @@ def collect_events(CFG):
 
                 ### store exon skip events
                 print('saving exon skips to %s' % fn_out_es)
-                pickle.dump(events_all, open(fn_out_es, 'w'), -1)
+                pickle.dump(events_all, open(fn_out_es, 'wb'), -1)
             else:
                 print('%s already exists' % fn_out_es)
 
@@ -407,7 +407,7 @@ def collect_events(CFG):
 
                 ### store multiple exon skip events
                 print('saving multiple exon skips to %s' % fn_out_mes)
-                pickle.dump(events_all, open(fn_out_mes, 'w'), -1)
+                pickle.dump(events_all, open(fn_out_mes, 'wb'), -1)
             else:
                 print('%s already exists' % fn_out_mes)
 
@@ -429,7 +429,7 @@ def collect_events(CFG):
 
                 ### store alt 5 prime events
                 print('saving alt 5 prime events to %s' % fn_out_a5)
-                pickle.dump(events_all, open(fn_out_a5, 'w'), -1)
+                pickle.dump(events_all, open(fn_out_a5, 'wb'), -1)
             else:
                 print('%s already exists' % fn_out_a5)
 
@@ -450,7 +450,7 @@ def collect_events(CFG):
 
                 ### store alt 3 prime events
                 print('saving alt 3 prime events to %s' % fn_out_a3)
-                pickle.dump(events_all, open(fn_out_a3, 'w'), -1)
+                pickle.dump(events_all, open(fn_out_a3, 'wb'), -1)
             else:
                 print('%s already exists' % fn_out_a3)
 
@@ -466,7 +466,7 @@ def collect_events(CFG):
 
                 ### store multiple exon skip events
                 print('saving mutually exclusive exons to %s' % fn_out_mex)
-                pickle.dump(events_all, open(fn_out_mex, 'w'), -1)
+                pickle.dump(events_all, open(fn_out_mex, 'wb'), -1)
             else:
                 print('%s already exists' % fn_out_mex)
 

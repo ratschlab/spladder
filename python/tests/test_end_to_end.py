@@ -4,6 +4,7 @@ import os
 import scipy as sp
 
 import pytest
+import pickle
 
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
@@ -26,6 +27,8 @@ def _assert_files_equal(expected_path, actual_path):
             return gzip.open(f, 'rb')
         elif f.endswith('.hdf5'):
             return h5py.File(f, 'r')
+        elif f.endswith('.pickle'):
+            return open(f, 'rb')
         else:
             return open(f, 'r')
 
@@ -33,9 +36,38 @@ def _assert_files_equal(expected_path, actual_path):
         with o(actual_path) as a:
             if expected_path.endswith('.hdf5'):
                 _compare_hdf5(e, a)
+            elif expected_path.endswith('.pickle'):
+                ta = pickle.load(a, encoding='latin1')
+                te = pickle.load(e, encoding='latin1')
+                if len(ta) == 0 or isinstance(ta[0], sp.int64):
+                    assert sp.all(ta == te)
+                else:
+                    assert sp.all([_compare_gene(_[0], _[1]) for _ in zip(ta, te)])
             else:
                 assert e.read() == a.read(), 'actual and expected content differ!\nactual path: %s\nexpected path: %s\n' % (expected_path, actual_path)
 
+def _codeUTF8(s):
+    return s.view(sp.chararray).encode('utf-8')
+
+def _compare_gene(a, b):
+    if sp.issubdtype(a.strain.dtype, sp.str_):
+        _astrain = _codeUTF8(a.strain)
+    else:
+        _astrain = a.strain
+    if sp.issubdtype(b.strain.dtype, sp.str_):
+        _bstrain = _codeUTF8(b.strain)
+    else:
+        _bstrain = b.strain
+
+    return ((a.chr == b.chr) &
+            (a.strand == b.strand) &
+            (sp.all(a.exons1 == b.exons1)) &
+            (sp.all(a.exons2 == b.exons2)) &
+            (sp.all(_astrain == _bstrain)) &
+            (a.event_type == b.event_type) &
+            (a.gene_idx == b.gene_idx) &
+            (a.id == b.id) &
+            (a.num_detected == b.num_detected))
 
 def _check_files(result_dir, out_dir, prefix):
     files = []

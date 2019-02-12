@@ -66,7 +66,7 @@ def filter_introns(introns, genes, CFG):
             k_idx = []
             cnt_tot += introns[i, si].shape[0]
             for j in range(introns[i, si].shape[0]):
-                if len(gene_trees[(s, genes[i].chr)].search(introns[i, si][j, 0] - offset, introns[i, si][j, 1] + offset)) == 1:
+                if len(gene_trees[(s, genes[i].chr)].overlap(introns[i, si][j, 0] - offset, introns[i, si][j, 1] + offset)) == 1:
                     k_idx.append(j)
             if len(k_idx) < introns[i, si].shape[0]:
                 cnt_rem += (introns[i, si].shape[0] - len(k_idx))
@@ -164,4 +164,5 @@ def log_progress(idx, total, bins=50):
         sys.stdout.write('\r[' + ('#' * progress) + (' ' * (bins - progress)) + ']' + ' %i / %i (%.0f%%)' % (idx, total, float(idx) / max(total, 1) * 100) + ' - took %i sec (ETA: %i sec)' % (time1 - TIME0, int((bins - progress) * float(time1 - TIME0) / max(progress, 1))))
         sys.stdout.flush()
 
-
+def codeUTF8(s):
+    return s.view(sp.chararray).encode('utf-8')

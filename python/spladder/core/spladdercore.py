@@ -14,14 +14,14 @@ def spladder_core(CFG):
         print('Augmenting splice graphs.', file=sys.stdout)
         print('=========================', file=sys.stdout)
         if not 'genes' in CFG:
-            genes = pickle.load(open(CFG['anno_fname'], 'r'))
+            genes = pickle.load(open(CFG['anno_fname'], 'rb'), encoding='latin1')
         else:
             genes = CFG['genes']
 
         genes = gen_graphs(genes, CFG)
 
         print('Saving genes to %s' % (CFG['out_fname']))
-        pickle.dump(genes, open(CFG['out_fname'], 'w'), -1)
+        pickle.dump(genes, open(CFG['out_fname'], 'wb'), -1)
 
         genes_loaded = True
     else:
@@ -34,7 +34,7 @@ def spladder_core(CFG):
         if not os.path.exists(CFG['out_fname']):
             ### load genes if not present yet
             if not genes_loaded:
-                genes = pickle.load(open(load_fn), 'r')
+                genes = pickle.load(open(load_fn), 'rb')
 
             ### make splice graphs unique
             genes = uniquify_splicegraph(genes)
@@ -46,7 +46,7 @@ def spladder_core(CFG):
 
             ### save pruned genes
             print('saving genes to %s' % (CFG['out_fname']))
-            pickle.dump(genes, open(CFG['out_fname'], 'w'), -1)
+            pickle.dump(genes, open(CFG['out_fname'], 'wb'), -1)
 
             genes_loaded = True;
         else:
@@ -61,7 +61,7 @@ def spladder_core(CFG):
         if not os.path.exists(CFG['out_fname']):
             ### load genes if not present yet
             if not genes_loaded:
-                genes = pickle.load(open(load_fn))
+                genes = pickle.load(open(load_fn, 'rb'))
 
             ### generate isoforms
             print('Generating all isoforms')
@@ -74,7 +74,7 @@ def spladder_core(CFG):
 
             ### save splicing graph with isoforms
             print('\tSaving genes to %s' % CFG['out_fname'])
-            pickle.dump((genes, genes_unsimplified), open(CFG['out_fname'], 'w'), -1)
+            pickle.dump((genes, genes_unsimplified), open(CFG['out_fname'], 'wb'), -1)
         else:
             print('Generating all isoforms already done')
     else:
