@@ -21,12 +21,15 @@ from . import settings
 from .core.spladdercore import spladder_core
 from .alt_splice.collect import collect_events
 from .alt_splice.analyze import analyze_events
-from .count import count_graph_coverage_wrapper
+from .count import count_graph_coverage_wrapper, collect_single_quantification_results
 from .editgraph import filter_by_edgecount
 from . import init
 from . import rproc as rp
 from .merge import run_merge
 from .helpers import *
+
+from .classes.gene import Gene
+sys.modules['modules.classe.gene'] = Gene
 
 def parse_options(argv):
 
@@ -81,7 +84,8 @@ def parse_options(argv):
     experimental.add_option('', '--ignore_mismatches', dest='ignore_mismatches', metavar='y|n', help='ignore mismatches - does not filter by edit operations - does not require NM in BAM [n]', default='n')
     experimental.add_option('', '--output_struc', dest='output_struc', metavar='y|n', help='outputs events in structured splicing syntax similar to astalavista [n]', default='n')
     experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
-    experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicilty set when -T is set [n]', default='n')
+    experimental.add_option('', '--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, collect, all [all]', default='all')
+    experimental.add_option('-q', '--quantify_graph', dest='quantify_graph', metavar='y|n', help='quantify graph - implicitly on when -T is set [n]', default='n')
     parser.add_option_group(required)
     parser.add_option_group(input)
     parser.add_option_group(output)
@@ -281,7 +285,7 @@ def spladder(argv):
             elif CFG['verbose']:
                 print >> sys.stdout, 'Sparse BAM representation for %s already exists.' % bfn
 
-    if CFG['merge_strategy'] == 'single':
+    if CFG['merge_strategy'] == 'single' or CFG['quantification_mode'] == 'collect':
         idxs = range(len(CFG['samples']))
     else:
         idxs = [0]
@@ -291,8 +295,12 @@ def spladder(argv):
         if CFG['merge_strategy'] == 'single':
             fn_in_count = get_filename('fn_count_in', CFG, sample_idx=idx)
             fn_out_count = get_filename('fn_count_out', CFG, sample_idx=idx)
-        else:
+        elif CFG['merge_strategy'] == 'merge_graphs' and CFG['quantification_mode'] == 'single':
             fn_in_count = get_filename('fn_count_in', CFG)
+            fn_out_count = get_filename('fn_count_out', CFG, sample_idx=0)
+        else:
+            if CFG['quantification_mode'] != 'collect':
+                fn_in_count = get_filename('fn_count_in', CFG)
             fn_out_count = get_filename('fn_count_out', CFG)
 
         ### count segment graph
@@ -300,6 +308,10 @@ def spladder(argv):
             if not os.path.exists(fn_out_count):
                 if CFG['merge_strategy'] == 'single':
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG, sample_idx=idx)
+                elif CFG['merge_strategy'] == 'merge_graphs' and CFG['quantification_mode'] == 'single':
+                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG, qmode='single')
+                elif CFG['merge_strategy'] == 'merge_graphs' and CFG['quantification_mode'] == 'collect':
+                    collect_single_quantification_results(fn_out_count, idxs, CFG)
                 else:
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, CFG)
 
