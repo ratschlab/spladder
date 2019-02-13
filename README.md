@@ -7,32 +7,29 @@ software takes a given annotation and RNA-Seq read alignments in standardized
 formats, transforms the annotation into a splicing graph representation,
 augments the splicing graph with additional information extracted from the read data,
 extracts alternative splicing events from the graph and quantifies the events
-based on the alignment data, The quantified events can then be used for
+based on the alignment data. The quantified events can then be used for
 differential analysis.
 
-Implementation and Dependencies
--------------------------------
+Dependencies and Installation
+-----------------------------
+SplAdder relies on Python3 and requires only few standard packages that can be
+installed using a Python package manager of your choice (e.g.,
+[conda](http://conda.pydata.org/)):
 
-Currently, there are two implementations available, which produce the same
-results on the same input data. The development of SplAdder was started in
-Matlab and has been moved to Python in the past two years, mostly for the reason
-of having fewer dependencies. Both implementations are available in this
-repository und the respective directories.
-
-Note, that the current Matlab implementation makes extensive use of the HDF5
-storage format and uses low level access to the files. Unfortunately, this
-functionality is not available in Octave, therefor requiring a working Matlab
-installation. In case the compatibility issues between Matlab and Octave
-regarding low level HDF5 should get resolved in the near future, SplAdder might
-be able to run also under Octave.
-
-However, future development is planned to focus on the Python branch. The Python
-version of the code has been developed in python 2.7 and requires the following
-packages:
 * scipy (version >= 0.12 tested)
 * pysam (version >= 0.7 required)
 * h5py (version >= 2.2.0 tested)
+* intervaltree (version >= 3.0.1 tested)
 * matplotlib (for the visualization code only; version >= 1.4.0 tested)
+
+SplAdder will not run without these packages installed. 
+
+Matlab version
+--------------
+Previous versions of SplAdder were provided for both Matlab and Python. Since 2019, the
+Matlab code is no longer provided as part of the SplAdder package. If you are
+interested in the Matlab code, please download the initial release. 
+
 
 Installation
 ------------
@@ -54,9 +51,9 @@ Documentation
 -------------
 
 This README provides a quick walk-through of a basic SplAdder run. For further
-reading, please consider the file DOCUMENTATION in the matlab or python
-directory. The following description is generic for both implementations.
+reading, please consider the [SplAdder Wiki](https://github.com/ratschlab/spladder/wiki).
 
+After installation, the command `spladder` becomes available in your path.
 Invoking SplAdder without any parameters will print a description of the
 command line interface to the screen.
 
