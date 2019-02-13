@@ -66,7 +66,7 @@ def filter_introns(introns, genes, CFG):
             k_idx = []
             cnt_tot += introns[i, si].shape[0]
             for j in range(introns[i, si].shape[0]):
-                if len(gene_trees[(s, genes[i].chr)].search(introns[i, si][j, 0] - offset, introns[i, si][j, 1] + offset)) == 1:
+                if len(gene_trees[(s, genes[i].chr)].overlap(introns[i, si][j, 0] - offset, introns[i, si][j, 1] + offset)) == 1:
                     k_idx.append(j)
             if len(k_idx) < introns[i, si].shape[0]:
                 cnt_rem += (introns[i, si].shape[0] - len(k_idx))
