@@ -22,13 +22,6 @@ def default_settings():
         CFG['paths'].append('%s/utils' % SPLADDER_SRC_PATH)
         CFG['paths'].append('%s/alt_splice' % SPLADDER_SRC_PATH)
 
-    if 'SPLADDER_PATH' in os.environ:
-        CFG['paths'].append('%s/mex' % os.environ['SPLADDER_PATH'])
-    else:
-        #SPLADDER_SRC_PATH = fileparts(which('default_settings'))
-        SPLADDER_SRC_PATH = os.getcwd()
-        CFG['paths'].append('%s/../mex' % SPLADDER_SRC_PATH)
-    
     CFG['bam_fnames'] = []
     # TODO
     #if len(CFG['paths']) > 0:
@@ -71,9 +64,9 @@ def default_settings():
     CFG['merge_strategy'] = 'merge_graphs' ### alternatives are: merge_graphs, single, merge_all
     CFG['confidence_level'] = 3
     CFG['validate_splicegraphs'] = 0
-    CFG['same_genestruct_for_all_samples'] = 1
+    #CFG['same_genestruct_for_all_samples'] = 1
     CFG['curate_alt_prime_events'] = 1
-    CFG['replicate_idxs'] = [0]
+    #CFG['replicate_idxs'] = [0]
     CFG['verify_alt_events'] = 1
 
     ### settings for verifying exon skips
@@ -114,11 +107,6 @@ def default_settings():
 
     CFG['count_segment_graph'] = 0
 
-    ### set I/O and verbosity
-    CFG['verbose'] = 1
-    CFG['debug'] = 0
-    CFG['fd_log'] = 1
-
     CFG['sg_min_edge_count'] = 10
     CFG['no_reset_conf'] = 0
 
@@ -126,53 +114,16 @@ def default_settings():
     CFG['do_gen_isoforms'] = 0
     CFG['do_merge_all'] = 0
 
-    CFG['is_half_open'] = 1
-
-    CFG['run_as_analysis'] = 1
-    CFG['event_types'] = ['exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip']
-
-    CFG['read_length'] = 36
-    CFG['var_aware'] = 0
-    CFG['primary_only'] = False
-
-    CFG['rproc'] = 0
-    CFG['parallel'] = 1
-
-    CFG['bam_to_sparse'] = 0
-    CFG['ignore_mismatch_tag'] = False
-
     ### define which output files are written
-    CFG['output_txt'] = False
-    CFG['output_bed'] = False
-    CFG['output_struc'] = False
-    CFG['output_confirmed_gff3'] = True
-    CFG['output_confirmed_txt'] = True
-    CFG['output_confirmed_bed'] = False
-    CFG['output_confirmed_struc'] = False
     CFG['output_filtered_txt'] = False
-    CFG['output_confirmed_tcga'] = False
-    CFG['output_confirmed_icgc'] = True
-    CFG['compress_text'] = True
 
     ### settings for truncation detection mode
     CFG['detect_trunc'] = False
-    CFG['count_intron_cov'] = False
     CFG['min_truncation_cov'] = 5
 
     CFG['psi_min_reads'] = 10
-    CFG['diagnose_plots'] = False
-
-    CFG['filter_overlapping_genes'] = False
-    CFG['filter_overlapping_exons'] = False
-    CFG['filter_overlapping_transcripts'] = False
-
-    ### edge limit for detecting events from a graph, if a graph has
-    ### more edges, the gene will be ignored for event detection
-    CFG['detect_edge_limit'] = 500 #2000
-
     CFG['introns_unstranded'] = False
 
-    CFG['plot_transcripts'] = False
     CFG['plot_splicegraph'] = False
     CFG['plot_labels'] = ''
 
@@ -196,10 +147,9 @@ def parse_args(options, identity='main'):
     ref_tag = ''
     
     ### general options
-    if _check(options, 'verbose'):
-        CFG['verbose'] = (options.verbose == 'y')
-    if _check(options, 'debug'):
-        CFG['debug'] = (options.debug == 'y')
+    CFG['verbose'] = options.verbose
+    CFG['debug'] = options.debug
+
 
     CFG['event_types'] = options.event_types.strip(',').split(',')
 
@@ -219,51 +169,41 @@ def parse_args(options, identity='main'):
 
     ### options specific for main program
     if identity == 'main':
-        if _check(options, 'insert_ir'):
-            CFG['do_insert_intron_retentions'] = (options.insert_ir == 'y')
-        if _check(options, 'insert_es'):
-            CFG['do_insert_cassette_exons'] = (options.insert_es == 'y')
-        if _check(options, 'insert_ni'):
-            CFG['do_insert_intron_edges'] = (options.insert_ni == 'y')
-        if _check(options, 'remove_se'):
-            CFG['do_remove_short_exons'] = (options.remove_se == 'y')
-        if _check(options, 'infer_sg'):
-            CFG['do_infer_splice_graph'] = (options.infer_sg == 'y')
-        if _check(options, 'var_aware'):
-            CFG['var_aware'] = (options.var_aware == 'y')
-        if _check(options, 'primary_only'):
-            CFG['primary_only'] = (options.primary_only == 'y')
-        if _check(options, 'intron_cov'):
-            CFG['count_intron_cov'] = (options.intron_cov == 'y')
-        if _check(options, 'quantify_graph'):
-            CFG['count_segment_graph'] = (options.quantify_graph == 'y')
-        if _check(options, 'ignore_mismatches'):
-            CFG['ignore_mismatch_tag'] = (options.ignore_mismatches == 'y')
-        if _check(options, 'output_struc'):
-            CFG['output_struc'] = (options.output_struc == 'y')
-            CFG['output_confirmed_struc'] = (options.output_struc == 'y')
-        if _check(options, 'filter_overlap_genes'):
-            CFG['filter_overlapping_genes'] = (options.filter_overlap_genes == 'y')
-        if _check(options, 'compress_text'):
-            CFG['compress_text'] = (options.compress_text == 'y')
-        if _check(options, 'sparse_bam'):
-            CFG['bam_to_sparse'] = (options.sparse_bam == 'y')
+        CFG['do_insert_intron_retentions'] = options.insert_ir
+        CFG['do_insert_cassette_exons'] = options.insert_es
+        CFG['do_insert_intron_edges'] = options.insert_ni
+        CFG['do_remove_short_exons'] = options.remove_se
+        CFG['do_infer_splice_graph'] = options.infer_sg
+
+        CFG['var_aware'] = options.var_aware == 'y'
+        CFG['primary_only'] = options.primary_only
+        CFG['count_intron_cov'] = options.intron_cov
+        CFG['count_segment_graph'] = options.quantify_graph
+        CFG['ignore_mismatch_tag'] = options.ignore_mismatches
+        CFG['filter_overlapping_genes'] = options.filter_overlap_genes
+        CFG['filter_overlapping_exons'] = options.filter_overlap_exons
+        CFG['filter_overlapping_transcripts'] = options.filter_overlap_transcripts
+        CFG['output_txt'] = options.output_txt
+        CFG['output_confirmed_txt'] = options.output_confirmed_txt
+        CFG['output_gff3'] = options.output_gff3
+        CFG['output_confirmed_gff3'] = options.output_confirmed_gff3
+        CFG['output_bed'] = options.output_bed
+        CFG['output_confirmed_bed'] = options.output_confirmed_bed
+        CFG['output_struc'] = options.output_struc
+        CFG['output_confirmed_struc'] = options.output_confirmed_struc
+        CFG['output_confirmed_tcga'] = options.output_confirmed_tcga
+        CFG['output_confirmed_icgc'] = options.output_confirmed_icgc
+        CFG['compress_text'] = options.compress_text
+        CFG['bam_to_sparse'] = options.sparse_bam
 
         CFG['insert_intron_iterations'] = options.iterations
         if options.spladderfile != '-':
             CFG['spladder_infile'] = options.spladderfile
 
         ### settings for the alt splice part
-        if _check(options, 'same_genome'):
-            CFG['same_genestruct_for_all_samples'] = (options.same_genome == 'y')
-        if _check(options, 'curate_alt_prime'):
-            CFG['curate_alt_prime_events'] = (options.curate_alt_prime == 'y')
-        if _check(options, 'extract_as'):
-            CFG['run_as_analysis'] = (options.extract_as == 'y')
+        CFG['curate_alt_prime_events'] = options.curate_alt_prime
+        CFG['run_as_analysis'] = options.extract_as
         
-        if options.replicates != '-':
-            CFG['replicate_idxs'] = [int(x) for x in options.replicates.split(',')]
-
         ### open log file, if specified
         if options.logfile != '-':
             CFG['log_fname'] = options.logfile
@@ -295,15 +235,15 @@ def parse_args(options, identity='main'):
         else:
             CFG['anno_fname'] = options.annotation
         
-        if options.refstrain != '-':
-            CFG['reference_strain'] = options.refstrain
-            ref_tag = '%s:' % options.refstrain
+        #if options.refstrain != '-':
+        #    CFG['reference_strain'] = options.refstrain
+        #    ref_tag = '%s:' % options.refstrain
 
         CFG['quantification_mode'] = options.qmode
 
         ### rproc options
-        if _check(options, 'pyproc'):
-            CFG['rproc'] = (options.pyproc == 'y')
+        CFG['rproc'] = options.pyproc
+        if CFG['rproc']:
             CFG['options_rproc'] = dict()
             CFG['options_rproc']['mem_req_resubmit']  = [30000, 60000, 80000]
             CFG['options_rproc']['time_req_resubmit'] = [60*60, 80*60, 90*60]
@@ -313,27 +253,17 @@ def parse_args(options, identity='main'):
 
         CFG['detect_edge_limit'] = options.detect_edge_limit
 
-
     if identity in ['main', 'test']:
-        ### parallel processing
         CFG['parallel'] = options.parallel
-
         CFG['merge_strategy'] = options.merge
         CFG['read_length'] = options.readlen
 
     if identity in ['main', 'test', 'viz']:
         CFG['confidence_level'] = options.confidence
-
-        if _check(options, 'validate_sg'):
-            CFG['validate_splicegraphs'] = (options.validate_sg == 'y')
+        CFG['validate_splicegraphs'] = options.validate_sg
     
     if identity == 'viz':
         CFG['event_id'] = options.event_id
-
-        if _check(options, 'transcripts'):
-            CFG['plot_transcripts'] = (options.transcripts == 'y')
-        if _check(options, 'splicegraph'):
-            CFG['plot_splicegraph'] = (options.splicegraph == 'y')
 
         CFG['plot_labels'] = options.labels
 
@@ -362,8 +292,7 @@ def parse_args(options, identity='main'):
             CFG['cap_exp_outliers'] = (options.cap_exp_outliers == 'y')
         if _check(options, 'cap_outliers'):
             CFG['cap_outliers'] = (options.cap_outliers == 'y')
-        if _check(options, 'diagnose_plots'):
-            CFG['diagnose_plots'] = (options.diagnose_plots == 'y')
+        CFG['diagnose_plots'] = options.diagnose_plots
 
         if options.conditionA == '-':
             print('ERROR: At least one sample for condition A required', file=sys.stderr)
@@ -404,9 +333,12 @@ def parse_args(options, identity='main'):
                 CFG['strains'][-1].append('%s%s' % (ref_tag, CFG['samples'][-1][-1]))
             CFG['strains'][-1] = sp.array(CFG['strains'][-1])
     else:
+        if options.labels != '-':
+            options.labels = options.labels.split(',')
+            assert (len(options.labels) == len(CFG['bam_fnames'])), "Number of labels (%i given) and file names (%i given) needs to match!" % (len(options.labels), len(CFG['bam_fnames']))
         for i in range(len(CFG['bam_fnames'])):
-            if options.label != '-':
-                CFG['samples'].append('%s_%s' % (options.label, re.sub(r'(.bam|.hdf5)$', '', CFG['bam_fnames'][i].split('/')[-1])))
+            if options.labels != '-':
+                CFG['samples'].append('%s_%s' % (options.labels, re.sub(r'(.bam|.hdf5)$', '', CFG['bam_fnames'][i].split('/')[-1])))
             else:
                 CFG['samples'].append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', CFG['bam_fnames'][i].split('/')[-1]))
             CFG['strains'].append('%s%s' % (ref_tag, CFG['samples'][-1]))

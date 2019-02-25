@@ -100,8 +100,8 @@ def test_end_to_end_merge(test_id, case, tmpdir):
                '-a', os.path.join(data_dir, 'annotation_{}.gtf'.format(case)),
                '-o', out_dir,
                '-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
-               '--merge_strat', 'merge_graphs',
-               '-T', 'y',
+               '--merge-strat', 'merge_graphs',
+               '--extract-as',
                '-n', '15']
 
     spladder.main(my_args)
@@ -123,8 +123,8 @@ def test_end_to_end_single(test_id, case, tmpdir):
                '-a', os.path.join(data_dir, 'annotation_{}.gtf'.format(case)),
                '-o', out_dir,
                '-b', os.path.join(data_dir, 'align', '{}_1.bam'.format(case)),
-               '--merge_strat', 'single',
-               '-T', 'y',
+               '--merge-strat', 'single',
+               '--extract-as',
                '-n', '15']
                #'-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
 
