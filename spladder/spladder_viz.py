@@ -21,45 +21,42 @@ def parse_options(argv):
 
     """Parses options from the command line """
 
-    from optparse import OptionParser, OptionGroup
+    def _switch(s):
+        return not s.startswith('--no-')
 
-    parser = OptionParser()
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
     required = OptionGroup(parser, 'MANDATORY')
-    required.add_option('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', default='-')
-    optional = OptionGroup(parser, 'OPTIONAL')
-    optional.add_option('-b', '--bams', dest='bams', metavar='FILE1A,FILE2A:FILE1B,FILE2B,,...', help='alignment files in BAM format (comma separated list,colon separated groups)', default='-')
-    optional.add_option('-L', '--labels', dest='labels', metavar='LABEL_A,LABEL_B,...', help='group labels for alignment files groups (comma separated list)', default='')
-    optional.add_option('-g', '--gene_name', dest='gene_name', metavar='STR', help='gene_name to be plotted', default=None)
-    optional.add_option('-e', '--event_id', dest='event_id', metavar='STR', help='event to be plotted', default=None)
-    optional.add_option('--test-result', dest='test_result', metavar='INT', type='int', help='plot top k significant events from test', default=0)
-    optional.add_option('--test-labels', dest='test_labels', metavar='STR', type='str', help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
-    optional.add_option('-t', '--event_types', dest='event_types', metavar='EVENT1,EVENT2,...', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
-    optional.add_option('', '--testdir', dest='testdir', metavar='DIR', help='directory to testing output, if different from spladder outdir', default='-')
+    required.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', default='-')
+    optional = parser.add_argument_group('OPTIONAL')
+    optional.add_argument('-b', '--bams', dest='bams', metavar='FILE1A,FILE2A:FILE1B,FILE2B,,...', help='alignment files in BAM format (comma separated list,colon separated groups)', default='-')
+    optional.add_argument('-L', '--labels', dest='labels', metavar='LABEL_A,LABEL_B,...', help='group labels for alignment files groups (comma separated list)', default='')
+    optional.add_argument('-g', '--gene_name', dest='gene_name', metavar='STR', help='gene_name to be plotted', default=None)
+    optional.add_argument('-e', '--event_id', dest='event_id', metavar='STR', help='event to be plotted', default=None)
+    optional.add_argument('--test-result', dest='test_result', metavar='INT', type='int', help='plot top k significant events from test', default=0)
+    optional.add_argument('--test-labels', dest='test_labels', metavar='STR', type='str', help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
+    optional.add_argument('-t', '--event_types', dest='event_types', metavar='EVENT1,EVENT2,...', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
+    optional.add_argument('', '--testdir', dest='testdir', metavar='DIR', help='directory to testing output, if different from spladder outdir', default='-')
 
-    output = OptionGroup(parser, 'OUTPUT')
-    output.add_option('-m', '--mincount', dest='mincount', metavar='INT', type='int', help='minimum count of introns to be displayed in coverage plot [0]', default=0)
-    output.add_option('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
-    output.add_option('', '--zoom_x', dest='zoom_x', metavar='percent_left,percent_right', help='zoom x axis from percent_left to percent_right [0.0,1.0]', default='0.0,1.0')
-    output.add_option('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
+    output = parser.add_argument_group('OUTPUT')
+    output.add_argument('-m', '--mincount', dest='mincount', metavar='INT', type='int', help='minimum count of introns to be displayed in coverage plot [0]', default=0)
+    output.add_argument('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
+    output.add_argument('', '--zoom_x', dest='zoom_x', metavar='percent_left,percent_right', help='zoom x axis from percent_left to percent_right [0.0,1.0]', default='0.0,1.0')
+    output.add_argument('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
 
-    user = OptionGroup(parser, 'USER')
-    user.add_option('-u', '--user', dest='user', metavar='y|n', help='apply user mode (experimental) [off]', default='n')
-    user.add_option('-T', '--transcripts', dest='transcripts', metavar='y|n', help='plot annotated transcripts', default='n')
-    user.add_option('-s', '--splicegraph', dest='splicegraph', metavar='y|n', help='plot splicegraph structure', default='n')
+    user = parser.add_argument_group('USER')
+    user.add_argument('-u', '--user', dest='user', metavar='y|n', help='apply user mode (experimental) [off]', default='n')
+    user.add_argument('-T', '--transcripts', dest='transcripts', action='store_true', help='plot annotated transcripts', default=False)
+    user.add_argument('-s', '--splicegraph', dest='splicegraph', action='store_true', help='plot splicegraph structure', default=False)
 
-    general = OptionGroup(parser, 'GENERAL')
-    general.add_option('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
-    general.add_option('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
-    general.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
-    general.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
-    parser.add_option_group(required)
-    parser.add_option_group(optional)
-    parser.add_option_group(output)
-    parser.add_option_group(user)
-    parser.add_option_group(general)
+    general = parser.add_argument_group('GENERAL')
+    general.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
+    general.add_argument('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
+    general.add_argument('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
+    general.add_argument('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
 
-    (options, args) = parser.parse_args()
-    #options.event_types = options.event_types.strip(',').split(',')
+    options = parser.parse_args(argv[1:])
 
     if len(argv) < 2:
         parser.print_help()
