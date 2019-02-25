@@ -97,6 +97,7 @@ def test_end_to_end_merge(test_id, case, tmpdir):
     out_dir = str(tmpdir)
 
     my_args = ['spladder',
+               'build',
                '-a', os.path.join(data_dir, 'annotation_{}.gtf'.format(case)),
                '-o', out_dir,
                '-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
@@ -120,6 +121,7 @@ def test_end_to_end_single(test_id, case, tmpdir):
     out_dir = str(tmpdir)
 
     my_args = ['spladder',
+               'build',
                '-a', os.path.join(data_dir, 'annotation_{}.gtf'.format(case)),
                '-o', out_dir,
                '-b', os.path.join(data_dir, 'align', '{}_1.bam'.format(case)),

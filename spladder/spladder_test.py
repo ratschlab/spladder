@@ -31,60 +31,6 @@ class Dummy():
     """Dummy class to mimic matlab structs"""
     pass
 
-
-def parse_options(argv):
-
-    """Parses options from the command line """
-
-    from optparse import OptionParser, OptionGroup
-
-    parser = OptionParser()
-    required = OptionGroup(parser, 'MANDATORY')
-    required.add_option('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder output directory', default='-')
-    required.add_option('-a', '--conditionA', dest='conditionA', metavar='idA1,idA2,idA3,...', help='comma separated list of alignment files for condition A', default='-')
-    required.add_option('-b', '--conditionB', dest='conditionB', metavar='idB1,idB2,idB3,...', help='comma separated list of alignment files for condition B', default='-')
-    input = OptionGroup(parser, 'INPUT OPTIONS')
-    input.add_option('-n', '--readlen', dest='readlen', metavar='INT', type='int', help='read length [50]', default=50)
-    input.add_option('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
-    input.add_option('-t', '--event_types', dest='event_types', metavar='y|n', help='list of alternative splicing events to be tested [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
-    input.add_option('-M', '--merge_strat', dest='merge', metavar='<STRAT>', help='merge strategy, where <STRAT> is one of: merge_bams, merge_graphs, merge_all [merge_graphs]', default='merge_graphs')
-    input.add_option('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
-    input.add_option('-m', '--matlab', dest='matlab', metavar='y|n', help='input data was generated with matlab version [n]', default='n')
-    input.add_option('-s', '--subset_samples', dest='subset_samples', metavar='y|n', help='gene expression counting will be only done on the tested subset of samples [n]', default='n')
-    testing = OptionGroup(parser, 'TESTING OPTIONS')
-    testing.add_option('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
-    testing.add_option('-0', '--max_zero_frac', dest='max_0_frac', metavar='FLOAT', type='float', help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)
-    testing.add_option('-i', '--min_count', dest='min_count', metavar='INT', help='min read count sum over all samples for an event isoform to be tested [10]', default=10)
-    testing.add_option('--cap_outliers', dest='cap_outliers', metavar='y|n', help='replace splice outliers with a max value [n]', default='n')
-    testing.add_option('--cap_exp_outliers', dest='cap_exp_outliers', metavar='y|n', help='replace expression outliers with a max value [y]', default='y')
-    output = OptionGroup(parser, 'OUTPUT OPTIONS')
-    output.add_option('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
-    output.add_option('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
-    output.add_option('-D', '--diagnose_plots', dest='diagnose_plots', metavar='y|n', help='generate diagnose plots [n]', default='n')
-    output.add_option('--timestamp', dest='timestamp', metavar='y|n', help='add timestamp to output directory [n]', default='n')
-    output.add_option('--labelA', dest='labelA', metavar='STRING', help='label for condition A (used for output naming)', default='condA')
-    output.add_option('--labelB', dest='labelB', metavar='STRING', help='label for condition B (used for output naming)', default='condB')
-    output.add_option('--out-tag', dest='out_tag', metavar='STRING', help='additional tag to label out directory', default='-')
-    experimental = OptionGroup(parser, 'EXPERIMENTAL - BETA STATE')
-    experimental.add_option('', '--parallel', dest='parallel', metavar='<INT>', type='int', help='use multiple processors [1]', default=1)
-    experimental.add_option('', '--non_alt_norm', dest='non_alt_norm', metavar='y|n', help='only use non alternative exon segments for gene expression counting [n]', default='n')
-    experimental.add_option('', '--low_memory', dest='low_memory', metavar='y|n', help='use less memory at the cost of longer running time [n]', default='n')
-    parser.add_option_group(required)
-    parser.add_option_group(input)
-    parser.add_option_group(testing)
-    parser.add_option_group(output)
-    parser.add_option_group(experimental)
-
-    (options, args) = parser.parse_args()
-
-    if len(argv) < 2:
-        parser.print_help()
-        sys.exit(2)
-
-    options.parser = parser
-    return options
-
-
 def get_non_alt_seg_ids_matlab(gene):
 
     tmp = sp.ones((gene.segmentgraph[0, 2].shape[0],), dtype='bool')
@@ -692,10 +638,7 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx, r_idx=No
     return (pvals, cov_used, disp_raw_used, disp_adj_used)
 
 
-def main():
-
-    ### get command line options
-    options = parse_options(sys.argv)
+def spladder_test(options):
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='test')
@@ -1042,7 +985,4 @@ def main():
                 data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), m_all[ks_idx, :]]
             data_out = sp.r_[header[sp.newaxis, :], data_out]
             sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
-
-if __name__ == "__main__":
-    main()
 
