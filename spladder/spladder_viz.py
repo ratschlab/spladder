@@ -17,54 +17,6 @@ from .viz.genelets import *
 from .viz import axes as vax
 from .identity import *
 
-def parse_options(argv):
-
-    """Parses options from the command line """
-
-    def _switch(s):
-        return not s.startswith('--no-')
-
-    from argparse import ArgumentParser
-
-    parser = ArgumentParser()
-    required = OptionGroup(parser, 'MANDATORY')
-    required.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', default='-')
-    optional = parser.add_argument_group('OPTIONAL')
-    optional.add_argument('-b', '--bams', dest='bams', metavar='FILE1A,FILE2A:FILE1B,FILE2B,,...', help='alignment files in BAM format (comma separated list,colon separated groups)', default='-')
-    optional.add_argument('-L', '--labels', dest='labels', metavar='LABEL_A,LABEL_B,...', help='group labels for alignment files groups (comma separated list)', default='')
-    optional.add_argument('-g', '--gene_name', dest='gene_name', metavar='STR', help='gene_name to be plotted', default=None)
-    optional.add_argument('-e', '--event_id', dest='event_id', metavar='STR', help='event to be plotted', default=None)
-    optional.add_argument('--test-result', dest='test_result', metavar='INT', type='int', help='plot top k significant events from test', default=0)
-    optional.add_argument('--test-labels', dest='test_labels', metavar='STR', type='str', help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
-    optional.add_argument('-t', '--event_types', dest='event_types', metavar='EVENT1,EVENT2,...', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
-    optional.add_argument('', '--testdir', dest='testdir', metavar='DIR', help='directory to testing output, if different from spladder outdir', default='-')
-
-    output = parser.add_argument_group('OUTPUT')
-    output.add_argument('-m', '--mincount', dest='mincount', metavar='INT', type='int', help='minimum count of introns to be displayed in coverage plot [0]', default=0)
-    output.add_argument('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
-    output.add_argument('', '--zoom_x', dest='zoom_x', metavar='percent_left,percent_right', help='zoom x axis from percent_left to percent_right [0.0,1.0]', default='0.0,1.0')
-    output.add_argument('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
-
-    user = parser.add_argument_group('USER')
-    user.add_argument('-u', '--user', dest='user', metavar='y|n', help='apply user mode (experimental) [off]', default='n')
-    user.add_argument('-T', '--transcripts', dest='transcripts', action='store_true', help='plot annotated transcripts', default=False)
-    user.add_argument('-s', '--splicegraph', dest='splicegraph', action='store_true', help='plot splicegraph structure', default=False)
-
-    general = parser.add_argument_group('GENERAL')
-    general.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type='int', help='confidence level (0 lowest to 3 highest) [3]', default=3)
-    general.add_argument('-V', '--validate_sg', dest='validate_sg', metavar='y|n', help='validate splice graph [n]', default='n')
-    general.add_argument('-v', '--verbose', dest='verbose', metavar='y|n', help='verbosity', default='n')
-    general.add_argument('-d', '--debug', dest='debug', metavar='y|n', help='use debug mode [n]', default='n')
-
-    options = parser.parse_args(argv[1:])
-
-    if len(argv) < 2:
-        parser.print_help()
-        sys.exit(2)
-
-    options.parser = parser
-    return options
-
 
 def get_plot_len(CFG):
     """Identifies the number of rows we need in our plot"""
@@ -84,12 +36,9 @@ def _add_ax(fig, axes, gs):
     sharex = None if len(axes) == 0 else axes[0]
     axes.append(fig.add_subplot(gs[len(axes), 0], sharex=sharex))
 
-def spladder_viz():
+def spladder_viz(options):
 
     """Main visualization code"""
-
-    ### parse command line parameters
-    options = parse_options(sys.argv)
 
     ### parse parameters from options object
     CFG = settings.parse_args(options, identity='viz')
@@ -353,9 +302,4 @@ def _plot_segments(CFG, gid, fig, axes, gs, options, seg_sample_idx=None):
     else:
         cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
     axes[-1].set_title('Segment counts')
-
-
-
-if __name__ == "__main__":
-    spladder_viz()
 
