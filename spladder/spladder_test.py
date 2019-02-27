@@ -27,21 +27,6 @@ from .helpers import log_progress
 
 TIME0 = time.time()
 
-class Dummy():
-    """Dummy class to mimic matlab structs"""
-    pass
-
-def get_non_alt_seg_ids_matlab(gene):
-
-    tmp = sp.ones((gene.segmentgraph[0, 2].shape[0],), dtype='bool')
-    for i in range(gene.segmentgraph[0, 2].shape[0] - 1):
-        ### get index of last acceptor
-        idx = sp.where(gene.segmentgraph[0, 2][i, i + 1:])[0]
-        ### mask all segments between current segment and acceptor
-        if idx.shape[0] > 0:
-            tmp[i + 1:idx[-1] + i + 1] = 0
-
-    return sp.where(tmp)[0]
 
 def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 
@@ -49,12 +34,8 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         sys.stdout.write('Quantifying gene expression ...\n')
 
     ### load gene information
-    if CFG['is_matlab']:
-        genes = scio.loadmat(CFG['fname_genes'], struct_as_record=False)['genes'][0, :]
-        numgenes = len(genes)
-    else:
-        genes = pickle.load(open(CFG['fname_genes'], 'rb'))[0]
-        numgenes = genes.shape[0]
+    genes = pickle.load(open(CFG['fname_genes'], 'rb'))[0]
+    numgenes = genes.shape[0]
 
     ### open hdf5 file containing graph count information
     IN = h5py.File(CFG['fname_count_in'], 'r')
@@ -68,12 +49,8 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     gene_counts = sp.zeros((numgenes, strain_idx.shape[0]), dtype='float')
     gene_names = sp.array([x.name for x in genes], dtype='str')
 
-    if CFG['is_matlab']:
-        seg_lens = IN['seg_len'][:, 0]
-        gene_ids_segs = IN['gene_ids_segs'][0, :].astype('int') - 1
-    else:
-        seg_lens = IN['seg_len'][:]
-        gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
+    seg_lens = IN['seg_len'][:]
+    gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
 
     ### no longer assume that the gene_ids_segs are sorted by gene ID
     s_idx = sp.argsort(gene_ids_segs[:, 0], kind='mergesort')
@@ -87,40 +64,26 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
             log_progress(gidx, numgenes, 100)
 
         ### get idx of non alternative segments
-        if CFG['is_matlab']:
-            non_alt_idx = get_non_alt_seg_ids_matlab(genes[gidx])
-            seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph[0, 2].shape[0])
-            if len(seg_idx) == 0:
-                continue
-        else:
-            non_alt_idx = genes[gidx].get_non_alt_seg_ids()
-            seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
+        non_alt_idx = genes[gidx].get_non_alt_seg_ids()
+        seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
 
         gene_idx = gene_ids_segs[seg_idx]
         if len(gene_idx.shape) > 0:
             gene_idx = gene_idx[0]
 
-        if CFG['is_matlab']:
-            assert(IN['gene_names'][gene_idx] == genes[gidx].name)
-        else:
-            assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
+        assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
 
         if CFG['non_alt_norm']:
             seg_idx = seg_idx[non_alt_idx]
 
         ### compute gene expression as the read count over all non alternative segments
-        if CFG['is_matlab']:
-            #gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx], IN['seg_len'][seg_idx, 0]) / sp.sum(IN['seg_len'][seg_idx, 0])
-            gene_counts[gidx, :] = sp.dot(IN['segments'][:, seg_idx][strain_idx], seg_lens[seg_idx]) / CFG['read_length']
-            #seg_offset += genes[gidx].segmentgraph[0, 2].shape[0]
+        #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
+        if seg_idx.shape[0] > 1:
+            gene_counts[gidx, :] = sp.squeeze(sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx])) / CFG['read_length']
         else:
-            #gene_counts[gidx, :] = sp.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / sp.sum(IN['seg_len'][:][seg_idx])
-            if seg_idx.shape[0] > 1:
-                gene_counts[gidx, :] = sp.squeeze(sp.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx])) / CFG['read_length']
-            else:
-                gene_counts[gidx, :] = IN['segments'][seg_idx[0], :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
-            #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
+            gene_counts[gidx, :] = IN['segments'][seg_idx[0], :][strain_idx] * seg_lens[seg_idx] / CFG['read_length']
+        #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
 
     IN.close()
 
@@ -161,40 +124,7 @@ def get_size_factors(gene_counts, CFG):
 def re_quantify_events(CFG):
     """This is more a legacy function for testing that requantifies events on a given graph"""
 
-    ### load events
-    if CFG['is_matlab']:
-        if CFG['fname_events'].endswith('mat'):
-            try:
-                ev = scio.loadmat(CFG['fname_events'], struct_as_record=False)['events_all'][0, :]
-            except NotImplementedError:
-                print('The event file in matlab format is too big to be loaded with python correctly. Please use the script events_to_hdf5.m in the matlab/src part of SplAdder to convert your event file to HDF5 and use it here instead.', file=sys.stderr)
-                sys.exit(1)
-        else:
-            ev = []
-            IN = h5py.File(CFG['fname_events'], 'r', driver='core')
-            shp = IN['chr'].shape[0]
-            for i in range(shp):
-                if CFG['verbose']:
-                    sys.stderr.write('.')
-                    sys.stderr.flush()
-                    if (i + 1) % 100 == 0:
-                        sys.stderr.write('%i/%i\n' % (i + 1, shp + 1))
-                tmp = Dummy()
-                for k in IN:
-                    if IN[k].shape[0] == shp:
-                        exec('tmp.%s = IN[\'%s\'][%i]' % (k, k, i))
-                    elif IN[k].shape[1] == shp:
-                        exec('tmp.%s = IN[\'%s\'][:, %i]' % (k, k, i))
-                    elif IN[k].shape[2] == shp:
-                        exec('tmp.%s = IN[\'%s\'][:, :, %i]' % (k, k, i))
-                    if k == 'gene_idx':
-                        tmp.gene_idx = int(tmp.gene_idx[0])
-                ev.append(tmp)
-            IN.close()
-            ev = sp.array(ev, dtype='object')
-    else:
-        ev = pickle.load(open(CFG['fname_events'], 'rb'))[0]
-
+    ev = pickle.load(open(CFG['fname_events'], 'rb'))[0]
     cov = quantify.quantify_from_graph(ev, sp.arange(1000), 'exon_skip', CFG, fn_merge=sys.argv[1])
 
     return cov
@@ -668,7 +598,6 @@ def spladder_test(options):
         print("Generating simulated dataset")
 
         npr.seed(23)
-        CFG['is_matlab'] = False
         #cov = npr.permutation(20000-20).astype('float').reshape(999, 20)
         #cov = sp.r_[cov, sp.c_[sp.ones((1, 10)) *10, sp.ones((1, 10)) * 500000] + npr.normal(10, 1, 20)]
         #sf = sp.ones((cov.shape[1], ), dtype='float')
@@ -718,13 +647,8 @@ def spladder_test(options):
         if CFG['validate_splicegraphs']:
             val_tag = '.validated'
 
-        if CFG['is_matlab']:
-            CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.mat' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
-            CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.mat' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
-        else:
-            CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
-            CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
-
+        CFG['fname_genes'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
+        CFG['fname_count_in'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag))
         CFG['fname_exp_hdf5'] = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.hdf5' % (CFG['confidence_level'], CFG['merge_strategy'], val_tag, non_alt_tag))
 
         condition_strains = None
@@ -947,10 +871,7 @@ def spladder_test(options):
             out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
             if CFG['verbose']:
                 print('Writing test results to %s' % out_fname)
-            if CFG['is_matlab']:
-                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx], 0], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), m_all[s_idx, :]]
-            else:
-                data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), m_all[s_idx, :]]
+            data_out = sp.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), m_all[s_idx, :]]
             sp.savetxt(out_fname, sp.r_[header[sp.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
             ### write extended output
@@ -969,20 +890,14 @@ def spladder_test(options):
             ks_idx = []
             taken = set()
             for i in s_idx:
-                if CFG['is_matlab']:
-                    gid = gene_ids[gene_idx[i], 0]
-                else:
-                    gid = gene_ids[gene_idx[i]]
+                gid = gene_ids[gene_idx[i]]
                 if gid in taken:
                     continue
                 ks_idx.append(i)
                 taken.add(gid)
             ks_idx = sp.array(ks_idx)
 
-            if CFG['is_matlab']:
-                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx], 0], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), m_all[ks_idx, :]]
-            else:
-                data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), m_all[ks_idx, :]]
+            data_out = sp.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), m_all[ks_idx, :]]
             data_out = sp.r_[header[sp.newaxis, :], data_out]
             sp.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 

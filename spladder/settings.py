@@ -286,8 +286,6 @@ def parse_args(options, identity='main'):
             CFG['non_alt_norm'] = (options.non_alt_norm == 'y')
         if _check(options, 'low_memory'):
             CFG['low_memory'] = (options.low_memory == 'y')
-        if _check(options, 'matlab'):
-            CFG['is_matlab'] = (options.matlab == 'y')
         if _check(options, 'cap_exp_outliers'):
             CFG['cap_exp_outliers'] = (options.cap_exp_outliers == 'y')
         if _check(options, 'cap_outliers'):

@@ -7,10 +7,6 @@ import h5py
 import scipy as sp
 import re
 
-### return identity
-def identity():
-    return "python"
-
 ### return a gene object
 def get_gene(gene):
     """This function returns a deep copy of the gene object"""
