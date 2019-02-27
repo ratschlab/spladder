@@ -33,9 +33,9 @@ def get_gene_names(CFG):
             print('Generating list of gene names for easy access')
         tmp_genes = load_genes(CFG)
         gene_names = sp.array([x.name.split('.')[0] for x in tmp_genes])
-        pickle.dump(gene_names, open(gene_name_file, 'w'), -1)
+        pickle.dump(gene_names, open(gene_name_file, 'wb'), -1)
     else:
-        gene_names = pickle.load(open(gene_name_file, 'r'))
+        gene_names = pickle.load(open(gene_name_file, 'rb'), encoding='latin1')
 
     return gene_names
 
@@ -53,22 +53,22 @@ def load_genes(CFG, idx=None, genes=None):
         if CFG['verbose']:
             print('loading annotation information from %s' % gene_file)
         if idx is None:
-            (genes, events) = pickle.load(open(gene_file, 'r'))
+            (genes, events) = pickle.load(open(gene_file, 'rb'), encoding='latin1')
         else:
             gene_db_file = re.sub(r'.pickle$', '', gene_file) + '.db.pickle'
             gene_idx_file = re.sub(r'.pickle$', '', gene_file) + '.idx.pickle'
             if os.path.exists(gene_idx_file):
                 genes = []
-                offsets = pickle.load(open(gene_idx_file, 'r'))
-                gene_handle = open(gene_db_file, 'r')
+                offsets = pickle.load(open(gene_idx_file, 'rb'))
+                gene_handle = open(gene_db_file, 'rb')
                 if not hasattr(idx, '__iter__'):
                     idx = [idx]
                 for e in idx:
                     gene_handle.seek(offsets[e], 0)
-                    genes.append(pickle.load(gene_handle))
+                    genes.append(pickle.load(gene_handle), encoding='latin1')
                 genes = sp.array(genes)
             else:
-                (genes, events) = pickle.load(open(gene_file, 'r'))
+                (genes, events) = pickle.load(open(gene_file, 'rb'), encoding='latin1')
                 genes = genes[idx]
 
     return genes
@@ -84,12 +84,12 @@ def load_events(CFG, event_info):
         event_idx_file = re.sub(r'.pickle$', '', event_file) + '.idx.pickle'
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
         if not os.path.exists(event_db_file):
-            events = pickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'r'))
+            events = pickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'rb'))
             for e in s_idx:
                 event_list.append(events[int(event_info[e, 1])])
         else:
-            offsets = pickle.load(open(event_idx_file, 'r'))
-            events_handle = open(event_db_file, 'r')
+            offsets = pickle.load(open(event_idx_file, 'rb'))
+            events_handle = open(event_db_file, 'rb')
             for e in s_idx:
                 events_handle.seek(offsets[int(event_info[e, 1])], 0)
                 event_list.append(pickle.load(events_handle))
