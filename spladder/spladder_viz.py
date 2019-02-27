@@ -15,7 +15,7 @@ from .viz.graph import *
 from .viz.coverage import *
 from .viz.genelets import *
 from .viz import axes as vax
-from .identity import *
+from .helpers_viz import *
 
 
 def get_plot_len(CFG):
@@ -297,9 +297,6 @@ def _plot_segments(CFG, gid, fig, axes, gs, options, seg_sample_idx=None):
             seg_sample_idx.append(sp.where(sp.in1d(strains, group))[0])
     axes.append(fig.add_subplot(gs[len(axes), 0], sharex=axes[0]))
     print('plot segment counts')
-    if identity() == 'matlab':
-        cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='F')
-    else:
-        cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
+    cov_from_segments(gene, segments, edges, edge_idx, axes[-1], xlim=xlim, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
     axes[-1].set_title('Segment counts')
 
