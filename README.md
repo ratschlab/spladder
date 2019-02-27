@@ -20,9 +20,11 @@ installed using a Python package manager of your choice (e.g.,
 * pysam (version >= 0.7 required)
 * h5py (version >= 2.2.0 tested)
 * intervaltree (version >= 3.0.1 tested)
-* matplotlib (for the visualization code only; version >= 1.4.0 tested)
+* matplotlib (for visualization mode; version >= 1.4.0 tested)
+* statsmodels (for testing mode; version >= 0.9.0 tested)
 
-SplAdder will not run without these packages installed. 
+SplAdder will not run without these packages installed. A complete list of dependencies can be also
+found in [requirements.txt](requirements.txt)
 
 Matlab version
 --------------
