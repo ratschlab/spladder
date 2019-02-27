@@ -160,6 +160,16 @@ def parse_options(argv):
     if len(argv) < 2:
         parser.print_help()
         sys.exit(2)
+    if len(argv) < 3:
+        if argv[1] == 'build':
+            parser_build.print_help()
+        elif argv[1] == 'test':
+            parser_test.print_help()
+        elif argv[1] == 'viz':
+            parser_viz.print_help()
+        else:
+            parser.print_help()
+        sys.exit(2)
 
     options.parser = parser
     return options
@@ -168,8 +178,6 @@ def main(argv):
 
     ### get command line options
     options = parse_options(argv)
-
-    print(options.func)
     options.func(options)
 
 if __name__ == "__main__":
