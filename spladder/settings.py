@@ -130,15 +130,6 @@ def default_settings():
     return CFG
 
 
-def _check(options, field, is_bool=True):
-    
-    if is_bool and not getattr(options, field) in ['n', 'y']:
-        print('ERROR:\n\toption "%s" should have value "y" or "n", but has value "%s"' % (field, getattr(options, field)), file=sys.stderr)
-        sys.exit(1)
-
-    return True
-
-
 def parse_args(options, identity='main'):
 
     ### load all default settings
@@ -266,6 +257,8 @@ def parse_args(options, identity='main'):
         CFG['event_id'] = options.event_id
 
         CFG['plot_labels'] = options.labels
+        CFG['plot_transcripts'] = options.transcripts 
+        CFG['plot_splicegraph'] = options.splicegraph
 
         if options.bams != '-':
             CFG['bam_fnames'] = options.bams.strip(':').split(':')
@@ -282,14 +275,10 @@ def parse_args(options, identity='main'):
         CFG['max_0_frac'] = options.max_0_frac
         CFG['min_count'] = options.min_count
         
-        if _check(options, 'non_alt_norm'):
-            CFG['non_alt_norm'] = (options.non_alt_norm == 'y')
-        if _check(options, 'low_memory'):
-            CFG['low_memory'] = (options.low_memory == 'y')
-        if _check(options, 'cap_exp_outliers'):
-            CFG['cap_exp_outliers'] = (options.cap_exp_outliers == 'y')
-        if _check(options, 'cap_outliers'):
-            CFG['cap_outliers'] = (options.cap_outliers == 'y')
+        CFG['non_alt_norm'] = options.non_alt_norm
+        CFG['low_memory'] = options.low_memory
+        CFG['cap_exp_outliers'] = options.cap_exp_outliers
+        CFG['cap_outliers'] = options.cap_outliers
         CFG['diagnose_plots'] = options.diagnose_plots
 
         if options.conditionA == '-':
