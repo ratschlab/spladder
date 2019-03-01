@@ -144,7 +144,7 @@ def parse_options(argv):
     output_viz.add_argument('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
 
     user_viz = parser_viz.add_argument_group('USER')
-    #user_viz.add_argument('-u', '--user', dest='user', metavar='y|n', help='apply user mode (experimental) [off]', default='n')
+    user_viz.add_argument('-u', '--user', dest='user', action='store_true', help='apply user mode (experimental) [off]', default=False)
     user_viz.add_argument('-T', '--transcripts', dest='transcripts', action='store_true', help='plot annotated transcripts', default=False)
     user_viz.add_argument('-s', '--splicegraph', dest='splicegraph', action='store_true', help='plot splicegraph structure', default=False)
 

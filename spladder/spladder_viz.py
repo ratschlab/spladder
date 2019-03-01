@@ -31,7 +31,6 @@ def get_plot_len(CFG):
     return rows
 
 
-
 def _add_ax(fig, axes, gs):
     sharex = None if len(axes) == 0 else axes[0]
     axes.append(fig.add_subplot(gs[len(axes), 0], sharex=sharex))
@@ -76,14 +75,19 @@ def spladder_viz(options):
     event_tag = ''
 
     ### did we get any labels?
-    if CFG['plot_labels']:
-        CFG['plot_labels'] = CFG['plot_labels'].strip(',').split(',')
-        assert len(CFG['plot_labels']) == len(CFG['bam_fnames']), "The number of given labels (%i) needs to match the number of given bam file groups (%i)" % (len(CFG['plot_labels']), len(CFG['bam_fnames']))
+    if ',' in options.labels:
+        options.labels = options.labels.strip(',').split(',')
+        assert len(options.labels) == len(CFG['bam_fnames']), "The number of given labels (%i) needs to match the number of given bam file groups (%i)" % (len(options.labels), len(CFG['bam_fnames']))
+
+
+    # Collect genes to be plotted - there are three cases possible
+    # 1) the user provides a gene ID
+    # 2) all genes containing a significant event of a given type from differential testing are plotted
+    # 3) all genes that contain any event are plotted
 
     ### the user chose a specific gene for plotting
     ### create pairs of gene ids and an event_id (the latter is None by default)
     if options.gene_name is not None:
-        #gid = sp.where(sp.array([x.split('.')[0] for x in gene_names]) == options.gene_name.split('.')[0])[0]
         gids = [[sp.where(sp.array(gene_names) == options.gene_name)[0][0], options.event_id]]
         if len(gids) == 0:
             sys.stderr.write('ERROR: provided gene ID %s could not be found, please check for correctness\n' % options.gene_name)
@@ -123,12 +127,12 @@ def spladder_viz(options):
     else:
         gids = get_gene_ids(CFG)
 
+
     ### iterate over genes to plot
     for gid in gids:
-
         ### gather information about the gene we plot
         gene = load_genes(CFG, idx=[gid[0]])[0]
-        if CFG['verbose']:
+        if options.verbose:
             print('plotting information for gene %s' % gene.name)
         gene.from_sparse()
 
@@ -138,7 +142,7 @@ def spladder_viz(options):
             event_info[1] = int(event_info[1]) - 1
             event_info = sp.array(event_info, dtype='str')[sp.newaxis, :]
             event_tag = '.%s' % gid[1]
-        ### get all significant events of the current gene
+        ### get all confident events of the current gene
         else:
             event_info = get_conf_events(CFG, gid[0])
 
@@ -155,7 +159,11 @@ def spladder_viz(options):
             plot_bam(options, gene, CFG['bam_fnames'], fig, axes[0], gs, None, cmap_cov, cmap_edg, single=False, sharex=axes[1], start=int(start), stop=int(stop))
 
         ### plot custom layout
-        elif options.user == 'y':
+        else:
+            ### set defaults
+            if not options.user:
+                options.splicegraph = True
+                options.transcripts = True
 
             if options.format == 'd3':
                 fig = plt.figure(figsize = (12, 2*rows), dpi=100)
@@ -164,12 +172,12 @@ def spladder_viz(options):
 
             xlim = None
             ### plot splicing graph
-            if options.splicegraph == 'y':
+            if options.splicegraph:
                 _plot_splicegraph(gene, fig, axes, gs)
-                xlim = axes[1].get_xlim()
+                xlim = axes[-1].get_xlim()
 
             ### plot annotated transcripts
-            if CFG['plot_transcripts']:
+            if options.transcripts:
                 sharex = None if len(axes) == 0 else axes[0]
                 axes.append(fig.add_subplot(gs[len(axes), 0], sharex=sharex))
                 multiple(gene.exons, ax=axes[-1], x_range=xlim)
@@ -252,7 +260,7 @@ def plot_bam(options, gene, samples, fig, axes, gs, xlim, cmap_cov, cmap_edg, si
                     ax = axes[-1]
                 else:
                     ax = axes
-            title = 'Expression all Sample Groups'
+            title = 'Expression for all sample groups'
             color_cov = cmap_cov(norm(s))
             color_edg = cmap_edg(norm(s))
 

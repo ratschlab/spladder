@@ -32,14 +32,3 @@ do
     STAR --runThreadN 3 --genomeDir ${test_data_dir}/genome/neg --readFilesIn ${test_data_dir}/${testname}_${i}.fq --outSAMtype BAM SortedByCoordinate --outFileNamePrefix ${test_data_dir}/align/neg_${i}/ --outSAMattributes NH HI NM MD AS XS && ln -s neg_${i}/Aligned.sortedByCoord.out.bam ${test_data_dir}/align/neg_${i}.bam
     samtools index ${test_data_dir}/align/neg_${i}.bam
 done
-
-## Step 7: Generating splicegraph and corresponding count file using spladder
-#rm ${test_data_dir}/data/test1pos.gtf.pickle || TRUE
-#rm ${test_data_dir}/data/test1neg.gtf.pickle || TRUE
-#rm -rf ${test_data_dir}/data/posgraph || TRUE
-#rm -rf ${test_data_dir}/data/neggraph || TRUE
-#python ${spladder_dir}/spladder.py  --insert_ir=n --insert_es=n --insert_ni=n --remove_se=n --validate_sg=n -b ${test_data_dir}/data/align/test1pos.bam -o ${test_data_dir}/data/posgraph -a ${test_data_dir}/data/test1pos.gtf -v y -c 3 -M merge_graphs -T n -P n -p n -q y
-#python ${spladder_dir}/spladder.py  --insert_ir=n --insert_es=n --insert_ni=n --remove_se=n --validate_sg=n -b ${test_data_dir}/data/align/test1neg.bam -o ${test_data_dir}/data/neggraph -a ${test_data_dir}/data/test1neg.gtf -v y -c 3 -M merge_graphs -T n -P n -p n -q y
-
-# step9: unzip gz file and rename to _gt file
-#python ${script_dir}/generate_gt_file.py

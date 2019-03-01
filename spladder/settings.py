@@ -256,7 +256,6 @@ def parse_args(options, identity='main'):
     if identity == 'viz':
         CFG['event_id'] = options.event_id
 
-        CFG['plot_labels'] = options.labels
         CFG['plot_transcripts'] = options.transcripts 
         CFG['plot_splicegraph'] = options.splicegraph
 
