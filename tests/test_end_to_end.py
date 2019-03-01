@@ -30,7 +30,7 @@ def _assert_files_equal(expected_path, actual_path):
         elif f.endswith('.pickle'):
             return open(f, 'rb')
         else:
-            return open(f, 'r')
+            return open(f, 'rb')
 
     with o(expected_path) as e:
         with o(actual_path) as a:
@@ -103,12 +103,28 @@ def test_end_to_end_merge(test_id, case, tmpdir):
                '-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
                '--merge-strat', 'merge_graphs',
                '--extract-as',
-               '-n', '15']
+               '-n', '15',
+               '-v']
 
     spladder.main(my_args)
 
     ### check that files are identical
     _check_files(result_dir, out_dir, prefix='merge_graphs') 
+
+    ### test visualization
+    my_args = ['spladder',
+               'viz',
+               '-o', out_dir,
+               '-b', ':'.join([','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(3)]), 
+                               ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+4)) for i in range(2)])]),
+               '-L', 'group1,group2',
+               '-f', 'png',
+               '-v']
+
+    spladder.main(my_args)
+
+    ### check that files are identical
+    _assert_files_equal(os.path.join(result_dir, 'plots', 'gene_overview_C3_GENE1.png'), os.path.join(out_dir, 'plots', 'gene_overview_C3_GENE1.png'))
 
 @pytest.mark.parametrize("test_id,case", [
     ['basic', 'pos'],
@@ -127,7 +143,8 @@ def test_end_to_end_single(test_id, case, tmpdir):
                '-b', os.path.join(data_dir, 'align', '{}_1.bam'.format(case)),
                '--merge-strat', 'single',
                '--extract-as',
-               '-n', '15']
+               '-n', '15',
+               '-v']
                #'-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
 
     spladder.main(my_args)

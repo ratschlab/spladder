@@ -84,7 +84,7 @@ def load_events(CFG, event_info):
         event_idx_file = re.sub(r'.pickle$', '', event_file) + '.idx.pickle'
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
         if not os.path.exists(event_db_file):
-            events = pickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'rb'))
+            events = pickle.load(open(os.path.join(CFG['out_dirname'], 'merge_graphs_%s_C%s.pickle' % (event_type, CFG['confidence_level'])),'rb'), encoding='latin1')
             for e in s_idx:
                 event_list.append(events[int(event_info[e, 1])])
         else:
@@ -136,6 +136,7 @@ def get_conf_events(CFG, gid):
         IN.close()
 
     return sp.array(event_info, dtype='str')
+
 
 def get_seg_counts(CFG, gid):
 
