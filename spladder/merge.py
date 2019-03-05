@@ -338,7 +338,6 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
         g.label_alt()
         g.to_sparse()
 
-
     ### re-sort genes by position - makes quantification more efficient
     s1_idx = sp.argsort([x.start for x in genes])
     s2_idx = sp.argsort([x.chr for x in genes[s1_idx]], kind='mergesort')
