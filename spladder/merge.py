@@ -335,8 +335,8 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     #    fn_out = fn_out.replace('.pickle', '%s.pickle' % chunk_tag)
 
     for g in genes:
+        g.label_alt()
         g.to_sparse()
-
 
     ### re-sort genes by position - makes quantification more efficient
     s1_idx = sp.argsort([x.start for x in genes])

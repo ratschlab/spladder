@@ -23,10 +23,9 @@ from .viz import diagnose as plot
 import multiprocessing as mp
 import signal as sig
 
-from .helpers import log_progress
+from .helpers import log_progress, decodeUTF8, codeUTF8
 
 TIME0 = time.time()
-
 
 def get_gene_expression(CFG, fn_out=None, strain_subset=None):
 
@@ -67,11 +66,11 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
         non_alt_idx = genes[gidx].get_non_alt_seg_ids()
         seg_idx = sp.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
 
-        gene_idx = gene_ids_segs[seg_idx]
+        gene_idx = gene_ids_segs[seg_idx, 0]
         if len(gene_idx.shape) > 0:
             gene_idx = gene_idx[0]
 
-        assert(IN['gene_names'][:][gene_idx] == genes[gidx].name)
+        assert(decodeUTF8(IN['gene_names'][:][gene_idx][0]) == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
 
         if CFG['non_alt_norm']:
@@ -94,9 +93,9 @@ def get_gene_expression(CFG, fn_out=None, strain_subset=None):
     ### write results to hdf5
     if fn_out is not None:
         OUT = h5py.File(fn_out, 'w')
-        OUT.create_dataset(name='all_strains', data=strains[strain_idx_all])
-        OUT.create_dataset(name='strains', data=strains[strain_idx])
-        OUT.create_dataset(name='genes', data=gene_names)
+        OUT.create_dataset(name='all_strains', data=codeUTF8(strains[strain_idx_all]))
+        OUT.create_dataset(name='strains', data=codeUTF8(strains[strain_idx]))
+        OUT.create_dataset(name='genes', data=codeUTF8(gene_names))
         OUT.create_dataset(name='raw_count', data=gene_counts, compression="gzip")
         OUT.close()
 
@@ -405,7 +404,7 @@ def test_count_chunk(gene_counts, disp_adj, sf, dmatrix0, dmatrix1, CFG, test_id
 
         response = gene_counts[i, :].astype('int')
 
-        if sp.sum(response[:response.shape[0] / 2] == 0) > CFG['max_0_frac'] * response.shape[0] / 2:
+        if sp.sum(response[:int(response.shape[0] / 2)] == 0) > CFG['max_0_frac'] * response.shape[0] / 2:
             continue
         modNB0 = sm.GLM(response, dmatrix0, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
         modNB1 = sm.GLM(response, dmatrix1, family=sm.families.NegativeBinomial(alpha=disp_adj[i]), offset=sp.log(sf))
@@ -531,7 +530,7 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx, r_idx=No
         pvals = pvals[r_idx]
 
     ### reshape and adjust p-values
-    pvals = pvals.reshape((2, pvals.shape[0] / 2)).T
+    pvals = pvals.reshape((2, int(pvals.shape[0] / 2))).T
     m_idx = sp.zeros(shape=(pvals.shape[0],), dtype='int')
     #for i in range(pvals.shape[0]):
     #    if sp.all(sp.isnan(pvals[i, :])):
@@ -559,7 +558,7 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, CFG, event_type, test_idx, r_idx=No
 
     pvals = sp.array([pvals[i, m_idx[i]] for i in range(pvals.shape[0])], dtype='float')
 
-    offset = cov.shape[0] / 2
+    offset = int(cov.shape[0] / 2)
     cov_used = sp.array([cov[i, :] if m_idx[i] == 0 else cov[i + offset, :] for i in range(pvals.shape[0])], dtype=cov.dtype)
     disp_raw_used = sp.array([disp_raw[i] if m_idx[i] == 0 else disp_raw[i + offset] for i in range(pvals.shape[0])], dtype=disp_raw.dtype)
     disp_adj_used = sp.array([disp_adj[i] if m_idx[i] == 0 else disp_adj[i + offset] for i in range(pvals.shape[0])], dtype=disp_adj.dtype)
@@ -660,9 +659,9 @@ def spladder_test(options):
                 print('Loading expression counts from %s' % CFG['fname_exp_hdf5'])
             IN = h5py.File(CFG['fname_exp_hdf5'], 'r')
             gene_counts = IN['raw_count'][:]
-            gene_strains = IN['strains'][:]
-            gene_strains_all = IN['all_strains'][:]
-            gene_ids = IN['genes'][:]
+            gene_strains = decodeUTF8(IN['strains'][:])
+            gene_strains_all = decodeUTF8(IN['all_strains'][:])
+            gene_ids = decodeUTF8(IN['genes'][:])
             IN.close()
         else:
             gene_counts, gene_strains_all, gene_strains, gene_ids = get_gene_expression(CFG, fn_out=CFG['fname_exp_hdf5'], strain_subset=condition_strains)
@@ -794,7 +793,7 @@ def spladder_test(options):
         #        plt.close(fig)
 
             ### build design matrix for testing
-            dmatrix1 = sp.zeros((cov.shape[1], 4), dtype='bool')
+            dmatrix1 = sp.zeros((cov.shape[1], 4), dtype='int')
             dmatrix1[:, 0] = 1                      # intercept
             dmatrix1[tidx, 1] = 1                   # delta splice
             dmatrix1[tidx, 2] = 1                   # delta gene exp
@@ -859,7 +858,6 @@ def spladder_test(options):
                           dmatrix0,
                           dmatrix1,
                           event_type,
-                          options,
                           CFG),
                          open(os.path.join(outdir, 'test_setup_C%i_%s.pickle' % (options.confidence, event_type)), 'wb'), -1)
 

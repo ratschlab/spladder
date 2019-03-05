@@ -159,7 +159,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
         if CFG is not None and CFG['verbose']:
             print("Storing gene structure in %s ..." % outfile, file=sys.stderr)
 
-        pickle.dump(genes, open(outfile, 'w'), -1)
+        pickle.dump(genes, open(outfile, 'wb'), -1)
 
         if CFG is not None and CFG['verbose']:
             print("... done", file=sys.stderr)
@@ -284,7 +284,7 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
         if CFG is not None and CFG['verbose']:
             print("Storing gene structure in %s ..." % outfile, file=sys.stderr)
 
-        pickle.dump(genes, open(outfile, 'w'), -1)
+        pickle.dump(genes, open(outfile, 'wb'), -1)
 
         if CFG is not None and CFG['verbose']:
             print("... done", file=sys.stderr)

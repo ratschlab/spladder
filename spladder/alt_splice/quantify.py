@@ -18,40 +18,22 @@ def quantify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     sg = gene.splicegraph
     segs = gene.segmentgraph
 
-    if CFG['is_matlab']:
-        seg_lens = segs[0, 0][1, :] - segs[0, 0][0, :]
-        seg_shape = segs[0, 2].shape[0]
-        order = 'F'
-        offset = 1
+    seg_lens = segs.segments[1, :] - segs.segments[0, :]
+    seg_shape = segs.seg_edges.shape[0]
+    order = 'C'
+    offset = 0
 
-        ### find exons corresponding to event
-        idx_exon_pre  = sp.where((sg[0, 0][0, :] == event.exon_pre[0]) & (sg[0, 0][1, :] == event.exon_pre[1]))[0]
-        idx_exon_aft  = sp.where((sg[0, 0][0, :] == event.exon_aft[0]) & (sg[0, 0][1, :] == event.exon_aft[1]))[0]
-        seg_exons = []
-        for i in range(0, event.exons.shape[1], 2):
-            tmp = sp.where((sg[0, 0][0, :] == event.exons[i]) & (sg[0, 0][1, :] == event.exons[i + 1]))[0]
-            seg_exons.append(sp.where(segs[0, 1][tmp, :])[1])
-        
-        ### find segments corresponding to exons
-        seg_exon_pre = sp.sort(sp.where(segs[0, 1][idx_exon_pre, :])[1])
-        seg_exon_aft = sp.sort(sp.where(segs[0, 1][idx_exon_aft, :])[1])
-    else:
-        seg_lens = segs.segments[1, :] - segs.segments[0, :]
-        seg_shape = segs.seg_edges.shape[0]
-        order = 'C'
-        offset = 0
-
-        ### find exons corresponding to event
-        idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
-        idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons2[-1, 0]) & (sg.vertices[1, :] == event.exons2[-1, 1]))[0]
-        seg_exons = []
-        for i in range(1, event.exons2.shape[0] - 1):
-            tmp = sp.where((sg.vertices[0, :] == event.exons2[i, 0]) & (sg.vertices[1, :] == event.exons2[i, 1]))[0]
-            seg_exons.append(sp.where(segs.seg_match[tmp, :])[1])
-        
-        ### find segments corresponding to exons
-        seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
-        seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
+    ### find exons corresponding to event
+    idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
+    idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons2[-1, 0]) & (sg.vertices[1, :] == event.exons2[-1, 1]))[0]
+    seg_exons = []
+    for i in range(1, event.exons2.shape[0] - 1):
+        tmp = sp.where((sg.vertices[0, :] == event.exons2[i, 0]) & (sg.vertices[1, :] == event.exons2[i, 1]))[0]
+        seg_exons.append(sp.where(segs.seg_match[tmp, :])[1])
+    
+    ### find segments corresponding to exons
+    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
 
     seg_exons_u = sp.sort(sp.unique([x for sublist in seg_exons for x in sublist]))
 
@@ -87,32 +69,18 @@ def quantify_intron_retention(event, gene, counts_segments, counts_edges, counts
     sg = gene.splicegraph
     segs = gene.segmentgraph
 
-    if CFG['is_matlab']:
-        seg_lens = segs[0, 0][1, :] - segs[0, 0][0, :]
-        seg_shape = segs[0, 2].shape
-        order = 'F'
-        offset = 1
+    seg_lens = segs.segments[1, :] - segs.segments[0, :]
+    seg_shape = segs.seg_edges.shape
+    order = 'C'
+    offset = 0
 
-        ### find exons corresponding to event
-        idx_exon1  = sp.where((sg[0, 0][0, :] == event.exon1[0]) & (sg[0, 0][1, :] == event.exon1[1]))[0]
-        idx_exon2  = sp.where((sg[0, 0][0, :] == event.exon2[0]) & (sg[0, 0][1, :] == event.exon2[1]))[0]
+    ### find exons corresponding to event
+    idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon2  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
 
-        ### find segments corresponding to exons
-        seg_exon1 = sp.sort(sp.where(segs[0, 1][idx_exon1, :])[1])
-        seg_exon2 = sp.sort(sp.where(segs[0, 1][idx_exon2, :])[1])
-    else:
-        seg_lens = segs.segments[1, :] - segs.segments[0, :]
-        seg_shape = segs.seg_edges.shape
-        order = 'C'
-        offset = 0
-
-        ### find exons corresponding to event
-        idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
-        idx_exon2  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
-
-        ### find segments corresponding to exons
-        seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
-        seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
+    ### find segments corresponding to exons
+    seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
+    seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
     seg_all = sp.arange(seg_exon1[0], seg_exon2[-1])
 
     seg_intron = sp.setdiff1d(seg_all, seg_exon1)
@@ -138,36 +106,20 @@ def quantify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     sg = gene.splicegraph
     segs = gene.segmentgraph
 
-    if CFG['is_matlab']:
-        seg_lens = segs[0, 0][1, :] - segs[0, 0][0, :]
-        seg_shape = segs[0, 2].shape
-        order = 'F'
-        offset = 1
+    seg_lens = segs.segments[1, :] - segs.segments[0, :]
+    seg_shape = segs.seg_edges.shape
+    order = 'C'
+    offset = 0
 
-        ### find exons corresponding to event
-        idx_exon_pre = sp.where((sg[0, 0][0, :] == event.exon_pre[0]) & (sg[0, 0][1, :] == event.exon_pre[1]))[0]
-        idx_exon = sp.where((sg[0, 0][0, :] == event.exon[0]) & (sg[0, 0][1, :] == event.exon[1]))[0]
-        idx_exon_aft = sp.where((sg[0, 0][0, :] == event.exon_aft[0]) & (sg[0, 0][1, :] == event.exon_aft[1]))[0]
+    ### find exons corresponding to event
+    idx_exon_pre = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
+    idx_exon = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    idx_exon_aft = sp.where((sg.vertices[0, :] == event.exons2[2, 0]) & (sg.vertices[1, :] == event.exons2[2, 1]))[0]
 
-        ### find segments corresponding to exons
-        seg_exon_pre = sp.sort(sp.where(segs[0, 1][idx_exon_pre, :])[1])
-        seg_exon_aft = sp.sort(sp.where(segs[0, 1][idx_exon_aft, :])[1])
-        seg_exon = sp.sort(sp.where(segs[0, 1][idx_exon, :])[1])
-    else:
-        seg_lens = segs.segments[1, :] - segs.segments[0, :]
-        seg_shape = segs.seg_edges.shape
-        order = 'C'
-        offset = 0
-
-        ### find exons corresponding to event
-        idx_exon_pre = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
-        idx_exon = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
-        idx_exon_aft = sp.where((sg.vertices[0, :] == event.exons2[2, 0]) & (sg.vertices[1, :] == event.exons2[2, 1]))[0]
-
-        ### find segments corresponding to exons
-        seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
-        seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
-        seg_exon = sp.sort(sp.where(segs.seg_match[idx_exon, :])[1])
+    ### find segments corresponding to exons
+    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
+    seg_exon = sp.sort(sp.where(segs.seg_match[idx_exon, :])[1])
 
     # get inner exon cov
     cov[0] = sp.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /sp.sum(seg_lens[seg_exon])
@@ -193,113 +145,67 @@ def quantify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
 
     sg = gene.splicegraph
     segs = gene.segmentgraph
-    if CFG['is_matlab']:
-        seg_lens = segs[0, 0][1, :] - segs[0, 0][0, :]
-        seg_shape = segs[0, 2].shape[0]
 
-        idx_exon_alt1 = sp.where((sg[0, 0][0, :] == event.exon_alt1[0]) & (sg[0, 0][1, :] == event.exon_alt1[1]))
-        idx_exon_alt2 = sp.where((sg[0, 0][0, :] == event.exon_alt2[0]) & (sg[0, 0][1, :] == event.exon_alt2[1]))
-        idx_exon_const = sp.where((sg[0, 0][0, :] == event.exon_const[0]) & (sg[0, 0][1, :] == event.exon_const[1]))
-        if idx_exon_alt1.shape[0] == 0:
-            segs_exon_alt1 = sp.where((segs[0, 0][0, :] >= event.exon_alt1[0]) & (segs[0, 0][1, :] >= event.exon_alt1[1]))
-        else:
-            segs_exon_alt1 = sp.where(segs[0, 1][idx_exon_alt1, :])[1]
-        if idx_exon_alt2.shape[0] == 0:
-            segs_exon_alt2 = sp.where((segs[0, 0][0, :] >= event.exon_alt2[0]) & (segs[0, 0][1, :] >= event.exon_alt2[1]))
-        else:
-            segs_exon_alt2 = sp.where(segs[0, 1][idx_exon_alt2, :])[1]
-        if idx_exon_const.shape[0] == 0:
-            segs_exon_const = sp.where((segs[0, 0][0, :] >= event.exon_const[0]) & (segs[0, 0][1, :] >= event.exon_const[1]))
-        else:
-            segs_exon_const = sp.where(segs[0, 1][idx_exon_const, :])[1]
+    seg_lens = segs.segments[1, :] - segs.segments[0, :]
+    seg_shape = segs.seg_edges.shape[0]
 
-        assert(segs_exon_alt1.shape[0] > 0)
-        assert(segs_exon_alt2.shape[0] > 0)
-        assert(segs_exon_const.shape[0] > 0)
-
-        cov[1] += sp.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / sp.sum(seg_lens[seg_diff])
-
-        ### check intron confirmations as sum of valid intron scores
-        ### intron score is the number of reads confirming this intron
-        if max(segs_exon_alt1[-1], segs_exon_alt2[-1]) < segs_exon_const[0]:
-            # intron1_conf 
-            idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon_alt1[0], segs_exon_const[-1]], seg_shape))[0] + 1
-            assert(idx.shape[0] > 0)
-            cov[0] += counts_edges[idx, 1]
-            # intron2_conf 
-            idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon_alt2[0], segs_exon_const[-1]], seg_shape))[0] + 1
-            assert(idx.shape[0] > 0)
-            cov[1] += counts_edges[idx, 1]
-        elif min(segs_exon_alt1[0], segs_exon_alt2[0]) > segs_exon_const[-1]:
-            # intron1_conf 
-            idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon_const[0], segs_exon_alt1[-1]], seg_shape))[0] + 1
-            assert(idx.shape[0] > 0)
-            cov[0] += counts_edges[idx, 1]
-            # intron2_conf 
-            idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon_const[0], segs_exon_alt2[-1]], seg_shape))[0] + 1
-            assert(idx.shape[0] > 0)
-            cov[1] += counts_edges[idx, 1]
+    ### find exons corresponding to event
+    idx_exon11 = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    if idx_exon11.shape[0] == 0:
+        segs_exon11 = sp.where((segs.segments[0, :] >= event.exons1[0, 0]) & (segs.segments[1, :] <= event.exons1[0, 1]))[0]
     else:
-        seg_lens = segs.segments[1, :] - segs.segments[0, :]
-        seg_shape = segs.seg_edges.shape[0]
+        segs_exon11 = sp.where(segs.seg_match[idx_exon11, :])[1]
+    idx_exon12 = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
+    if idx_exon12.shape[0] == 0:
+        segs_exon12 = sp.where((segs.segments[0, :] >= event.exons1[1, 0]) & (segs.segments[1, :] <= event.exons1[1, 1]))[0]
+    else:
+        segs_exon12 = sp.where(segs.seg_match[idx_exon12, :])[1]
+    idx_exon21 = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
+    if idx_exon21.shape[0] == 0:
+        segs_exon21 = sp.where((segs.segments[0, :] >= event.exons2[0, 0]) & (segs.segments[1, :] <= event.exons2[0, 1]))[0]
+    else:
+        segs_exon21 = sp.where(segs.seg_match[idx_exon21, :])[1]
+    idx_exon22 = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    if idx_exon22.shape[0] == 0:
+        segs_exon22 = sp.where((segs.segments[0, :] >= event.exons2[1, 0]) & (segs.segments[1, :] <= event.exons2[1, 1]))[0]
+    else:
+        segs_exon22 = sp.where(segs.seg_match[idx_exon22, :] > 0)[1]
 
-        ### find exons corresponding to event
-        idx_exon11 = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
-        if idx_exon11.shape[0] == 0:
-            segs_exon11 = sp.where((segs.segments[0, :] >= event.exons1[0, 0]) & (segs.segments[1, :] <= event.exons1[0, 1]))[0]
-        else:
-            segs_exon11 = sp.where(segs.seg_match[idx_exon11, :])[1]
-        idx_exon12 = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
-        if idx_exon12.shape[0] == 0:
-            segs_exon12 = sp.where((segs.segments[0, :] >= event.exons1[1, 0]) & (segs.segments[1, :] <= event.exons1[1, 1]))[0]
-        else:
-            segs_exon12 = sp.where(segs.seg_match[idx_exon12, :])[1]
-        idx_exon21 = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
-        if idx_exon21.shape[0] == 0:
-            segs_exon21 = sp.where((segs.segments[0, :] >= event.exons2[0, 0]) & (segs.segments[1, :] <= event.exons2[0, 1]))[0]
-        else:
-            segs_exon21 = sp.where(segs.seg_match[idx_exon21, :])[1]
-        idx_exon22 = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
-        if idx_exon22.shape[0] == 0:
-            segs_exon22 = sp.where((segs.segments[0, :] >= event.exons2[1, 0]) & (segs.segments[1, :] <= event.exons2[1, 1]))[0]
-        else:
-            segs_exon22 = sp.where(segs.seg_match[idx_exon22, :] > 0)[1]
+    assert(segs_exon11.shape[0] > 0)
+    assert(segs_exon12.shape[0] > 0)
+    assert(segs_exon21.shape[0] > 0)
+    assert(segs_exon22.shape[0] > 0)
 
-        assert(segs_exon11.shape[0] > 0)
-        assert(segs_exon12.shape[0] > 0)
-        assert(segs_exon21.shape[0] > 0)
-        assert(segs_exon22.shape[0] > 0)
+    if sp.all(segs_exon11 == segs_exon21):
+        seg_diff = sp.setdiff1d(segs_exon12, segs_exon22)
+        if seg_diff.shape[0] == 0:
+            seg_diff = sp.setdiff1d(segs_exon22, segs_exon12)
+    elif sp.all(segs_exon12 == segs_exon22):
+        seg_diff = sp.setdiff1d(segs_exon11, segs_exon21)
+        if seg_diff.shape[0] == 0:
+            seg_diff = sp.setdiff1d(segs_exon21, segs_exon11)
+    else:
+        print("ERROR: both exons differ in alt prime event in verify_alt_prime", file=sys.stderr)
+        sys.exit(1)
 
-        if sp.all(segs_exon11 == segs_exon21):
-            seg_diff = sp.setdiff1d(segs_exon12, segs_exon22)
-            if seg_diff.shape[0] == 0:
-                seg_diff = sp.setdiff1d(segs_exon22, segs_exon12)
-        elif sp.all(segs_exon12 == segs_exon22):
-            seg_diff = sp.setdiff1d(segs_exon11, segs_exon21)
-            if seg_diff.shape[0] == 0:
-                seg_diff = sp.setdiff1d(segs_exon21, segs_exon11)
-        else:
-            print("ERROR: both exons differ in alt prime event in verify_alt_prime", file=sys.stderr)
-            sys.exit(1)
-
-        # exon_diff_cov
-        if seg_diff in segs_exon11 or seg_diff in segs_exon12:
-            cov[0] += sp.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / sp.sum(seg_lens[seg_diff])
-        elif seg_diff in segs_exon21 or seg_diff in segs_exon22:
-            cov[1] += sp.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / sp.sum(seg_lens[seg_diff])
-        else:
-            raise Exception('differential segment not part of any other segment')
-        
-        ### check intron confirmations as sum of valid intron scores
-        ### intron score is the number of reads confirming this intron
-        # intron1_conf 
-        idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], seg_shape))[0]
-        assert(idx.shape[0] > 0)
-        cov[0] += counts_edges[idx, 1]
-        # intron2_conf 
-        idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], seg_shape))[0]
-        assert(idx.shape[0] > 0)
-        cov[1] += counts_edges[idx, 1]
+    # exon_diff_cov
+    if seg_diff in segs_exon11 or seg_diff in segs_exon12:
+        cov[0] += sp.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / sp.sum(seg_lens[seg_diff])
+    elif seg_diff in segs_exon21 or seg_diff in segs_exon22:
+        cov[1] += sp.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / sp.sum(seg_lens[seg_diff])
+    else:
+        raise Exception('differential segment not part of any other segment')
+    
+    ### check intron confirmations as sum of valid intron scores
+    ### intron score is the number of reads confirming this intron
+    # intron1_conf 
+    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], seg_shape))[0]
+    assert(idx.shape[0] > 0)
+    cov[0] += counts_edges[idx, 1]
+    # intron2_conf 
+    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], seg_shape))[0]
+    assert(idx.shape[0] > 0)
+    cov[1] += counts_edges[idx, 1]
 
     return cov
 
@@ -309,41 +215,22 @@ def quantify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
     sg = gene.splicegraph
     segs = gene.segmentgraph
 
-    if CFG['is_matlab']:
-        seg_lens = segs[0, 0][1, :] - segs[0, 0][0, :]
-        seg_shape = segs[0, 2].shape[0]
-        order = 'F'
-        offset = 1
+    seg_lens = segs.segments[1, :] - segs.segments[0, :]
+    seg_shape = segs.seg_edges.shape[0]
+    order = 'C'
+    offset = 0
 
-        ### find exons corresponding to event
-        idx_exon_pre  = sp.where((sg[0, 0][0, :] == event.exon_pre[0]) & (sg[0, 0][1, :] == event.exon_pre[1]))[0]
-        idx_exon_aft  = sp.where((sg[0, 0][0, :] == event.exon_aft[0]) & (sg[0, 0][1, :] == event.exon_aft[1]))[0]
-        idx_exon1  = sp.where((sg[0, 0][0, :] == event.exon1[0]) & (sg[0, 0][1, :] == event.exon1[1]))[0]
-        idx_exon2  = sp.where((sg[0, 0][0, :] == event.exon2[0]) & (sg[0, 0][1, :] == event.exon2[1]))[0]
-        
-        ### find segments corresponding to exons
-        seg_exon_pre = sp.sort(sp.where(segs[0, 1][idx_exon_pre, :])[1])
-        seg_exon_aft = sp.sort(sp.where(segs[0, 1][idx_exon_aft, :])[1])
-        seg_exon1 = sp.sort(sp.where(segs[0, 1][idx_exon1, :])[1])
-        seg_exon2 = sp.sort(sp.where(segs[0, 1][idx_exon2, :])[1])
-
-    else:
-        seg_lens = segs.segments[1, :] - segs.segments[0, :]
-        seg_shape = segs.seg_edges.shape[0]
-        order = 'C'
-        offset = 0
-
-        ### find exons corresponding to event
-        idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
-        idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons1[-1, 0]) & (sg.vertices[1, :] == event.exons1[-1, 1]))[0]
-        idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
-        idx_exon2  = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
-        
-        ### find segments corresponding to exons
-        seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
-        seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
-        seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
-        seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
+    ### find exons corresponding to event
+    idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons1[-1, 0]) & (sg.vertices[1, :] == event.exons1[-1, 1]))[0]
+    idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
+    idx_exon2  = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    
+    ### find segments corresponding to exons
+    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
+    seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
+    seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
 
     # exon1 cov
     cov[0] = sp.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / sp.sum(seg_lens[seg_exon1])
@@ -392,20 +279,12 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         IN = h5py.File(event_fn, 'r', driver='core', backing_store=False)
     
     ### get indices of confident events
-    if CFG['is_matlab']:
-        conf_idx = IN['conf_idx'][:].astype('int') - 1
-        if 'filter_idx' in IN:
-            event_idx = IN['filter_idx'][:].astype('int')
-        else:
-            event_idx = conf_idx.copy()
-        event_features = IN['event_features'][:]
+    conf_idx = IN['conf_idx'][:].astype('int')
+    if 'filter_idx' in IN:
+        event_idx = IN['filter_idx'][:].astype('int')
     else:
-        conf_idx = IN['conf_idx'][:].astype('int')
-        if 'filter_idx' in IN:
-            event_idx = IN['filter_idx'][:].astype('int')
-        else:
-            event_idx = conf_idx.copy()
-        event_features = IN['event_features'][event_type][:]
+        event_idx = conf_idx.copy()
+    event_features = decodeUTF8(IN['event_features'][event_type][:])
 
     ### arrays to collect exon coordinates for length normalization
     pos0e = []
@@ -418,42 +297,29 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         if CFG['use_exon_counts']:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'exon_cov')[0]]
-            if CFG['is_matlab']:
-                pos1e = [IN['event_pos'][[2, 3], :].astype('int')]
-            else:
-                pos1e = [IN['event_pos'][:, [2, 3]].astype('int')]
+            pos1e = [IN['event_pos'][:, [2, 3]].astype('int')]
     elif event_type == 'intron_retention':
         fidx0i = [sp.where(event_features == 'intron_conf')[0]]
         fidx1i = []
         if CFG['use_exon_counts']:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'intron_cov')[0]]
-            if CFG['is_matlab']:
-                pos1e = [IN['event_pos'][[1, 2], :].astype('int')]
-            else:
-                pos1e = [IN['event_pos'][:, [1, 2]].astype('int')]
+            pos1e = [IN['event_pos'][:, [1, 2]].astype('int')]
     elif event_type in ['alt_3prime', 'alt_5prime']:
         fidx0i = [sp.where(event_features == 'intron1_conf')[0]]
         fidx1i = [sp.where(event_features == 'intron2_conf')[0]]
         if CFG['use_exon_counts']:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'exon_diff_cov')[0]]
-            if CFG['is_matlab']:
-                pos1e = [sp.zeros((IN['event_pos'].shape[1], 2), dtype='int')]
-                idx = sp.where(IN['event_pos'][0, :] == IN['event_pos'][2, :])[0]
-                pos1e[0][idx, :] = IN['event_pos'][[1, 3], :][:, idx].astype('int')
-                idx = sp.where(IN['event_pos'][3, :] == IN['event_pos'][5, :])[0]
-                pos1e[0][idx, :] = IN['event_pos'][[2, 4], :][:, idx].astype('int')
-            else:
-                pos1e = [sp.zeros((IN['event_pos'].shape[0], 2), dtype='int')]
-                idx = sp.where((IN['event_pos'][:, 4] == IN['event_pos'][:, 6]) & (IN['event_pos'][:, 1] < IN['event_pos'][:, 3]))[0]
-                pos1e[0][idx, :] = IN['event_pos'][:, [1, 3]][idx, :].astype('int')
-                idx = sp.where((IN['event_pos'][:, 4] == IN['event_pos'][:, 6]) & (IN['event_pos'][:, 1] > IN['event_pos'][:, 3]))[0]
-                pos1e[0][idx, :] = IN['event_pos'][:, [1, 3]][idx, :].astype('int')[:, ::-1]
-                idx = sp.where((IN['event_pos'][:, 1] == IN['event_pos'][:, 3]) & (IN['event_pos'][:, 4] < IN['event_pos'][:, 6]))[0]
-                pos1e[0][idx, :] = IN['event_pos'][:, [4, 6]][idx, :].astype('int')
-                idx = sp.where((IN['event_pos'][:, 1] == IN['event_pos'][:, 3]) & (IN['event_pos'][:, 4] > IN['event_pos'][:, 6]))[0]
-                pos1e[0][idx, :] = IN['event_pos'][:, [4, 6]][idx, :].astype('int')[:, ::-1]
+            pos1e = [sp.zeros((IN['event_pos'].shape[0], 2), dtype='int')]
+            idx = sp.where((IN['event_pos'][:, 4] == IN['event_pos'][:, 6]) & (IN['event_pos'][:, 1] < IN['event_pos'][:, 3]))[0]
+            pos1e[0][idx, :] = IN['event_pos'][:, [1, 3]][idx, :].astype('int')
+            idx = sp.where((IN['event_pos'][:, 4] == IN['event_pos'][:, 6]) & (IN['event_pos'][:, 1] > IN['event_pos'][:, 3]))[0]
+            pos1e[0][idx, :] = IN['event_pos'][:, [1, 3]][idx, :].astype('int')[:, ::-1]
+            idx = sp.where((IN['event_pos'][:, 1] == IN['event_pos'][:, 3]) & (IN['event_pos'][:, 4] < IN['event_pos'][:, 6]))[0]
+            pos1e[0][idx, :] = IN['event_pos'][:, [4, 6]][idx, :].astype('int')
+            idx = sp.where((IN['event_pos'][:, 1] == IN['event_pos'][:, 3]) & (IN['event_pos'][:, 4] > IN['event_pos'][:, 6]))[0]
+            pos1e[0][idx, :] = IN['event_pos'][:, [4, 6]][idx, :].astype('int')[:, ::-1]
     elif event_type == 'mult_exon_skip':
         fidx0i = [sp.where(event_features == 'exon_pre_exon_aft_conf')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon_conf')[0], sp.where(event_features == 'exon_exon_aft_conf')[0], sp.where(event_features == 'sum_inner_exon_conf')[0]] 
@@ -461,22 +327,15 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         if CFG['use_exon_counts']:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'exons_cov')[0]]
-            if CFG['is_matlab']:
-                pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[0],), dtype='int'), IN['event_counts'][:, tmp_idx, 0].astype('int')]]
-            else:
-                pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[2],), dtype='int'), IN['event_counts'][0, tmp_idx, :].astype('int')]]
+            pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[2],), dtype='int'), IN['event_counts'][0, tmp_idx, :].astype('int')]]
     elif event_type == 'mutex_exons':
         fidx0i = [sp.where(event_features == 'exon_pre_exon1_conf')[0], sp.where(event_features == 'exon1_exon_aft_conf')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon2_conf')[0], sp.where(event_features == 'exon2_exon_aft_conf')[0]] 
         if CFG['use_exon_counts']:
             fidx0e = [sp.where(event_features == 'exon1_cov')[0]]
             fidx1e = [sp.where(event_features == 'exon2_cov')[0]]
-            if CFG['is_matlab']:
-                pos0e = [IN['event_pos'][[2, 3], :].astype('int')]
-                pos1e = [IN['event_pos'][[4, 5], :].astype('int')]
-            else:
-                pos0e = [IN['event_pos'][:, [2, 3]].astype('int')]
-                pos1e = [IN['event_pos'][:, [4, 5]].astype('int')]
+            pos0e = [IN['event_pos'][:, [2, 3]].astype('int')]
+            pos1e = [IN['event_pos'][:, [4, 5]].astype('int')]
     else:
         raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
 
@@ -489,7 +348,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         assert(sp.all((c[:, 1] - c[:, 0]) >= 0))
 
     ### tackle unsorted input
-    s_idx = sp.argsort(IN['strains'][:])
+    s_idx = sp.argsort(decodeUTF8(IN['strains'][:]))
     strain_idx1 = sp.sort(s_idx[strain_idx1])
     strain_idx2 = sp.sort(s_idx[strain_idx2])
     idx1_len = strain_idx1.shape[0]
@@ -498,20 +357,12 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     if CFG['use_exon_counts']:
         if CFG['verbose']:
             print('Collecting exon segment expression values')
-        if CFG['is_matlab']:
-            for f, ff in enumerate(fidx0e):
-                cov[0][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][conf_idx, :] * (pos0e[f][1, conf_idx] - pos0e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
-                cov[0][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][conf_idx, :] * (pos0e[f][1, conf_idx] - pos0e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
-            for f, ff in enumerate(fidx1e):
-                cov[1][:, :idx1_len] += (IN['event_counts'][:, ff[0], strain_idx1][conf_idx, :] * (pos1e[f][1, conf_idx] - pos1e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
-                cov[1][:, idx1_len:] += (IN['event_counts'][:, ff[0], strain_idx2][conf_idx, :] * (pos1e[f][1, conf_idx] - pos1e[f][0, conf_idx])[:, sp.newaxis]) / CFG['read_length']
-        else:
-            for f, ff in enumerate(fidx0e):
-                cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
-                cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
-            for f, ff in enumerate(fidx1e):
-                cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
-                cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+        for f, ff in enumerate(fidx0e):
+            cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+            cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+        for f, ff in enumerate(fidx1e):
+            cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+            cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
 
     ### get counts for introns
     if CFG['verbose']:
@@ -519,45 +370,36 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
 
 
     ### get gene index
-    if CFG['is_matlab']:
-        gene_idx = IN['gene_idx'][:].astype('int') - 1
-        for f in fidx0i:
-            cov[0][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][conf_idx, :]
-            cov[0][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][conf_idx, :]
-        for f in fidx1i:
-            cov[1][:, :idx1_len] += IN['event_counts'][:, f[0], strain_idx1][conf_idx, :]
-            cov[1][:, idx1_len:] += IN['event_counts'][:, f[0], strain_idx2][conf_idx, :]
-    else:
-        gene_idx = IN['gene_idx'][:].astype('int')
-        cnt1 = []
-        cnt2 = []
-        for f in fidx0i:
-            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
-            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
-            #cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
-            #cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
-        if len(fidx0i) > 0:
-            cov[0][:, :idx1_len] += sp.array(cnt1).min(axis=0)
-            cov[0][:, idx1_len:] += sp.array(cnt2).min(axis=0)
-        cnt1 = []
-        cnt2 = []
-        for f in fidx1i:
-            #cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
-            #cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
-            cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
-            cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
-        if len(fidx1i) > 0:
-            cov[1][:, :idx1_len] += sp.array(cnt1).min(axis=0)
-            cov[1][:, idx1_len:] += sp.array(cnt2).min(axis=0)
-        del cnt1, cnt2
+    gene_idx = IN['gene_idx'][:].astype('int')
+    cnt1 = []
+    cnt2 = []
+    for f in fidx0i:
+        cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
+        cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
+        #cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
+        #cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
+    if len(fidx0i) > 0:
+        cov[0][:, :idx1_len] += sp.array(cnt1).min(axis=0)
+        cov[0][:, idx1_len:] += sp.array(cnt2).min(axis=0)
+    cnt1 = []
+    cnt2 = []
+    for f in fidx1i:
+        #cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
+        #cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
+        cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
+        cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
+    if len(fidx1i) > 0:
+        cov[1][:, :idx1_len] += sp.array(cnt1).min(axis=0)
+        cov[1][:, idx1_len:] += sp.array(cnt2).min(axis=0)
+    del cnt1, cnt2
 
     ### get strain list
-    strains1 = IN['strains'][:][strain_idx1]
+    strains1 = decodeUTF8(IN['strains'][:][strain_idx1])
     s_idx = sp.argsort(strains1)
     strains1 = strains1[s_idx]
     cov[0][:, :idx1_len] = cov[0][:, :idx1_len][:, s_idx]
     cov[1][:, :idx1_len] = cov[1][:, :idx1_len][:, s_idx]
-    strains2 = IN['strains'][:][strain_idx2]
+    strains2 = decodeUTF8(IN['strains'][:][strain_idx2])
     s_idx = sp.argsort(strains2)
     strains2 = strains2[s_idx]
     cov[0][:, idx1_len:] = cov[0][:, idx1_len:][:, s_idx]
@@ -600,12 +442,8 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
     if fn_merge is None:
         fn_merge = get_filename('fn_out_merge_val', CFG)
 
-    if CFG['is_matlab']:
-        genes = scio.loadmat(fn_merge, struct_as_record=False)['genes'][0, :]
-        fn_count = fn_merge.replace('mat', 'count.mat')
-    else:
-        genes = pickle.load(open(fn_merge_val, 'r'))[0]
-        fn_count = fn_merge.replace('pickle', 'count.hdf5')
+    genes = pickle.load(open(fn_merge_val, 'r'))[0]
+    fn_count = fn_merge.replace('pickle', 'count.hdf5')
 
     ### load count index data from hdf5
     IN = h5py.File(fn_count, 'r')
@@ -639,10 +477,7 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
         if i % 10 == 0:
             sys.stdout.write('%i\n' % i)
         sys.stdout.flush()
-        if CFG['is_matlab']:
-            offset = 1
-        else:
-            offset = 0
+        offset = 0
         g_idx = ev[i].gene_idx
 
         while gene_ids_segs[genes_f_idx_segs[gr_idx_segs]] < g_idx:
@@ -654,16 +489,10 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
         assert(gene_ids_edges[genes_f_idx_edges[gr_idx_edges]] == g_idx)
 
         ### laod relevant count data from HDF5
-        if CFG['is_matlab']:
-            segments = IN['segments'][strain_idx, genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs] + 1].T
-            seg_pos = IN['seg_pos'][strain_idx, genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs] + 1].astype('int')
-            edges = IN['edges'][strain_idx, genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges] + 1].T
-            edge_idx = IN['edge_idx'][0, genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges] + 1].astype('int')
-        else:
-            segments = IN['segments'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
-            seg_pos = IN['seg_pos'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
-            edges = IN['edges'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1, strain_idx]
-            edge_idx = IN['edge_idx'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1]
+        segments = IN['segments'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
+        seg_pos = IN['seg_pos'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
+        edges = IN['edges'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1, strain_idx]
+        edge_idx = IN['edge_idx'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1]
 
         for s_idx in range(len(strain_idx)):
             #print '%i/%i' % (s_idx, len(strain_idx))
@@ -701,51 +530,27 @@ def get_event_ids(IN, event_type, event_idx, CFG):
     if CFG['verbose']:
         print('Constructing event IDs')
     
-    if CFG['is_matlab']:
-        gene_idx = IN['gene_idx'][:].astype('int') - 1
-        gene_chr = IN['gene_chr'][:][gene_idx]
-        if event_type in ['exon_skip', 'mult_exon_skip']:
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[0, 1, 3, 4], i].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][:, i].astype('str'))) for i in event_idx], dtype='str')
-        elif event_type == 'intron_retention':
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[1, 2], i].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][:, i].astype('str'))) for i in event_idx], dtype='str')
-        elif event_type in ['alt_3prime', 'alt_5prime']:
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[0, 1, 4, 5], i].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.zeros((event_idx.shape[0], ), dtype='int')
-            idx = sp.where(IN['event_pos'][3, event_idx] < IN['event_pos'][4, event_idx])[0]
-            event_ids1[idx] = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[2, 3, 4, 5], i].astype('str'))) for i in event_idx[idx]], dtype='str')
-            idx = sp.where(IN['event_pos'][3, event_idx] > IN['event_pos'][4, event_idx])[0]
-            event_ids1[idx] = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][[0, 1, 2, 3], i].astype('str'))) for i in event_idx[idx]], dtype='str')
-            assert(sp.sum(event_ids1 == '') == 0)
-        elif event_type == 'mutex_exons':
-            event_ids0 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][:4, i].astype('str'))) for i in event_idx], dtype='str')
-            event_ids1 = sp.array(['%s:%s' % (gene_chr[i], '-'.join(IN['event_pos'][4:, i].astype('str'))) for i in event_idx], dtype='str')
-        else:
-            raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
-    ### we are not operating on matlab hdf5 files
+    gene_idx = IN['gene_idx'][:].astype('int')
+    gene_chr = IN['gene_chr'][:][gene_idx][event_idx]
+    event_pos = IN['event_pos'][:][event_idx, :].astype('str')
+    if event_type in ['exon_skip', 'mult_exon_skip']:
+        tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 3, 4]]]
+        tmp2 = sp.c_[gene_chr, event_pos]
+    elif event_type == 'intron_retention':
+        tmp1 = sp.c_[gene_chr, event_pos[:, [1, 2]]]
+        tmp2 = sp.c_[gene_chr, event_pos]
+    elif event_type in ['alt_3prime', 'alt_5prime']:
+        tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 6, 7]]]
+        tmp2 = sp.c_[gene_chr, event_pos[:, [2, 3, 4, 5]]]
+    elif event_type == 'mutex_exons':
+        tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 3]]]
+        tmp2 = sp.c_[gene_chr, event_pos[:, [0, 2, 3]]]
     else:
-        gene_idx = IN['gene_idx'][:].astype('int')
-        gene_chr = IN['gene_chr'][:][gene_idx][event_idx]
-        event_pos = IN['event_pos'][:][event_idx, :].astype('str')
-        if event_type in ['exon_skip', 'mult_exon_skip']:
-            tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 3, 4]]]
-            tmp2 = sp.c_[gene_chr, event_pos]
-        elif event_type == 'intron_retention':
-            tmp1 = sp.c_[gene_chr, event_pos[:, [1, 2]]]
-            tmp2 = sp.c_[gene_chr, event_pos]
-        elif event_type in ['alt_3prime', 'alt_5prime']:
-            tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 6, 7]]]
-            tmp2 = sp.c_[gene_chr, event_pos[:, [2, 3, 4, 5]]]
-        elif event_type == 'mutex_exons':
-            tmp1 = sp.c_[gene_chr, event_pos[:, [0, 1, 3]]]
-            tmp2 = sp.c_[gene_chr, event_pos[:, [0, 2, 3]]]
-        else:
-            raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
+        raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
 
-        event_ids0 = sp.array([':'.join(tmp1[i, :]) for i in range(tmp1.shape[0])], dtype='str')
-        event_ids1 = sp.array([':'.join(tmp2[i, :]) for i in range(tmp2.shape[0])], dtype='str')
-        del tmp1, tmp2
+    event_ids0 = sp.array([':'.join(tmp1[i, :]) for i in range(tmp1.shape[0])], dtype='str')
+    event_ids1 = sp.array([':'.join(tmp2[i, :]) for i in range(tmp2.shape[0])], dtype='str')
+    del tmp1, tmp2
             
     return [event_ids0, event_ids1]
 
