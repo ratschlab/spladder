@@ -1,0 +1,22 @@
+##gff-version 3
+1	alt_3prime	gene	5201	5500	.	+	.	ID=alt_3prime.1;GeneName="gene8"
+1	alt_3prime	mRNA	5201	5500	.	+	.	ID=alt_3prime.1_iso1;Parent=alt_3prime.1;GeneName="gene8"
+1	alt_3prime	exon	5201	5300	.	+	.	Parent=alt_3prime.1_iso1
+1	alt_3prime	exon	5401	5500	.	+	.	Parent=alt_3prime.1_iso1
+1	alt_3prime	mRNA	5201	5500	.	+	.	ID=alt_3prime.1_iso2;Parent=alt_3prime.1;GeneName="gene8"
+1	alt_3prime	exon	5201	5300	.	+	.	Parent=alt_3prime.1_iso2
+1	alt_3prime	exon	5351	5500	.	+	.	Parent=alt_3prime.1_iso2
+1	alt_3prime	gene	6051	6750	.	+	.	ID=alt_3prime.2;GeneName="gene10"
+1	alt_3prime	mRNA	6051	6750	.	+	.	ID=alt_3prime.2_iso1;Parent=alt_3prime.2;GeneName="gene10"
+1	alt_3prime	exon	6051	6200	.	+	.	Parent=alt_3prime.2_iso1
+1	alt_3prime	exon	6551	6750	.	+	.	Parent=alt_3prime.2_iso1
+1	alt_3prime	mRNA	6051	6750	.	+	.	ID=alt_3prime.2_iso2;Parent=alt_3prime.2;GeneName="gene10"
+1	alt_3prime	exon	6051	6200	.	+	.	Parent=alt_3prime.2_iso2
+1	alt_3prime	exon	6301	6750	.	+	.	Parent=alt_3prime.2_iso2
+1	alt_3prime	gene	5551	5850	.	-	.	ID=alt_3prime.5;GeneName="gene9"
+1	alt_3prime	mRNA	5551	5850	.	-	.	ID=alt_3prime.5_iso1;Parent=alt_3prime.5;GeneName="gene9"
+1	alt_3prime	exon	5551	5650	.	-	.	Parent=alt_3prime.5_iso1
+1	alt_3prime	exon	5751	5850	.	-	.	Parent=alt_3prime.5_iso1
+1	alt_3prime	mRNA	5551	5850	.	-	.	ID=alt_3prime.5_iso2;Parent=alt_3prime.5;GeneName="gene9"
+1	alt_3prime	exon	5551	5700	.	-	.	Parent=alt_3prime.5_iso2
+1	alt_3prime	exon	5751	5850	.	-	.	Parent=alt_3prime.5_iso2
