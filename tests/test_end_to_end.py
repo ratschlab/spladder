@@ -2,6 +2,7 @@ import gzip
 import h5py
 import os
 import scipy as sp
+import glob
 
 import pytest
 import pickle
@@ -20,6 +21,25 @@ def _compare_hdf5(expected, actual):
         else:
             assert sp.all(expected[k][:] == actual[k][:])
 
+def _assert_files_equal_testing(e, a):
+
+    da = sp.loadtxt(a, dtype='str', delimiter='\t')
+    de = sp.loadtxt(e, dtype='str', delimiter='\t')
+
+    ### check header
+    assert sp.all(da[0, :] == de[0, :])
+    da = da[1:, ]
+    de = de[1:, ]
+    
+    ### check text cols
+    assert sp.all(da[:, [0, 1]] == de[:, [0, 1]])
+    da = da[:, 2:]
+    de = de[:, 2:]
+
+    ### check p-values (up to certain precision)
+    da = sp.around(da.astype('float'), decimals=6)
+    de = sp.around(de.astype('float'), decimals=6)
+    assert sp.all(da == de)
 
 def _assert_files_equal(expected_path, actual_path):
     def o(f):
@@ -43,6 +63,8 @@ def _assert_files_equal(expected_path, actual_path):
                     assert sp.all(ta == te)
                 else:
                     assert sp.all([_compare_gene(_[0], _[1]) for _ in zip(ta, te)])
+            elif os.path.basename(expected_path).startswith('test_results'):
+                _assert_files_equal_testing(e, a)
             else:
                 assert e.read() == a.read(), 'actual and expected content differ!\nactual path: %s\nexpected path: %s\n' % (expected_path, actual_path)
 
@@ -66,10 +88,9 @@ def _compare_gene(a, b):
             (sp.all(_astrain == _bstrain)) &
             (a.event_type == b.event_type) &
             (a.gene_idx == b.gene_idx) &
-            (a.id == b.id) &
             (a.num_detected == b.num_detected))
 
-def _check_files(result_dir, out_dir, prefix):
+def _check_files_spladder(result_dir, out_dir, prefix):
     files = []
     for event_type in ['exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime']:
         files.append('{}_{}_C3.confirmed.pickle'.format(prefix, event_type))
@@ -85,6 +106,18 @@ def _check_files(result_dir, out_dir, prefix):
             os.path.join(result_dir, fname),
             os.path.join(out_dir, fname)
         )
+
+def _check_files_testing(result_dir, out_dir, suffixes):
+    files = []
+    for p in suffixes:
+        files.extend([os.path.basename(x) for x in glob.glob(os.path.join(result_dir, p))])
+
+    for fname in files:
+        _assert_files_equal(
+            os.path.join(result_dir, fname),
+            os.path.join(out_dir, fname)
+        )
+
 
 @pytest.mark.parametrize("test_id,case", [
     ['basic', 'pos'],
@@ -109,7 +142,7 @@ def test_end_to_end_merge(test_id, case, tmpdir):
     spladder.main(my_args)
 
     ### check that files are identical
-    _check_files(result_dir, out_dir, prefix='merge_graphs') 
+    _check_files_spladder(result_dir, out_dir, prefix='merge_graphs') 
 
     ### test visualization
     my_args = ['spladder',
@@ -128,7 +161,7 @@ def test_end_to_end_merge(test_id, case, tmpdir):
 
 @pytest.mark.parametrize("test_id,case", [
     ['basic', 'pos'],
-    ['basic', 'neg']
+     ['basic', 'neg']
 ])
 def test_end_to_end_single(test_id, case, tmpdir):
     data_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'data')
@@ -142,7 +175,7 @@ def test_end_to_end_single(test_id, case, tmpdir):
                '-o', out_dir,
                '-b', os.path.join(data_dir, 'align', '{}_1.bam'.format(case)),
                '--merge-strat', 'single',
-               '--extract-as',
+               '--extract-ase',
                '-n', '15',
                '-v']
                #'-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
@@ -150,5 +183,52 @@ def test_end_to_end_single(test_id, case, tmpdir):
     spladder.main(my_args)
 
     ### check that files are identical
-    _check_files(result_dir, out_dir, prefix='{}_1'.format(case)) 
+    _check_files_spladder(result_dir, out_dir, prefix='{}_1'.format(case)) 
+
+@pytest.mark.parametrize("test_id", [
+    'events'
+])
+def test_end_to_end_testing(test_id, tmpdir):
+    data_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'data')
+    result_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'results_merged')
+
+    out_dir = str(tmpdir)
+
+    my_args = ['spladder',
+               'build',
+               '-a', os.path.join(data_dir, 'testcase_{}_spladder.gtf'.format(test_id)),
+               '-o', out_dir,
+               '-b', ','.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.bam'.format(test_id, idx+1)) for idx in range(20)]),
+               '--event-types', 'exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip',
+               '--merge-strat', 'merge_graphs',
+               '--extract-ase',
+               '--readlen', '50',
+               '-v']
+
+    spladder.main(my_args)
+
+    bamsA = os.path.join(out_dir, 'bamlistA.txt')
+    bamsB = os.path.join(out_dir, 'bamlistB.txt')
+    with open(bamsA, 'w') as fh:
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.bam'.format(test_id, idx+1)) for idx in range(10)]) + '\n')
+    with open(bamsB, 'w') as fh:
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.bam'.format(test_id, idx+11)) for idx in range(10)]) + '\n')
+
+    my_args = ['spladder', 
+               'test',
+               '-o', out_dir,
+               '-v',
+               '--diagnose-plots',
+               '--readlen', '50',
+               '--merge-strat', 'merge_graphs',
+               '--event-types', 'exon_skip',
+               '-a', bamsA,
+               '-b', bamsB]
+
+    spladder.main(my_args)
+
+    ### check that files are identical
+    _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv']) 
+    _check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.png']) 
+
 
