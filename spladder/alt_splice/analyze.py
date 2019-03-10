@@ -61,11 +61,11 @@ def analyze_events(options, event_type, sample_idx=None):
     else:
         gz_suffix = ''
     fn_out_txt = fn_out.replace('.pickle', '.txt' + gz_suffix)
-    fn_out_struc = fn_out.replace('.pickle', '.struc.txt')
+    fn_out_struc = fn_out.replace('.pickle', '.struc.txt' + gz_suffix)
     fn_out_bed = fn_out.replace('.pickle', '.bed')
     fn_out_gff3 = fn_out.replace('.pickle', '.gff3')
     fn_out_conf_txt = fn_out_conf.replace('.pickle', '.txt' + gz_suffix)
-    fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt')
+    fn_out_conf_struc = fn_out_conf.replace('.pickle', '.struc.txt' + gz_suffix)
     fn_out_conf_bed = fn_out_conf.replace('.pickle', '.bed')
     fn_out_conf_gff3 = fn_out_conf.replace('.pickle', '.gff3')
     fn_out_conf_tcga = fn_out_conf.replace('.pickle', '.tcga.txt' + gz_suffix)
@@ -258,7 +258,7 @@ def analyze_events(options, event_type, sample_idx=None):
         if os.path.exists(fn_out_txt):
             print('%s already exists' % fn_out_txt)
         else:
-            write_events_txt(fn_out_txt, events_all, fn_out_count)
+            write_events_txt(fn_out_txt, options.strains, events_all, fn_out_count)
 
     if options.output_struc:
         if os.path.exists(fn_out_struc):

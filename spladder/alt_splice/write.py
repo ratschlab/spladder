@@ -349,7 +349,10 @@ def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
     print('writing %s events in generic structured format to %s' % (events[0].event_type, fn_out_struc))
     mult_exon_skip_bool = True
 
-    fd_out = open(fn_out_struc, 'w+') 
+    if fn_out_struc.endswith('.gz'):
+        fd_out = gzip.open(fn_out_struc, 'wt', encoding='utf-8') 
+    else:
+        fd_out = open(fn_out_struc, 'wt', encoding='utf-8') 
 
     ### load data from count hdf5
     IN = h5py.File(fn_counts, 'r')
