@@ -19,7 +19,10 @@ def _compare_hdf5(expected, actual):
             for l in expected[k]:
                 assert sp.all(expected[k][l][:] == actual[k][l][:])
         else:
-            assert sp.all(expected[k][:] == actual[k][:])
+            if k in ['psi']:
+                assert sp.all(expected[k][:].astype('str') == actual[k][:].astype('str'))
+            else:
+                assert sp.all(expected[k][:] == actual[k][:])
 
 def _compare_ps(expected, actual):
     
@@ -156,6 +159,14 @@ def test_end_to_end_merge(test_id, case, tmpdir):
                '--extract-as',
                '-n', '15',
                '--output-conf-icgc',
+               '--output-txt', 
+               '--output-txt-conf',
+               '--output-gff3', 
+               '--output-struc', 
+               '--output-struc-conf', 
+               '--output-bed', 
+               '--output-conf-bed', 
+               '--output-conf-tcga',
                '-v']
 
     spladder.main(my_args)
@@ -198,9 +209,23 @@ def test_end_to_end_single(test_id, case, tmpdir):
                '-n', '15',
                '--output-conf-icgc', 
                '-v']
-               #'-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
 
     spladder.main(my_args)
+
+    my_args = ['spladder',
+               'build',
+               '-a', os.path.join(data_dir, 'annotation_{}.gtf'.format(case)),
+               '-o', out_dir,
+               '-b', os.path.join(data_dir, 'align', '{}_1.bam'.format(case)),
+               '--merge-strat', 'single',
+               '--extract-ase',
+               '-n', '15',
+               '--output-conf-icgc', 
+               '--sparse-bam',
+               '-v']
+
+    spladder.main(my_args)
+
 
     ### check that files are identical
     _check_files_spladder(result_dir, out_dir, prefix='{}_1'.format(case)) 
@@ -223,9 +248,22 @@ def test_end_to_end_testing(test_id, tmpdir):
                '--merge-strat', 'merge_graphs',
                '--extract-ase',
                '--readlen', '50',
+               '--output-conf-icgc',
+               '--output-txt', 
+               '--output-txt-conf',
+               '--output-gff3',
+               '--output-struc',
+               '--output-struc-conf',
+               '--output-bed',
+               '--output-conf-bed',
+               '--output-conf-tcga',
+               '--output-conf-icgc',
                '-v']
 
     spladder.main(my_args)
+
+    ### check that event files are identical
+    _check_files_spladder(result_dir, out_dir, prefix='merge_graphs') 
 
     bamsA = os.path.join(out_dir, 'bamlistA.txt')
     bamsB = os.path.join(out_dir, 'bamlistB.txt')

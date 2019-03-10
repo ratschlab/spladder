@@ -93,7 +93,7 @@ def spladder(options):
                         options = append_chrms([x['SN'] for x in parse_header(IN.text)['SQ']], options)
                         IN.close()
 
-                    OUT = h5py.File(re.sub(r'.bam$', '', bfn) + '.conf_%i' % options.confidence_level + '.filt.hdf5', 'w')
+                    OUT = h5py.File(re.sub(r'.bam$', '', bfn) + '.conf_%i' % options.confidence + '.filt.hdf5', 'w')
                     if options.parallel > 1:
                         import multiprocessing as mp
                         pool = mp.Pool(processes=options.parallel)

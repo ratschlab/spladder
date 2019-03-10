@@ -1,0 +1,10 @@
+##gff-version 3
+1	mutex_exons	gene	2101	2850	.	+	.	ID=mutex_exons.1;GeneName="gene4"
+1	mutex_exons	mRNA	2101	2850	.	+	.	ID=mutex_exons.1_iso1;Parent=mutex_exons.1;GeneName="gene4"
+1	mutex_exons	exon	2101	2250	.	+	.	Parent=mutex_exons.1_iso1
+1	mutex_exons	exon	2351	2450	.	+	.	Parent=mutex_exons.1_iso1
+1	mutex_exons	exon	2751	2850	.	+	.	Parent=mutex_exons.1_iso1
+1	mutex_exons	mRNA	2101	2850	.	+	.	ID=mutex_exons.1_iso2;Parent=mutex_exons.1;GeneName="gene4"
+1	mutex_exons	exon	2101	2250	.	+	.	Parent=mutex_exons.1_iso2
+1	mutex_exons	exon	2551	2650	.	+	.	Parent=mutex_exons.1_iso2
+1	mutex_exons	exon	2751	2850	.	+	.	Parent=mutex_exons.1_iso2

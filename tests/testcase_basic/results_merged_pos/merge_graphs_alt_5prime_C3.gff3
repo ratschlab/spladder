@@ -1,0 +1,8 @@
+##gff-version 3
+chr1	alt_5prime	gene	5	50	.	+	.	ID=alt_5prime.1;GeneName="GENE1"
+chr1	alt_5prime	mRNA	5	50	.	+	.	ID=alt_5prime.1_iso1;Parent=alt_5prime.1;GeneName="GENE1"
+chr1	alt_5prime	exon	5	26	.	+	.	Parent=alt_5prime.1_iso1
+chr1	alt_5prime	exon	39	50	.	+	.	Parent=alt_5prime.1_iso1
+chr1	alt_5prime	mRNA	5	50	.	+	.	ID=alt_5prime.1_iso2;Parent=alt_5prime.1;GeneName="GENE1"
+chr1	alt_5prime	exon	5	29	.	+	.	Parent=alt_5prime.1_iso2
+chr1	alt_5prime	exon	39	50	.	+	.	Parent=alt_5prime.1_iso2
