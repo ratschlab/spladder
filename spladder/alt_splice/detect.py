@@ -375,25 +375,25 @@ def detect_wrapper(genes, event_type, gidx, idx, edge_limit, log=False):
         return (detect_multipleskips(genes, gidx, log, edge_limit), idx)
     
 
-def detect_events(genes, event_type, idx, CFG):
+def detect_events(genes, event_type, idx, options):
 
-    if CFG['parallel'] > 1:
-        pool = mp.Pool(processes=CFG['parallel'], initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
+    if options.parallel > 1:
+        pool = mp.Pool(processes=options.parallel, initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
         binsize = 3
         maxsize = idx.shape[0]
         idx_chunks = [sp.arange(x, min(x + binsize, maxsize)) for x in range(0, maxsize, binsize)]
         result_list = sp.empty((len(idx_chunks), ), dtype='object')
 
         try:
-            result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c, CFG['detect_edge_limit'])) for c,cidx in enumerate(idx_chunks)]
+            result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c, options.detect_edge_limit)) for c,cidx in enumerate(idx_chunks)]
             res_cnt = 0
             while result:
                 tmp = result.pop(0).get()
                 result_list[tmp[1]] = tmp[0]
-                if CFG['verbose']:
+                if options.verbose:
                     log_progress(res_cnt, len(idx_chunks))
                     res_cnt += 1
-            if CFG['verbose']:
+            if options.verbose:
                 log_progress(len(idx_chunks), len(idx_chunks))
                 print('')
             pool.terminate()
@@ -413,7 +413,7 @@ def detect_events(genes, event_type, idx, CFG):
             else:
                 result_list = [[], []]
     else:
-        result_list = detect_wrapper(genes[idx], event_type, idx, None, edge_limit=CFG['detect_edge_limit'], log=CFG['verbose'])[0]        
+        result_list = detect_wrapper(genes[idx], event_type, idx, None, edge_limit=options.detect_edge_limit, log=options.verbose)[0]        
 
     return result_list
  

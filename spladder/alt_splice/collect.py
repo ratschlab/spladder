@@ -14,15 +14,15 @@ from ..init import append_chrms
 from ..classes.event import Event
 
 
-def collect_events(CFG):
+def collect_events(options):
 
     ### which events do we call
-    do_exon_skip = ('exon_skip' in CFG['event_types'])
-    do_intron_retention = ('intron_retention' in CFG['event_types'])
-    do_mult_exon_skip = ('mult_exon_skip' in CFG['event_types'])
-    do_alt_3prime = ('alt_3prime' in CFG['event_types'])
-    do_alt_5prime = ('alt_5prime' in CFG['event_types'])
-    do_mutex_exons = ('mutex_exons' in CFG['event_types'])
+    do_exon_skip = ('exon_skip' in options.event_types)
+    do_intron_retention = ('intron_retention' in options.event_types)
+    do_mult_exon_skip = ('mult_exon_skip' in options.event_types)
+    do_alt_3prime = ('alt_3prime' in options.event_types)
+    do_alt_5prime = ('alt_5prime' in options.event_types)
+    do_mutex_exons = ('mutex_exons' in options.event_types)
 
     ### init empty event fields
     intron_reten_pos = []
@@ -33,58 +33,58 @@ def collect_events(CFG):
     mutex_exons_pos = []
 
     validate_tag = ''
-    if 'validate_splicegraphs' in CFG and CFG['validate_splicegraphs']:
+    if hasattr(options, 'validate_sg') and options.validate_sg:
         validate_tag = '.validated'
 
-    for i in range(len(CFG['samples'])):
+    for i in range(len(options.samples)):
         if i == 1:
             break
 
-        strain = CFG['strains'][i]
+        strain = options.strains[i]
 
-        if 'spladder_infile' in CFG:
-            genes_fnames = CFG['spladder_infile']
-        elif CFG['merge_strategy'] == 'single':
-            genes_fnames = '%s/spladder/genes_graph_conf%i.%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][i])
+        if hasattr(options, 'spladderfile') and options.spladderfile != '-':
+            genes_fnames = options.spladderfile
+        elif options.merge == 'single':
+            genes_fnames = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.samples[i])
         else:
-            genes_fnames = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag)
+            genes_fnames = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag)
 
         ### define outfile names
-        sample_tag = CFG['merge_strategy']
-        if CFG['merge_strategy'] == 'single':
-            sample_tag = CFG['samples'][i]
-        fn_out_ir = '%s/%s_intron_retention_C%i.pickle' % (CFG['out_dirname'], sample_tag, CFG['confidence_level'])
-        fn_out_es = '%s/%s_exon_skip_C%i.pickle' % (CFG['out_dirname'], sample_tag, CFG['confidence_level'])
-        fn_out_mes = '%s/%s_mult_exon_skip_C%i.pickle' % (CFG['out_dirname'], sample_tag, CFG['confidence_level']) 
-        fn_out_a5 = '%s/%s_alt_5prime_C%i.pickle' % (CFG['out_dirname'], sample_tag, CFG['confidence_level'])
-        fn_out_a3 = '%s/%s_alt_3prime_C%i.pickle' % (CFG['out_dirname'], sample_tag, CFG['confidence_level'])
-        fn_out_mex = '%s/%s_mutex_exons_C%i.pickle' % (CFG['out_dirname'], sample_tag, CFG['confidence_level'])
+        sample_tag = options.merge
+        if options.merge == 'single':
+            sample_tag = options.samples[i]
+        fn_out_ir = '%s/%s_intron_retention_C%i.pickle' % (options.outdir, sample_tag, options.confidence)
+        fn_out_es = '%s/%s_exon_skip_C%i.pickle' % (options.outdir, sample_tag, options.confidence)
+        fn_out_mes = '%s/%s_mult_exon_skip_C%i.pickle' % (options.outdir, sample_tag, options.confidence) 
+        fn_out_a5 = '%s/%s_alt_5prime_C%i.pickle' % (options.outdir, sample_tag, options.confidence)
+        fn_out_a3 = '%s/%s_alt_3prime_C%i.pickle' % (options.outdir, sample_tag, options.confidence)
+        fn_out_mex = '%s/%s_mutex_exons_C%i.pickle' % (options.outdir, sample_tag, options.confidence)
 
-        print('\nconfidence %i / sample %i' % (CFG['confidence_level'], i))
+        print('\nconfidence %i / sample %i' % (options.confidence, i))
 
         if os.path.exists(genes_fnames):
             print('Loading gene structure from %s ...' % genes_fnames)
             (genes, inserted) = pickle.load(open(genes_fnames, 'rb'))
             print('... done.')
             
-            if not 'chrm_lookup' in CFG:
-                CFG = append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), CFG)
+            if not hasattr(options, 'chrm_lookup'):
+                options = append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), options)
 
             ### detect intron retentions from splicegraph
             if do_intron_retention:
                 if not os.path.exists(fn_out_ir):
-                    idx_intron_reten, intron_intron_reten = detect_events(genes, 'intron_retention', sp.where([x.is_alt for x in genes])[0], CFG)
+                    idx_intron_reten, intron_intron_reten = detect_events(genes, 'intron_retention', sp.where([x.is_alt for x in genes])[0], options)
                     for k in range(len(idx_intron_reten)):
                         gene = genes[idx_intron_reten[k]]
 
                         ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not 'reference_strain' in CFG:
+                        if not hasattr(options, 'reference_strain'):
                             exons_col = exons
                             exons_col_pos = exons
                         else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
+                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
                         if exons_col.shape != exons_col_pos.shape: 
                             print('skipping non-mappable intron retention event')
                             continue
@@ -108,18 +108,18 @@ def collect_events(CFG):
             ### detect exon_skips from splicegraph
             if do_exon_skip:
                 if not os.path.exists(fn_out_es):
-                    idx_exon_skip, exon_exon_skip = detect_events(genes, 'exon_skip', sp.where([x.is_alt for x in genes])[0], CFG)
+                    idx_exon_skip, exon_exon_skip = detect_events(genes, 'exon_skip', sp.where([x.is_alt for x in genes])[0], options)
                     for k in range(len(idx_exon_skip)):
                         gene = genes[idx_exon_skip[k]]
 
                         ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not 'reference_strain' in CFG:
+                        if not hasattr(options, 'reference_strain'):
                             exons_col = exons
                             exons_col_pos = exons
                         else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
+                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
                         if exons_col.shape != exons_col_pos.shape: 
                             print('skipping non-mappable exon_skip event')
                             continue
@@ -141,19 +141,19 @@ def collect_events(CFG):
             ### detect alternative intron_ends from splicegraph
             if do_alt_3prime or do_alt_5prime:
                 if not os.path.exists(fn_out_a5) or not os.path.exists(fn_out_a3):
-                    idx_alt_end_5prime, exon_alt_end_5prime, idx_alt_end_3prime, exon_alt_end_3prime = detect_events(genes, 'alt_prime', sp.where([x.is_alt for x in genes])[0], CFG)
+                    idx_alt_end_5prime, exon_alt_end_5prime, idx_alt_end_3prime, exon_alt_end_3prime = detect_events(genes, 'alt_prime', sp.where([x.is_alt for x in genes])[0], options)
                     ### handle 5 prime events
                     for k in range(len(idx_alt_end_5prime)):
                         gene = genes[idx_alt_end_5prime[k]]
 
                         ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not 'reference_strain' in CFG:
+                        if not hasattr(options, 'reference_strain'):
                             exons_col = exons
                             exons_col_pos = exons
                         else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
+                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
                         if exons_col.shape != exons_col_pos.shape: 
                             print('skipping non-mappable alt 5-prime event')
                             continue
@@ -198,12 +198,12 @@ def collect_events(CFG):
 
                         ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not 'reference_strain' in CFG:
+                        if not hasattr(options, 'reference_strain'):
                             exons_col = exons
                             exons_col_pos = exons
                         else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
+                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
                         if exons_col.shape != exons_col_pos.shape: 
                             print('skipping non-mappable alt 3-prime event')
                             continue
@@ -248,18 +248,18 @@ def collect_events(CFG):
             ### detect multiple_exon_skips from splicegraph
             if do_mult_exon_skip:
                 if not os.path.exists(fn_out_mes):
-                    idx_mult_exon_skip, exon_mult_exon_skip = detect_events(genes, 'mult_exon_skip', sp.where([x.is_alt for x in genes])[0], CFG)
+                    idx_mult_exon_skip, exon_mult_exon_skip = detect_events(genes, 'mult_exon_skip', sp.where([x.is_alt for x in genes])[0], options)
                     for k, gidx in enumerate(idx_mult_exon_skip):
                         gene = genes[gidx] 
 
                         ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not 'reference_strain' in CFG:
+                        if not hasattr(options, 'reference_strain'):
                             exons_col = exons
                             exons_col_pos = exons
                         else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
+                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
                         if exons_col.shape != exons_col_pos.shape: 
                             print('skipping non-mappable multiple exon skip event')
                             continue
@@ -281,19 +281,19 @@ def collect_events(CFG):
             ### detect mutually exclusive exons from splicegraph
             if do_mutex_exons:
                 if not os.path.exists(fn_out_mex):
-                    idx_mutex_exons, exon_mutex_exons = detect_events(genes, 'mutex_exons', sp.where([x.is_alt for x in genes])[0], CFG)
+                    idx_mutex_exons, exon_mutex_exons = detect_events(genes, 'mutex_exons', sp.where([x.is_alt for x in genes])[0], options)
                     if len(idx_mutex_exons) > 0:
                         for k in range(len(exon_mutex_exons)):
                             gene = genes[idx_mutex_exons[k]]
 
                             ### perform liftover between strains if necessary
                             exons = gene.splicegraph.vertices
-                            if not 'reference_strain' in CFG:
+                            if not hasattr(options, 'reference_strain'):
                                 exons_col = exons
                                 exons_col_pos = exons
                             else:
-                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
-                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, CFG['reference_strain']).T
+                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
+                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
 
                             if exons_col.shape != exons_col_pos.shape: 
                                 print('skipping non-mappable mutex exons event')
@@ -324,7 +324,7 @@ def collect_events(CFG):
         if not os.path.exists(fn_out_ir):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(intron_reten_pos), CFG)
+            events_all = post_process_event_struct(sp.array(intron_reten_pos), options)
 
             ### store intron retentions
             print('saving intron retentions to %s' % fn_out_ir)
@@ -339,7 +339,7 @@ def collect_events(CFG):
         if not os.path.exists(fn_out_es):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(exon_skip_pos), CFG)
+            events_all = post_process_event_struct(sp.array(exon_skip_pos), options)
 
             ### store exon skip events
             print('saving exon skips to %s' % fn_out_es)
@@ -354,7 +354,7 @@ def collect_events(CFG):
         if not os.path.exists(fn_out_mes):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(mult_exon_skip_pos), CFG)
+            events_all = post_process_event_struct(sp.array(mult_exon_skip_pos), options)
 
             ### store multiple exon skip events
             print('saving multiple exon skips to %s' % fn_out_mes)
@@ -369,13 +369,13 @@ def collect_events(CFG):
         if not os.path.exists(fn_out_a5):
           
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(alt_end_5prime_pos), CFG)
+            events_all = post_process_event_struct(sp.array(alt_end_5prime_pos), options)
 
             ### curate alt prime events
             ### cut to min len, if alt exon lengths differ
             ### remove, if alt exons do not overlap
-            if CFG['curate_alt_prime_events']:
-                events_all = curate_alt_prime(events_all, CFG)
+            if options.curate_alt_prime:
+                events_all = curate_alt_prime(events_all, options)
 
             ### store alt 5 prime events
             print('saving alt 5 prime events to %s' % fn_out_a5)
@@ -390,13 +390,13 @@ def collect_events(CFG):
         if not os.path.exists(fn_out_a3):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(alt_end_3prime_pos), CFG)
+            events_all = post_process_event_struct(sp.array(alt_end_3prime_pos), options)
 
             ### curate alt prime events
             ### cut to min len, if alt exon lengths differ
             ### remove, if alt exons do not overlap
-            if CFG['curate_alt_prime_events']:
-                events_all = curate_alt_prime(events_all, CFG)
+            if options.curate_alt_prime:
+                events_all = curate_alt_prime(events_all, options)
 
             ### store alt 3 prime events
             print('saving alt 3 prime events to %s' % fn_out_a3)
@@ -411,7 +411,7 @@ def collect_events(CFG):
         if not os.path.exists(fn_out_mex):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(mutex_exons_pos), CFG)
+            events_all = post_process_event_struct(sp.array(mutex_exons_pos), options)
 
             ### store multiple exon skip events
             print('saving mutually exclusive exons to %s' % fn_out_mex)

@@ -10,16 +10,15 @@ from .utils import *
 from .init import *
 from .reads import *
 
-def remove_short_exons(genes, CFG):
-    # [genes] = remove_short_exons(genes, terminal_short_extend, terminal_short_len, short_exon_skipped, short_exon_removed)
+def remove_short_exons(genes, options):
 
     short_exon_removed = 0
     short_exon_skipped = 0
 
     rm_idx = []
     for i in range(len(genes)):
-        if CFG['verbose'] and (i+1) % 1000 == 0:
-            print('%i' % (i+1), file=CFG['log_fd'])
+        if options.verbose and (i+1) % 1000 == 0:
+            print('%i' % (i+1), file=options.fd_log)
 
         ### remove genes with no exons
         if genes[i].splicegraph.vertices.shape[0] == 0:
@@ -27,34 +26,34 @@ def remove_short_exons(genes, CFG):
             continue
       
         ### extend terminal exons to terminal_short_extend if they are shorter than terminal_short_len
-        if genes[i].splicegraph.vertices[1, 0] - genes[i].splicegraph.vertices[0, 0] < CFG['remove_exons']['terminal_short_len']:
-            genes[i].splicegraph.vertices[0, 0] = genes[i].splicegraph.vertices[1, 0] - CFG['remove_exons']['terminal_short_extend']
+        if genes[i].splicegraph.vertices[1, 0] - genes[i].splicegraph.vertices[0, 0] < options.remove_exons['terminal_short_len']:
+            genes[i].splicegraph.vertices[0, 0] = genes[i].splicegraph.vertices[1, 0] - options.remove_exons['terminal_short_extend']
             genes[i].start = min(genes[i].start, genes[i].splicegraph.vertices[0, 0])
       
-        if genes[i].splicegraph.vertices[1, -1] - genes[i].splicegraph.vertices[0, -1] < CFG['remove_exons']['terminal_short_len']:
-            genes[i].splicegraph.vertices[1, -1] = genes[i].splicegraph.vertices[1, -1] + CFG['remove_exons']['terminal_short_extend']
+        if genes[i].splicegraph.vertices[1, -1] - genes[i].splicegraph.vertices[0, -1] < options.remove_exons['terminal_short_len']:
+            genes[i].splicegraph.vertices[1, -1] = genes[i].splicegraph.vertices[1, -1] + options.remove_exons['terminal_short_extend']
             genes[i].stop = max(genes[i].stop, genes[i].splicegraph.vertices[1, -1]) 
       
         ### check for very short exons and insert an edge that allows skipping them
         exons_remove_idx = []
         j = 1
         while (j <= genes[i].splicegraph.vertices.shape[1] - 1):
-            if (genes[i].splicegraph.vertices[1, j] - genes[i].splicegraph.vertices[0, j]) < CFG['remove_exons']['min_exon_len']:
+            if (genes[i].splicegraph.vertices[1, j] - genes[i].splicegraph.vertices[0, j]) < options.remove_exons['min_exon_len']:
                 foundp = False
                 for jp in range(j + 1, genes[i].splicegraph.vertices.shape[1]):
-                    if (genes[i].splicegraph.vertices[1, jp] - genes[i].splicegraph.vertices[0, jp] >= CFG['remove_exons']['min_exon_len_remove']) and (genes[i].splicegraph.edges[j, jp] == 1):
+                    if (genes[i].splicegraph.vertices[1, jp] - genes[i].splicegraph.vertices[0, jp] >= options.remove_exons['min_exon_len_remove']) and (genes[i].splicegraph.edges[j, jp] == 1):
                         foundp = True
                         break 
                 foundn = False
                 for jn in range(j - 2, -1, -1):
-                    if (genes[i].splicegraph.vertices[1, jn] - genes[i].splicegraph.vertices[0, jn] >= CFG['remove_exons']['min_exon_len_remove']) and (genes[i].splicegraph.edges[jn, j] == 1):
+                    if (genes[i].splicegraph.vertices[1, jn] - genes[i].splicegraph.vertices[0, jn] >= options.remove_exons['min_exon_len_remove']) and (genes[i].splicegraph.edges[jn, j] == 1):
                         foundn = True
                         break
                 if foundp and foundn:
                     genes[i].splicegraph.edges[jn, jp] = 1 
                     genes[i].splicegraph.edges[jp, jn] = 1 
       
-                    if genes[i].splicegraph.vertices[1, j] - genes[i].splicegraph.vertices[0, j] < CFG['remove_exons']['min_exon_len_remove']:
+                    if genes[i].splicegraph.vertices[1, j] - genes[i].splicegraph.vertices[0, j] < options.remove_exons['min_exon_len_remove']:
                         short_exon_removed += 1
                         exons_remove_idx.append(j)
                     else:
@@ -67,9 +66,9 @@ def remove_short_exons(genes, CFG):
     keep_idx = sp.where(~sp.in1d(sp.arange(len(genes[i])), rm_idx))[0]
     genes = genes[keep_idx]
 
-    if CFG['verbose']:
-        print('short_exon_removed: %i' % short_exon_removed, file=CFG['log_fd'])
-        print('short_exon_skipped: %i' % short_exon_skipped, file=CFG['log_fd'])
+    if options.verbose:
+        print('short_exon_removed: %i' % short_exon_removed, file=options.fd_log)
+        print('short_exon_skipped: %i' % short_exon_skipped, file=options.fd_log)
 
     return genes
 
@@ -240,7 +239,7 @@ def reduce_splice_graph(genes):
     return genes
 
 
-def filter_by_edgecount(genes, CFG):
+def filter_by_edgecount(genes, options):
 
     ### filter splicegraphs by support count over samples
     keep_genes = []
@@ -249,7 +248,7 @@ def filter_by_edgecount(genes, CFG):
         #(tmp, tmp, k_idx) = intersect_rows(u_exons, genes[i].splicegraph.vertices.T, index=True)
         genes[i].from_sparse()
         k_idx = sp.where(genes[i].splicegraph.edges.sum(axis = 1) == 0)[0]
-        genes[i].splicegraph.edges = (genes[i].edge_count >= CFG['sg_min_edge_count']).astype('int')
+        genes[i].splicegraph.edges = (genes[i].edge_count >= options.sg_min_edge_count).astype('int')
         ### remove all exons that have no incoming or outgoing edges (caused by validation, keep single exon transcripts that occured before)
         k_idx2 = sp.where(genes[i].splicegraph.edges.sum(axis = 1) > 0)[0]
         #rm_idx = sp.where(~sp.in1d(k_idx2, k_idx))[0]
@@ -263,19 +262,18 @@ def filter_by_edgecount(genes, CFG):
     return genes[keep_genes]
 
 
-def insert_intron_retentions(genes, CFG):
+def insert_intron_retentions(genes, options):
     # written by Georg Zeller & Gunnar Raetsch, Mpi Tuebingen, Germany, 2009, Andre Kahles, MSKCC, 2013
-    # [genes, inserted] = insert_intron_retentions(genes, CFG)
 
     inserted = 0
     strands = ['+', '-']
 
     ### form all possible combinations of contigs and strands --> regions
-    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG['confidence_level'], CFG, sparse_bam=CFG['bam_to_sparse'])
+    (regions, options) = init_regions(options.bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
 
     ### ignore contigs not present in bam files 
     # TODO
-    #keepidx = sp.where(sp.in1d(sp.array([CFG['chrm_lookup'][x.chr] for x in genes[chunk_idx]]), sp.array([x.chr_num for x in regions])))[0]
+    #keepidx = sp.where(sp.in1d(sp.array([options.chrm_lookup[x.chr] for x in genes[chunk_idx]]), sp.array([x.chr_num for x in regions])))[0]
     #genes = genes[keepidx]
 
     c = 0 
@@ -291,27 +289,27 @@ def insert_intron_retentions(genes, CFG):
 
             for i in cidx:
 
-                if CFG['verbose'] and (c+1) % 100 == 0:
+                if options.verbose and (c+1) % 100 == 0:
                     print('\r %i(%i) genes done (found %i new retentions in %i tested eligible introns, %2.1f%%)' % (c+1, genes.shape[0], num_introns_added, num_introns, 100 * num_introns_added / float(max(1, num_introns))), file=sys.stdout)
 
                 gg = genes[i]
                 assert(gg.strand == s)
                 assert(gg.chr == contig)
 
-                if CFG['bam_to_sparse']:
-                    if isinstance(CFG['bam_fnames'], str):
-                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                if options.sparse_bam:
+                    if isinstance(options.bam_fnames, str):
+                        [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
-                        for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                        for fname in options.bam_fnames:
+                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:
                                 tracks += tmp_
                     tracks = sp.asarray(tracks)
                 else:
-                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'])
+                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches)
 
                 exon_coverage = sp.zeros((gg.splicegraph.vertices.shape[1],), dtype='float')
                 for k in range(gg.splicegraph.vertices.shape[1]):
@@ -331,11 +329,11 @@ def insert_intron_retentions(genes, CFG):
                     num_introns += 1
                     idx = sp.arange(gg.splicegraph.vertices[1, k], gg.splicegraph.vertices[0, l]) - gg.start
                     icov = sp.sum(tracks[:, idx], axis=0) 
-                    if sp.median(icov) > CFG['intron_retention']['min_retention_cov'] and \
-                        sp.mean(icov > (0.5 * sp.mean(icov))) > CFG['intron_retention']['min_retention_region'] and  \
-                        max(exon_coverage[k], exon_coverage[l]) / (1e-6 + min(exon_coverage[k], exon_coverage[l])) <= CFG['intron_retention']['min_retention_max_exon_fold_diff'] and \
-                        sp.mean(icov) >= CFG['intron_retention']['min_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0 and \
-                        sp.mean(icov) <= CFG['intron_retention']['max_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0:
+                    if sp.median(icov) > options.intron_retention['min_retention_cov'] and \
+                        sp.mean(icov > (0.5 * sp.mean(icov))) > options.intron_retention['min_retention_region'] and  \
+                        max(exon_coverage[k], exon_coverage[l]) / (1e-6 + min(exon_coverage[k], exon_coverage[l])) <= options.intron_retention['min_retention_max_exon_fold_diff'] and \
+                        sp.mean(icov) >= options.intron_retention['min_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0 and \
+                        sp.mean(icov) <= options.intron_retention['max_retention_rel_cov'] * (exon_coverage[k] + exon_coverage[l]) / 2.0:
 
                         new_retention[k, l] = 1
                         inserted += 1
@@ -400,11 +398,10 @@ def insert_intron_retentions(genes, CFG):
     return (genes, inserted)
 
 
-def insert_intron_edges(genes, CFG):
-    #function [genes, inserted] = insert_intron_edges(genes, CFG)
+def insert_intron_edges(genes, options):
 
-    if not 'debug' in CFG:
-        CFG['debug'] = False
+    if not hasattr(options, 'debug'):
+        options.debug = False
 
     print_intermediates = False
 
@@ -434,10 +431,10 @@ def insert_intron_edges(genes, CFG):
 
     for i in range(genes.shape[0]):
     
-        if CFG['verbose'] and (i+1) % 1000 == 0:
-            print('%i of %i genes' % (i+1, genes.shape[0]), file=CFG['fd_log'])
+        if options.verbose and (i+1) % 1000 == 0:
+            print('%i of %i genes' % (i+1, genes.shape[0]), file=options.fd_log)
 
-        if CFG['bam_to_sparse'] and genes[i].chr != last_chr:
+        if options.sparse_bam and genes[i].chr != last_chr:
             bam_cache = dict()
         last_chr = genes[i].chr
 
@@ -447,8 +444,8 @@ def insert_intron_edges(genes, CFG):
             continue
 
         unused_introns = []
-        if CFG['debug']:
-            print('processing gene %i; with %i introns' % (i, len(genes[i].introns[s])), file=CFG['fd_log'])
+        if options.debug:
+            print('processing gene %i; with %i introns' % (i, len(genes[i].introns[s])), file=options.fd_log)
             ### TODO timing
 
         for j in range(genes[i].introns[s].shape[0]):
@@ -466,7 +463,7 @@ def insert_intron_edges(genes, CFG):
             if idx1.shape[0] == 0 and idx2.shape[0] == 0:
                 both_missing[s] += 1
 
-                if CFG['intron_edges']['insert_intron_retention']:
+                if options.intron_edges['insert_intron_retention']:
                     ### find all exons that completely include added introns 
                     idx1__ = sp.where((genes[i].introns[s][j, 0] > genes[i].splicegraph.vertices[0, :]) & (genes[i].introns[s][j, 1] < genes[i].splicegraph.vertices[1, :]))[0]
                     for idx1_ in idx1__:
@@ -496,10 +493,10 @@ def insert_intron_edges(genes, CFG):
                         inserted['intron_in_exon'] += 1
                         assert(sp.all(genes[i].splicegraph.vertices[0, :] <= genes[i].splicegraph.vertices[1, :]))
 
-                        if CFG['debug']:
+                        if options.debug:
                             print('%s\tintron_retention_exon\t%c\t%i\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[0, -2],
                                                                                                          genes[i].splicegraph.vertices[1, -2], genes[i].splicegraph.vertices[0, -1], 
-                                                                                                         genes[i].splicegraph.vertices[1, -1]), file=CFG['fd_log'])
+                                                                                                         genes[i].splicegraph.vertices[1, -1]), file=options.fd_log)
                         intron_used = True
 
                 if not intron_used:
@@ -514,7 +511,7 @@ def insert_intron_edges(genes, CFG):
                 if idx1_.shape[0] > 0:
                     prev += 1
                     # mark the two genes for merging
-                    if CFG['intron_edges']['gene_merges']:
+                    if options.intron_edges['gene_merges']:
                         merge_idx = sp.c_[merge_idx, sp.array([i-1, i])]
                         intron_used = True
                     if not intron_used:
@@ -529,7 +526,7 @@ def insert_intron_edges(genes, CFG):
                 if idx2_.shape[0] > 0:
                     next += 1
                     # mark the two genes for merging
-                    if CFG['intron_edges']['gene_merges']: 
+                    if options.intron_edges['gene_merges']: 
                         merge_idx = sp.c_[merge_idx, sp.array([i, i+1])]
                         intron_used = True
                     if not intron_used:
@@ -539,9 +536,9 @@ def insert_intron_edges(genes, CFG):
             # did not find exons in same gene sharing boundaries with intron start
             # check whether the intron starts in the vicinity of an exon
             if idx1.shape[0] == 0: 
-                ### find all exons that overlap intron-start j +/- CFG.intron_edges.vicinity_region
-                idx1__ = sp.where((genes[i].splicegraph.vertices[0, :] - CFG['intron_edges']['vicinity_region'] <= genes[i].introns[s][j, 0]) & 
-                                  (genes[i].splicegraph.vertices[1, :] + CFG['intron_edges']['vicinity_region'] > genes[i].introns[s][j, 0]))[0]
+                ### find all exons that overlap intron-start j +/- options.intron_edges.vicinity_region
+                idx1__ = sp.where((genes[i].splicegraph.vertices[0, :] - options.intron_edges['vicinity_region'] <= genes[i].introns[s][j, 0]) & 
+                                  (genes[i].splicegraph.vertices[1, :] + options.intron_edges['vicinity_region'] > genes[i].introns[s][j, 0]))[0]
 
                 ### check, if we can find an exon before the current intron and there is continuous coverage between intron end and exon
                 if idx1__.shape[0] == 0:
@@ -555,20 +552,20 @@ def insert_intron_edges(genes, CFG):
                         gg.start = genes[i].splicegraph.vertices[1, idx1__][0] ### stop of previous exon
                         gg.stop = genes[i].introns[s][j, 0]  ### end of presumable exon
 
-                        if CFG['bam_to_sparse']:
-                            if isinstance(CFG['bam_fnames'], str):
-                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                        if options.sparse_bam:
+                            if isinstance(options.bam_fnames, str):
+                                [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
-                                for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                for fname in options.bam_fnames:
+                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
                                         tracks += tmp_
                             tracks = sp.asarray(tracks)
                         else:
-                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'])
+                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches)
 
                         ### TODO: make the following a configurable
                         if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
@@ -582,7 +579,7 @@ def insert_intron_edges(genes, CFG):
                     if diff.shape[0] > 0:
                         idx1__ = sp.array([idx1__[sp.argmin(diff)]])
                         for idx1_ in idx1__:
-                            if genes[i].introns[s][j, 0] - genes[i].splicegraph.vertices[0, idx1_] >= CFG['intron_edges']['min_exon_len']:
+                            if genes[i].introns[s][j, 0] - genes[i].splicegraph.vertices[0, idx1_] >= options.intron_edges['min_exon_len']:
                                 exon_vicinity_cnt1[s] += 1
                                 genes[i].splicegraph.vertices = sp.c_[genes[i].splicegraph.vertices, genes[i].splicegraph.vertices[:, idx1_]]
                                 genes[i].splicegraph.vertices[1, -1] = genes[i].introns[s][j, 0]  # set exon end to intron start (half open)
@@ -598,17 +595,17 @@ def insert_intron_edges(genes, CFG):
                                 genes[i].splicegraph.add_intron(sp.array([genes[i].splicegraph.edges.shape[0] - 1]), 0, idx2, 1)
                                             
                                 inserted['alt_53_prime'] += 1
-                                if CFG['debug']:
+                                if options.debug:
                                     for idx2_ in idx2:
                                         print('%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph,vertices[1, idx1_], 
-                                                                                                                 genes[i].splicegraph.vertices[1, -1], genes[i].splicegraph.vertices[0, idx2_]), file=CFG['fd_log'])
+                                                                                                                 genes[i].splicegraph.vertices[1, -1], genes[i].splicegraph.vertices[0, idx2_]), file=options.fd_log)
                                 intron_used = True
 
                 ### if no proximal exon was found, insert new terminal exon, if wished
-                if  not intron_used and CFG['intron_edges']['append_new_terminal_exons']:
+                if  not intron_used and options.intron_edges['append_new_terminal_exons']:
                     inserted['new_terminal_exon'] += 1
 
-                    iregion = sp.array([[max(0, genes[i].introns[s][j, 0] - CFG['intron_edges']['append_new_terminal_exons_len'])], [genes[i].introns[s][j, 0]]])
+                    iregion = sp.array([[max(0, genes[i].introns[s][j, 0] - options.intron_edges['append_new_terminal_exons_len'])], [genes[i].introns[s][j, 0]]])
                     idx_iregion = sp.where((genes[i].introns[s][:, 1] >= iregion[0]) & (genes[i].introns[s][:, 1] < iregion[1]))[0]
                     if idx_iregion.shape[0] > 0:
                         if not idx_iregion.shape[0] == 1:
@@ -636,8 +633,8 @@ def insert_intron_edges(genes, CFG):
             # did not find exons in same gene sharing boundaries with intron end
             # check whether the intron ends in the vicinity of an exon
             if idx2.shape[0] == 0: 
-                idx2__ = sp.where((genes[i].splicegraph.vertices[0, :] - CFG['intron_edges']['vicinity_region'] < genes[i].introns[s][j, 1]) &
-                                  (genes[i].splicegraph.vertices[1, :] + CFG['intron_edges']['vicinity_region'] >= genes[i].introns[s][j, 1]))[0]
+                idx2__ = sp.where((genes[i].splicegraph.vertices[0, :] - options.intron_edges['vicinity_region'] < genes[i].introns[s][j, 1]) &
+                                  (genes[i].splicegraph.vertices[1, :] + options.intron_edges['vicinity_region'] >= genes[i].introns[s][j, 1]))[0]
 
                 ### check, if we can find an exon after the current intron and there is continuous coverage between intron end and exon
                 if idx2__.shape[0] == 0:
@@ -651,20 +648,20 @@ def insert_intron_edges(genes, CFG):
                         gg.start = genes[i].introns[s][j, 1]  ### start of presumable exon
                         gg.stop = genes[i].splicegraph.vertices[1, idx2__][0]  ### stop of next exon
 
-                        if CFG['bam_to_sparse']:
-                            if isinstance(CFG['bam_fnames'], str):
-                                [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                        if options.sparse_bam:
+                            if isinstance(options.bam_fnames, str):
+                                [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
-                                for fname in CFG['bam_fnames']:
-                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                                for fname in options.bam_fnames:
+                                    [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
                                     else:
                                         tracks += tmp_
                             tracks = sp.asarray(tracks)
                         else:
-                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'])
+                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches)
 
                         ### TODO: make configurable
                         if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
@@ -678,7 +675,7 @@ def insert_intron_edges(genes, CFG):
                     if diff.shape[0] > 0:
                         idx2__ = sp.array([idx2__[sp.argmin(diff)]])
                         for idx2_ in idx2__:
-                            if genes[i].splicegraph.vertices[1, idx2_] - genes[i].introns[s][j, 1] >= CFG['intron_edges']['min_exon_len']:
+                            if genes[i].splicegraph.vertices[1, idx2_] - genes[i].introns[s][j, 1] >= options.intron_edges['min_exon_len']:
                                 exon_vicinity_cnt2[s] += 1
                                 genes[i].splicegraph.vertices = sp.c_[genes[i].splicegraph.vertices, genes[i].splicegraph.vertices[:, idx2_]]
                                 genes[i].splicegraph.vertices[0, -1] = genes[i].introns[s][j, 1]
@@ -694,17 +691,17 @@ def insert_intron_edges(genes, CFG):
                                 
                                 inserted['alt_53_prime'] += 1
 
-                                if CFG['debug']:
+                                if options.debug:
                                     for idx1_ in idx1:
                                         print('%s\talternative_53_prime2\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[1, idx1_], 
-                                                                                                                 genes[i].splicegraph.vertices[0, -1], genes[i].splicegraph.vertices[0, idx2_]), file=CFG['fd_log'])
+                                                                                                                 genes[i].splicegraph.vertices[0, -1], genes[i].splicegraph.vertices[0, idx2_]), file=options.fd_log)
                                 intron_used = True
 
                 ### if no proximal exon was found, insert new terminal exon, if wished
-                if not intron_used and CFG['intron_edges']['append_new_terminal_exons']:
+                if not intron_used and options.intron_edges['append_new_terminal_exons']:
 
                     ### define range of new exon
-                    iregion = sp.array([[genes[i].introns[s][j, 1]], [genes[i].introns[s][j, 1] + CFG['intron_edges']['append_new_terminal_exons_len']]])
+                    iregion = sp.array([[genes[i].introns[s][j, 1]], [genes[i].introns[s][j, 1] + options.intron_edges['append_new_terminal_exons_len']]])
                     ### find introns starting within new exon
                     idx_iregion = sp.where((genes[i].introns[s][:, 0] > iregion[0]) & (genes[i].introns[s][:, 0] <= iregion[1]))[0]
 
@@ -752,24 +749,12 @@ def insert_intron_edges(genes, CFG):
                     if genes[i].splicegraph.edges[idx1_, idx2_] == 0:
                         inserted['exon_skip'] += 1
                                     
-                        #adj_mat = triu(genes(i).splicegraph{2}) ;
-                        #id1 = find(adj_mat(idx1_,:)) ;
-                        #if length(id1)==1 && adj_mat(id1, idx2_),
-                        #		fprintf(CFG.fd_log, '%s\texon_skip\t%c\t%i\t%i\t%i\t%i\t%i\t%i\n', genes(i).chr, genes(i).strand, genes(i).splicegraph{1}(1,idx1_), genes(i).splicegraph{1}(2,idx1_), genes(i).splicegraph{1}(1,id1),	...
-                        #						genes(i).splicegraph{1}(2,id1), genes(i).splicegraph{1}(1,idx2_), genes(i).splicegraph{1}(2,idx2_)) ;
-
             genes[i].splicegraph.add_intron(idx1, 1, idx2, 1)
-
-            #for i1=idx1,
-            #	for i2=idx2,
-            #		P(end+1,:)=[i1,i2] ;
-            #		genes(i).splicegraph{2}(i1,i2)=1 ;
-            #		genes(i).splicegraph{2}(i2,i1)=1 ;
 
         unused_introns = sp.array(unused_introns, dtype='int')
         idx_unused = sp.where((genes[i].introns[s][unused_introns, 1] >= genes[i].start) & (genes[i].introns[s][unused_introns, 0] <= genes[i].stop))[0]
         unused_introns = unused_introns[idx_unused]
-        if CFG['debug'] and unused_introns.shape[0] > 0:
+        if options.debug and unused_introns.shape[0] > 0:
             print('Warning: unused introns: %s' % str(unused_introns))
         num_unused_introns[i] += unused_introns.shape[0]
 
@@ -824,16 +809,15 @@ def insert_intron_edges(genes, CFG):
     return (genes, inserted)
 
 
-def insert_cassette_exons(genes, CFG):
+def insert_cassette_exons(genes, options):
     # written by Andre Kahles, Mpi Tuebingen, Germany, 2012
-    # [genes, inserted] = insert_cassette_exons(genes, CFG)
 
     inserted = 0
 
     strands = ['+', '-']
 
     ### form all possible combinations of contigs and strands --> regions
-    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG['confidence_level'], CFG, sparse_bam=CFG['bam_to_sparse'])
+    (regions, options) = init_regions(options.bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
 
     ### ignore contigs not present in bam files 
     # TODO TODO
@@ -852,27 +836,27 @@ def insert_cassette_exons(genes, CFG):
             cidx = sp.where((contigs == contig) & (gene_strands == s))[0]
 
             for i in cidx:
-                if CFG['verbose'] and (c+1) % 100 == 0:
+                if options.verbose and (c+1) % 100 == 0:
                     print('\r %i(%i) genes done (found %i new cassette exons in %i tested intron pairs, %2.1f%%)' % (c+1, genes.shape[0], num_exons_added, num_exons, 100*num_exons_added/float(max(1, num_exons))))
 
                 gg = genes[i]
                 assert(gg.strand == s)
                 assert(gg.chr == contig)
 
-                if CFG['bam_to_sparse']:
-                    if isinstance(CFG['bam_fnames'], str):
-                        [tracks] = add_reads_from_sparse_bam(gg, CFG['bam_fnames'], contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                if options.sparse_bam:
+                    if isinstance(options.bam_fnames, str):
+                        [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
-                        for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, CFG['confidence_level'], types=['exon_track'], filter=CFG['read_filter'], cache=bam_cache, unstranded=True)
+                        for fname in options.bam_fnames:
+                            [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
                             else:
                                 tracks += tmp_
                     tracks = sp.asarray(tracks)
                 else:
-                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), CFG['bam_fnames'], ['exon_track'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'])
+                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches)
 
                 ### add introns implied by splicegraph to the list
                 all_introns = gg.introns[si][:, :2]
@@ -924,14 +908,14 @@ def insert_cassette_exons(genes, CFG):
                                 aft_segment_cov = sp.sum(tracks[:, (curr_exon[1] - gg.start):], axis=0)
                             min_len_aft = min(aft_segment_cov.shape[0], exon_cov.shape[0])
 
-                            if sp.mean(exon_cov > (0.2 * sp.mean(exon_cov))) > CFG['cassette_exon']['min_cassette_region'] and \
-                               sp.median(exon_cov) > CFG['cassette_exon']['min_cassette_cov'] and \
-                               (sp.median(exon_cov[-min_len_aft:]) / sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
-                               (sp.median(exon_cov[:min_len_pre]) / sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
-                               #max(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) / min(sp.median(exon_cov[-min_len_aft:]), sp.median(aft_segment_cov[:min_len_aft])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff'] and \
-                               #max(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) / min(sp.median(exon_cov[:min_len_pre]), sp.median(pre_segment_cov[-min_len_pre:])) - 1 >= CFG['cassette_exon']['min_cassette_rel_diff']:
-                                new_cassette[k, l] = 1
-                                inserted += 1 
+                            if sp.mean(exon_cov > (0.2 * sp.mean(exon_cov))) > options.cassette_exon['min_cassette_region'] and \
+                               sp.median(exon_cov) > options.cassette_exon['min_cassette_cov']:
+                                median_aft = max(sp.median(aft_segment_cov[:min_len_aft]), 1)
+                                median_pre = max(sp.median(pre_segment_cov[-min_len_pre:]), 1)
+                                if (sp.median(exon_cov[-min_len_aft:]) / median_aft) - 1 >= options.cassette_exon['min_cassette_rel_diff'] and \
+                                   (sp.median(exon_cov[:min_len_pre]) / median_pre) - 1 >= options.cassette_exon['min_cassette_rel_diff']:
+                                    new_cassette[k, l] = 1
+                                    inserted += 1 
                 any_added = False
                 if any(new_cassette.ravel()):
                     curr_sg = gg.splicegraph.vertices

@@ -396,19 +396,19 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
 
     return (None, coverage)
 
-def get_intron_list(genes, CFG):
+def get_intron_list(genes, options):
 
     introns = sp.zeros((genes.shape[0], 2), dtype = 'object')
     introns[:] = None
 
     ### collect all possible combinations of contigs and strands
-    (regions, CFG) = init_regions(CFG['bam_fnames'], CFG['confidence_level'], CFG, sparse_bam=CFG['bam_to_sparse'])
+    (regions, options) = init_regions(options.bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
 
     ### form chunks for quick sorting
     strands = ['+', '-']
 
     ### ignore contigs not present in bam files 
-    keepidx = sp.where(sp.in1d(sp.array([CFG['chrm_lookup'][x.chr] for x in genes]), sp.array([x.chr_num for x in regions])))[0]
+    keepidx = sp.where(sp.in1d(sp.array([options.chrm_lookup[x.chr] for x in genes]), sp.array([x.chr_num for x in regions])))[0]
     genes = genes[keepidx]
 
     c = 0
@@ -424,7 +424,7 @@ def get_intron_list(genes, CFG):
 
             for i in cidx:
 
-                if CFG['verbose'] and (c+1) % 100 == 0:
+                if options.verbose and (c+1) % 100 == 0:
                     t1 = time.time()
                     print('%i (%i) genes done (%i introns taken) ... took %i secs' % (c+1, genes.shape[0], num_introns_filtered, t1 - t0), file=sys.stdout)
                     t0 = t1
@@ -435,20 +435,20 @@ def get_intron_list(genes, CFG):
                 gg[0].stop = gg[0].stop + 5000
                 assert(gg[0].chr == contig)
 
-                if CFG['bam_to_sparse']:
-                    if isinstance(CFG['bam_fnames'], str):
-                        [intron_list_tmp] = add_reads_from_sparse_bam(gg[0], CFG['bam_fnames'], contig, CFG['confidence_level'], types=['intron_list'], filter=CFG['read_filter'], cache=bam_cache, unstranded=CFG['introns_unstranded'])
+                if options.sparse_bam:
+                    if isinstance(options.bam_fnames, str):
+                        [intron_list_tmp] = add_reads_from_sparse_bam(gg[0], options.bam_fnames, contig, options.confidence, types=['intron_list'], filter=options.read_filter, cache=bam_cache, unstranded=options.introns_unstranded)
                     else:
                         intron_list_tmp = None
-                        for fname in CFG['bam_fnames']:
-                            [tmp_] = add_reads_from_sparse_bam(gg[0], fname, contig, CFG['confidence_level'], types=['intron_list'], filter=CFG['read_filter'], cache=bam_cache, unstranded=CFG['introns_unstranded'])
+                        for fname in options.bam_fnames:
+                            [tmp_] = add_reads_from_sparse_bam(gg[0], fname, contig, options.confidence, types=['intron_list'], filter=options.read_filter, cache=bam_cache, unstranded=options.introns_unstranded)
                             if intron_list_tmp is None:
                                 intron_list_tmp = tmp_
                             else:
                                 intron_list_tmp = sp.r_[intron_list_tmp, tmp_]
 
                         ### some merging in case of multiple bam files
-                        if len(CFG['bam_fnames']) > 1:
+                        if len(options.bam_fnames) > 1:
                             intron_list_tmp = sort_rows(intron_list_tmp)
                             rm_idx = []
                             for i in range(1, intron_list_tmp.shape[0]):
@@ -459,7 +459,7 @@ def get_intron_list(genes, CFG):
                                 k_idx = sp.setdiff1d(sp.arange(intron_list_tmp.shape[0]), rm_idx)
                                 intron_list_tmp = intron_list_tmp[k_idx, :]
                 else:
-                    [intron_list_tmp] = add_reads_from_bam(gg, CFG['bam_fnames'], ['intron_list'], CFG['read_filter'], CFG['var_aware'], CFG['primary_only'], CFG['ignore_mismatch_tag'], unstranded=CFG['introns_unstranded'])
+                    [intron_list_tmp] = add_reads_from_bam(gg, options.bam_fnames, ['intron_list'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, unstranded=options.introns_unstranded)
                 num_introns_filtered += intron_list_tmp.shape[0]
                 introns[i, si] = sort_rows(intron_list_tmp)
 
@@ -524,13 +524,13 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
     return False
 
 
-def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, spliced=True, unstranded=True):
+def summarize_chr(fname, chr_name, options, filter=None, strand=None, mapped=True, spliced=True, unstranded=True):
 
     infile = pysam.Samfile(fname, 'rb')
     introns_p = dict()
     introns_m = dict()
 
-    if CFG['verbose']:
+    if options.verbose:
         print('Summarizing contig %s of file %s' % (chr_name, fname), file=sys.stdout)
 
     chr_len = [int(x['LN']) for x in parse_header(infile.text)['SQ'] if x['SN'] == chr_name]
@@ -547,7 +547,7 @@ def summarize_chr(fname, chr_name, CFG, filter=None, strand=None, mapped=True, s
         for read in infile.fetch(chr_name, until_eof=True):
 
             ### check if we skip this reads
-            if filter_read(read, filter, spliced, mapped, strand, CFG['primary_only'], CFG['var_aware']):
+            if filter_read(read, filter, spliced, mapped, strand, options.primary_only, options.var_aware):
                 continue
             
             tags = dict(read.tags)

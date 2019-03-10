@@ -11,7 +11,7 @@ if __package__ is None:
 from ..utils import *
 from ..helpers import *
 
-def quantify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
+def quantify_mult_exon_skip(event, gene, counts_segments, counts_edges):
 
     cov = sp.zeros((2, ), dtype='float')
 
@@ -63,7 +63,7 @@ def quantify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     return cov
 
 
-def quantify_intron_retention(event, gene, counts_segments, counts_edges, counts_seg_pos, CFG):
+def quantify_intron_retention(event, gene, counts_segments, counts_edges, counts_seg_pos):
 
     cov = sp.zeros((2, ), dtype='float')
     sg = gene.splicegraph
@@ -100,7 +100,7 @@ def quantify_intron_retention(event, gene, counts_segments, counts_edges, counts
     return cov
 
 
-def quantify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
+def quantify_exon_skip(event, gene, counts_segments, counts_edges):
 
     cov = sp.zeros((2, ), dtype='float')
     sg = gene.splicegraph
@@ -139,7 +139,7 @@ def quantify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     return cov
 
 
-def quantify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
+def quantify_alt_prime(event, gene, counts_segments, counts_edges):
 
     cov = sp.zeros((2, ), dtype='float')
 
@@ -210,7 +210,7 @@ def quantify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     return cov
 
 
-def quantify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
+def quantify_mutex_exons(event, gene, counts_segments, counts_edges):
 
     sg = gene.splicegraph
     segs = gene.segmentgraph
@@ -259,7 +259,7 @@ def quantify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
     return cov
 
 
-def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, event_type=None, CFG=None, out_fn=None, gen_event_ids=False, low_mem=False):
+def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, event_type=None, options=None, out_fn=None, gen_event_ids=False, low_mem=False):
 
     ### set parameters if called by rproc
     if strain_idx1 is None:
@@ -270,7 +270,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         if 'out_fn' in PAR:
             out_fn = PAR['out_fn']
         event_type = PAR['event_type']
-        CFG = PAR['CFG']
+        options = PAR['options']
 
     ### read count_data from event HDF5
     if low_mem:
@@ -294,21 +294,21 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     if event_type == 'exon_skip':
         fidx0i = [sp.where(event_features == 'exon_pre_exon_aft_conf')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon_conf')[0], sp.where(event_features == 'exon_exon_aft_conf')[0]] 
-        if CFG['use_exon_counts']:
+        if options.use_exon_counts:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'exon_cov')[0]]
             pos1e = [IN['event_pos'][:, [2, 3]].astype('int')]
     elif event_type == 'intron_retention':
         fidx0i = [sp.where(event_features == 'intron_conf')[0]]
         fidx1i = []
-        if CFG['use_exon_counts']:
+        if options.use_exon_counts:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'intron_cov')[0]]
             pos1e = [IN['event_pos'][:, [1, 2]].astype('int')]
     elif event_type in ['alt_3prime', 'alt_5prime']:
         fidx0i = [sp.where(event_features == 'intron1_conf')[0]]
         fidx1i = [sp.where(event_features == 'intron2_conf')[0]]
-        if CFG['use_exon_counts']:
+        if options.use_exon_counts:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'exon_diff_cov')[0]]
             pos1e = [sp.zeros((IN['event_pos'].shape[0], 2), dtype='int')]
@@ -324,14 +324,14 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         fidx0i = [sp.where(event_features == 'exon_pre_exon_aft_conf')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon_conf')[0], sp.where(event_features == 'exon_exon_aft_conf')[0], sp.where(event_features == 'sum_inner_exon_conf')[0]] 
         tmp_idx = sp.where(event_features == 'len_inner_exon')[0]
-        if CFG['use_exon_counts']:
+        if options.use_exon_counts:
             fidx0e = []
             fidx1e = [sp.where(event_features == 'exons_cov')[0]]
             pos1e = [sp.c_[sp.zeros((IN['event_counts'].shape[2],), dtype='int'), IN['event_counts'][0, tmp_idx, :].astype('int')]]
     elif event_type == 'mutex_exons':
         fidx0i = [sp.where(event_features == 'exon_pre_exon1_conf')[0], sp.where(event_features == 'exon1_exon_aft_conf')[0]]
         fidx1i = [sp.where(event_features == 'exon_pre_exon2_conf')[0], sp.where(event_features == 'exon2_exon_aft_conf')[0]] 
-        if CFG['use_exon_counts']:
+        if options.use_exon_counts:
             fidx0e = [sp.where(event_features == 'exon1_cov')[0]]
             fidx1e = [sp.where(event_features == 'exon2_cov')[0]]
             pos0e = [IN['event_pos'][:, [2, 3]].astype('int')]
@@ -354,18 +354,18 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     idx1_len = strain_idx1.shape[0]
 
     ### get counts for exon segments
-    if CFG['use_exon_counts']:
-        if CFG['verbose']:
+    if options.use_exon_counts:
+        if options.verbose:
             print('Collecting exon segment expression values')
         for f, ff in enumerate(fidx0e):
-            cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
-            cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+            cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / options.readlen
+            cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, sp.newaxis]) / options.readlen
         for f, ff in enumerate(fidx1e):
-            cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
-            cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / CFG['read_length']
+            cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / options.readlen
+            cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, sp.newaxis]) / options.readlen
 
     ### get counts for introns
-    if CFG['verbose']:
+    if options.verbose:
         print('Collecting intron confirmation values')
 
 
@@ -412,7 +412,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     ### get list of event IDs - we will use these to make event forms unique
     event_ids = None
     if gen_event_ids:
-        event_ids = get_event_ids(IN, event_type, conf_idx, CFG)
+        event_ids = get_event_ids(IN, event_type, conf_idx, options)
 
     IN.close()
 
@@ -426,8 +426,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     return (cov, gene_idx, event_idx, event_ids, strains)
 
 
-def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=None, fn_merge=None):
-    # cov = quantify_from_graph(ev, strain_idx, event_type, CFG, out_fn)
+def quantify_from_graph(ev, strain_idx=None, event_type=None, options=None, out_fn=None, fn_merge=None):
 
     ### set parameters if called by rproc
     if strain_idx is None:
@@ -437,10 +436,10 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
         if 'out_fn' in PAR:
             out_fn = PAR['out_fn']
         event_type = PAR['event_type']
-        CFG = PAR['CFG']
+        options = PAR['options']
 
     if fn_merge is None:
-        fn_merge = get_filename('fn_out_merge_val', CFG)
+        fn_merge = get_filename('fn_out_merge_val', options)
 
     genes = pickle.load(open(fn_merge_val, 'r'))[0]
     fn_count = fn_merge.replace('pickle', 'count.hdf5')
@@ -498,15 +497,15 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
             #print '%i/%i' % (s_idx, len(strain_idx))
 
             if event_type == 'exon_skip':
-                cov = quantify_exon_skip(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                cov = quantify_exon_skip(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]])
             elif event_type in ['alt_3prime', 'alt_5prime']:
-                cov = quantify_alt_prime(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                cov = quantify_alt_prime(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]])
             elif event_type == 'intron_retention':
-                cov = quantify_intron_retention(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
+                cov = quantify_intron_retention(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T)
             elif event_type == 'mult_exon_skip':
-                cov = quantify_mult_exon_skip(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                cov = quantify_mult_exon_skip(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]])
             elif event_type == 'mutex_exons':
-                cov = quantify_mutex_exons(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]], CFG)
+                cov = quantify_mutex_exons(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  sp.c_[edge_idx, edges[:, s_idx]])
 
             if s_idx == 0:
                 counts.append(sp.array([cov]))
@@ -525,9 +524,9 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, CFG=None, out_fn=N
     return (ev, counts)
 
 
-def get_event_ids(IN, event_type, event_idx, CFG):
+def get_event_ids(IN, event_type, event_idx, options):
 
-    if CFG['verbose']:
+    if options.verbose:
         print('Constructing event IDs')
     
     gene_idx = IN['gene_idx'][:].astype('int')
