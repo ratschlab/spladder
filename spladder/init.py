@@ -31,8 +31,7 @@ def get_tags_gtf(tagline):
     return tags
 
 
-def init_genes_gtf(infile, CFG=None, outfile=None):
-    # (genes, CFG) = init_genes_gtf(infile, CFG=None, outfile=None)
+def init_genes_gtf(options):
 
     """This function reads the gtf input file and returns the information in an
        internal data structure"""
@@ -40,17 +39,17 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
     from .classes.gene import Gene
     from .classes.splicegraph import Splicegraph
 
-    if CFG is not None and CFG['verbose']:
-        print("Parsing annotation from %s ..." % infile, file=sys.stderr)
+    if options.verbose:
+        print("Parsing annotation from %s ..." % options.annotation, file=sys.stderr)
     
     ### initial run to get the transcript to gene mapping
-    if CFG is not None and CFG['verbose']:
+    if options.verbose:
         print("... init structure", file=sys.stderr)
 
     genes = dict()
     chrms = []
 
-    for line in open(infile, 'r'):
+    for line in open(options.annotation, 'r'):
         if line[0] == '#':
             continue
         sl = line.strip().split('\t')
@@ -73,13 +72,13 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
             genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
             chrms.append(sl[0])
 
-    CFG = append_chrms(sp.sort(sp.unique(chrms)), CFG)
+    options = append_chrms(sp.sort(sp.unique(chrms)), options)
 
     counter = 1
     warn_infer_count = 0
     inferred_genes = False
     for line in open(infile, 'r'):
-        if CFG is not None and CFG['verbose'] and counter % 10000 == 0:
+        if options.verbose and counter % 10000 == 0:
             sys.stdout.write('.')
             if counter % 100000 == 0:
                 sys.stdout.write(' %i lines processed\n' % counter)
@@ -122,7 +121,7 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
 
                 warn_infer_count += 1
                 if warn_infer_count < 5:
-                    print('WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (infile, trans_id), file=sys.stderr)
+                    print('WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (options.annotation, trans_id), file=sys.stderr)
                 elif warn_infer_count == 5:
                     print('WARNING: too many warnings for inferred tags', file=sys.stderr)
                     
@@ -150,41 +149,36 @@ def init_genes_gtf(infile, CFG=None, outfile=None):
     genes = sp.array([genes[gene] for gene in genes], dtype='object')
 
     ### check for consistency and validity of genes
-    genes = check_annotation(CFG, genes)
+    genes = check_annotation(options, genes)
 
-    if CFG is not None and CFG['verbose']:
+    if options.verbose:
         print("... done", file=sys.stderr)
 
-    if outfile is not None:
-        if CFG is not None and CFG['verbose']:
-            print("Storing gene structure in %s ..." % outfile, file=sys.stderr)
+    if options.verbose:
+        print("Storing gene structure in %s.pickle ..." % options.annotation, file=sys.stderr)
 
-        pickle.dump(genes, open(outfile, 'wb'), -1)
+    pickle.dump(genes, open(options.annotation + '.pickle', 'wb'), -1)
 
-        if CFG is not None and CFG['verbose']:
-            print("... done", file=sys.stderr)
+    if options.verbose:
+        print("... done", file=sys.stderr)
 
-    return (genes, CFG)
+    return (genes, options)
 
 
-def append_chrms(chrms, CFG):
+def append_chrms(chrms, options):
     """Checks if chrm is in lookup table adds it if not"""
 
-    if CFG is None:
-        CFG = dict()
-
-    if not 'chrm_lookup' in CFG:
-        CFG['chrm_lookup'] = dict()
+    if not hasattr(options, 'chrm_lookup'):
+        options.chrm_lookup = dict()
 
     for chrm in chrms:
-        if not chrm in CFG['chrm_lookup']:
-            CFG['chrm_lookup'][chrm] = len(CFG['chrm_lookup'])
+        if not chrm in options.chrm_lookup:
+            options.chrm_lookup[chrm] = len(options.chrm_lookup)
 
-    return CFG
+    return options
 
 
-def init_genes_gff3(infile, CFG=None, outfile=None):
-    # genes = init_genes_gff3(infile, CFG=None, outfile=None)
+def init_genes_gff3(options):
 
     """This function reads the gff3 input file and returns the information in an
        internal data structure"""
@@ -192,18 +186,16 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
     from .classes.gene import Gene
     from .classes.splicegraph import Splicegraph
 
-    if CFG is not None and CFG['verbose']:
-        print("Parsing annotation from %s ..." % infile, file=sys.stderr)
-    
     ### initial run to get the transcript to gene mapping
-    if CFG is not None and CFG['verbose']:
+    if options.verbose:
+        print("Parsing annotation from %s ..." % options.annotation, file=sys.stderr)
         print("... init structure", file=sys.stderr)
 
     trans2gene = dict() ### dict with: keys = transcript IDs, values = gene IDs
     genes = dict()
     chrms = []
 
-    for line in open(infile, 'r'):
+    for line in open(options.annotation, 'r'):
         if line[0] == '#':
             continue
         sl = line.strip().split('\t')
@@ -226,13 +218,12 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
             genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2])
             chrms.append(sl[0])
 
-
-    CFG = append_chrms(sp.sort(sp.unique(chrms)), CFG)
+    options = append_chrms(sp.sort(sp.unique(chrms)), options)
 
     counter = 1
-    for line in open(infile, 'r'):
+    for line in open(options.annotation, 'r'):
 
-        if CFG is not None and CFG['verbose'] and counter % 10000 == 0:
+        if options.verbose and counter % 10000 == 0:
             sys.stdout.write('.')
             if counter % 100000 == 0:
                 sys.stdout.write(' %i lines processed\n' % counter)
@@ -275,21 +266,21 @@ def init_genes_gff3(infile, CFG=None, outfile=None):
     genes = sp.array([genes[gene] for gene in genes], dtype='object')
 
     ### check for consistency and validity of genes
-    genes = check_annotation(CFG, genes)
+    genes = check_annotation(options, genes)
 
-    if CFG is not None and CFG['verbose']:
+    if options.verbose:
         print("... done", file=sys.stderr)
 
-    if outfile is not None:
-        if CFG is not None and CFG['verbose']:
-            print("Storing gene structure in %s ..." % outfile, file=sys.stderr)
+    if options.verbose:
+        print("Storing gene structure in %s.pickle ..." % options.annotation, file=sys.stderr)
 
-        pickle.dump(genes, open(outfile, 'wb'), -1)
+    pickle.dump(genes, open(options.annotation + '.pickle', 'wb'), -1)
 
-        if CFG is not None and CFG['verbose']:
-            print("... done", file=sys.stderr)
+    if options.verbose:
+        print("... done", file=sys.stderr)
 
-    return (genes, CFG)
+    return (genes, options)
+
 
 def parse_header(header_string):
 
@@ -307,8 +298,7 @@ def parse_header(header_string):
             hd[sl[0].strip('@')] = [td]
     return hd
 
-def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
-    # regions=init_regions(fn_bams)
+def init_regions(fn_bams, conf, options=None, sparse_bam=False):
 
     regions = []
     processed = []
@@ -335,8 +325,8 @@ def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
                         for s in strands:
                             region = Region()
                             region.chr = chrm
-                            CFG = append_chrms([chrm], CFG)
-                            region.chr_num = CFG['chrm_lookup'][region.chr]
+                            options = append_chrms([chrm], options)
+                            region.chr_num = options.chrm_lookup[region.chr]
                             region.strand = s
                             region.start = 1
                             region.stop = lens
@@ -350,7 +340,7 @@ def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
                 #header_info = IN.header['SQ']
                 header_info = parse_header(IN.text)['SQ']
                 
-                CFG = append_chrms([x['SN'] for x in header_info], CFG)
+                options = append_chrms([x['SN'] for x in header_info], options)
 
                 strands = ['+', '-']
                 for c in range(len(header_info)):
@@ -358,7 +348,7 @@ def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
                         for s in strands:
                             region = Region()
                             region.chr = header_info[c]['SN']
-                            region.chr_num = CFG['chrm_lookup'][region.chr]
+                            region.chr_num = options.chrm_lookup[region.chr]
                             region.strand = s
                             region.start = 1
                             region.stop = header_info[c]['LN']
@@ -369,12 +359,12 @@ def init_regions(fn_bams, conf, CFG=None, sparse_bam=False):
                 IN.close()
         break
 
-    return (sp.array(regions, dtype = 'object'), CFG)
+    return (sp.array(regions, dtype = 'object'), options)
 
 
-def check_annotation(CFG, genes):
+def check_annotation(options, genes):
     
-    if CFG['verbose']:
+    if options.verbose:
         print('\n... checking annotation')
 
     ### check whether genes have no exons annotated
@@ -384,14 +374,14 @@ def check_annotation(CFG, genes):
             rm_ids.append(gene.name)
     if len(rm_ids) > 0:
         print('WARNING: removing %i genes from given annotation that had no exons annotated:' % len(rm_ids), file=sys.stderr)
-        print('list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_no_exons'), file=sys.stderr)
-        sp.savetxt(CFG['anno_fname'] + '.genes_excluded_no_exons', rm_ids, fmt='%s', delimiter='\t')
+        print('list of excluded genes written to: %s' % (options.annotation + '.genes_excluded_no_exons'), file=sys.stderr)
+        sp.savetxt(options.annotation + '.genes_excluded_no_exons', rm_ids, fmt='%s', delimiter='\t')
         gene_names = sp.array([x.name for x in genes], dtype='str')
         k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
         genes = genes[k_idx]
 
     ### check whether we run unstranded analysis and have to exclude overlapping gene annotations
-    if CFG['filter_overlapping_genes']:
+    if options.filter_overlap_genes:
         rm_ids = []
         chrms = sp.array([x.chr for x in genes])
         strands = sp.array([x.strand for x in genes])
@@ -406,14 +396,14 @@ def check_annotation(CFG, genes):
         if len(rm_ids) > 0:
             rm_ids = sp.unique(rm_ids)
             print('WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0], file=sys.stderr)
-            print('list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_gene_overlap'), file=sys.stderr)
-            sp.savetxt(CFG['anno_fname'] + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
+            print('list of excluded genes written to: %s' % (options.annotation + '.genes_excluded_gene_overlap'), file=sys.stderr)
+            sp.savetxt(options.annotation + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
             gene_names = sp.array([x.name for x in genes], dtype='str')
             k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
             genes = genes[k_idx]
 
     ### check whether exons are part of multiple genes
-    if CFG['filter_overlapping_exons']:
+    if options.filter_overlap_exons:
         exon_map = dict()
         for i, g in enumerate(genes):
             for t in range(len(g.exons)):
@@ -430,14 +420,14 @@ def check_annotation(CFG, genes):
         if len(rm_ids) > 0:
             rm_ids = sp.unique(rm_ids)
             print('WARNING: removing %i genes from given annotation that share exact exon coordinates:' % rm_ids.shape[0], file=sys.stderr)
-            print('list of excluded exons written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_shared'), file=sys.stderr)
-            sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
+            print('list of excluded exons written to: %s' % (options.annotation + '.genes_excluded_exon_shared'), file=sys.stderr)
+            sp.savetxt(options.annotation + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
             gene_names = sp.array([x.name for x in genes], dtype='str')
             k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
             genes = genes[k_idx]
 
     ### check whether exons within the same transcript overlap
-    if CFG['filter_overlapping_transcripts']:
+    if options.filter_overlap_transcripts:
         rm_ids = []
         for i, g in enumerate(genes):
             for t in range(len(g.exons)):
@@ -447,8 +437,8 @@ def check_annotation(CFG, genes):
         if len(rm_ids) > 0:
             rm_ids = sp.unique(rm_ids)
             print('WARNING: removing %i genes from given annotation that have at least one transcript with overlapping exons.' % rm_ids.shape[0], file=sys.stderr)
-            print('list of excluded genes written to: %s' % (CFG['anno_fname'] + '.genes_excluded_exon_overlap'), file=sys.stderr)
-            sp.savetxt(CFG['anno_fname'] + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
+            print('list of excluded genes written to: %s' % (options.annotation + '.genes_excluded_exon_overlap'), file=sys.stderr)
+            sp.savetxt(options.annotation + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
             gene_names = sp.array([x.name for x in genes], dtype='str')
             k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
             genes = genes[k_idx]

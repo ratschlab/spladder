@@ -23,8 +23,7 @@ sys.modules['modules.classes.splicegraph'] = csplicegraph
 sys.modules['modules.classes.segmentgraph'] = csegmentgraph
 ### end fix
 
-def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
-# [counts] = count_graph_coverage(genes, fn_bam, CFG, fn_out)
+def count_graph_coverage(genes, fn_bam=None, options=None, fn_out=None):
 
     if fn_bam is None and isinstance(genes, dict):
         PAR = genes
@@ -32,7 +31,7 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
         fn_bam = PAR['fn_bam']
         if 'fn_out' in PAR:
             fn_out = PAR['fn_out'] 
-        CFG = PAR['CFG']
+        options = PAR['options']
 
     if hasattr(genes[0], 'splicegraph_edges_data'):
         for gg in genes:
@@ -70,17 +69,17 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
                 counts[f, i] = Counts(gg.segmentgraph.segments.shape[1])
 
-                if CFG['bam_to_sparse'] and \
+                if options.sparse_bam and \
                   (fn_bam[f].endswith('npz') or \
                    os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz') or \
                    fn_bam[f].endswith('hdf5') or \
                    os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'hdf5')):
                     ### make sure that we query the right contig from cache
                     assert(gg.chr == contig)
-                    (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, CFG['confidence_level'], types=['exon_track','intron_list'], filter=None, cache=bam_cache)
+                    (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, options.confidence, types=['exon_track','intron_list'], filter=None, cache=bam_cache)
                 else:
                     ### add RNA-seq evidence to the gene structure
-                    (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, CFG['var_aware'], CFG['primary_only']);
+                    (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, options.var_aware, options.primary_only);
                     intron_list = intron_list[0] ### TODO
 
                 ### extract mean exon coverage for all segments
@@ -121,9 +120,9 @@ def count_graph_coverage(genes, fn_bam=None, CFG=None, fn_out=None):
 
 
 
-def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmode='all'):
+def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, qmode='all'):
 
-    (genes, inserted) = pickle.load(open(fname_in, 'rb'))
+    (genes, inserted) = pickle.load(open(fname_in, 'rb')) 
     for g in genes:
         g.from_sparse()
     
@@ -144,20 +143,20 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
     counts['seg_len'] = sp.hstack([x.segmentgraph.segments[1, :] - x.segmentgraph.segments[0, :] for x in genes]).T
     counts['gene_names'] = sp.array([x.name for x in genes], dtype='str')
 
-    if not CFG['rproc']:
-        if CFG['merge_strategy'] == 'single':
-            print('\nprocessing %s' % (CFG['samples'][sample_idx]))
-            counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][sample_idx], CFG)
-        elif CFG['merge_strategy'] == 'merge_graphs' and qmode == 'single':
-            print('\nquantifying merged graph in single mode (first file only) on %s' % CFG['samples'][0])
-            counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][0], CFG)
+    if not options.pyproc:
+        if options.merge == 'single':
+            print('\nprocessing %s' % (options.samples[sample_idx]))
+            counts_tmp = count_graph_coverage(genes, options.bam_fnames[sample_idx], options)
+        elif options.merge == 'merge_graphs' and qmode == 'single':
+            print('\nquantifying merged graph in single mode (first file only) on %s' % options.samples[0])
+            counts_tmp = count_graph_coverage(genes, options.bam_fnames[0], options)
         else:
-            for s_idx in range(CFG['strains'].shape[0]):
-                print('\n%i/%i' % (s_idx + 1, CFG['strains'].shape[0]))
+            for s_idx in range(options.strains.shape[0]):
+                print('\n%i/%i' % (s_idx + 1, options.strains.shape[0]))
                 if s_idx == 0:
-                    counts_tmp = count_graph_coverage(genes, CFG['bam_fnames'][s_idx], CFG)
+                    counts_tmp = count_graph_coverage(genes, options.bam_fnames[s_idx], options)
                 else:
-                    counts_tmp = sp.r_[sp.atleast_2d(counts_tmp), count_graph_coverage(genes, CFG['bam_fnames'][s_idx], CFG)]
+                    counts_tmp = sp.r_[sp.atleast_2d(counts_tmp), count_graph_coverage(genes, options.bam_fnames[s_idx], options)]
 
         for c in range(counts_tmp.shape[1]):
             counts['segments'].append(sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
@@ -177,7 +176,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         counts['edge_idx'] = counts['edges'][:, 0] if len(counts['edges']) > 0 else sp.array([])
         counts['edges'] = counts['edges'][:, 1:] if len(counts['edges']) > 0 else sp.array([])
         h5fid = h5py.File(fname_out, 'w')
-        h5fid.create_dataset(name='strains', data=codeUTF8(CFG['strains']))
+        h5fid.create_dataset(name='strains', data=codeUTF8(options.strains))
         for key in counts:
             if sp.issubdtype(counts[key].dtype, sp.str_):
                 h5fid.create_dataset(name=key, data=codeUTF8(counts[key]))
@@ -186,19 +185,19 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         h5fid.close()
     else:
         ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
-        if CFG['bam_to_sparse']:
-            chunksize = int(max(1, math.floor(1000000 / len(CFG['strains']))))
+        if options.sparse_bam:
+            chunksize = int(max(1, math.floor(1000000 / len(options.strains))))
         else:
-            chunksize = int(max(1, math.floor(100000 / len(CFG['strains']))))
+            chunksize = int(max(1, math.floor(100000 / len(options.strains))))
 
         jobinfo = []
 
         PAR = dict()
-        PAR['CFG'] = CFG.copy()
-        if CFG['merge_strategy'] == 'single':
-            PAR['CFG']['bam_fnames'] = PAR['CFG']['bam_fnames'][sample_idx]
-            PAR['CFG']['samples'] = PAR['CFG']['samples'][sample_idx]
-            PAR['CFG']['strains'] = PAR['CFG']['strains'][sample_idx]
+        PAR['options'] = options.copy()
+        if options.merge == 'single':
+            PAR['options'].bam_fnames = PAR['options'].bam_fnames[sample_idx]
+            PAR['options'].samples = PAR['options'].samples[sample_idx]
+            PAR['options'].strains = PAR['options'].strains[sample_idx]
 
         #s_idx = sp.argsort([x.chr for x in genes]) # TODO
         s_idx = sp.arange(genes.shape[0])
@@ -212,18 +211,16 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                 PAR['genes'] = genes[s_idx][c_idx:cc_idx]
                 for gg in PAR['genes']:
                     gg.to_sparse()
-                PAR['fn_bam'] = CFG['bam_fnames']
+                PAR['fn_bam'] = options.bam_fnames
                 PAR['fn_out'] = fn
-                PAR['CFG'] = CFG
-                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 15000, CFG['options_rproc'], 60*48))
-                #count_graph_coverage(PAR)
-                #jobinfo.append(rp.rproc('count_graph_coverage', PAR, 100000, CFG['options_rproc'], 60*72))
+                PAR['options'] = options
+                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 15000, options.options_rproc, 60*48))
 
         rp.rproc_wait(jobinfo, 30, 1.0, -1)
         del genes
 
         ### merge results from count chunks
-        if 'verbose' in CFG and CFG['verbose']:
+        if options.verbose:
             print('\nCollecting count data from chunks ...\n')
             print('writing data to %s' % fname_out)
 
@@ -231,10 +228,10 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         h5fid = h5py.File(fname_out, 'w')
         h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
         h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
-        h5fid.create_dataset(name='strains', data=codeUTF8(CFG['strains']))
+        h5fid.create_dataset(name='strains', data=codeUTF8(options.strains))
         for c_idx in range(0, s_idx.shape[0], chunksize):
             cc_idx = min(s_idx.shape[0], c_idx + chunksize)
-            if 'verbose' in CFG and CFG['verbose']:
+            if options.verbose:
                 print('collecting chunk %i-%i (%i)' % (c_idx, cc_idx, s_idx.shape[0]))
             fn = re.sub(r'.hdf5$', '', fname_out) + '.chunk_%i_%i.pickle' % (c_idx, cc_idx)
             if not os.path.exists(fn):
@@ -248,8 +245,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
                         appendToHDF5(h5fid, sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), 'seg_pos') 
                         appendToHDF5(h5fid, sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (s_idx[c_idx + c]), 'gene_ids_segs')
                     else:
-                        h5fid.create_dataset(name='segments', data=sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(CFG['strains'])))
-                        h5fid.create_dataset(name='seg_pos', data=sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(CFG['strains'])))
+                        h5fid.create_dataset(name='segments', data=sp.hstack([sp.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.strains)))
+                        h5fid.create_dataset(name='seg_pos', data=sp.hstack([sp.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.strains)))
                         h5fid.create_dataset(name='gene_ids_segs', data=sp.ones((sp.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
 
                     tmp = [sp.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0]
@@ -269,10 +266,10 @@ def count_graph_coverage_wrapper(fname_in, fname_out, CFG, sample_idx=None, qmod
         h5fid.close()
 
 
-def collect_single_quantification_results(fname_out, sample_idxs, CFG):
+def collect_single_quantification_results(fname_out, sample_idxs, options):
 
         ### merge results from single count files
-        if 'verbose' in CFG and CFG['verbose']:
+        if options.verbose:
             print('\nCollecting count data from files quantified in single mode ...\n')
             print('writing data to %s' % fname_out)
 
@@ -280,8 +277,8 @@ def collect_single_quantification_results(fname_out, sample_idxs, CFG):
         h5fid = h5py.File(fname_out, 'w')
         for i, idx in enumerate(sample_idxs):
 
-            fname = get_filename('fn_count_in', CFG, sample_idx=idx)
-            if 'verbose' in CFG and CFG['verbose']:
+            fname = get_filename('fn_count_in', options, sample_idx=idx)
+            if options.verbose:
                 print('collecting counts from %s (%i/%i)' % (fname, i+1, len(sample_idxs)))
             if not os.path.exists(fname):
                 print('ERROR: Counts for sample %i cannot be loaded - %s is not present' % (i + 1, fname), file=sys.stderr)
@@ -296,5 +293,5 @@ def collect_single_quantification_results(fname_out, sample_idxs, CFG):
             else:
                 appendToHDF5(h5fid, CIN['edges'][:], 'edges', faxis=1, daxis=1)
                 appendToHDF5(h5fid, CIN['strains'][:], 'strains', faxis=0, daxis=0)
-        h5fid.close()
+        h5fid.close() 
 

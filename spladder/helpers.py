@@ -7,22 +7,22 @@ if __package__ is None:
 
 from .reads import *
 
-def make_introns_feasible(introns, genes, CFG):
+def make_introns_feasible(introns, genes, options):
 
     tmp1 = sp.array([x.shape[0] for x in introns[:, 0]])
     tmp2 = sp.array([x.shape[0] for x in introns[:, 1]])
     
     unfeas = sp.where((tmp1 > 200) | (tmp2 > 200))[0]
-    print('found %i unfeasible genes' % unfeas.shape[0], file=CFG['fd_log'])
+    print('found %i unfeasible genes' % unfeas.shape[0], file=options.fd_log)
 
     while unfeas.shape[0] > 0:
         ### make filter more stringent
-        CFG['read_filter']['exon_len'] = min(36, CFG['read_filter']['exon_len'] + 4)
-        CFG['read_filter']['mincount'] = 2 * CFG['read_filter']['mincount']
-        CFG['read_filter']['mismatch'] = max(CFG['read_filter']['mismatch'] - 1, 0)
+        options.read_filter['exon_len'] = min(36, options.read_filter['exon_len'] + 4)
+        options.read_filter['mincount'] = 2 * options.read_filter['mincount']
+        options.read_filter['mismatch'] = max(options.read_filter['mismatch'] - 1, 0)
 
         ### get new intron counts
-        tmp_introns = get_intron_list(genes[unfeas], CFG)
+        tmp_introns = get_intron_list(genes[unfeas], options)
         introns[unfeas, :] = tmp_introns
 
         ### still unfeasible?
@@ -33,14 +33,14 @@ def make_introns_feasible(introns, genes, CFG):
         idx = sp.where(~sp.in1d(unfeas, still_unfeas))[0]
 
         for i in unfeas[idx]:
-            print('[feasibility] set criteria for gene %s to: min_ex %i, min_conf %i, max_mism %i' % (genes[i].name, CFG['read_filter']['exon_len'], CFG['read_filter']['mincount'], CFG['read_filter']['mismatch']), file=CFG['fd_log'])
+            print('[feasibility] set criteria for gene %s to: min_ex %i, min_conf %i, max_mism %i' % (genes[i].name, options.read_filter['exon_len'], options.read_filter['mincount'], options.read_filter['mismatch']), file=options.fd_log)
         unfeas = still_unfeas;
 
     return introns
 
 
 ### remove introns overlapping to more than one gene
-def filter_introns(introns, genes, CFG):
+def filter_introns(introns, genes, options):
     
     ### build interval trees of all genes starts and ends
     chrms = sp.array([_.strand for _ in genes])
@@ -58,7 +58,7 @@ def filter_introns(introns, genes, CFG):
     cnt_tot = 0
     cnt_rem = 0
     strand_list = ['+', '-']
-    offset = CFG['intron_edges']['append_new_terminal_exons_len']
+    offset = options.intron_edges['append_new_terminal_exons_len']
     for si, s in enumerate(strand_list):
         for i in range(introns.shape[0]):
             if introns[i, si].shape[0] == 0:
@@ -77,46 +77,46 @@ def filter_introns(introns, genes, CFG):
 
 
 ### determine count output file
-def get_filename(which, CFG, sample_idx=None):
+def get_filename(which, options, sample_idx=None):
     """This function returns a filename generated from the current configuration"""
 
     ### init any tags
     prune_tag = ''
-    if CFG['do_prune']:
+    if options.do_prune:
         prune_tag = '_pruned'
     validate_tag = ''
-    if CFG['validate_splicegraphs']:
+    if options.validate_sg:
         validate_tag = '.validated'
 
     ### iterate over return file types    
     if which in ['fn_count_in', 'fn_count_out']:
-        if not 'spladder_infile' in CFG:
-            if CFG['merge_strategy'] == 'single':
-                fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['samples'][sample_idx], prune_tag))
+        if options.spladderfile == '-':
+            if options.merge == 'single':
+                fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
             else:
-                if (CFG['quantification_mode'] == 'single' and which != 'fn_count_in') or (CFG['quantification_mode'] == 'collect' and which == 'fn_count_in'):
-                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], CFG['samples'][sample_idx], prune_tag, validate_tag))
+                if (options.qmode == 'single' and which != 'fn_count_in') or (options.qmode == 'collect' and which == 'fn_count_in'):
+                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.pickle' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
                 else:
-                    fname = os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag, validate_tag))
+                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, prune_tag, validate_tag))
         else:
-            fname = CFG['spladder_infile']
+            fname = options.spladderfile
         
         if which == 'fn_count_in':
-            if CFG['quantification_mode'] == 'collect':
+            if options.qmode == 'collect':
                 return fname.replace('.pickle', '') + '.count.hdf5'
             else:
                 return fname
         elif which == 'fn_count_out':
             return fname.replace('.pickle', '') + '.count.hdf5'
     elif which == 'fn_out_merge':
-        if CFG['merge_strategy'] == 'merge_graphs':
-            return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], prune_tag))
+        if options.merge == 'merge_graphs':
+            return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, prune_tag))
         else:
             return ''
     elif which == 'fn_out_merge_val':
-        return os.path.join(CFG['out_dirname'], 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag))
+        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, validate_tag, prune_tag))
 
-def compute_psi(counts, event_type, CFG):
+def compute_psi(counts, event_type, options):
     
     ### collect count data based on event type
     if event_type == 'exon_skip':
@@ -145,7 +145,7 @@ def compute_psi(counts, event_type, CFG):
         psi = a / (a + b)  
 
     ### filter for sufficient read support
-    n_idx = sp.where((a + b) < CFG['psi_min_reads'])
+    n_idx = sp.where((a + b) < options.psi_min_reads)
     psi[n_idx] = sp.nan
 
     return (psi, a, b)
@@ -155,14 +155,14 @@ def log_progress(idx, total, bins=50):
     
     global TIME0
 
-    binsize = max(total / bins, 1)
-    if idx % binsize == 0:
-        time1 = time.time()
-        if idx == 0:
-            TIME0 = time1
-        progress = int(idx / binsize)
-        sys.stdout.write('\r[' + ('#' * progress) + (' ' * (bins - progress)) + ']' + ' %i / %i (%.0f%%)' % (idx, total, float(idx) / max(total, 1) * 100) + ' - took %i sec (ETA: %i sec)' % (time1 - TIME0, int((bins - progress) * float(time1 - TIME0) / max(progress, 1))))
-        sys.stdout.flush()
+    #binsize = max(total / bins, 1)
+    binsize = bins / total
+    time1 = time.time()
+    if idx == 0:
+        TIME0 = time1
+    progress = int((idx + 1) * binsize)
+    sys.stdout.write('\r[' + ('#' * progress) + (' ' * (bins - progress)) + ']' + ' %i / %i (%.0f%%)' % (idx, total, float(idx) / max(total, 1) * 100) + ' - took %i sec (ETA: %i sec)' % (time1 - TIME0, int((bins - progress) * float(time1 - TIME0) / max(progress, 1))))
+    sys.stdout.flush()
 
 def codeUTF8(s):
     return s.view(sp.chararray).encode('utf-8')

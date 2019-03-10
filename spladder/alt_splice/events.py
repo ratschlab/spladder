@@ -5,14 +5,13 @@ if __package__ is None:
 
 from ..utils import *
 
-def sort_events_full(event_list, CFG):
-    # event_list = sort_events_full(event_list, CFG),
+def sort_events_full(event_list, options):
 
     if event_list.shape[0] == 0:
         return event_list
 
     coord_list = sp.array([x.get_coords() for x in event_list]) 
-    chr_list = sp.array([CFG['chrm_lookup'][x.chr] for x in event_list])
+    chr_list = sp.array([options.chrm_lookup[x.chr] for x in event_list])
     strand_list = sp.array([x.strand == '-' for x in event_list], dtype = 'double')
     sort_list = sp.c_[chr_list, strand_list, coord_list]
     tmp, idx = sort_rows(sort_list, index=True)
@@ -21,11 +20,10 @@ def sort_events_full(event_list, CFG):
 
 
 
-def sort_events_by_event(event_list, CFG):
-    # event_list = sort_events_by_event(event_list, CFG),
+def sort_events_by_event(event_list, options):
    
     coord_list = sp.array([x.get_inner_coords() for x in event_list], dtype='double') 
-    chr_list = sp.array([CFG['chrm_lookup'][x.chr] for x in event_list], dtype='double')
+    chr_list = sp.array([options.chrm_lookup[x.chr] for x in event_list], dtype='double')
     strand_list = sp.array([x.strand == '-' for x in event_list], dtype = 'double')
     sort_list = sp.c_[chr_list, strand_list, coord_list]
     tmp, idx = sort_rows(sort_list, index=True)
@@ -34,8 +32,7 @@ def sort_events_by_event(event_list, CFG):
 
 
 
-def post_process_event_struct(events, CFG):
-    # events = post_process_event_struct(events)
+def post_process_event_struct(events, options):
 
     if events.shape[0] == 0:
         return events
@@ -55,14 +52,14 @@ def post_process_event_struct(events, CFG):
     events = events[is_valid]
    
     ### sort events by all coordinates
-    events = sort_events_full(events, CFG) 
+    events = sort_events_full(events, options) 
     
     ### make events unique by strain
     print('\nMake %s events unique by strain' % events[0].event_type)
     events = make_unique_by_strain(events)
 
     ### sort events by event coordinates
-    events = sort_events_by_event(events, CFG) 
+    events = sort_events_by_event(events, options) 
     
     ### make events unique by event
     print('\nMake %s events unique by event' % events[0].event_type)
@@ -173,7 +170,7 @@ def make_unique_by_event(event_list):
     return event_list
 
 
-def curate_alt_prime(event_list, CFG):
+def curate_alt_prime(event_list, options):
     # event_list = curate_alt_prime(event_list)
 
     if event_list.shape[0] == 0:

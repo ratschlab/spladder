@@ -13,12 +13,11 @@ from .editgraph import filter_by_edgecount
 from . import rproc as rp
 
 
-def merge_duplicate_exons(genes, CFG):
-# genes = merge_duplicate_exons(genes, CFG)
+def merge_duplicate_exons(genes, options):
 
     num_removed = 0
     for i in range(genes.shape[0]):
-        if CFG['verbose'] and i % 100 == 0: 
+        if options.verbose and i % 100 == 0: 
             print('%i\r' % i)
 
         ### check if there are non unique exons
@@ -59,13 +58,13 @@ def merge_duplicate_exons(genes, CFG):
         genes[i].splicegraph.terminals = genes[i].splicegraph.terminals[:, k_idx]
         num_removed += sum(remove)
 
-    if CFG['verbose']:
+    if options.verbose:
         print('\n... removed %i duplicate exons ...' % num_removed)
 
     return genes
 
 
-def merge_genes_by_isoform(CFG):
+def merge_genes_by_isoform(options):
     ### This script takes several gene structures and merges them into one. If the number of isoforms of an annotated transcript should 
     ### exceed max_num_isoforms, max_num_isoforms many are subsampled
     
@@ -74,18 +73,18 @@ def merge_genes_by_isoform(CFG):
 
     ### generate merge list
     merge_list = []
-    if CFG['do_prune']:
+    if options.do_prune:
         prune_tag = '_pruned'
     else:
         prune_tag = ''
 
     ### add all single bam file isoforms
-    for i in range(len(CFG['samples'])):
-        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][i], prune_tag))
+    for i in range(len(options.samples)):
+        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, options.samples[i], prune_tag))
 
     ### add also isoforms of all bam files combined
-    fn_bam_merged = '%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag)
-    if CFG['merge_strategy'] == 'merge_all' and os.path.exists(fn_bam_merged):
+    fn_bam_merged = '%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (options.outdir, options.confidence, prune_tag)
+    if options.merge == 'merge_all' and os.path.exists(fn_bam_merged):
         merge_list.append(fn_bam_merged)
 
     for i in range(len(merge_list)):
@@ -159,7 +158,7 @@ def merge_genes_by_isoform(CFG):
     genes = genes2
     del genes2
 
-    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms.pickle' % (options.outdir, options.confidence, options.merge, prune_tag)
     print('Store genes at: %s' % fn)
     for g in genes:
         g.to_sparse()
@@ -178,34 +177,33 @@ def merge_genes_by_isoform(CFG):
             genes.splicegraph = Splicegraph(genes[i])
     print('... done\n')
 
-    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms_subsampled.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    fn = '%s/spladder/genes_graph_conf%i.%s%s_merge_isoforms_subsampled.pickle' % (options.outdir, options.confidence, options.merge, prune_tag)
     print('Store subsampled genes at: %s' % fn)
     pickle.dump((genes, inserted), open(fn, 'wb'), -1)       
 
 
-def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
-    # merge_genes_by_splicegraph(CFG, merge_list, fn_out) 
+def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
     #
     #   This script takes several gene structures and merges them into one. 
     #   the merge is based on the splicegraphs within the genes struct
     
     ### if we are running with rproc we only get one parameter struct
-    if merge_list is None and 'CFG' in CFG:
-        if 'merge_list' in CFG:
-            merge_list = CFG['merge_list']
-        if 'fn_out' in CFG:
-            fn_out = CFG['fn_out']
-        CFG = CFG['CFG']
+    if merge_list is None and 'options' in options:
+        if 'merge_list' in options:
+            merge_list = options['merge_list']
+        if 'fn_out' in options:
+            fn_out = options['fn_out']
+        options = options['options']
 
     ### generate merge list
-    if CFG['do_prune']:
+    if options.do_prune:
         prune_tag = '_pruned'
     else:
         prune_tag = ''
 
     ### add also graph of all bam files combined
-    if CFG['do_merge_all'] and os.path.exists('%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag)):
-        merge_list.append('%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], prune_tag))
+    if options.do_merge_all and os.path.exists('%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (options.outdir, options.confidence, prune_tag)):
+        merge_list.append('%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (options.outdir, options.confidence, prune_tag))
 
     ### iterate over merge list 
     appended = False
@@ -329,11 +327,6 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     genes = genes2.copy()
     del genes2
 
-    #fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
-    #if chunk_idx is not None:
-    #    chunk_tag = '_level%i_chunk%i_%i' % (level, chunk_idx[0], chunk_idx[-1] + 1)
-    #    fn_out = fn_out.replace('.pickle', '%s.pickle' % chunk_tag)
-
     for g in genes:
         g.label_alt()
         g.to_sparse()
@@ -347,41 +340,40 @@ def merge_genes_by_splicegraph(CFG, merge_list=None, fn_out=None):
     pickle.dump((genes, inserted), open(fn_out, 'wb'), -1)
 
 
-def run_merge(CFG):
+def run_merge(options):
 
-    merge_all = (CFG['merge_strategy'] == 'merge_all')
+    merge_all = (options.merge == 'merge_all')
     merge_all_tag = ''
     if merge_all:
         merge_all_tag = '_merged_bams'
 
     prune_tag = ''
-    if CFG['do_prune']:
+    if options.do_prune:
         prune_tag = '_pruned'
 
     chunksize = 10
 
-    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'] , CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
-    #fn_out_val = '%s/spladder/genes_graph_conf%i.%s%s.validated.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
-    if CFG['validate_splicegraphs']:
-        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.validated.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
+    fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir , options.confidence, options.merge, prune_tag)
+    if options.validate_sg:
+        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.validated.count.hdf5' % (options.outdir, options.confidence, options.merge, prune_tag)
     else:
-        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'] , prune_tag)
+        fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.count.hdf5' % (options.outdir, options.confidence, options.merge , prune_tag)
 
     if not os.path.exists(fn_out):
-        if not CFG['rproc']:
-            merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], x, prune_tag) for x in CFG['samples']])
-            merge_genes_by_splicegraph(CFG, merge_list=merge_list, fn_out=fn_out)
+        if not options.pyproc:
+            merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
+            merge_genes_by_splicegraph(options, merge_list=merge_list, fn_out=fn_out)
         else:
             jobinfo = []
             PAR = dict()
-            PAR['CFG'] = CFG
+            PAR['options'] = options
             if chunksize > 0:
-                levels = int(math.ceil(math.log(len(CFG['samples']), chunksize)))
+                levels = int(math.ceil(math.log(len(options.samples), chunksize)))
                 level_files = dict()
                 for level in range(1, levels + 1):
                     print('merging files on level %i' % level)
                     if level == 1:
-                        merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], x, prune_tag) for x in CFG['samples']])
+                        merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
                     else:
                         merge_list = sp.array(level_files[level - 1])
                     level_files[level] = []
@@ -390,7 +382,7 @@ def run_merge(CFG):
                             assert(len(merge_list) <= chunksize)
                             fn = fn_out
                         else:
-                            fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag, level, c_idx, min(len(merge_list), c_idx + chunksize))
+                            fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, level, c_idx, min(len(merge_list), c_idx + chunksize))
                         level_files[level].append(fn)
                         if os.path.exists(fn):
                             continue
@@ -399,36 +391,36 @@ def run_merge(CFG):
                             chunk_idx = sp.arange(c_idx, min(len(merge_list), c_idx + chunksize))
                             PAR['merge_list'] = merge_list[chunk_idx]
                             PAR['fn_out'] = fn
-                            jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, CFG['options_rproc'], 40*60))
+                            jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, options.options_rproc, 40*60))
                     rp.rproc_wait(jobinfo, 30, 1.0, -1)
             else:
-                PAR['merge_list'] = CFG['samples']
+                PAR['merge_list'] = options.samples
                 PAR['fn_out'] = fn_out
-                jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000, CFG['options_rproc'], 40*60))
+                jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000, options.options_rproc, 40*60))
                 rp.rproc_wait(jobinfo, 30, 1.0, -1)
     else:
         print('File %s already exists!' % fn_out)
 
     ### generate validated version of splice graph
-    #if CFG['validate_splicegraphs'] and not os.path.exists(fn_out_val):
+    #if options.validate_sg and not os.path.exists(fn_out_val):
     #    (genes, inserted) = cPickle.load(open(fn_out, 'r'))
-    #    genes = filter_by_edgecount(genes, CFG)
+    #    genes = filter_by_edgecount(genes, options)
     #    cPickle.dump((genes, inserted), open(fn_out_val, 'w'), -1)
     #    del genes
 
     ### count segment graph
-    #if CFG['validate_splicegraphs']:
-    #   count_graph_coverage_wrapper(fn_out_val, fn_out_count, CFG)
+    #if options.validate_sg:
+    #   count_graph_coverage_wrapper(fn_out_val, fn_out_count, options)
     #else:
-    #   count_graph_coverage_wrapper(fn_out, fn_out_count, CFG)
+    #   count_graph_coverage_wrapper(fn_out, fn_out_count, options)
 
-    if CFG['do_gen_isoforms']:
-        fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], prune_tag)
+    if options.do_gen_isoforms:
+        fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.pickle' % (options.outdir, options.confidence, options.merge, prune_tag)
         if not os.path.exists(fn_out):
-            if not CFG['rproc']:
-                merge_genes_by_isoform(CFG['out_dirname'], CFG['confidence_level'], merge_all, experiment)
+            if not options.pyproc:
+                merge_genes_by_isoform(options.outdir, options.confidence, merge_all, experiment)
             else:
-                jobinfo = [rp.rproc('merge_genes_by_isoform', PAR, 10000, CFG['options_rproc'], 40*60)]
+                jobinfo = [rp.rproc('merge_genes_by_isoform', PAR, 10000, options.options_rproc, 40*60)]
                 rp.rproc_wait(jobinfo, 30, 1.0, 1)
         else:
             print('File %s already exists!' % fn_out)

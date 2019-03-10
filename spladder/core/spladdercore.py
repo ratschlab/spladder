@@ -5,33 +5,33 @@ import pickle
 
 from .gen_graphs import gen_graphs 
 
-def spladder_core(CFG):
+def spladder_core(options):
 
     genes_loaded = False
 
     ### check if result file exists and start gen graph step if necessary
-    if not os.path.exists(CFG['out_fname']):
+    if not os.path.exists(options.out_fname):
         print('Augmenting splice graphs.', file=sys.stdout)
         print('=========================', file=sys.stdout)
-        if not 'genes' in CFG:
-            genes = pickle.load(open(CFG['anno_fname'], 'rb'), encoding='latin1')
+        if not hasattr(options, 'genes'):
+            genes = pickle.load(open(options.annotation, 'rb'), encoding='latin1')
         else:
-            genes = CFG['genes']
+            genes = options.genes
 
-        genes = gen_graphs(genes, CFG)
+        genes = gen_graphs(genes, options)
 
-        print('Saving genes to %s' % (CFG['out_fname']))
-        pickle.dump(genes, open(CFG['out_fname'], 'wb'), -1)
+        print('Saving genes to %s' % (options.out_fname))
+        pickle.dump(genes, open(options.out_fname, 'wb'), -1)
 
         genes_loaded = True
     else:
         print('Augmenting splice graphs already completed.')
 
     ### prune splice graph if necessary
-    if CFG['do_prune']:
-        load_fn = CFG['out_fname']
-        CFG['out_fname'] = re.sub(r'.pickle$', '_pruned.pickle', CFG['out_fname'])
-        if not os.path.exists(CFG['out_fname']):
+    if options.do_prune:
+        load_fn = options.out_fname
+        options.out_fname = re.sub(r'.pickle$', '_pruned.pickle', options.out_fname)
+        if not os.path.exists(options.out_fname):
             ### load genes if not present yet
             if not genes_loaded:
                 genes = pickle.load(open(load_fn), 'rb')
@@ -45,8 +45,8 @@ def spladder_core(CFG):
             num_paths_after = count_all_paths(genes)
 
             ### save pruned genes
-            print('saving genes to %s' % (CFG['out_fname']))
-            pickle.dump(genes, open(CFG['out_fname'], 'wb'), -1)
+            print('saving genes to %s' % (options.out_fname))
+            pickle.dump(genes, open(options.out_fname, 'wb'), -1)
 
             genes_loaded = True;
         else:
@@ -55,10 +55,10 @@ def spladder_core(CFG):
         print('No pruning requested!')
 
     ### generate isoforms if necessary
-    if CFG['do_gen_isoforms']:
-        load_fn = CFG['out_fname']
-        CFG['out_fame'] = re.sub(r'.pickle$', '_with_isoforms.pickle', CFG['out_fname']);
-        if not os.path.exists(CFG['out_fname']):
+    if options.do_gen_isoforms:
+        load_fn = options.out_fname
+        options.out_fame = re.sub(r'.pickle$', '_with_isoforms.pickle', options.out_fname);
+        if not os.path.exists(options.out_fname):
             ### load genes if not present yet
             if not genes_loaded:
                 genes = pickle.load(open(load_fn, 'rb'))
@@ -70,11 +70,11 @@ def spladder_core(CFG):
             ### re-constitute splicing graph
             print('\tRe-constituting simplified splice graph from generated transcripts')
             genes_unsimplified = genes
-            genes = splice_graph(genes, CFG['do_infer_splice_graph'])
+            genes = splice_graph(genes, options.infer_sg)
 
             ### save splicing graph with isoforms
-            print('\tSaving genes to %s' % CFG['out_fname'])
-            pickle.dump((genes, genes_unsimplified), open(CFG['out_fname'], 'wb'), -1)
+            print('\tSaving genes to %s' % options.out_fname)
+            pickle.dump((genes, genes_unsimplified), open(options.out_fname, 'wb'), -1)
         else:
             print('Generating all isoforms already done')
     else:

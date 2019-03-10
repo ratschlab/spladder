@@ -9,8 +9,7 @@ if __package__ is None:
 
 from ..utils import *
 
-def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
-    # [verified, info] = verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG) 
+def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
 
     verified = [0, 0, 0, 0, 0]
     # (0) exon coordinates are valid (>= 0 && start < stop && non-overlapping) & skipped exon coverage >= FACTOR * mean(pre, after)
@@ -59,7 +58,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     info[2] = sp.sum(counts_segments[seg_exons_u] * seg_lens[seg_exons_u]) / sp.sum(seg_lens[seg_exons_u])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
-    if info[2] >= CFG['mult_exon_skip']['min_skip_rel_cov'] * (info[1] + info[3]) / 2:
+    if info[2] >= options.mult_exon_skip['min_skip_rel_cov'] * (info[1] + info[3]) / 2:
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -85,20 +84,19 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # num_inner_exon
     info[8] = event.exons2.shape[0] - 2
     info[9] = sp.sum(event.exons2[1:-1, 1] - event.exons2[1:-1, 0])
-    if info[4] >= CFG['mult_exon_skip']['min_non_skip_count']:
+    if info[4] >= options.mult_exon_skip['min_non_skip_count']:
         verified[1] = 1
-    if info[5] >= CFG['mult_exon_skip']['min_non_skip_count']:
+    if info[5] >= options.mult_exon_skip['min_non_skip_count']:
         verified[2] = 1
-    if (info[7] / info[8]) >= CFG['mult_exon_skip']['min_non_skip_count']:
+    if (info[7] / info[8]) >= options.mult_exon_skip['min_non_skip_count']:
         verified[3] = 1 
-    if info[6] >= CFG['mult_exon_skip']['min_skip_count']:
+    if info[6] >= options.mult_exon_skip['min_skip_count']:
         verified[4] = 1 
 
     return (verified, info)
 
 
-def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_seg_pos, CFG):
-    # [verified, info] = verify_intron_retention(event, fn_bam, CFG)
+def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_seg_pos, options):
 
     verified = [0, 0]
     # (0) counts meet criteria for min_retention_cov, min_retention_region and min_retetion_rel_cov 
@@ -146,9 +144,9 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     info[5] = sp.sum(counts_seg_pos[seg_intron]) / sp.sum(seg_lens[seg_intron])
 
     ### check if counts match verification criteria
-    if info[1] > CFG['intron_retention']['min_retention_cov'] and \
-       info[5] > CFG['intron_retention']['min_retention_region'] and \
-       info[1] >= CFG['intron_retention']['min_retention_rel_cov'] * (info[2] + info[3]) / 2:
+    if info[1] > options.intron_retention['min_retention_cov'] and \
+       info[5] > options.intron_retention['min_retention_region'] and \
+       info[1] >= options.intron_retention['min_retention_rel_cov'] * (info[2] + info[3]) / 2:
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -157,14 +155,13 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon1[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
 
-    if info[4] >= CFG['intron_retention']['min_non_retention_count']:
+    if info[4] >= options.intron_retention['min_non_retention_count']:
         verified[1] = 1
 
     return (verified, info)
 
 
-def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
-    # [verified, info] = verify_exon_skip(event, fn_bam, CFG)
+def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
 
     verified = [0, 0, 0, 0]
     # (0) coverage of skipped exon is >= than FACTOR * mean(pre, after)
@@ -208,7 +205,7 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     info[1] = sp.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /sp.sum(seg_lens[seg_exon])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
-    if info[1] >= CFG['exon_skip']['min_skip_rel_cov'] * (info[2] + info[3]) / 2: 
+    if info[1] >= options.exon_skip['min_skip_rel_cov'] * (info[2] + info[3]) / 2: 
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -216,23 +213,23 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, CFG):
     # exon_pre_exon_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
-    if info[4] >= CFG['exon_skip']['min_non_skip_count']:
+    if info[4] >= options.exon_skip['min_non_skip_count']:
         verified[1] = 1
     # exon_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[5] = counts_edges[idx, 1]
-    if info[5] >= CFG['exon_skip']['min_non_skip_count']:
+    if info[5] >= options.exon_skip['min_non_skip_count']:
         verified[2] = 1
     # exon_pre_exon_aft_conf
     idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[6] = counts_edges[idx, 1]
-    if info[6] >= CFG['exon_skip']['min_skip_count']:
+    if info[6] >= options.exon_skip['min_skip_count']:
         verified[3] = 1
 
     return (verified, info)
 
 
-def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
+def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     # [verified, info] = verify_exon_skip(event, fn_bam, cfg)
 
     verified = [0, 0]
@@ -283,13 +280,13 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     assert(segs_exon21.shape[0] > 0)
     assert(segs_exon22.shape[0] > 0)
 
-    if sp.all(segs_exon11 == segs_exon21):
+    if segs_exon11.shape == segs_exon21.shape and sp.all(segs_exon11 == segs_exon21):
         seg_exon_const = segs_exon11
         seg_diff = sp.setdiff1d(segs_exon12, segs_exon22)
         if seg_diff.shape[0] == 0:
             seg_diff = sp.setdiff1d(segs_exon22, segs_exon12)
         seg_const = sp.intersect1d(segs_exon12, segs_exon22)
-    elif sp.all(segs_exon12 == segs_exon22):
+    elif segs_exon12.shape == segs_exon22.shape and sp.all(segs_exon12 == segs_exon22):
         seg_exon_const = segs_exon12
         seg_diff = sp.setdiff1d(segs_exon11, segs_exon21)
         if seg_diff.shape[0] == 0:
@@ -307,7 +304,7 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     # exon_const_cov
     info[2] = sp.sum(counts_segments[seg_const] * seg_lens[seg_const]) / sp.sum(seg_lens[seg_const])
 
-    if info[1] >= CFG['alt_prime']['min_diff_rel_cov'] * info[2]:
+    if info[1] >= options.alt_prime['min_diff_rel_cov'] * info[2]:
         verified[0] = 1
 
     ### check intron confirmations as sum of valid intron scores
@@ -321,13 +318,12 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, CFG):
     assert(idx.shape[0] > 0)
     info[4] = counts_edges[idx, 1]
 
-    if min(info[3], info[4]) >= CFG['alt_prime']['min_intron_count']:
+    if min(info[3], info[4]) >= options.alt_prime['min_intron_count']:
         verified[1] = 1
 
     return (verified, info)
 
-def verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
-    # [verified, info] = verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG)
+def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     #
 
     verified = [0, 0, 0, 0]
@@ -378,9 +374,9 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
     info[4] = sp.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) / sp.sum(seg_lens[seg_exon_aft])
 
     ### check if coverage of first exon is >= than FACTOR times average of pre and after
-    if info[2] >= CFG['mutex_exons']['min_skip_rel_cov'] * (info[1] + info[4])/2:
+    if info[2] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2:
         verified[0] = 1
-    if info[3] >= CFG['mutex_exons']['min_skip_rel_cov'] * (info[1] + info[4])/2:
+    if info[3] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2:
         verified[1] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -403,16 +399,15 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, CFG):
         info[8] = counts_edges[idx[0], 1]
 
     # set verification flags for intron confirmation
-    if min(info[5], info[6]) >= CFG['mutex_exons']['min_conf_count']:
+    if min(info[5], info[6]) >= options.mutex_exons['min_conf_count']:
         verified[2] = 1
-    if min(info[7], info[8]) >= CFG['mutex_exons']['min_conf_count']:
+    if min(info[7], info[8]) >= options.mutex_exons['min_conf_count']:
         verified[3] = 1
 
     return (verified, info)
 
 
-def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=None, out_fn=None):
-    # (ev, counts) = verify_all_events(ev, strain_idx, list_bam, event_type, CFG) ;
+def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, options=None, out_fn=None):
 
     ### set parameters if called by rproc
     if strain_idx is None:
@@ -423,24 +418,24 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
         if 'out_fn' in PAR:
             out_fn = PAR['out_fn']
         event_type = PAR['event_type']
-        CFG = PAR['CFG']
+        options = PAR['options']
 
     ### verify the events if demanded
-    if CFG['verify_alt_events']:
+    if options.verify_alt_events:
 
         prune_tag = ''
-        if CFG['do_prune']:
+        if options.do_prune:
             prune_tag = '_pruned'
         validate_tag = ''
-        if CFG['validate_splicegraphs']:
+        if options.validate_sg:
             validate_tag = '.validated'
 
-        if CFG['merge_strategy'] == 'single':
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][strain_idx], validate_tag, prune_tag), 'rb'))
-            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][strain_idx], validate_tag, prune_tag)
+        if options.merge == 'single':
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.samples[strain_idx], validate_tag, prune_tag), 'rb'))
+            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (options.outdir, options.confidence, options.samples[strain_idx], validate_tag, prune_tag)
         else:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag), 'rb'))
-            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag)
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag), 'rb'))
+            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag)
 
         ### load count index data from hdf5
         IN = h5py.File(fn_count, 'r')
@@ -506,15 +501,15 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, CFG=N
                # ev_tmp.subset_strain(s_idx) ### TODO 
                 #sys.stdout.flush()
                 if event_type == 'exon_skip':
-                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
                 elif event_type in ['alt_3prime', 'alt_5prime']:
-                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
                 elif event_type == 'intron_retention':
-                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, CFG)
+                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, options)
                 elif event_type == 'mult_exon_skip':
-                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
                 elif event_type == 'mutex_exons':
-                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], CFG)
+                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
 
                 ev[i].verified.append(ver)
                 if s_idx == 0:

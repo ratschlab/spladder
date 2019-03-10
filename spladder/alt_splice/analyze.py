@@ -13,25 +13,25 @@ from .write import *
 from ..rproc import rproc, rproc_wait
 from ..helpers import compute_psi, codeUTF8
 
-def _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=None):
+def _prepare_count_hdf5(options, OUT, event_features, sample_idx=None):
     
     ### load gene info
-    if 'spladder_infile' in CFG and os.path.exists(CFG['spladder_infile']):
-        (genes, inserted) = pickle.load(open(CFG['spladder_infile']), 'rb')
+    if hasattr(options, 'spladderfile') and os.path.exists(options.spladderfile):
+        (genes, inserted) = pickle.load(open(options.spladderfile), 'rb')
     else:
         prune_tag = ''
-        if CFG['do_prune']:
+        if options.do_prune:
             prune_tag = '_pruned'
         validate_tag = ''
-        if CFG['validate_splicegraphs']:
+        if options.validate_sg:
             validate_tag = '.validated'
         if not sample_idx is None:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['samples'][sample_idx], validate_tag, prune_tag), 'rb'))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag, prune_tag), 'rb'))
         else:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (CFG['out_dirname'], CFG['confidence_level'], CFG['merge_strategy'], validate_tag, prune_tag), 'rb'))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag), 'rb'))
 
     ### write strain and gene indices to hdf5
-    OUT.create_dataset(name='strains', data=codeUTF8(CFG['strains']))
+    OUT.create_dataset(name='strains', data=codeUTF8(options.strains))
     feat = OUT.create_group(name='event_features')
     for f in event_features:
         feat.create_dataset(name=f, data=codeUTF8(sp.array(event_features[f], dtype='str')))
@@ -41,22 +41,22 @@ def _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=None):
     OUT.create_dataset(name='gene_pos', data=sp.array([[x.start, x.stop] for x in genes], dtype='int'))
 
 
-def analyze_events(CFG, event_type, sample_idx=None):
+def analyze_events(options, event_type, sample_idx=None):
 
-    if CFG['rproc'] and not os.path.exists('%s/event_count_chunks' % CFG['out_dirname']):
-        os.makedirs('%s/event_count_chunks' % CFG['out_dirname'])
+    if options.pyproc and not os.path.exists('%s/event_count_chunks' % options.outdir):
+        os.makedirs('%s/event_count_chunks' % options.outdir)
 
-    print('analyzing events with confidence %i' % CFG['confidence_level'])
+    print('analyzing events with confidence %i' % options.confidence)
 
-    if CFG['merge_strategy'] == 'single':
-        fn_out = '%s/%s_%s_C%i.pickle' % (CFG['out_dirname'], CFG['samples'][sample_idx], event_type, CFG['confidence_level'])
+    if options.merge == 'single':
+        fn_out = '%s/%s_%s_C%i.pickle' % (options.outdir, options.samples[sample_idx], event_type, options.confidence)
     else:
-        fn_out = '%s/%s_%s_C%i.pickle' % (CFG['out_dirname'], CFG['merge_strategy'], event_type, CFG['confidence_level'])
+        fn_out = '%s/%s_%s_C%i.pickle' % (options.outdir, options.merge, event_type, options.confidence)
     fn_out_conf = fn_out.replace('.pickle', '.confirmed.pickle')
     fn_out_count = fn_out.replace('.pickle', '.counts.hdf5')
 
     ### define result files
-    if CFG['compress_text']:
+    if options.compress_text:
         gz_suffix = '.gz'
     else:
         gz_suffix = ''
@@ -87,21 +87,21 @@ def analyze_events(CFG, event_type, sample_idx=None):
     if not os.path.exists(fn_out_count):
 
         events_all = pickle.load(open(fn_out, 'rb'))
-        events_all_strains = CFG['strains']
+        events_all_strains = options.strains
 
         ### handle case where we did not find any event of this type
         if sp.sum([x.event_type == event_type for x in events_all]) == 0:
             OUT = h5py.File(fn_out_count, 'w')
             OUT.create_dataset(name='event_counts', data=[0])
-            _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=sample_idx)
+            _prepare_count_hdf5(options, OUT, event_features, sample_idx=sample_idx)
             OUT.close()
             confirmed_idx = sp.array([], dtype='int')
         else:
-            if not CFG['rproc']:
-                if CFG['merge_strategy'] == 'single':
-                    (events_all, counts) = verify_all_events(events_all, sample_idx, CFG['bam_fnames'], event_type, CFG)
+            if not options.pyproc:
+                if options.merge == 'single':
+                    (events_all, counts) = verify_all_events(events_all, sample_idx, options.bam_fnames, event_type, options)
                 else:
-                    (events_all, counts) = verify_all_events(events_all, sp.arange(len(CFG['strains'])), CFG['bam_fnames'], event_type, CFG)
+                    (events_all, counts) = verify_all_events(events_all, sp.arange(len(options.strains)), options.bam_fnames, event_type, options)
                 verified = sp.array([x.verified for x in events_all], dtype='bool')
                 for ev in events_all:
                     ev.verified = []
@@ -110,7 +110,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                 iso1 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                 iso2 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                 for i in range(counts.shape[2]):
-                    (psi[:, i], iso1[:, i], iso2[:, i])  = compute_psi(counts[:, :, i], event_type, CFG)
+                    (psi[:, i], iso1[:, i], iso2[:, i])  = compute_psi(counts[:, :, i], event_type, options)
 
                 OUT = h5py.File(fn_out_count, 'w')
                 OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
@@ -119,7 +119,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
                 OUT.create_dataset(name='iso2', data=iso2, compression='gzip')
                 OUT.create_dataset(name='gene_idx', data=sp.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
                 OUT.create_dataset(name='verified', data=verified, compression='gzip')
-                _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=sample_idx)
+                _prepare_count_hdf5(options, OUT, event_features, sample_idx=sample_idx)
             else:
                 jobinfo = []
                 PAR = dict()
@@ -127,20 +127,19 @@ def analyze_events(CFG, event_type, sample_idx=None):
                 chunk_size_strains = 500
                 for i in range(0, events_all.shape[0], chunk_size_events):
                     idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
-                    for j in range(0, len(CFG['strains']), chunk_size_strains):
-                        idx_strains = sp.arange(j, min(j + chunk_size_strains, len(CFG['strains'])))
+                    for j in range(0, len(options.strains), chunk_size_strains):
+                        idx_strains = sp.arange(j, min(j + chunk_size_strains, len(options.strains)))
                         PAR['ev'] = events_all[idx_events].copy()
                         PAR['strain_idx'] = idx_strains
-                        PAR['list_bam'] = CFG['bam_fnames']
-                        PAR['out_fn'] = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (CFG['out_dirname'], event_type, i, j, CFG['confidence_level'])
+                        PAR['list_bam'] = options.bam_fnames
+                        PAR['out_fn'] = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (options.outdir, event_type, i, j, options.confidence)
                         PAR['event_type'] = event_type
-                        PAR['CFG'] = CFG
+                        PAR['options'] = options
                         if os.path.exists(PAR['out_fn']):
                             print('Chunk event %i, strain %i already completed' % (i, j))
                         else:
                             print('Submitting job %i, event chunk %i/%i, strain chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j))
-                            #jobinfo.append(rproc('verify_all_events', PAR, 30000, CFG['options_rproc'], 60 * 4))
-                            jobinfo.append(rproc('verify_all_events', PAR, 10000, CFG['options_rproc'], 60 * 12))
+                            jobinfo.append(rproc('verify_all_events', PAR, 10000, options['options_rproc'], 60 * 12))
                             #verify_all_events(PAR)
                 
                 rproc_wait(jobinfo, 20, 1.0, 1)
@@ -153,10 +152,10 @@ def analyze_events(CFG, event_type, sample_idx=None):
                 OUT = h5py.File(fn_out_count, 'w')
                 for i in range(0, events_all.shape[0], chunk_size_events):
                     idx_events = sp.arange(i, min(i + chunk_size_events, events_all.shape[0]))
-                    for j in range(0, len(CFG['strains']), chunk_size_strains):
-                        idx_strains = sp.arange(j, min(j + chunk_size_strains, len(CFG['strains'])))
-                        print('\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(CFG['strains'])))
-                        out_fn = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (CFG['out_dirname'], event_type, i, j, CFG['confidence_level'])
+                    for j in range(0, len(options.strains), chunk_size_strains):
+                        idx_strains = sp.arange(j, min(j + chunk_size_strains, len(options.strains)))
+                        print('\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(options.strains)))
+                        out_fn = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (options.outdir, event_type, i, j, options.confidence)
                         if not os.path.exists(out_fn):
                             print('ERROR: not finished %s' % out_fn, file=sys.stderr)
                             sys.exit(1)
@@ -176,10 +175,10 @@ def analyze_events(CFG, event_type, sample_idx=None):
                     iso1 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                     iso2 = sp.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                     for j in range(counts.shape[2]):
-                        (psi[:, j], iso1[:, j], iso2[:, j]) = compute_psi(counts[:, :, j], event_type, CFG) 
+                        (psi[:, j], iso1[:, j], iso2[:, j]) = compute_psi(counts[:, :, j], event_type, options) 
 
                     if i == 0:
-                        OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(CFG['strains']), len(event_features[event_type]), None), compression='gzip')
+                        OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(options.strains), len(event_features[event_type]), None), compression='gzip')
                         OUT.create_dataset(name='psi', data=sp.atleast_2d(psi), maxshape=(psi.shape[0], None), compression='gzip')
                         OUT.create_dataset(name='iso1', data=sp.atleast_2d(iso1), maxshape=(iso1.shape[0], None), compression='gzip')
                         OUT.create_dataset(name='iso2', data=sp.atleast_2d(iso2), maxshape=(iso2.shape[0], None), compression='gzip')
@@ -208,7 +207,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
 
                 OUT.create_dataset(name='verified', data=verified, dtype='bool', compression='gzip')
                 OUT.create_dataset(name='gene_idx', data=gene_idx_)
-                _prepare_count_hdf5(CFG, OUT, event_features, sample_idx=sample_idx)
+                _prepare_count_hdf5(options, OUT, event_features, sample_idx=sample_idx)
             
             ### write more event infos to hdf5
             if event_type == 'exon_skip':
@@ -230,7 +229,7 @@ def analyze_events(CFG, event_type, sample_idx=None):
             OUT.create_dataset(name='confirmed', data=confirmed)
 
             #verified_count = []
-            #for min_verified = 1:length(CFG.strains),
+            #for min_verified = 1:length(options.strains),
             #    verified_count(min_verified) = sum([events_all.confirmed] >= min_verified) ;
             
             confirmed_idx = sp.where(confirmed >= 1)[0]
@@ -255,13 +254,13 @@ def analyze_events(CFG, event_type, sample_idx=None):
     else:
         print('\nReporting complete %s events:' % event_type)
 
-    if CFG['output_txt']:
+    if options.output_txt:
         if os.path.exists(fn_out_txt):
             print('%s already exists' % fn_out_txt)
         else:
             write_events_txt(fn_out_txt, events_all, fn_out_count)
 
-    if CFG['output_struc']:
+    if options.output_struc:
         if os.path.exists(fn_out_struc):
             print('%s already exists' % fn_out_struc)
         else:
@@ -276,69 +275,69 @@ def analyze_events(CFG, event_type, sample_idx=None):
     if isinstance(sample_idx, int):
         sample_idx = [sample_idx]
     elif sample_idx is None:
-        sample_idx = sp.arange(CFG['strains'].shape[0])
+        sample_idx = sp.arange(options.strains.shape[0])
 
-    if CFG['output_gff3']:
+    if options.output_gff3:
         if os.path.exists(fn_out_gff3):
             print('%s already exists' % fn_out_gff3)
         else:
             write_events_gff3(fn_out_gff3, events_all)
 
-    if CFG['output_confirmed_gff3']:
+    if options.output_confirmed_gff3:
         if os.path.exists(fn_out_conf_gff3):
             print('%s already exists' % fn_out_conf_gff3)
         else:
             write_events_gff3(fn_out_conf_gff3, events_all, confirmed_idx)
 
-    if CFG['output_confirmed_txt']:
+    if options.output_confirmed_txt:
         if os.path.exists(fn_out_conf_txt):
             print('%s already exists' % fn_out_conf_txt)
         else:
-            write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
+            write_events_txt(fn_out_conf_txt, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
-    if CFG['output_confirmed_bed']:
+    if options.output_confirmed_bed:
         if os.path.exists(fn_out_conf_bed):
             print('%s already exists' % fn_out_conf_bed)
         else:
             write_events_bed(fn_out_conf_bed, events_all, idx=confirmed_idx)
 
-    if CFG['output_bed']:
+    if options.output_bed:
         if os.path.exists(fn_out_bed):
             print('%s already exists' % fn_out_bed)
         else:
             write_events_bed(fn_out_bed, events_all)
 
-    if CFG['output_confirmed_struc']:
+    if options.output_confirmed_struc:
         if os.path.exists(fn_out_conf_struc):
             print('%s already exists' % fn_out_conf_struc)
         else:
             write_events_structured(fn_out_conf_struc, events_all, fn_out_count, confirmed_idx)
 
-    if CFG['output_confirmed_tcga']:
+    if options.output_confirmed_tcga:
         if os.path.exists(fn_out_conf_tcga):
             print('%s already exists' % fn_out_conf_tcga)
         else:
-            write_events_tcga(fn_out_conf_tcga, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
+            write_events_tcga(fn_out_conf_tcga, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
-    if CFG['output_confirmed_icgc']:
+    if options.output_confirmed_icgc:
         if os.path.exists(fn_out_conf_icgc):
             print('%s already exists' % fn_out_conf_icgc)
         else:
-            write_events_icgc(fn_out_conf_icgc, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
+            write_events_icgc(fn_out_conf_icgc, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
-    if CFG['output_filtered_txt']:
+    if options.output_filtered_txt:
         fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
         if os.path.exists(fn_out_conf_txt):
             print('%s already exists' % fn_out_conf_txt)
         else:
             print('\nWriting filtered events (sample freq 0.05):')
-            cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * CFG['strains'].shape[0]))[0]
-            write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+            cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * options.strains.shape[0]))[0]
+            write_events_txt(fn_out_conf_txt, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
 
         fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
         if os.path.exists(fn_out_conf_txt):
             print('%s already exists' %  fn_out_conf_txt)
         else:
             print('\nWriting filtered events (sample freq 0.01):')
-            cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * CFG['strains'].shape[0]))[0]
-            write_events_txt(fn_out_conf_txt, CFG['strains'][sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+            cf_idx = sp.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * options.strains.shape[0]))[0]
+            write_events_txt(fn_out_conf_txt, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
