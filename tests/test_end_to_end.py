@@ -21,6 +21,20 @@ def _compare_hdf5(expected, actual):
         else:
             assert sp.all(expected[k][:] == actual[k][:])
 
+def _compare_ps(expected, actual):
+    
+    e_str = []
+    for line in expected:
+        if line.startswith('%'):
+            continue
+        e_str.append(line)
+    a_str = []
+    for line in actual:
+        if line.startswith('%'):
+            continue
+        a_str.append(line)
+    assert ''.join(e_str) == ''.join(a_str)
+            
 def _assert_files_equal_testing(e, a):
 
     da = sp.loadtxt(a, dtype='str', delimiter='\t')
@@ -47,6 +61,8 @@ def _assert_files_equal(expected_path, actual_path):
             return gzip.open(f, 'rb')
         elif f.endswith('.hdf5'):
             return h5py.File(f, 'r')
+        elif f.endswith('.ps'):
+            return open(f, 'r')
         elif f.endswith('.pickle'):
             return open(f, 'rb')
         else:
@@ -56,6 +72,8 @@ def _assert_files_equal(expected_path, actual_path):
         with o(actual_path) as a:
             if expected_path.endswith('.hdf5'):
                 _compare_hdf5(e, a)
+            elif expected_path.endswith('.ps'):
+                _compare_ps(e, a)
             elif expected_path.endswith('.pickle'):
                 ta = pickle.load(a, encoding='latin1')
                 te = pickle.load(e, encoding='latin1')
@@ -137,6 +155,7 @@ def test_end_to_end_merge(test_id, case, tmpdir):
                '--merge-strat', 'merge_graphs',
                '--extract-as',
                '-n', '15',
+               '--output-conf-icgc',
                '-v']
 
     spladder.main(my_args)
@@ -151,13 +170,13 @@ def test_end_to_end_merge(test_id, case, tmpdir):
                '-b', ':'.join([','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(3)]), 
                                ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+4)) for i in range(2)])]),
                '-L', 'group1,group2',
-               '-f', 'png',
+               '-f', 'ps',
                '-v']
 
     spladder.main(my_args)
 
     ### check that files are identical
-    _assert_files_equal(os.path.join(result_dir, 'plots', 'gene_overview_C3_GENE1.png'), os.path.join(out_dir, 'plots', 'gene_overview_C3_GENE1.png'))
+    _assert_files_equal(os.path.join(result_dir, 'plots', 'gene_overview_C3_GENE1.ps'), os.path.join(out_dir, 'plots', 'gene_overview_C3_GENE1.ps'))
 
 @pytest.mark.parametrize("test_id,case", [
     ['basic', 'pos'],
@@ -177,6 +196,7 @@ def test_end_to_end_single(test_id, case, tmpdir):
                '--merge-strat', 'single',
                '--extract-ase',
                '-n', '15',
+               '--output-conf-icgc', 
                '-v']
                #'-b', ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(5)]),
 
@@ -219,6 +239,7 @@ def test_end_to_end_testing(test_id, tmpdir):
                '-o', out_dir,
                '-v',
                '--diagnose-plots',
+               '-f', 'ps',
                '--readlen', '50',
                '--merge-strat', 'merge_graphs',
                '--event-types', 'exon_skip',
@@ -229,6 +250,6 @@ def test_end_to_end_testing(test_id, tmpdir):
 
     ### check that files are identical
     _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv']) 
-    _check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.png']) 
+    _check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps']) 
 
 
