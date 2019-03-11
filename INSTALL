@@ -1,20 +1,19 @@
 Installation and Dependencies
 -----------------------------
 
-The python version of SplAdder does not require any installation process. It can
-be used as is, given that the following dependencies are fulfilled:
-
-* pysam
-* h5py
-* scipy
-
-These are standard packages and the authors suggest to use a python package
-manager such as anaconda.
-
-To start SplAdder and see a list of all available options, use:
-
+You can install SplAdder into your local PATH using
 ```
-python spladder.py
+make install
+```
+
+For SplAdder to run, all dependencies listed in requirements.txt must be available 
+on your system.
+
+We recommend using a python package manager such as anaconda to organize dependencies.
+
+To start SplAdder and see a list of all available options, you can simply type:
+```
+spladder
 ```
 
 Example Data
