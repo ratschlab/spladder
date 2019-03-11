@@ -26,12 +26,14 @@ installed using a Python package manager of your choice (e.g.,
 SplAdder will not run without these packages installed. A complete list of dependencies can be also
 found in [requirements.txt](requirements.txt)
 
-Matlab version
---------------
+Versions for Matlab and Python 2.7
+----------------------------------
 Previous versions of SplAdder were provided for both Matlab and Python. Since 2019, the
 Matlab code is no longer provided as part of the SplAdder package. If you are
 interested in the Matlab code, please download the initial release. 
 
+If you are interested in previous versions of SplAdder capable of running under Python 2.7, please use
+release 1.2.0. Please note, that the Python 2.7 code will be no longer maintained.
 
 Installation
 ------------
