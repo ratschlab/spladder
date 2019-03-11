@@ -1,7 +1,7 @@
 Installation and Dependencies
 -----------------------------
 
-The python version of SplAdder does not require any installation process. In can
+The python version of SplAdder does not require any installation process. It can
 be used as is, given that the following dependencies are fulfilled:
 
 * pysam
@@ -21,7 +21,6 @@ Example Data
 ------------
 
 To check if your SplAdder installation is working and all dependencies are met,
-we provide a test script that computes the results on example data. If not done
-yet, the example data, will be downloaded from a remote location.
+we provide some test cases that compute the results on example data.
 
-Please invoke ```example_run.sh``` to start the test procedure.
+Please invoke ```make test``` after installation completed to start the test procedure.

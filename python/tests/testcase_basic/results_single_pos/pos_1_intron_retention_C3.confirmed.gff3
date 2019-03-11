@@ -1,0 +1,19 @@
+##gff-version 3
+chr1	intron_retention	gene	39	90	.	+	.	ID=intron_retention.1;GeneName="GENE1"
+chr1	intron_retention	mRNA	39	90	.	+	.	ID=intron_retention.1_iso1;Parent=intron_retention.1;GeneName="GENE1"
+chr1	intron_retention	exon	39	50	.	+	.	Parent=intron_retention.1_iso1
+chr1	intron_retention	exon	62	90	.	+	.	Parent=intron_retention.1_iso1
+chr1	intron_retention	mRNA	39	90	.	+	.	ID=intron_retention.1_iso2;Parent=intron_retention.1;GeneName="GENE1"
+chr1	intron_retention	exon	39	90	.	+	.	Parent=intron_retention.1_iso2
+chr1	intron_retention	gene	39	75	.	+	.	ID=intron_retention.2;GeneName="GENE1"
+chr1	intron_retention	mRNA	39	75	.	+	.	ID=intron_retention.2_iso1;Parent=intron_retention.2;GeneName="GENE1"
+chr1	intron_retention	exon	39	50	.	+	.	Parent=intron_retention.2_iso1
+chr1	intron_retention	exon	67	75	.	+	.	Parent=intron_retention.2_iso1
+chr1	intron_retention	mRNA	39	75	.	+	.	ID=intron_retention.2_iso2;Parent=intron_retention.2;GeneName="GENE1"
+chr1	intron_retention	exon	39	75	.	+	.	Parent=intron_retention.2_iso2
+chr1	intron_retention	gene	50	120	.	+	.	ID=intron_retention.3;GeneName="GENE1"
+chr1	intron_retention	mRNA	50	120	.	+	.	ID=intron_retention.3_iso1;Parent=intron_retention.3;GeneName="GENE1"
+chr1	intron_retention	exon	50	75	.	+	.	Parent=intron_retention.3_iso1
+chr1	intron_retention	exon	88	120	.	+	.	Parent=intron_retention.3_iso1
+chr1	intron_retention	mRNA	50	120	.	+	.	ID=intron_retention.3_iso2;Parent=intron_retention.3;GeneName="GENE1"
+chr1	intron_retention	exon	50	120	.	+	.	Parent=intron_retention.3_iso2

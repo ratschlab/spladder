@@ -1,7 +1,7 @@
 Welcome to the Python implementation of SplAdder
 ------------------------------------------------
 
-This README describes the Matlab version of the software SplAdder. Briefly, the
+This README describes the Python version of the software SplAdder. Briefly, the
 software takes a given annotation and RNA-Seq read alignments in standardized
 formats, transforms the annotation into a splicing graph representation,
 augments the splicing graph with additional information extracted from the read data,
