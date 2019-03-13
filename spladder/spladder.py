@@ -175,11 +175,11 @@ def parse_options(argv):
     options.parser = parser
     return options
 
-def main():
+def main(argv=sys.argv):
 
     ### get command line options
-    options = parse_options(sys.argv)
+    options = parse_options(argv)
     options.func(options)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
