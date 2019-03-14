@@ -130,7 +130,7 @@ def spladder(argv):
             idxs = range(len(CFG['samples']))
         else:
             idxs = [0]
-        
+
         ### set parallelization
         if CFG['rproc']:
             jobinfo = []
@@ -219,7 +219,7 @@ def spladder(argv):
                 fn_out = re.sub('.pickle$', '_pruned.pickle', fn_out)
             if CFG['do_gen_isoforms']:
                 fn_out = re.sub('.pickle$', '_with_isoforms.pickle', fn_out)
-    
+
             if os.path.exists(fn_out):
                 print >> sys.stdout, '%s - All result files already exist.' % fn_out
             else:
@@ -259,7 +259,7 @@ def spladder(argv):
                     CFG = append_chrms([x['SN'] for x in parse_header(IN.text)['SQ']], CFG)
                     IN.close()
 
-                OUT = h5py.File(re.sub(r'.bam$', '', bfn) + '.hdf5', 'w') 
+                OUT = h5py.File(re.sub(r'.bam$', '', bfn) + '.hdf5', 'w')
                 if CFG['parallel'] > 1:
                     import multiprocessing as mp
                     pool = mp.Pool(processes=CFG['parallel'])
@@ -331,7 +331,7 @@ def spladder(argv):
                 else:
                     analyze_events(CFG, CFG['event_types'][e_idx])
 
-def main(argv):
+def main(argv=sys.argv):
     spladder(argv)
 
 if __name__ == "__main__":
