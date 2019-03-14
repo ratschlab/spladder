@@ -25,7 +25,7 @@ def _compare_hdf5(expected, actual):
                 assert sp.all(expected[k][:] == actual[k][:])
 
 def _compare_ps(expected, actual):
-    
+
     e_str = []
     for line in expected:
         if line.startswith('%'):
@@ -37,7 +37,7 @@ def _compare_ps(expected, actual):
             continue
         a_str.append(line)
     assert ''.join(e_str) == ''.join(a_str)
-            
+
 def _assert_files_equal_testing(e, a):
 
     da = sp.loadtxt(a, dtype='str', delimiter='\t')
@@ -47,7 +47,7 @@ def _assert_files_equal_testing(e, a):
     assert sp.all(da[0, :] == de[0, :])
     da = da[1:, ]
     de = de[1:, ]
-    
+
     ### check text cols
     assert sp.all(da[:, [0, 1]] == de[:, [0, 1]])
     da = da[:, 2:]
@@ -159,26 +159,26 @@ def test_end_to_end_merge(test_id, case, tmpdir):
                '--extract-as',
                '-n', '15',
                '--output-conf-icgc',
-               '--output-txt', 
+               '--output-txt',
                '--output-txt-conf',
-               '--output-gff3', 
-               '--output-struc', 
-               '--output-struc-conf', 
-               '--output-bed', 
-               '--output-conf-bed', 
+               '--output-gff3',
+               '--output-struc',
+               '--output-struc-conf',
+               '--output-bed',
+               '--output-conf-bed',
                '--output-conf-tcga',
                '-v']
 
     spladder.main(my_args)
 
     ### check that files are identical
-    _check_files_spladder(result_dir, out_dir, prefix='merge_graphs') 
+    _check_files_spladder(result_dir, out_dir, prefix='merge_graphs')
 
     #### test visualization
     #my_args = ['spladder',
     #           'viz',
     #           '-o', out_dir,
-    #           '-b', ':'.join([','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(3)]), 
+    #           '-b', ':'.join([','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(3)]),
     #                           ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+4)) for i in range(2)])]),
     #           '-L', 'group1,group2',
     #           '-f', 'ps',
@@ -207,7 +207,7 @@ def test_end_to_end_single(test_id, case, tmpdir):
                '--merge-strat', 'single',
                '--extract-ase',
                '-n', '15',
-               '--output-conf-icgc', 
+               '--output-conf-icgc',
                '-v']
 
     spladder.main(my_args)
@@ -220,7 +220,7 @@ def test_end_to_end_single(test_id, case, tmpdir):
                '--merge-strat', 'single',
                '--extract-ase',
                '-n', '15',
-               '--output-conf-icgc', 
+               '--output-conf-icgc',
                '--sparse-bam',
                '-v']
 
@@ -228,7 +228,7 @@ def test_end_to_end_single(test_id, case, tmpdir):
 
 
     ### check that files are identical
-    _check_files_spladder(result_dir, out_dir, prefix='{}_1'.format(case)) 
+    _check_files_spladder(result_dir, out_dir, prefix='{}_1'.format(case))
 
 @pytest.mark.parametrize("test_id", [
     'events'
@@ -249,7 +249,7 @@ def test_end_to_end_testing(test_id, tmpdir):
                '--extract-ase',
                '--readlen', '50',
                '--output-conf-icgc',
-               '--output-txt', 
+               '--output-txt',
                '--output-txt-conf',
                '--output-gff3',
                '--output-struc',
@@ -263,7 +263,7 @@ def test_end_to_end_testing(test_id, tmpdir):
     spladder.main(my_args)
 
     ### check that event files are identical
-    _check_files_spladder(result_dir, out_dir, prefix='merge_graphs') 
+    _check_files_spladder(result_dir, out_dir, prefix='merge_graphs')
 
     bamsA = os.path.join(out_dir, 'bamlistA.txt')
     bamsB = os.path.join(out_dir, 'bamlistB.txt')
@@ -272,7 +272,7 @@ def test_end_to_end_testing(test_id, tmpdir):
     with open(bamsB, 'w') as fh:
         fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.bam'.format(test_id, idx+11)) for idx in range(10)]) + '\n')
 
-    my_args = ['spladder', 
+    my_args = ['spladder',
                'test',
                '-o', out_dir,
                '-v',
@@ -287,7 +287,7 @@ def test_end_to_end_testing(test_id, tmpdir):
     spladder.main(my_args)
 
     ### check that files are identical
-    _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv']) 
-    _check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps']) 
+    _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv'])
+    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps'])
 
 
