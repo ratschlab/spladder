@@ -45,7 +45,7 @@ Matlab code is no longer provided as part of the SplAdder package. If you are
 interested in the Matlab code, please download the initial release. 
 
 If you are interested in previous versions of SplAdder capable of running under Python 2.7, please use
-release 1.2.0. Please note, that the Python 2.7 code will be no longer maintained.
+release 1.2.1. Please note, that the Python 2.7 code will be no longer maintained.
 
 
 Authors
@@ -61,16 +61,16 @@ All licensing information can be found in the COPYRIGHT file.
 Documentation
 -------------
 
-This README provides a quick walk-through of a basic SplAdder run. For further
+This README provides only a high-level overview of a basic SplAdder run. For further
 reading, please consider the [SplAdder Wiki](https://github.com/ratschlab/spladder/wiki).
 
 After installation, the command `spladder` becomes available in your path.
 Invoking SplAdder without any parameters will print a description of the
 command line interface to the screen.
 
-In a basic call, SplAdder is invoked with three parameters: the annotation file
-(via -a), a comma separated list of alignment files (via -b) and an output
-directory where results files are stored (via -o). This will run SplAdder in its
+In a basic call in build-mode (`spladder build`), SplAdder requires at least three parameters: the annotation file
+(via `-a`), a comma-separated list of alignment files (via `-b`) and an output
+directory where results files are stored (via `-o`). This will run SplAdder in its
 default configuration, which consists of the following steps:
 
 * transform annotation into splicing graph representation
