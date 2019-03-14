@@ -11,20 +11,32 @@ based on the alignment data. The quantified events can then be used for
 differential analysis.
 
 Dependencies and Installation
------------------------------
-SplAdder relies on Python3 and requires only few standard packages that can be
-installed using a Python package manager of your choice (e.g.,
-[conda](http://conda.pydata.org/)):
+------------------------------------
 
-* scipy (version >= 0.12 tested)
-* pysam (version >= 0.7 required)
-* h5py (version >= 2.2.0 tested)
-* intervaltree (version >= 3.0.1 tested)
-* matplotlib (for visualization mode; version >= 1.4.0 tested)
-* statsmodels (for testing mode; version >= 0.9.0 tested)
+SplAdder relies on Python3 and requires only few standard packages. A complete list of dependencies can be found in [requirements.txt](requirements.txt)
 
-SplAdder will not run without these packages installed. A complete list of dependencies can be also
-found in [requirements.txt](requirements.txt)
+We recommend using a python package manager such as anaconda to organize dependencies.
+
+* Installation via `pip`: `pip install spladder`
+* Installation from source:
+   1. clone this repository
+   2. Within the SplAdder root directory, run `make install`
+
+
+Running Spladder
+--------------------
+
+To start SplAdder and see a list of all available options, you can simply type:
+```
+spladder
+```
+
+
+Test with Example Data
+---------------------------
+
+If you installed SplAdder from source, you can test the installation by invoking ```make test``` in the SplAdder root directory.
+
 
 Versions for Matlab and Python 2.7
 ----------------------------------
@@ -35,11 +47,6 @@ interested in the Matlab code, please download the initial release.
 If you are interested in previous versions of SplAdder capable of running under Python 2.7, please use
 release 1.2.0. Please note, that the Python 2.7 code will be no longer maintained.
 
-Installation
-------------
-
-Please see the respective INSTALL files in the matlab or python directories for
-details on how to install SplAdder on your system. 
 
 Authors
 -------
