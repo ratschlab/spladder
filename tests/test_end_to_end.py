@@ -174,20 +174,20 @@ def test_end_to_end_merge(test_id, case, tmpdir):
     ### check that files are identical
     _check_files_spladder(result_dir, out_dir, prefix='merge_graphs') 
 
-    ### test visualization
-    my_args = ['spladder',
-               'viz',
-               '-o', out_dir,
-               '-b', ':'.join([','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(3)]), 
-                               ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+4)) for i in range(2)])]),
-               '-L', 'group1,group2',
-               '-f', 'ps',
-               '-v']
+    #### test visualization
+    #my_args = ['spladder',
+    #           'viz',
+    #           '-o', out_dir,
+    #           '-b', ':'.join([','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+1)) for i in range(3)]), 
+    #                           ','.join([os.path.join(data_dir, 'align', '{}_{}.bam'.format(case, i+4)) for i in range(2)])]),
+    #           '-L', 'group1,group2',
+    #           '-f', 'ps',
+    #           '-v']
 
-    spladder.main(my_args)
+    #spladder.main(my_args)
 
-    ### check that files are identical
-    _assert_files_equal(os.path.join(result_dir, 'plots', 'gene_overview_C3_GENE1.ps'), os.path.join(out_dir, 'plots', 'gene_overview_C3_GENE1.ps'))
+    #### check that files are identical
+    #_assert_files_equal(os.path.join(result_dir, 'plots', 'gene_overview_C3_GENE1.ps'), os.path.join(out_dir, 'plots', 'gene_overview_C3_GENE1.ps'))
 
 @pytest.mark.parametrize("test_id,case", [
     ['basic', 'pos'],
