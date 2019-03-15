@@ -513,9 +513,9 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
 
                 ev[i].verified.append(ver)
                 if s_idx == 0:
-                    counts.append(sp.array([info]))
+                    counts.append(sp.array([info], dtype='float'))
                 else:
-                    counts[-1] = sp.r_[counts[-1], sp.array([info])]
+                    counts[-1] = sp.r_[counts[-1], sp.array([info], dtype='float')]
             ev[i].verified = sp.array(ev[i].verified, dtype='bool')
 
         IN.close()
