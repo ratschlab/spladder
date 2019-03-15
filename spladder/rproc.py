@@ -233,10 +233,6 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     else:
         option_str = ''
      
-    #option_str += ' -l h_vmem=%iM -l s_vmem=%iM -soft -l h_cpu=%1.0f -hard ' % (Mem, Mem,  max(60, runtime*60))
-    # TORQUE
-    #option_str += '-l nodes=1:ppn=%i -l mem=%imb,vmem=%imb,pmem=%imb -l walltime=%1.0f' % (options['ncpus'], Mem, Mem,  Mem, max(60, runtime*60))
-    #option_str += '-n %i -M %i -R "rusage[mem=%i]" -W %i' % (options['ncpus'], Mem, math.ceil(Mem / float(options['ncpus'])), max(60, runtime*60))
     option_str += SCHED_MIN_OPTIONS.substitute(cores=str(options['ncpus']), mem=str(Mem), coremem=str(math.ceil(Mem / float(options['ncpus']))), time=str(max(60, runtime)))
 
     if environment == 'galaxy':
@@ -327,14 +323,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     elif options['immediately_bg']:
         callstr = '%s bash %s >> %s &' % (envstr, m_fname, log_fname)
     else:
-      #str = 'echo \'%s hostname; bash %s >> %s\' | qsub -o %s -j y -r y %s -N %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, option_str, prefix, log_fname)
-      # TORQUE
-      #str = 'echo \'%s hostname; bash %s >> %s\' | qsub -o %s -j oe -r y %s -N %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, option_str, prefix, log_fname)
-      # LSF
-      #str = 'echo \'%s hostname; bash %s >> %s\' | bsub -o %s -e %s %s -J %s >> %s 2>&1' % (envstr, m_fname, log_fname, qsublog_fname, qsublog_fname, option_str, prefix, log_fname)
       callstr = SCHED_SUBMIT_CMD.substitute(env=envstr, script=m_fname, log=log_fname, qsub_log=qsublog_fname, options=option_str, name=prefix)
-
-      #print >> sys.stderr, callstr
 
     ### too verbose
     #if options['submit_now'] and options['verbosity']:
