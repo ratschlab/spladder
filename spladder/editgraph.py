@@ -15,10 +15,15 @@ def remove_short_exons(genes, options):
     short_exon_removed = 0
     short_exon_skipped = 0
 
+    if options.logfile == '-':
+        fd_log = sys.stdout
+    else:
+        fd_log = open(options.logfile, 'w')
+
     rm_idx = []
     for i in range(len(genes)):
         if options.verbose and (i+1) % 1000 == 0:
-            print('%i' % (i+1), file=options.fd_log)
+            print('%i' % (i+1), file=fd_log)
 
         ### remove genes with no exons
         if genes[i].splicegraph.vertices.shape[0] == 0:
@@ -67,11 +72,13 @@ def remove_short_exons(genes, options):
     genes = genes[keep_idx]
 
     if options.verbose:
-        print('short_exon_removed: %i' % short_exon_removed, file=options.fd_log)
-        print('short_exon_skipped: %i' % short_exon_skipped, file=options.fd_log)
+        print('short_exon_removed: %i' % short_exon_removed, file=fd_log)
+        print('short_exon_skipped: %i' % short_exon_skipped, file=fd_log)
+
+    if fd_log != sys.stdout:
+        fd_log.close()
 
     return genes
-
 
 
 def reduce_splice_graph(genes):
@@ -429,10 +436,15 @@ def insert_intron_edges(genes, options):
 
     last_chr = ''
 
+    if options.logfile == '-':
+        fd_log = sys.stdout
+    else:
+        fd_log = open(options.logfile, 'w')
+
     for i in range(genes.shape[0]):
     
         if options.verbose and (i+1) % 1000 == 0:
-            print('%i of %i genes' % (i+1, genes.shape[0]), file=options.fd_log)
+            print('%i of %i genes' % (i+1, genes.shape[0]), file=fd_log)
 
         if options.sparse_bam and genes[i].chr != last_chr:
             bam_cache = dict()
@@ -445,7 +457,7 @@ def insert_intron_edges(genes, options):
 
         unused_introns = []
         if options.debug:
-            print('processing gene %i; with %i introns' % (i, len(genes[i].introns[s])), file=options.fd_log)
+            print('processing gene %i; with %i introns' % (i, len(genes[i].introns[s])), file=fd_log)
             ### TODO timing
 
         for j in range(genes[i].introns[s].shape[0]):
@@ -496,7 +508,7 @@ def insert_intron_edges(genes, options):
                         if options.debug:
                             print('%s\tintron_retention_exon\t%c\t%i\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[0, -2],
                                                                                                          genes[i].splicegraph.vertices[1, -2], genes[i].splicegraph.vertices[0, -1], 
-                                                                                                         genes[i].splicegraph.vertices[1, -1]), file=options.fd_log)
+                                                                                                         genes[i].splicegraph.vertices[1, -1]), file=fd_log)
                         intron_used = True
 
                 if not intron_used:
@@ -598,7 +610,7 @@ def insert_intron_edges(genes, options):
                                 if options.debug:
                                     for idx2_ in idx2:
                                         print('%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph,vertices[1, idx1_], 
-                                                                                                                 genes[i].splicegraph.vertices[1, -1], genes[i].splicegraph.vertices[0, idx2_]), file=options.fd_log)
+                                                                                                                 genes[i].splicegraph.vertices[1, -1], genes[i].splicegraph.vertices[0, idx2_]), file=fd_log)
                                 intron_used = True
 
                 ### if no proximal exon was found, insert new terminal exon, if wished
@@ -694,7 +706,7 @@ def insert_intron_edges(genes, options):
                                 if options.debug:
                                     for idx1_ in idx1:
                                         print('%s\talternative_53_prime2\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[1, idx1_], 
-                                                                                                                 genes[i].splicegraph.vertices[0, -1], genes[i].splicegraph.vertices[0, idx2_]), file=options.fd_log)
+                                                                                                                 genes[i].splicegraph.vertices[0, -1], genes[i].splicegraph.vertices[0, idx2_]), file=fd_log)
                                 intron_used = True
 
                 ### if no proximal exon was found, insert new terminal exon, if wished
@@ -759,9 +771,12 @@ def insert_intron_edges(genes, options):
         num_unused_introns[i] += unused_introns.shape[0]
 
     if print_intermediates:
-        print('one missing: %s' % str(one_missing))
-        print('multi: %s' % str(multi))
-        print('num_unused_introns: $i' % sp.sum(num_unused_introns))
+        print('one missing: %s' % str(one_missing), file=fd_log)
+        print('multi: %s' % str(multi), file=fd_log)
+        print('num_unused_introns: $i' % sp.sum(num_unused_introns), file=fd_log)
+
+    if fd_log != sys.stdout:
+        fd_log.close()
 
     merge_idx = unique_rows(merge_idx)
     rm_map = sp.zeros_like(genes, dtype='int')

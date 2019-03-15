@@ -120,18 +120,13 @@ def parse_args(options, identity='main'):
     
     options.event_types = options.event_types.strip(',').split(',')
 
-    if options.outdir == '-':
-        print('ERROR: please provide the mandatory parameter: out directory\n\n', file=sys.stderr)
-        options.parser.print_help()
-        sys.exit(2)
-    else:
-        if not os.path.exists(options.outdir):
-            print('WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir, file=sys.stderr)
-            try:
-                os.makedirs(options.outdir)
-            except OSError:
-                print('ERROR: Output directory %s can not be created.\n\n' % options.outdir, file=sys.stderr)
-                sys.exit(2)
+    if not os.path.exists(options.outdir):
+        print('WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir, file=sys.stderr)
+        try:
+            os.makedirs(options.outdir)
+        except OSError:
+            print('ERROR: Output directory %s can not be created.\n\n' % options.outdir, file=sys.stderr)
+            sys.exit(2)
 
     ### options specific for main program
     if identity == 'main':
@@ -139,29 +134,17 @@ def parse_args(options, identity='main'):
         ### open log file, if specified
         if options.logfile != '-':
             options.log_fname = options.logfile
-            options.fd_log = open(options.logfile, 'w')
         else:
             options.log_fname = 'stdout'
-            options.fd_log = sys.stdout
 
-        ### mandatory parameters for main spladder
-        if options.bams == '-':
-            print('ERROR: please provide the mandatory parameter: bam files\n\n', file=sys.stderr)
-            options.parser.print_help()
-            sys.exit(2)
-        else:
-            options.bam_fnames = options.bams.strip(',').split(',')
-            ### check existence of files
-            for fname in options.bam_fnames:
-                if not os.path.isfile(fname):
-                    print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
-                    sys.exit(2)
+        options.bam_fnames = options.bams.strip(',').split(',')
+        ### check existence of files
+        for fname in options.bam_fnames:
+            if not os.path.isfile(fname):
+                print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
+                sys.exit(2)
 
-        if options.annotation == '-':
-            print('ERROR: please provide the mandatory parameter: annotation\n\n', file=sys.stderr)
-            options.parser.print_help()
-            sys.exit(2)
-        elif not os.path.isfile(options.annotation):
+        if not os.path.isfile(options.annotation):
             print('ERROR: Annotation file %s can not be found\n\n' % options.annotation, file=sys.stderr)
             sys.exit(2)
         

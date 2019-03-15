@@ -16,9 +16,9 @@ def parse_options(argv):
     ### RUN MODE "BUILD"
     parser_build = subparsers.add_parser('build', help='run mode to build and construct graphs')
     required = parser_build.add_argument_group('MANDATORY')
-    required.add_argument('-b', '--bams', dest='bams', metavar='FILE1,FILE2,...', help='alignment files in BAM format (comma separated list)', default='-')
-    required.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='output directory', default='-')
-    required.add_argument('-a', '--annotation', dest='annotation', metavar='FILE', help='file name for annotation in GTF/GFF3 or format', default='-')
+    required.add_argument('-b', '--bams', dest='bams', metavar='FILE1,FILE2,...', help='alignment files in BAM format (comma separated list)', default='-', required=True)
+    required.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='output directory', default='-', required=True)
+    required.add_argument('-a', '--annotation', dest='annotation', metavar='FILE', help='file name for annotation in GTF/GFF3 or format', default='-', required=True)
     general = parser_build.add_argument_group('GENERAL')
     general.add_argument('--parallel', dest='parallel', metavar='<INT>', type=int, help='use INT processors [1]', default=1)
     general.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='use verbose output mode [off]', default=False)
@@ -172,7 +172,6 @@ def parse_options(argv):
             parser.print_help()
         sys.exit(2)
 
-    options.parser = parser
     return options
 
 def main(argv=sys.argv):

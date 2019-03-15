@@ -11,9 +11,14 @@ def make_introns_feasible(introns, genes, options):
 
     tmp1 = sp.array([x.shape[0] for x in introns[:, 0]])
     tmp2 = sp.array([x.shape[0] for x in introns[:, 1]])
+
+    if options.logfile == '-':
+        fd_log = sys.stdout
+    else:
+        fd_log = open(options.logfile, 'w')
     
     unfeas = sp.where((tmp1 > 200) | (tmp2 > 200))[0]
-    print('found %i unfeasible genes' % unfeas.shape[0], file=options.fd_log)
+    print('found %i unfeasible genes' % unfeas.shape[0], file=fd_log)
 
     while unfeas.shape[0] > 0:
         ### make filter more stringent
@@ -33,8 +38,11 @@ def make_introns_feasible(introns, genes, options):
         idx = sp.where(~sp.in1d(unfeas, still_unfeas))[0]
 
         for i in unfeas[idx]:
-            print('[feasibility] set criteria for gene %s to: min_ex %i, min_conf %i, max_mism %i' % (genes[i].name, options.read_filter['exon_len'], options.read_filter['mincount'], options.read_filter['mismatch']), file=options.fd_log)
+            print('[feasibility] set criteria for gene %s to: min_ex %i, min_conf %i, max_mism %i' % (genes[i].name, options.read_filter['exon_len'], options.read_filter['mincount'], options.read_filter['mismatch']), file=fd_log)
         unfeas = still_unfeas;
+
+    if fd_log != sys.stdout:
+        fd_log.close()
 
     return introns
 
