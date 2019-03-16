@@ -193,7 +193,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
         jobinfo = []
 
         PAR = dict()
-        PAR['options'] = options.copy()
+        PAR['options'] = options
         if options.merge == 'single':
             PAR['options'].bam_fnames = PAR['options'].bam_fnames[sample_idx]
             PAR['options'].samples = PAR['options'].samples[sample_idx]
@@ -226,7 +226,7 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
 
         ### write data to hdf5 continuously
         h5fid = h5py.File(fname_out, 'w')
-        h5fid.create_dataset(name='gene_names', data=counts['gene_names'])
+        h5fid.create_dataset(name='gene_names', data=codeUTF8(counts['gene_names']))
         h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
         h5fid.create_dataset(name='strains', data=codeUTF8(options.strains))
         for c_idx in range(0, s_idx.shape[0], chunksize):

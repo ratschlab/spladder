@@ -160,6 +160,8 @@ def parse_args(options, identity='main'):
             options.options_rproc['resubmit'] = 3
             options.options_rproc['priority'] = 100
             options.options_rproc['addpaths'] = options.paths
+            if options.environment:
+                options.options_rproc['environment'] = options.environment
 
     if identity == 'viz':
 

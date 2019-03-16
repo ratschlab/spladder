@@ -16,7 +16,7 @@ def appendToHDF5(file, data, name, faxis=0, daxis=0):
     dshape = data.shape
 
     ### force one dimensional input data into the right form
-    if fshape > 1 and dshape == 1 and faxis == 0:
+    if len(fshape) > 1 and len(dshape) == 1 and faxis == 0:
         data = data[sp.newaxis, :]
         dshape = data.shape
 
@@ -24,8 +24,8 @@ def appendToHDF5(file, data, name, faxis=0, daxis=0):
     assert shapediff in [0, 1]
 
     ### check whether axes have been chosen correctly
-    assert faxis < fshape
-    assert daxis < dshape
+    assert faxis < len(fshape)
+    assert daxis < len(dshape)
 
     ### check that axes are compatible
     cfaxis = [x for i, x in enumerate(fshape) if i != faxis]

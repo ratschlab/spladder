@@ -120,8 +120,6 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
 
     _set_scheduler()
 
-    environment = '' # TODO
-
     if callfile is None:
         ### check if ProcName is defined in calling function
         callframe = sys._getframe(1)
@@ -208,6 +206,9 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         options['data_size'] = [] 
     if not 'hard_time_limit' in options:
         options['hard_time_limit'] = 1000000
+    env_str = ''
+    if 'environment' in options:
+        env_str = 'source activate %s; ' % options['environment']
 
     jobinfo = rproc_empty()
 
@@ -234,9 +235,6 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
         option_str = ''
      
     option_str += SCHED_MIN_OPTIONS.substitute(cores=str(options['ncpus']), mem=str(Mem), coremem=str(math.ceil(Mem / float(options['ncpus']))), time=str(max(60, runtime)))
-
-    if environment == 'galaxy':
-        option_str += ' -l parent=0.0 '
 
     if 'hold' in options:
         if options['hold']: 
@@ -306,7 +304,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     pickle.dump(P1, open(data_fname, 'wb'), -1)
 
     evalstring = '%s %s %s %s' % (bin_str, rproc_path, mat_fname, data_fname)
-    evalstring = 'cd %s; %s; exit' % (dirctry, evalstring)
+    evalstring = 'cd %s;%s %s; exit' % (dirctry, env_str, evalstring)
     fd = open(m_fname, 'w')
     print('%s' % evalstring, file=fd)
     fd.close()
@@ -335,7 +333,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
             try:
                 #num_queued = int(subprocess.check_output('qstat -u' + os.environ['USER'] + '2> /dev/null | grep ' + os.environ['USER'] + '| wc -l | tr -d " "', shell=True).strip())
                 #num_queued = int(subprocess.check_output('bjobs -u' + os.environ['USER'] + '2> /dev/null | grep ' + os.environ['USER'] + '| wc -l | tr -d " "', shell=True).strip())
-                num_queued = int(subprocess.check_output(SCHED_GET_JOB_NUMBER.substitute(user=os.environ['USER']), shell=True).strip())
+                num_queued = int(subprocess.check_output(SCHED_GET_JOB_NUMBER.substitute(user=os.environ['USER']), shell=True).decode('utf-8').strip())
             except:
                 print('WARNING: could not determine how many jobs are scheduled', file=sys.stderr)
                 break
@@ -356,7 +354,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
 
         if options['immediately_bg']:
             while True:
-                str_ = subprocess.check_output('uptime').strip()
+                str_ = subprocess.check_output('uptime').decode('utf-8').strip()
                 float(str_[re.search('average:', str_).start()+8:].split(',')[0])
                 hit = re.search('average:', str_)
                 while hit is None:
@@ -447,7 +445,7 @@ def rproc_clean_register():
             parent_jobids.append(int(items[3]))
 
 
-    text = subprocess.check_output('qstat').strip()
+    text = subprocess.check_output('qstat').decode('utf-8').strip()
     for line in text.split('\n'):
         items = line.split(' ')
         if items[0][0] >= '0' and items[0][0] <= '9':
@@ -541,7 +539,7 @@ def rproc_reached_timelimit(jobinfo):
     #str_ = 'qstat -f %i | grep resources_used.walltime | sed -e "s/.*= //g"' % jobinfo.jobid
     #str_ = 'bjobs -o run_time %i | tail -n +2 | sed -e "s/ .*//g"' % (jobinfo.jobid)
     str_ = SCHED_GET_JOB_RUNTIME.substitute(jobid=jobinfo.jobid)
-    w = subprocess.check_output(str_, shell=True)
+    w = subprocess.check_output(str_, shell=True).decode('utf-8')
     ## TODO use save Popen for pipeline
 
     if 'error' in w:
@@ -650,7 +648,7 @@ def rproc_result(jobinfo, read_attempts=None):
             time.sleep(10)
             att += 1 
 
-    (retval1, retval2) = pickle.load(open(jobinfo.result_fname, 'r'))
+    (retval1, retval2) = pickle.load(open(jobinfo.result_fname, 'rb'))
 
     return (retval1, retval2)
 
@@ -683,7 +681,7 @@ def rproc_still_running(jobinfo):
     curtime = time.time()
     if rproc_nqstat_time is None or (curtime - rproc_nqstat_time > 0.5e-4):
         try:
-            text = subprocess.check_output(qstat_command)
+            text = subprocess.check_output(qstat_command).decode('utf-8')
             rproc_nqstat_output = text
             rproc_nqstat_time = curtime
         except subprocess.CalledProcessError as e:
@@ -963,7 +961,7 @@ def start_proc(fname, data_fname, rm_flag=True):
     THIS_IS_A_RPROC_PROCESS = True
 
     ### load and create environment
-    (ProcName, dirctry, options, callfile) = pickle.load(open(fname, 'r'))
+    (ProcName, dirctry, options, callfile) = pickle.load(open(fname, 'rb'))
     os.chdir(dirctry)
 
     print('%s on %s started (in %s; from %s %s)' % (ProcName, os.environ['HOSTNAME'], dirctry, fname, data_fname))
@@ -997,7 +995,8 @@ def start_proc(fname, data_fname, rm_flag=True):
             subpaths = get_subpaths(os.path.dirname(module[1]).split('/'))
             imported = True
             for m in range(len(mod_sl)):
-                exec('exists = \'%s\' in globals().keys()' % '.'.join(mod_sl[:m+1]))
+                #exec('exists = \'%s\' in globals()' % '.'.join(mod_sl[:m+1]))
+                exists = '.'.join(mod_sl[:m+1]) in globals()
                 if not exists and not '.'.join(mod_sl[:m+1]) in import_list and not 'rproc' in mod_sl[:m+1]:
                     try:
                         (f, fn, des) = imp.find_module(mod_sl[m], subpaths)
@@ -1022,8 +1021,10 @@ def start_proc(fname, data_fname, rm_flag=True):
             if mod != module[0] and imported:
                 exec('%s = %s' % (mod, module[0]))
                 
+    sys.path = [dirctry] + sys.path
+
     ### load data into environment
-    P1 = pickle.load(open(data_fname, 'r'))
+    P1 = pickle.load(open(data_fname, 'rb'))
 
     retval1 = []
     retval2 = []
@@ -1034,7 +1035,7 @@ def start_proc(fname, data_fname, rm_flag=True):
         else:
             exec('from %s import %s' % (callfile[0], ProcName))
 
-        if len(P1) > 0:
+        if not P1 is None:
             retval = eval('%s(P1)' % ProcName)
         else:
             retval = eval('%s()' % ProcName)

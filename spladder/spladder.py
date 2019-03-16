@@ -81,6 +81,7 @@ def parse_options(argv):
     splice.add_argument('--no-quantify-graph', dest='quantify_graph', action='store_false', default=False)
     experimental = parser_build.add_argument_group('EXPERIMENTAL - BETA STATE')
     experimental.add_argument('--pyproc', dest='pyproc', action='store_true', help='use parallel implementation [off]', default=False)
+    experimental.add_argument('--environment', dest='environment', metavar='STRING', help='conda environment to by used for pyproc', default=None)
     #experimental.add_argument('-R', '--replicates', dest='replicates', metavar='1,1,2,2,...', help='replicate structure of files (same number as alignment files) [all 1 - no replicated]', default='-')
     experimental.add_argument('--intron-cov', dest='intron_cov', action='store_true', help='count intron coverage [off]', default=False)
     experimental.add_argument('--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, collect, all [all]', default='all')

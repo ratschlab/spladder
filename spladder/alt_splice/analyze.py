@@ -139,7 +139,7 @@ def analyze_events(options, event_type, sample_idx=None):
                             print('Chunk event %i, strain %i already completed' % (i, j))
                         else:
                             print('Submitting job %i, event chunk %i/%i, strain chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j))
-                            jobinfo.append(rproc('verify_all_events', PAR, 10000, options['options_rproc'], 60 * 12))
+                            jobinfo.append(rproc('verify_all_events', PAR, 10000, options.options_rproc, 60 * 12))
                             #verify_all_events(PAR)
                 
                 rproc_wait(jobinfo, 20, 1.0, 1)
