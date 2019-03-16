@@ -134,7 +134,7 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
 
     ### detect path of this script
     this_frame = sys._getframe(0)
-    rproc_path = os.path.abspath(inspect.getfile(this_frame))
+    #rproc_path = os.path.abspath(inspect.getfile(this_frame))
 
     if runtime is None:
         runtime = 24
@@ -255,7 +255,8 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
 
     ### TODO make this configurable
     # use same pthon that the one it was called with
-    bin_str = sys.executable
+    #bin_str = sys.executable
+    bin_str = 'spladder pyproc'
 
     ### request cplex license
     if 'cplex' in options and options['cplex']:
@@ -303,7 +304,8 @@ def rproc(ProcName, P1, Mem=None, options=None, runtime=None, callfile=None, res
     pickle.dump((ProcName, dirctry, options, callfile), open(mat_fname, 'wb'), -1)
     pickle.dump(P1, open(data_fname, 'wb'), -1)
 
-    evalstring = '%s %s %s %s' % (bin_str, rproc_path, mat_fname, data_fname)
+    #evalstring = '%s %s %s %s' % (bin_str, rproc_path, mat_fname, data_fname)
+    evalstring = '%s %s %s' % (bin_str, mat_fname, data_fname)
     evalstring = 'cd %s;%s %s; exit' % (dirctry, env_str, evalstring)
     fd = open(m_fname, 'w')
     print('%s' % evalstring, file=fd)
@@ -1021,7 +1023,7 @@ def start_proc(fname, data_fname, rm_flag=True):
             if mod != module[0] and imported:
                 exec('%s = %s' % (mod, module[0]))
                 
-    sys.path = [dirctry] + sys.path
+    #sys.path = [dirctry] + sys.path
 
     ### load data into environment
     P1 = pickle.load(open(data_fname, 'rb'))
@@ -1089,6 +1091,11 @@ def split_walltime(time_str):
 def get_subpaths(sl):
 
     return ['/'.join(sl[:len(sl)-i]) for i in range(len(sl) - 1)]
+
+def spladder_pyproc(options):
+    
+    _set_scheduler()
+    start_proc(options.proc, options.data)
 
 if __name__ == "__main__":
     

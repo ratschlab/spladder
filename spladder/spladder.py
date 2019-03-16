@@ -3,6 +3,7 @@ import sys
 from .spladder_build import spladder
 from .spladder_viz import spladder_viz
 from .spladder_test import spladder_test
+from .rproc import spladder_pyproc 
 
 def parse_options(argv):
 
@@ -11,7 +12,7 @@ def parse_options(argv):
     from argparse import ArgumentParser
 
     parser = ArgumentParser(prog='spladder')
-    subparsers = parser.add_subparsers(help='Running modes')
+    subparsers = parser.add_subparsers(help='Running modes', metavar='{build, test, viz}')
 
     ### RUN MODE "BUILD"
     parser_build = subparsers.add_parser('build', help='run mode to build and construct graphs')
@@ -128,7 +129,7 @@ def parse_options(argv):
     ### RUN MODE "VIZ"
     parser_viz = subparsers.add_parser('viz', help='run mode to visualize graphs and events')
     required_viz = parser_viz.add_argument_group('MANDATORY')
-    required_viz.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', default='-')
+    required_viz.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', default='-', required=True)
     optional_viz = parser_viz.add_argument_group('OPTIONAL')
     optional_viz.add_argument('-b', '--bams', dest='bams', metavar='FILE1A,FILE2A:FILE1B,FILE2B,,...', help='alignment files in BAM format (comma separated list,colon separated groups)', default='-')
     optional_viz.add_argument('-L', '--labels', dest='labels', metavar='LABEL_A,LABEL_B,...', help='group labels for alignment files groups (comma separated list)', default='')
@@ -156,6 +157,13 @@ def parse_options(argv):
     general_viz.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='user verbose output mode [off]', default=False)
     general_viz.add_argument('-d', '--debug', dest='debug', action='store_true', help='use debug mode [off]', default=False)
     parser_viz.set_defaults(func=spladder_viz)
+
+    ### RUN MODE "VIZ"
+    parser_pyproc = subparsers.add_parser('pyproc')
+    required_pyproc = parser_pyproc.add_argument_group('MANDATORY')
+    required_pyproc.add_argument('proc', metavar='PROC_FILE', help='pyproc pickle file', default='-')
+    required_pyproc.add_argument('data', metavar='DATA_FILE', help='pyproc data file', default='-')
+    parser_pyproc.set_defaults(func=spladder_pyproc)
 
     options = parser.parse_args(argv[1:])
 
