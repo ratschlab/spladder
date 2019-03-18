@@ -138,11 +138,6 @@ def parse_args(options, identity='main'):
             options.log_fname = 'stdout'
 
         options.bam_fnames = options.bams.strip(',').split(',')
-        ### check existence of files
-        for fname in options.bam_fnames:
-            if not os.path.isfile(fname):
-                print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
-                sys.exit(2)
 
         if not os.path.isfile(options.annotation):
             print('ERROR: Annotation file %s can not be found\n\n' % options.annotation, file=sys.stderr)
@@ -202,6 +197,15 @@ def parse_args(options, identity='main'):
             for g, group in enumerate(options.bam_fnames):
                 if group[0].split('.')[-1] == 'txt':
                     options.bam_fnames[g] = [str(x) for x in sp.atleast_1d(sp.loadtxt(group[0], dtype='str'))]
+
+        ### check existence of alignment files
+        for fname in options.bam_fnames:
+            if not os.path.isfile(fname):
+                print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
+                sys.exit(2)
+            if not os.path.isfile(fname + '.bai'):
+                print('ERROR: Input file %s is not indexed. %s.bai can not be found\n\n' % (fname, fname), file=sys.stderr)
+                sys.exit(2)
 
     ### assemble strain list
     options.samples = []
