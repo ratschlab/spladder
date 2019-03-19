@@ -77,7 +77,7 @@ def init_genes_gtf(options):
     counter = 1
     warn_infer_count = 0
     inferred_genes = False
-    for line in open(infile, 'r'):
+    for line in open(options.annotation, 'r'):
         if options.verbose and counter % 10000 == 0:
             sys.stdout.write('.')
             if counter % 100000 == 0:
