@@ -70,7 +70,7 @@ def get_gene_expression(options, fn_out=None, strain_subset=None):
         if len(gene_idx.shape) > 0:
             gene_idx = gene_idx[0]
 
-        assert(decodeUTF8(IN['gene_names'][:][gene_idx][0]) == genes[gidx].name)
+        assert(decodeUTF8(IN['gene_names'][:][gene_idx]) == genes[gidx].name)
         assert(genes[gidx].name == gene_names[gidx])
 
         if options.non_alt_norm:
