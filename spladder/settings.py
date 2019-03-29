@@ -203,7 +203,7 @@ def parse_args(options, identity='main'):
             if not os.path.isfile(fname):
                 print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                 sys.exit(2)
-            if not os.path.isfile(fname + '.bai'):
+            if not fname.endswith('.hdf5') and not os.path.isfile(fname + '.bai'):
                 print('ERROR: Input file %s is not indexed. %s.bai can not be found\n\n' % (fname, fname), file=sys.stderr)
                 sys.exit(2)
 
