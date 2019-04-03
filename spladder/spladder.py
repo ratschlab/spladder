@@ -123,7 +123,7 @@ def parse_options(argv):
     experimental_test = parser_test.add_argument_group('EXPERIMENTAL - BETA STATE')
     experimental_test.add_argument('--parallel', dest='parallel', metavar='<INT>', type=int, help='use multiple processors [1]', default=1)
     experimental_test.add_argument('--non-alt-norm', dest='non_alt_norm', action='store_true', help='only use non alternative exon segments for gene expression counting [off]', default=False)
-    experimental_test.add_argument('--low-memory', dest='low_memory', action='store_true', help='use less memory at the cost of longer running time [off]', default=False)
+    experimental_test.add_argument('--high-memory', dest='high_memory', action='store_true', help='use more memory to increase running time (mem-map counts) [off]', default=False)
     parser_test.set_defaults(func=spladder_test)
 
     ### RUN MODE "VIZ"

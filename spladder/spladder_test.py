@@ -665,7 +665,7 @@ def spladder_test(options):
         options.fname_events = os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence))
 
         ### quantify events
-        (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1_all, idx2_all, event_type, options, gen_event_ids=False, low_mem=options.low_memory)
+        (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1_all, idx2_all, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
 
         if options.cap_outliers:
             log_counts = sp.log2(cov[0] + 1)
