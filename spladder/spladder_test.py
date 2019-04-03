@@ -14,6 +14,7 @@ from scipy.optimize import minimize_scalar
 from scipy.special import polygamma
 from scipy.stats import chi2,nbinom,scoreatpercentile
 import numpy.random as npr
+import hashlib
 
 from .alt_splice import quantify
 from .testing import likelihood
@@ -609,7 +610,9 @@ def spladder_test(options):
     condition_strains = None
     if options.subset_samples:
         condition_strains = sp.unique(sp.r_[sp.array(options.conditionA), sp.array(options.conditionB)])
-        options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%i.hdf5' % (options.confidence, options.merge, val_tag, non_alt_tag, hash(tuple(sp.unique(condition_strains))) * -1))
+        _hash = hashlib.sha256()
+        _hash.update(sp.unique(condition_strains))
+        options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%s.hdf5' % (options.confidence, options.merge, val_tag, non_alt_tag, _hash.hexdigest()))
     if os.path.exists(options.fname_exp_hdf5):
         if options.verbose:
             print('Loading expression counts from %s' % options.fname_exp_hdf5)
