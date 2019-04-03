@@ -13,7 +13,7 @@ if __package__ is None:
 from .utils import *
 from .init import *
 
-def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=True, spliced=True, var_aware=None, collapse=False, primary_only=False, no_mm=False):
+def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=True, spliced=True, var_aware=None, collapse=False, primary_only=False, no_mm=False, mm_tag='NM'):
     
     infile = pysam.Samfile(fname, 'rb')
 
@@ -42,7 +42,7 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
         for read in infile.fetch(chr_name, start, stop, until_eof=True):
             
             ### check if we skip this read
-            if filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, no_mm):
+            if filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, no_mm, mm_tag=mm_tag):
                 continue
 
             tags = dict(read.tags)
@@ -128,7 +128,7 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
     return (read_matrix, introns_p, introns_m)
 
 
-def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, primary_only=False, no_mm=False, unstranded=True):
+def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, primary_only=False, no_mm=False, unstranded=True, mm_tag='NM'):
     # blocks coordinates are assumed to be in closed intervals
 
     #if filter is None:
@@ -161,19 +161,19 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
 
         ## get data from bam
         if 'exon_track' in types:
-            (introns_p, introns_m, coverage) = get_all_data(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
+            (introns_p, introns_m, coverage) = get_all_data(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm, mm_tag=mm_tag) 
         if 'mapped_exon_track' in types:
-            (introns_p, introns_m, mapped_coverage) = get_all_data(blocks[b], filenames, spliced=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
+            (introns_p, introns_m, mapped_coverage) = get_all_data(blocks[b], filenames, spliced=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm, mm_tag=mm_tag) 
         if 'spliced_exon_track' in types:
-            (introns_p, introns_m, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm) 
+            (introns_p, introns_m, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm, mm_tag=mm_tag) 
         if 'polya_signal_track' in types:
-            (introns_p, introns_m, polya_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, clipped=True, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
+            (introns_p, introns_m, polya_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, clipped=True, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm, mm_tag=mm_tag)
         if 'end_signal_track' in types:
-            (introns_p, introns_m, read_end_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
+            (introns_p, introns_m, read_end_signals) = get_all_data_uncollapsed(blocks[b], filenames, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm, mm_tag=mm_tag)
 
         if 'intron_list' in types or 'intron_track' in types:
             if introns_p is None:
-                (introns_p, introns_m, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm)
+                (introns_p, introns_m, spliced_coverage) = get_all_data(blocks[b], filenames, mapped=False, filter=filter, var_aware=var_aware, primary_only=primary_only, no_mm=no_mm, mm_tag=mm_tag)
         if not introns_p is None:
             introns_p = sort_rows(introns_p)
         if not introns_m is None:
@@ -269,7 +269,7 @@ def add_reads_from_bam(blocks, filenames, types, filter=None, var_aware=False, p
 
 def add_reads_from_sparse_bam(gg, fname, contig, conf, types=None, filter=None, cache=None, unstranded=False):
 
-    if cache is None or len(cache) == 0:
+    if cache is None or len(cache) == 0: 
         ### load counts from summary file
         if fname.endswith('hdf5'):
             IN = h5py.File(fname, 'r')
@@ -313,7 +313,7 @@ def add_reads_from_sparse_bam(gg, fname, contig, conf, types=None, filter=None, 
 
 
 #function [introns, coverage, pair_cov] = get_all_data(block, mapped, spliced, filenames, filter, clipped, var_aware) 
-def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipped=False, var_aware=False, primary_only=False, no_mm=False):
+def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipped=False, var_aware=False, primary_only=False, no_mm=False, mm_tag='NM'):
 
     block_len = block.stop - block.start
     # get all data from bam file
@@ -339,7 +339,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
         else:
             collapse = True
         ### get reads from bam file
-        (coverage_tmp, introns_p_tmp, introns_m_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm)
+        (coverage_tmp, introns_p_tmp, introns_m_tmp) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm, mm_tag)
 
         ### compute total coverages
         if not filter is None and 'maps' in filter:
@@ -375,7 +375,7 @@ def get_all_data(block, filenames, mapped=True, spliced=True, filter=None, clipp
     return (introns_p, introns_m, coverage)
 
 #function [introns, coverage, pair_cov] = get_all_data_uncollapsed(block, mapped, spliced, filenames, filter, var_aware) 
-def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=None, var_aware=False, primary_only=False, no_mm=False):
+def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=None, var_aware=False, primary_only=False, no_mm=False, mm_tag='NM'):
 
     block_len = block.stop - block.start
     # get all data from bam file
@@ -391,7 +391,7 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
         contig_name = block.chr
         strand = block.strand
         collapse = False
-        (coverage_tmp, _, _) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm)
+        (coverage_tmp, _, _) = get_reads(fname, contig_name, block.start, block.stop, strand, filter, mapped, spliced, var_aware, collapse, primary_only, no_mm, mm_tag)
         coverage = sp.r_[coverage, coverage_tmp]
 
     return (None, coverage)
@@ -459,7 +459,7 @@ def get_intron_list(genes, options):
                                 k_idx = sp.setdiff1d(sp.arange(intron_list_tmp.shape[0]), rm_idx)
                                 intron_list_tmp = intron_list_tmp[k_idx, :]
                 else:
-                    [intron_list_tmp] = add_reads_from_bam(gg, options.bam_fnames, ['intron_list'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, unstranded=options.introns_unstranded)
+                    [intron_list_tmp] = add_reads_from_bam(gg, options.bam_fnames, ['intron_list'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, unstranded=options.introns_unstranded, mm_tag=options.mm_tag)
                 num_introns_filtered += intron_list_tmp.shape[0]
                 introns[i, si] = sort_rows(intron_list_tmp)
 
@@ -475,7 +475,7 @@ def get_intron_list(genes, options):
 
 
 
-def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, no_mm=False):
+def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, no_mm=False, mm_tag='NM'):
 
     if read.is_unmapped:
         return True
@@ -498,10 +498,10 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
                 return True
         elif not no_mm:
             try:
-                if filter['mismatch'] < tags['NM']:
+                if filter['mismatch'] < tags[mm_tag]:
                     return True
             except KeyError:
-                print('SplAdder expects the NM tag to be present in all input alignment files. If you are unable to provide this information in the input files, please restart SplAdder with the option --ignore_mismatches y.', file=sys.stderr)
+                print('SplAdder expects the NM tag (or the one set with --set-mm-tag) to be present in all input alignment files. If you are unable to provide this information in the input files, please restart SplAdder with the option --ignore-mismatches.', file=sys.stderr)
                 sys.exit(1)
 
         if is_spliced:
@@ -547,7 +547,7 @@ def summarize_chr(fname, chr_name, options, filter=None, strand=None, mapped=Tru
         for read in infile.fetch(chr_name, until_eof=True):
 
             ### check if we skip this reads
-            if filter_read(read, filter, spliced, mapped, strand, options.primary_only, options.var_aware):
+            if filter_read(read, filter, spliced, mapped, strand, options.primary_only, options.var_aware, mm_tag=options.mm_tag):
                 continue
             
             tags = dict(read.tags)

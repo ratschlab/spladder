@@ -30,6 +30,7 @@ def parse_options(argv):
     inputs.add_argument('--no-primary-only', dest='primary_only', action='store_false', default=True)
     inputs.add_argument('--var-aware', dest='var_aware', action='store_true', help='alignment files are variation aware (presence of XM and XG tags) [off]', default=False)
     inputs.add_argument('--no-var-aware', dest='var_aware', action='store_false', default=False)
+    inputs.add_argument('--set-mm-tag', dest='mm_tag', help='sets the sequence of the mismatch tag used in alignments [NM]', default='NM')
     inputs.add_argument('--labels', dest='labels', metavar='STRING', help='use labels instead of bam file names (comma separated list) [-]', default='-')
     #inputs.add_argument('-S', '--ref-strain', dest='refstrain', metavar='STRING', help='reference strain [-]', default='-')
     #inputs.add_argument('-x', '--same-genome', dest='same_genome', metavar='y|n', help='input alignments share the same genome [y]', default='y')

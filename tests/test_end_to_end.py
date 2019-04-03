@@ -167,6 +167,7 @@ def test_end_to_end_merge(test_id, case, tmpdir):
                '--output-bed',
                '--output-conf-bed',
                '--output-conf-tcga',
+               '--set-mm-tag', 'NM',
                '-v']
 
     spladder.main(my_args)
