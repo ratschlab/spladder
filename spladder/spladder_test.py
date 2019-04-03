@@ -33,7 +33,7 @@ def get_gene_expression(options, fn_out=None, strain_subset=None):
         sys.stdout.write('Quantifying gene expression ...\n')
 
     ### load gene information
-    genes = pickle.load(open(options.fname_genes, 'rb'))[0]
+    genes = pickle.load(open(options.fname_genes, 'rb'), encoding='latin1')[0]
     numgenes = genes.shape[0]
 
     ### open hdf5 file containing graph count information
@@ -608,8 +608,8 @@ def spladder_test(options):
 
     condition_strains = None
     if options.subset_samples:
-        condition_strains = sp.unique(sp.r_[sp.array(Coptions.conditionA), sp.array(options.conditionB)])
-        options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%i.hdf5' % (options.confidence_level, options.merge, val_tag, non_alt_tag, hash(tuple(sp.unique(condition_strains))) * -1))
+        condition_strains = sp.unique(sp.r_[sp.array(options.conditionA), sp.array(options.conditionB)])
+        options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%i.hdf5' % (options.confidence, options.merge, val_tag, non_alt_tag, hash(tuple(sp.unique(condition_strains))) * -1))
     if os.path.exists(options.fname_exp_hdf5):
         if options.verbose:
             print('Loading expression counts from %s' % options.fname_exp_hdf5)
