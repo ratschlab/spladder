@@ -107,6 +107,7 @@ def spladder(options):
                             OUT.create_dataset(name=(tmp[0] + '_introns_m'), data=tmp[2], compression='gzip')
                             OUT.create_dataset(name=(tmp[0] + '_introns_p'), data=tmp[3], compression='gzip')
                             del tmp
+                        pool.close()
                     else:
                         for chrm in options.chrm_lookup:
                             tmp = summarize_chr(bfn, str(chrm), options, filter=options.read_filter)
@@ -188,6 +189,8 @@ def spladder(options):
                         OUT.create_dataset(name=(tmp[0] + '_reads_shp'), data=tmp[1].shape)
                         OUT.create_dataset(name=(tmp[0] + '_introns_m'), data=tmp[2], compression='gzip')
                         OUT.create_dataset(name=(tmp[0] + '_introns_p'), data=tmp[3], compression='gzip')
+                        del tmp
+                    pool.close()
                 else:
                     for chrm in options.chrm_lookup:
                         tmp = summarize_chr(bfn, str(chrm), options)
