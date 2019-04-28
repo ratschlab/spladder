@@ -63,6 +63,10 @@ def spladder(options):
         if not os.path.exists(os.path.join(options.outdir, 'spladder')):
             os.makedirs(os.path.join(options.outdir, 'spladder'))
 
+        ### create tmp sub-directory
+        if not os.path.exists(options.tmpdir):
+            os.makedirs(os.path.join(options.tmpdir))
+
         ### pre-process annotation, if necessary
         if options.annotation.split('.')[-1] != 'pickle':
             if not os.path.exists(options.annotation + '.pickle'):
@@ -97,15 +101,14 @@ def spladder(options):
                     if options.parallel > 1:
                         import multiprocessing as mp
                         pool = mp.Pool(processes=options.parallel)
-                        result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), options,), kwds={'filter':options.read_filter}) for chrm in sorted(options.chrm_lookup)]
+                        result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), options,), kwds={'filter':options.read_filter, 'usetmp':True}) for chrm in sorted(options.chrm_lookup)]
                         while result:
                             tmp = result.pop(0).get()
-                            OUT.create_dataset(name=(tmp[0] + '_reads_row'), data=tmp[1].row.astype('uint8'), compression='gzip')
-                            OUT.create_dataset(name=(tmp[0] + '_reads_col'), data=tmp[1].col, compression='gzip')
-                            OUT.create_dataset(name=(tmp[0] + '_reads_dat'), data=tmp[1].data, compression='gzip')
-                            OUT.create_dataset(name=(tmp[0] + '_reads_shp'), data=tmp[1].shape)
-                            OUT.create_dataset(name=(tmp[0] + '_introns_m'), data=tmp[2], compression='gzip')
-                            OUT.create_dataset(name=(tmp[0] + '_introns_p'), data=tmp[3], compression='gzip')
+                            P_IN = h5py.File(tmp[1], 'r')
+                            for k in P_IN.keys():
+                                OUT.create_dataset(name=k, data=P_IN[k][:], compression='gzip')
+                            P_IN.close()
+                            os.remove(tmp[1])
                             del tmp
                         pool.close()
                     else:
@@ -180,15 +183,14 @@ def spladder(options):
                 if options.parallel > 1:
                     import multiprocessing as mp
                     pool = mp.Pool(processes=options.parallel)
-                    result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), options,)) for chrm in sorted(options.chrm_lookup)]
+                    result = [pool.apply_async(summarize_chr, args=(bfn, str(chrm), options,), kwds={'usetmp':True}) for chrm in sorted(options.chrm_lookup)]
                     while result:
                         tmp = result.pop(0).get()
-                        OUT.create_dataset(name=(tmp[0] + '_reads_row'), data=tmp[1].row.astype('uint8'), compression='gzip')
-                        OUT.create_dataset(name=(tmp[0] + '_reads_col'), data=tmp[1].col, compression='gzip')
-                        OUT.create_dataset(name=(tmp[0] + '_reads_dat'), data=tmp[1].data, compression='gzip')
-                        OUT.create_dataset(name=(tmp[0] + '_reads_shp'), data=tmp[1].shape)
-                        OUT.create_dataset(name=(tmp[0] + '_introns_m'), data=tmp[2], compression='gzip')
-                        OUT.create_dataset(name=(tmp[0] + '_introns_p'), data=tmp[3], compression='gzip')
+                        P_IN = h5py.File(tmp[1], 'r')
+                        for k in P_IN.keys():
+                            OUT.create_dataset(name=k, data=P_IN[k][:], compression='gzip')
+                        P_IN.close()
+                        os.remove(tmp[1])
                         del tmp
                     pool.close()
                 else:

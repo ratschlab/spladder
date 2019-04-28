@@ -137,6 +137,10 @@ def parse_args(options, identity='main'):
         else:
             options.log_fname = 'stdout'
 
+        ### set tmp directory default
+        if options.tmpdir == '':
+            options.tmpdir = os.path.join(options.outdir, 'tmp')
+
         options.bam_fnames = options.bams.strip(',').split(',')
 
         if not os.path.isfile(options.annotation):

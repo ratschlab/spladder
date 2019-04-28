@@ -56,6 +56,7 @@ def parse_options(argv):
     outputs.add_argument('--sparse-bam', dest='sparse_bam', action='store_true', help='store BAM content as sparse representation for later use [off]', default=False)
     outputs.add_argument('--compress-text', dest='compress_text', action='store_true', help='compress text output [on]', default=True)
     outputs.add_argument('--no-compress-text', dest='compress_text', action='store_false', default=True)
+    outputs.add_argument('--tmp-dir', dest='tmpdir', metavar='DIR', help='directory to store temporary data [<outdir>/tmp]', default='')
     graph = parser_build.add_argument_group('GRAPH OPTIONS')
     graph.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)
     graph.add_argument('-I', '--iterations', dest='insert_intron_iterations', metavar='INT', type=int, help='number of iterations to insert new introns into the graph [5]', default=5)

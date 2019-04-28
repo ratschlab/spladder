@@ -6,6 +6,7 @@ import copy
 import pdb
 import time
 import h5py
+import uuid
 
 if __package__ is None:
     __package__ = 'modules'
@@ -524,7 +525,7 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
     return False
 
 
-def summarize_chr(fname, chr_name, options, filter=None, strand=None, mapped=True, spliced=True, unstranded=True):
+def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=None, mapped=True, spliced=True, unstranded=True):
 
     infile = pysam.Samfile(fname, 'rb')
     introns_p = dict()
@@ -593,7 +594,19 @@ def summarize_chr(fname, chr_name, options, filter=None, strand=None, mapped=Tru
     else:
         read_matrix = scipy.sparse.coo_matrix(read_matrix, dtype='uint32')
 
-    return (chr_name, read_matrix, introns_m, introns_p)
+    if usetmp:
+        tmp_fname = os.path.join(options.tmpdir, chr_name + str(uuid.uuid4()) + '.hdf5') 
+        OUT = h5py.File(tmp_fname, 'w')
+        OUT.create_dataset(name=(chr_name + '_reads_row'), data=read_matrix.row.astype('uint8'), compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_reads_col'), data=read_matrix.col, compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_reads_dat'), data=read_matrix.data, compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_reads_shp'), data=read_matrix.shape)
+        OUT.create_dataset(name=(chr_name + '_introns_m'), data=introns_m, compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_introns_p'), data=introns_p, compression='gzip')
+        OUT.close()
+        return (chr_name, tmp_fname)
+    else:
+        return (chr_name, read_matrix, introns_m, introns_p)
 
 
 def get_intron_range(introns, start, stop):
