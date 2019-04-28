@@ -4,6 +4,8 @@ import scipy as sp
 import math
 import re
 
+from .utils import flatten
+
 def default_settings(options):
 
     ### import necessary paths 
@@ -203,7 +205,7 @@ def parse_args(options, identity='main'):
                     options.bam_fnames[g] = [str(x) for x in sp.atleast_1d(sp.loadtxt(group[0], dtype='str'))]
 
         ### check existence of alignment files
-        for fname in options.bam_fnames:
+        for fname in flatten(options.bam_fnames):
             if not os.path.isfile(fname):
                 print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                 sys.exit(2)

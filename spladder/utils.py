@@ -130,4 +130,12 @@ def replace_sub_matrix(mat_in, idx, mat_put):
 
     return mat_in
 
-
+def flatten(l):
+    
+    r = []
+    for i in l:
+        if isinstance(i, list):
+            r.extend(flatten(i))
+        else:
+            r.append(i)
+    return r
