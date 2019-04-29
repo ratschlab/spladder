@@ -667,6 +667,12 @@ def spladder_test(options):
 
         options.fname_events = os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence))
 
+        ### check whether we have any events at all
+        with h5py.File(options.fname_events, 'r') as IN:
+            if not 'conf_idx' in IN:
+                print('SKIPPING: no events of type %s available for testing in file %s\n' % (event_type, options.fname_events), file=sys.stderr)
+                continue
+
         ### quantify events
         (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1_all, idx2_all, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
 
