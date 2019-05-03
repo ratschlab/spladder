@@ -167,8 +167,6 @@ def parse_options(argv):
     required_pyproc.add_argument('data', metavar='DATA_FILE', help='pyproc data file', default='-')
     parser_pyproc.set_defaults(func=spladder_pyproc)
 
-    options = parser.parse_args(argv[1:])
-
     if len(argv) < 2:
         parser.print_help()
         sys.exit(2)
@@ -183,7 +181,7 @@ def parse_options(argv):
             parser.print_help()
         sys.exit(2)
 
-    return options
+    return parser.parse_args(argv[1:])
 
 def main(argv=sys.argv):
 
