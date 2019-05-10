@@ -581,7 +581,7 @@ def spladder_test(options):
     options.use_exon_counts = False
 
     ### make sure spladder has been run in the correct mode
-    if not os.path.exists(os.path.join(options.outdir, 'genes_graph_conf%i.merge_graphs.pickle' % options.confidence)):
+    if not os.path.exists(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.pickle' % options.confidence)):
         sys.stderr.write('\nERROR: Testing mode can only be run on SplAdder outputs generated using the default merging strategy: --merge-strat merge_graphs\n\n')
         sys.exit(1)
 
