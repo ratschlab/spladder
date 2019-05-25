@@ -29,7 +29,7 @@ from .merge import run_merge
 from .helpers import *
 
 from .classes.gene import Gene
-sys.modules['modules.classe.gene'] = Gene
+sys.modules['modules.classes.gene'] = Gene
 
 def spladder(options):
 
