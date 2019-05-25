@@ -1,5 +1,10 @@
 import sys
 
+### check which python version we are running
+if sys.version_info[0] < 3:
+    sys.stderr.write('\nERROR: SplAdder requires Python 3 to run. You are currently running Python %i.%i.%i\n' % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
+    sys.exit(1)
+
 from .spladder_build import spladder
 from .spladder_viz import spladder_viz
 from .spladder_test import spladder_test
