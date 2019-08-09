@@ -185,10 +185,8 @@ def collect_events(options):
 
                                 ### assert that first isoform is always the shorter one
                                 if sp.sum(event.exons1[:, 1] - event.exons1[:, 0]) > sp.sum(event.exons2[:, 1] - event.exons2[:, 0]):
-                                    _tmp = event.exons1.copy()
-                                    event.exons1 = event.exons2.copy()
-                                    event.exons2 = _tmp
-                                #event.transcript_type = sp.array([gene.transcript_type])
+                                    event.exons1, event.exons2 = event.exons2, event.exons1
+
                                 if do_alt_5prime:
                                     alt_end_5prime_pos.append(event)
 
@@ -235,11 +233,8 @@ def collect_events(options):
 
                                 ### assert that first isoform is always the shorter one
                                 if sp.sum(event.exons1[:, 1] - event.exons1[:, 0]) > sp.sum(event.exons2[:, 1] - event.exons2[:, 0]):
-                                    _tmp = event.exons1.copy()
-                                    event.exons1 = event.exons2.copy()
-                                    event.exons2 = _tmp
+                                    event.exons1, event.exons2 = event.exons2, event.exons1
 
-                                #event.transcript_type = sp.array([gene.transcript_type])
                                 if do_alt_3prime:
                                     alt_end_3prime_pos.append(event)
                 else:
@@ -308,6 +303,11 @@ def collect_events(options):
                             event.exons2_col = sp.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][2]], exons_col[:, exon_mutex_exons[k][3]]].T
                             event.gene_name = sp.array([gene.name])
                             event.gene_idx = idx_mutex_exons[k]
+
+                            ### assert that first isoform is always the shorter one
+                            if sp.sum(event.exons1[:, 1] - event.exons1[:, 0]) > sp.sum(event.exons2[:, 1] - event.exons2[:, 0]):
+                                event.exons1, event.exons2 = event.exons2, event.exons1
+
                             #event.transcript_type = sp.array([gene.transcript_type])
                             mutex_exons_pos.append(event)
                 else:
