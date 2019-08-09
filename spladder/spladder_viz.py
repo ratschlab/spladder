@@ -17,6 +17,14 @@ from .viz.genelets import *
 from .viz import axes as vax
 from .helpers_viz import *
 
+### intermediate fix to load pickle files stored under previous version
+from .classes import gene as cgene
+from .classes import splicegraph as csplicegraph
+from .classes import segmentgraph as csegmentgraph
+sys.modules['modules.classes.gene'] = cgene
+sys.modules['modules.classes.splicegraph'] = csplicegraph
+sys.modules['modules.classes.segmentgraph'] = csegmentgraph
+
 
 def get_plot_len(options):
     """Identifies the number of rows we need in our plot"""
