@@ -136,8 +136,8 @@ def compute_psi(counts, event_type, options):
         a = counts[:, 1] # intron cov
         b = counts[:, 4] # intron conf
     elif event_type in ['alt_3prime', 'alt_5prime']:
-        a = counts[:, 3] # intron1 conf
-        b = counts[:, 4] # intron2 conf
+        a = counts[:, 4] # intron2 conf
+        b = counts[:, 3] # intron1 conf
     elif event_type == 'mutex_exons':
         a = counts[:, 5] + counts[:, 7] # exon_pre_exon1_conf + exon1_exon_aft_conf
         b = counts[:, 6] + counts[:, 8] # exon_pre_exon2_conf + exon2_exon_aft_conf
