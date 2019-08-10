@@ -15,11 +15,12 @@ To install the latest release, please use::
 Further information about requirements can be found in the :ref:`Installation notes <installation>`.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    installation.rst
    spladder_modes.rst
+   file_formats.rst
 
 
 

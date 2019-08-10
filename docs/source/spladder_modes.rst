@@ -209,6 +209,36 @@ splicing graph will be augmented.
     to be counted towards confirming an intron, and the `maximum intron length` is the upper
     threshold for new introns to be counted.
 
+**Merging**
+    As SplAdder can be run with multiple alignment files as input, there are several ways on how
+    these files can be combined into forming augmented splicing graphs. This behavior is controlled
+    with the setting of the `merging strategy` using ``--merge-strat``.
+
+    The first way of merging is to generate a separate augmented splicing graph per given input
+    alignment file. This strategy is called `single` and can be invoked as follows::
+
+        spladder build ... --merge-strat single ...
+
+    The second (and default) way of merging is to create a single splicing graph per input file and
+    then merge all graphs into a joint single graph. (This happens for every gene independently.)
+    This strategy is called `merge graphs` and can be invoked as follows::
+
+        spladder build ... --merge-strat merge_graphs ...
+
+    A third way of merging is to treat all input alignment files as technical replicates and
+    directly form a splicing graph using all reads. (This makes a difference especially for the
+    count thresholds.) This strategy is called `merge bams` and can be invoked as follows::
+
+        spladder build ... --merge-strat merge_bams ...
+
+    The fourth way of merging is a combination of ``merge_bams`` and ``merge_graphs``. In this
+    setting, both steps are performed and both resulting graphs are integrated into a joint graph.
+    The idea behind this setting is to generate maximum sensitivity. However, the improvement is in
+    general marginal and we would not advise to use this setting in general. If you would like to
+    try it nevertheless, you can do so with::
+
+        spladder build ... --merge_strat merge_all ...
+
 .. _graph_quantification:
 
 Graph quantification
