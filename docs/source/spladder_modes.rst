@@ -26,22 +26,22 @@ To display all available options for ``build``, one can simply type::
 This first step of any SplAdder pipeline consists of several main phases (some of which can be
 omitted) :
 
-:ref:`Graph construction <graph_construction>`
+:ref:`1 Graph construction <graph_construction>`
     This is the very initial phase. It parses the given annotation file and summarizes all
     transcripts of a gene into a splicing graph. This graph will be the basis for all further steps
     in the workflow.
-:ref:`Graph augmentation <graph_augmentation>`
+:ref:`2 Graph augmentation <graph_augmentation>`
     Given at least one alignment file, the splicing graph of each gene is augmented with new introns
     and exon segments that were detected in the alignment file. There are different ways how a more
     than one input alignment files can be combined into final splicing graphs. At the end of this
     phase, each gene contains an augmented graph that carries not only annotated splice connections
     but also any novel connections found in the data. Depending on the chosen confidence level, this
     graph will have a higher or lower density.
-:ref:`Graph quantification <graph_quantification>`
+:ref:`3 Graph quantification <graph_quantification>`
     Once a graph is constructed, all nodes and edges (exons and introns, respectively) in the graph
     can be quantified using at least one input alignment file. The quantification values can then be
     used subsequently to quantify splicing events and to compute percent spliced in (PSI) values.
-:ref:`Event detection <event_detection>`
+:ref:`4 Event detection <event_detection>`
     Based on the splicing graph of each gene, SplAdder can detect different types of alternative
     splicing events: exon skipping, intron retention, alternative 3' splice sites, alternative 5'
     splice sites, mutual exclusive exons and multiple (coordinated) exon skips. Each event can be
@@ -52,8 +52,8 @@ the result can be influenced through the choice of command line parameters.
 
 .. _graph_construction:
 
-Graph construction
-^^^^^^^^^^^^^^^^^^
+1 Graph construction
+^^^^^^^^^^^^^^^^^^^^
 
 This phase runs implicitly before any other phase. We just describe it here for completeness, but
 in general there is no reason to run this phase only by itself. What it does in the background,
@@ -89,8 +89,8 @@ If two genes overlap on the same strand::
 
 .. _graph_augmentation:
 
-Graph augmentation
-^^^^^^^^^^^^^^^^^^
+2 Graph augmentation
+^^^^^^^^^^^^^^^^^^^^
 
 The augmentation phase brings together alignment file and splicing graphs. Let's assume that you are
 given an alignment file ``alignment.bam`` (which should also have an index ``alignment.bam.bai``)
@@ -104,6 +104,16 @@ All three parameters are mandatory for a SplAdder run in ``build`` mode. Due to 
 of other parameters, this will carry out a full run of all phases. We will describe in the
 following, which parameters you can change to either only run this phase or to adapt how the
 splicing graph will be augmented. 
+
+Multiple alignment files can be provided using comma-separated notation::
+
+    spladder build --bams alignment1.bam,alignment2.bam,...
+
+Alternatively, a text file, e.g., ``alignment_list.txt``, can be provided. This should contain the
+absolute path to one alignment file per line. The filename has to end in ``.txt``. SplAdder can then
+be invoked with::
+    
+    spladder build --bames alignment_list.txt
 
 **Alignment**
     By default, SplAdder only uses primary alignments (in SAM/BAM the ones not carrying the 256
@@ -241,14 +251,72 @@ splicing graph will be augmented.
 
 .. _graph_quantification:
 
-Graph quantification
-^^^^^^^^^^^^^^^^^^^^
+3 Graph quantification
+^^^^^^^^^^^^^^^^^^^^^^
 
-Text
+In the step of graph quantification, the augmented graph is evaluated again against all given input
+alignment files, to determine edge and node weights based on the respective expression. If
+alternative splicing events are to be extracted (next step), this step is carried out automatically.
+If the user decided not to extract alternative splicing events (explained in the next section), but
+the graph should be quantified anyways, this can be achieved with::
+
+    spladder build ... --quantify-graph ...
+
+Especially for larger cohorts, it can be challenging to process through all the alignment files for
+quantification. (We will provide more detailed explanations for this scenario in `Working with large
+cohorts`.) Here, we will just mention, that the quantification step can be invoked in different
+modes, called `qmodes`. Let us assume, that two alignment files were provided to SplAdder,
+``aligment1.bam`` and ``alignment2.bam``. Then the default is that all files processed sequentially.
+This quantification mode is called ``all`` and (despite being used implicitly per default), can also
+be explicitly set with::
+
+    spladder build ... --bams alignment1.bam,alignment2.bam \
+                       --qmode all ...
+
+As an alternative, one can also provide a single alignment file at a time to SplAdder. This strategy
+is called ``single`` and can be used to parallelize SplAdder processes across alignment files. It
+can be invoked via::
+
+    spladder build .. --bams alignment1.bam --qmode single ...
+    spladder build .. --bams alignment2.bam --qmode single ...
+
+The ``single`` command always needs to be accompanied by an additional run of SplAdder, that
+integrates the quantification files for the single alignment files into a joint data structure. 
+For this, all alignment files are provided as input and the quantification mode ``collect`` is
+chosen::
+
+    spladder build .. --bams alignment1.bam,alignment2.bam \
+                      --qmode collect ...
 
 .. _event_detection:
 
-Event detection
-^^^^^^^^^^^^^^^
+4 Event detection
+^^^^^^^^^^^^^^^^^
 
-Text
+In this last phase of the ``build`` mode, the graphs are used for the extraction of alternative
+splicing events. Event extraction is performed per default. The user can choose to omit this step
+entirely (for instance to carry it out at a later point in time). This is done via::
+
+    spladder build ... --no-extract-ase ...
+
+SplAdder can currently extract 6 different types of alternative splicing events:
+
+- exon skips (`exon_skip`)
+- intron retentions (`intron_retention`)
+- alternative 3' splice sites (`alt_3prime`)
+- alternative 5' splice sites (`alt_5prime`)
+- mutually exclusive exons (`mutex_exons`)
+- multiple (coordinated) exons skips (`mult_exon_skips`)
+
+Per default all events of all types are extracted from the graph. To specify a single type or a
+subset of types (e.g., exon skips and mutually exclusive exons only), the user can specify the short
+names of the event types (as shown in parentheses above) as follows::
+
+    spladder build ... --event-types exon_skip,mutex_exons ...
+
+In some cases (for instance when integrating hundreds of alignment samples), the splicing graphs can
+grow very complex. To limit the running time, an upper bound for the maximum number of edges in the
+splicing graph of a gene to be used for event extraction is set. This threshold is 500 per default.
+To adapt this threshold, e.g., to 250, the user can specify::
+    
+    spladder build ... --ase-edge-limit 250 ...

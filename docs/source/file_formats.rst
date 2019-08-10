@@ -99,13 +99,11 @@ The event hdf5 is structured as follows:
 - **event_features**: group that contains the description of the counted features per event type
 
     * **features alt3_prime / alt_5prime**: 
-
         + **valid**: contains a 1 if the event is valid and 0 otherwise
         + **exon_diff_cov**: mean coverage of the exonic segment that between the two alternative splice sites 
         + **exon_const_cov**: mean coverage of the remaining exonic segments in the event
         + **intron1_conf**: number of spliced alignments spanning the longer intron
         + **intron2_conf**: number of spliced alignments spanning the shorter intron
-
     * **features exon_skip**:
         + **valid**: contains a 1 if the event is valid and 0 otherwise
         + **exon_cov**: mean coverage of the cassette exon
