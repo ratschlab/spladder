@@ -81,11 +81,11 @@ If two exons of different genes overlap on the same strand, one can remove them 
 
 If two transcripts of different genes overlap on the same strand, one can remove them with::
 
-    spladder build .. --filter-overlap-transcripts ...
+    spladder build ... --filter-overlap-transcripts ...
 
 If two genes overlap on the same strand::
 
-    spladder build .. --filter-overlap-genes
+    spladder build ... --filter-overlap-genes ...
 
 .. _graph_augmentation:
 
@@ -96,7 +96,9 @@ The augmentation phase brings together alignment file and splicing graphs. Let's
 given an alignment file ``alignment.bam`` (which should also have an index ``alignment.bam.bai``)
 and an annotation file in GTF format ``annotation.gtf``. You can the simply invoke::
 
-    spladder build --bams alignment.bam --annotation annotation.gtf --outdir spladder_out 
+    spladder build --bams alignment.bam \
+                   --annotation annotation.gtf \
+                   --outdir spladder_out 
 
 All three parameters are mandatory for a SplAdder run in ``build`` mode. Due to the default values
 of other parameters, this will carry out a full run of all phases. We will describe in the
@@ -110,7 +112,7 @@ splicing graph will be augmented.
         spladder build ... --no-primary-only ...
 
     The quality of an alignment is partially determined by the number of mismatches it carries. The
-    default tag in SAM/BAM for this is the ``NM:i:`` tag. Te let SplAdder use a different tag, such
+    default tag in SAM/BAM for this is the ``NM:i:`` tag. To let SplAdder use a different tag, such
     as ``Nm:i:``, one can use::
         
         spladder build ... --set-mm-tag Nm ...
@@ -151,7 +153,61 @@ splicing graph will be augmented.
         spladder build ... --iterations 10 ...
 
 **Confidence**
+    The confidence level of a SplAdder run determines how strongly input alignments are filtered
+    before new nodes and edges are added to the splicing graphs. In general, there are four
+    confidence levels, with confidence increasing from 0 to 3. The default level is 3 and applies
+    the highest level of filtering. To adapt this choice, e.g., to confidence level 2, one can use::
 
+        spladder build ... --confidence 2 ...
+
+    The read filter criteria are dependent on the read length. Here a short overview of the criteria
+    for each of the levels:
+
+    +----------+------------------------------+---------------------------------+
+    | Level    | Criteria                     | Value                           |
+    +==========+==============================+=================================+
+    |        3 | Maximum number of mismatches | 0                               |
+    +----------+------------------------------+---------------------------------+
+    |        3 | Minimum number of alignments | 2                               |
+    +----------+------------------------------+---------------------------------+
+    |        3 | Minimum anchor length        | ceil(0.25 * readlength)         |
+    +----------+------------------------------+---------------------------------+
+    |        3 | Maximum intron length        | 350000                          |
+    +----------+------------------------------+---------------------------------+
+    +----------+------------------------------+---------------------------------+
+    |        2 | Maximum number of mismatches | max(1, floor(0.01 * readlength) |
+    +----------+------------------------------+---------------------------------+
+    |        2 | Minimum number of alignments | 2                               |
+    +----------+------------------------------+---------------------------------+
+    |        2 | Minimum anchor length        | ceil(0.20 * readlength)         |
+    +----------+------------------------------+---------------------------------+
+    |        2 | Maximum intron length        | 350000                          |
+    +----------+------------------------------+---------------------------------+
+    +----------+------------------------------+---------------------------------+
+    |        1 | Maximum number of mismatches | max(1, floor(0.02 * readlength) |
+    +----------+------------------------------+---------------------------------+
+    |        1 | Minimum number of alignments | 2                               |
+    +----------+------------------------------+---------------------------------+
+    |        1 | Minimum anchor length        | ceil(0.15 * readlength)         |
+    +----------+------------------------------+---------------------------------+
+    |        1 | Maximum intron length        | 350000                          |
+    +----------+------------------------------+---------------------------------+
+    +----------+------------------------------+---------------------------------+
+    |        0 | Maximum number of mismatches | max(2, floor(0.03 * readlength) |
+    +----------+------------------------------+---------------------------------+
+    |        0 | Minimum number of alignments | 1                               |
+    +----------+------------------------------+---------------------------------+
+    |        0 | Minimum anchor length        | ceil(0.10 * readlength)         |
+    +----------+------------------------------+---------------------------------+
+    |        0 | Maximum intron length        | 350000                          |
+    +----------+------------------------------+---------------------------------+
+
+    In the above table, the `maximum number of mismatches` is used to remove reads that have low
+    quality alignments, the `minimum number of alignments` is the number of split/spliced alignments
+    necessary to confirm a new intron edge for being taken into the graph, the `minimum achor
+    length` is the shortest overlap to an exon segment that a split/spliced alignment needs to have
+    to be counted towards confirming an intron, and the `maximum intron length` is the upper
+    threshold for new introns to be counted.
 
 .. _graph_quantification:
 
