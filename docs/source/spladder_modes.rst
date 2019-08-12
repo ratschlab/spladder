@@ -1,5 +1,5 @@
-SplAdder - the run modes
-========================
+SplAdder - run modes
+====================
 
 SplAdder has different run modes that reflect the different steps of a typical analysis pipeline:
 
@@ -320,3 +320,41 @@ splicing graph of a gene to be used for event extraction is set. This threshold 
 To adapt this threshold, e.g., to 250, the user can specify::
     
     spladder build ... --ase-edge-limit 250 ...
+
+The `test` mode
+---------------
+
+This SplAdder mode is for differentially testing the usage of alternative event between two groups
+of samples. A prerequisite for this is that all samples that are involved in testing have been
+subjected to a joint analysis in the ``build`` mode. However, not the full set of samples collected
+in the ``build`` mode has to be subjected to testing, but subsets of samples can be used instead. 
+
+It is recommended that for each sample condition to be tested (e.g., wild type and some mutant), the
+number of available replicates is at least three. Further, the mean-variance relationship for intron
+counts are estimated on the set of tested events. It the number of events to be tested becomes too
+small, then this estimate becomes unstable and might result in an error.
+
+For the invocation of the testing mode, three different input parameters are mandatory::
+    
+    spladder test --conditionA aligmmentA1.bam,alignmentA2.bam \
+                  --conditionB alignmentB1.bam,alignmentB2.bam \
+                  --outdir spladder_out
+
+In detail, these are the two lists of alignment files representing the samples for conditions A and
+B, respectively, as well as the SplAdder output directory. This is the same output directory, as
+has been used for the ``build`` mode.
+Analog to the way a list of alignments can be provided in ``build`` mode, also in ``test`` mode the
+comma-separated file list can be substituted with a file containing the paths to the respective
+files::
+
+    spladder test --conditionA alignmentsA_list.txt \
+                  --conditionB alignmentsB_list.txt \
+                  --outdir spladder_out
+
+By default all event types will be subjected to testing (if they were extracted from the graph prior
+to testing). If only a specific event type or subset of types should be tested, e.g., exon skips and
+mutual exclusive exons, the same syntax as in build mode can be applied::
+
+    spladder test --event-types exon_skip,mutex_exons
+
+
