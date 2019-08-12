@@ -14,14 +14,17 @@ To install the latest release, please use::
 
 Further information about requirements can be found in the :ref:`Installation notes <installation>`.
 
+Before diving deeper into the documentation, we suggest to read through the :ref:`General
+information <general_info>` first.
+
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
 
    installation.rst
+   general.rst
    spladder_modes.rst
    file_formats.rst
-
 
 
 Indices and tables
