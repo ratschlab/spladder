@@ -3,4 +3,50 @@
 General information
 ===================
 
-Text
+In the following, we provide some general information on how the setup of SplAdder works in
+principle and mention several useful things to keep in mind when using SplAdder. 
+
+The SplAdder directory setup
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The general purpose of SplAdder is to build and quantify augmented splicing graphs from RNA-Sequencing
+data and to utilize them for the detection for alternative splicing events. To achieve this,
+SplAdder operates on a single `project` at a time, where a project is characterized by a single
+shared output (or project) directory. All data of subsequent steps will be written to that
+directory and a certain substructure will directly be created by SplAdder.
+
+SplAdder has different run modes that reflect the different steps of a typical analysis pipeline:
+
+``build`` mode
+    for constructing splicing graphs from RNA-Seq data and extracting alternative events
+``test`` mode
+    for the differential analysis between samples
+``viz`` mode
+    for the visualization of splicing graphs and alternative events
+
+All of these modes will operate on the same output directory. Please note, that the ``build`` mode
+always has to precede the ``testing`` and ``viz`` modes, as this creates the splicing graph
+structures the latter modes operate on.
+
+Please have a look at the :ref:`SplAdder run modes <spladder_run_modes>` page for further information.
+
+SplAdder is a heuristic
+^^^^^^^^^^^^^^^^^^^^^^^
+
+We would like to reiterate here that SplAdder is a heuristic approach, that employs a system of
+empirical filter rules on RNA-Seq data to extend a splicing graph pre-defined by a given annotation.
+Due to this heuristic nature, there is a list of things one should keep in mind when working with
+the software:
+
+- Although the algorithm is deterministic, it is sensitive to the order of input data. Especially
+  when you are working with many input samples and integrate their information to generate a single
+  splicing graph, the order of input files might influence the outcome. However, in most cases the
+  generated splicing graphs are robust against changes of the order of the input.
+- Depending on the annotation file that you are using, some annotated gene regions might be subject to
+  filtering. SplAdder will automatically ignore all introns in the input data that could be assigned
+  to more than one gene in the annotation. (This decision is strand-specific, that is both genes and
+  the intron need to be on the same strand.) 
+- As SplAdder will sample all possible events from the graph, there can be a certain redundancy in
+  the events (although all events are unique as a whole). For instance, if there are 3 possible
+  donors paired with an acceptor in a gene on the positive strand, SplAdder will output all three
+  possible pairs of alternative 3 prime splice site events. 

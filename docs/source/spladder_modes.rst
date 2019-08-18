@@ -1,3 +1,5 @@
+.. _spladder_run_modes:
+
 SplAdder - run modes
 ====================
 
