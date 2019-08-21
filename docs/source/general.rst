@@ -4,7 +4,7 @@ General information
 ===================
 
 In the following, we provide some general information on how the setup of SplAdder works in
-principle and mention several useful things to keep in mind when using SplAdder. 
+principle and mention several useful things to keep in mind when using the software. 
 
 The SplAdder directory setup
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -50,3 +50,14 @@ the software:
   the events (although all events are unique as a whole). For instance, if there are 3 possible
   donors paired with an acceptor in a gene on the positive strand, SplAdder will output all three
   possible pairs of alternative 3 prime splice site events. 
+
+Working with large datasets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SplAdder can be scaled to larger cohorts and has been run successfully on studies including as many
+as 10000 samples. Working on such large datasets still needs some consideration and planning and
+might require to call individual steps differently than how it is done for smaller sample sets.
+
+We provide more detailed information in the section describing how to handle :ref:`Large cohorts
+<spladder_cohorts>`.
+

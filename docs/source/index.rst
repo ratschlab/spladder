@@ -24,6 +24,7 @@ information <general_info>` first.
    installation.rst
    general.rst
    spladder_modes.rst
+   spladder_cohort.rst
    file_formats.rst
 
 

@@ -323,8 +323,8 @@ To adapt this threshold, e.g., to 250, the user can specify::
     
     spladder build ... --ase-edge-limit 250 ...
 
-The `test` mode
----------------
+The ``test`` mode
+-----------------
 
 This SplAdder mode is for differentially testing the usage of alternative event between two groups
 of samples. A prerequisite for this is that all samples that are involved in testing have been
@@ -357,6 +357,53 @@ By default all event types will be subjected to testing (if they were extracted 
 to testing). If only a specific event type or subset of types should be tested, e.g., exon skips and
 mutual exclusive exons, the same syntax as in build mode can be applied::
 
-    spladder test --event-types exon_skip,mutex_exons
+    spladder test ... --event-types exon_skip,mutex_exons ...
+
+If you have built the SplAdder graphs using non-default setting, for instance an adapted confidence
+level of 2, these parameters also need to be passed in ``test`` mode, so the correct input files are
+chosen from the project directory::
+
+    spladder test ... --confidence 2 ...
+
+By default expression outliers are removed in a preprocessing step. If you would like to keep genes
+that show outlier expression, this behavior can be disabled with::
+
+    spladder test ... --no-cap-exp-outliers
+
+Similarly, you can also switch on the capping of splice outliers, which is not done by default::
+
+    spladder test ... --cap-outliers ...
+
+Sometimes it is useful to assign labels to the two groups being tested, especially is multiple
+different groupings are analyzed. Groups A and B can be assigned arbitrary labels, such as `Mutant`
+and `Wildtype`,  using::
+
+    spladder test ... --labelA Mutant --labelB Wildtype
+
+In addition, you can also provide a separate tag that will be appended to the output directory name.
+This is useful, if several rounds of testing or different parameter choices are explored. To tag the
+output directory with `Round1` you would use::
+
+    spladder test ... --out-tag Round1 ...
+
+The ``test`` mode is capable of generating several summary plots for diagnosing issues and getting a
+better understanding of the data being tested. Per default, the plots are generated in `png` format,
+but other formats such as `pdf` or `eps` can be chosen as well. Per default, the diagnose plots are
+switched off. To generate them, for instance in `pdf` format, you would use::
+
+    spladder test ... --diagnose-plots --plot-format pdf ...
+
+If several compute cores are available, the computation of the testing can be accelerated by
+allowing parallel access. If 4 cores should be used::
+
+    spladder test ... --parallel 4 ...
+
+The ``viz`` mode
+----------------
+
+The purpose of this mode is to generate visual overviews of splicing graphs and events and the
+associated coverage available in the underlying RNA-Seq samples.
+
+.. note:: This mode is currently under construction and will change in the near future. 
 
 
