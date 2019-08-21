@@ -51,6 +51,34 @@ the software:
   donors paired with an acceptor in a gene on the positive strand, SplAdder will output all three
   possible pairs of alternative 3 prime splice site events. 
 
+Default parameters
+^^^^^^^^^^^^^^^^^^
+
+For most of the settings available in SplAdder default parameters are assumed. In a basic call in
+build-mode (``spladder build``), SplAdder requires at least three parameters: the annotation file
+(via ``-a``), a comma-separated list of alignment files (via ``-b``) and an output
+directory where results files are stored (via ``-o``)::
+
+    spladder build -o output_directory -b bam_file -a annotation_file
+
+This will run SplAdder in its default configuration, which consists of the following steps:
+
+- transform annotation into splicing graph representation
+- generate an augmented splicing graph for each alignment file by inferring and
+  adding the following elements:
+    - insert intron retentions
+    - insert cassette exons
+    - insert new intron edges
+- merge the augmented splicing graphs into a common splicing graph
+- extract the following alternative splicing events:
+    - exon skip
+    - intron retention
+    - alternative 3'/5' splice site
+    - multiple exon skip
+    - mutually exclusive exons
+- quantify all alternative splicing events on each of the provided alignment
+  files
+
 Working with large datasets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

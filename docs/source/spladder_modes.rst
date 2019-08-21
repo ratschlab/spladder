@@ -1,7 +1,7 @@
 .. _spladder_run_modes:
 
-SplAdder - run modes
-====================
+Run modes
+=========
 
 SplAdder has different run modes that reflect the different steps of a typical analysis pipeline:
 

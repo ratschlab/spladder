@@ -1,7 +1,7 @@
 .. _spladder_cohorts:
 
-SplAdder - Use on large cohorts
-===============================
+Use on large cohorts
+====================
 
 While SplAdder is often run on a smaller set of samples, it can also be applied to larger cohorts
 containing hundreds or thousands of samples. In this setting, it is often advisable to distribute
