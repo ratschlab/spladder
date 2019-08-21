@@ -66,6 +66,7 @@ This will run SplAdder in its default configuration, which consists of the follo
 - transform annotation into splicing graph representation
 - generate an augmented splicing graph for each alignment file by inferring and
   adding the following elements:
+
     - insert intron retentions
     - insert cassette exons
     - insert new intron edges

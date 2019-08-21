@@ -26,7 +26,7 @@ author = u'Andre Kahles'
 # The short X.Y version
 version = u''
 # The full version, including alpha/beta/rc tags
-release = u'2.3.0'
+release = u'2.2.3'
 
 
 # -- General configuration ---------------------------------------------------
@@ -75,7 +75,7 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
