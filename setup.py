@@ -45,6 +45,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ratschlab/spladder',
-    version='2.2.2',
+    version='2.2.3',
     zip_safe=False,
 )
