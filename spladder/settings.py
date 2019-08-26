@@ -222,11 +222,11 @@ def parse_args(options, identity='main'):
             options.samples.append([])
             for i in range(len(group)):
                 options.samples[-1].append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', group[i].split('/')[-1]))
-                options.strains[-1].append('%s%s' % (ref_tag, options.samples[-1][-1]))
+                options.strains[-1].append(options.samples[-1][-1])
             options.strains[-1] = sp.array(options.strains[-1])
-        if options.labels != '':
-            options.labels = options.labels.split(',')
-            assert (len(options.labels) == len(options.bam_fnames)), "Number of labels (%i given) and file names (%i given) needs to match!" % (len(options.labels), len(options.bam_fnames))
+        #if options.labels != '':
+        #    options.labels = options.labels.split(',')
+        #    assert (len(options.labels) == len(options.bam_fnames)), "Number of labels (%i given) and file names (%i given) needs to match!" % (len(options.labels), len(options.bam_fnames))
     else:
         for i in range(len(options.bam_fnames)):
             options.samples.append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', options.bam_fnames[i].split('/')[-1]))

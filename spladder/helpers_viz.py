@@ -68,7 +68,7 @@ def load_genes(options, idx=None, genes=None):
                 genes = sp.array(genes)
             else:
                 (genes, events) = pickle.load(open(gene_file, 'rb'), encoding='latin1')
-                genes = genes[tuple(idx)]
+                genes = genes[idx]
 
     return genes
 
@@ -83,6 +83,8 @@ def load_events(options, event_info):
         event_idx_file = re.sub(r'.pickle$', '', event_file) + '.idx.pickle'
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
         if not os.path.exists(event_db_file):
+            if options.verbose:
+                print('Indexing event files for faster future access')
             events = pickle.load(open(os.path.join(options.outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, options.confidence)),'rb'), encoding='latin1')
             for e in s_idx:
                 event_list.append(events[int(event_info[e, 1])])
@@ -93,8 +95,8 @@ def load_events(options, event_info):
                 events_handle.seek(offsets[int(event_info[e, 1])], 0)
                 event_list.append(pickle.load(events_handle))
 
-
     return event_list
+
 
 def get_gene_ids(options, gene_names=None):
 
@@ -137,15 +139,15 @@ def get_conf_events(options, gid):
     return sp.array(event_info, dtype='str')
 
 
-def get_seg_counts(options, gid):
+def get_seg_counts(gid, outdir, confidence, validate_sg):
 
-    if options.validate_sg:
-        IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.validated.count.hdf5' % (options.confidence)), 'r')
+    if validate_sg:
+        IN = h5py.File(os.path.join(outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.validated.count.hdf5' % confidence), 'r')
     else:
-        IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % (options.confidence)), 'r')
+        IN = h5py.File(os.path.join(outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % confidence), 'r')
     idx = sp.where(IN['gene_ids_edges'][:] == gid)[0]
     edges = IN['edges'][idx, :]
-    edge_idx = IN['edge_idx'][:][idx]
+    edge_idx = IN['edge_idx'][:][idx].astype('int')
     idx = sp.where(IN['gene_ids_segs'][:] == gid)[0]
     segments = IN['segments'][idx, :]
     strains = IN['strains'][:]
