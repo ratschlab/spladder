@@ -137,9 +137,9 @@ def parse_options(argv):
     parser_viz = subparsers.add_parser('viz', help='run mode to visualize graphs and events')
     required_viz = parser_viz.add_argument_group('MANDATORY')
     required_viz.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', default='-', required=True)
+    required_viz.add_argument('--range', dest='range', metavar="TYPE SPECS", nargs='+', action='append', help='defines which genomic range should be plotted', required=True)
     required_viz.add_argument('--track', dest='data_tracks', metavar="TYPE [SAMPLES [SAMPLES]]", nargs='+', action='append', help='defines which type of plot should be generated on which samples', required=True)
     optional_viz = parser_viz.add_argument_group('OPTIONAL')
-    optional_viz.add_argument('-b', '--bams', dest='bams', metavar='FILE1A,FILE2A:FILE1B,FILE2B,,...', help='alignment files in BAM format (comma separated list,colon separated groups)', default='-')
     optional_viz.add_argument('-g', '--genes', dest='genes', metavar='STR', help='genes to be plotted', nargs='*', default=None)
     optional_viz.add_argument('-e', '--events', dest='events', metavar='STR', help='events to be plotted', nargs='*', default=None)
     optional_viz.add_argument('--test-result', dest='test_result', metavar='INT', type=int, help='plot top k significant events from test', default=0)
@@ -152,11 +152,6 @@ def parse_options(argv):
     output_viz.add_argument('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
     output_viz.add_argument('--zoom-x', dest='zoom_x', metavar='percent_left,percent_right', help='zoom x axis from percent_left to percent_right [0.0,1.0]', default='0.0,1.0')
     output_viz.add_argument('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
-
-    user_viz = parser_viz.add_argument_group('USER')
-    user_viz.add_argument('-u', '--user', dest='user', action='store_true', help='apply user mode (experimental) [off]', default=False)
-    user_viz.add_argument('-T', '--transcripts', dest='transcripts', action='store_true', help='plot annotated transcripts', default=False)
-    user_viz.add_argument('-s', '--splicegraph', dest='splicegraph', action='store_true', help='plot splicegraph structure', default=False)
 
     general_viz = parser_viz.add_argument_group('GENERAL')
     general_viz.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)

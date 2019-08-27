@@ -9,6 +9,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import pickle
 import pdb
+from collections import namedtuple
 
 from . import settings
 from .viz.graph import *
@@ -26,11 +27,44 @@ sys.modules['modules.classes.gene'] = cgene
 sys.modules['modules.classes.splicegraph'] = csplicegraph
 sys.modules['modules.classes.segmentgraph'] = csegmentgraph
 
+EVENT_TYPES = ['exon_skip', 'intron_retention', 'alt_3prime', 'alt_5prime', 'mult_exon_skip', 'mutex_exons']
+def _add_gene_events(id_array, gene_id, event_type, outdir, confidence):
+    
+    if event_type == 'any':
+        curr_event_types = EVENT_TYPES
+    elif not event_type in EVENT_TYPES:
+        sys.stderr.write('ERROR: Given event type (%s) is not in the list of allowed event types (%s)\n' % (event_type, ','.join(EVENT_TYPES)))
+        sys.exit(1)
+    else:
+        curr_event_types = [event_type]
+
+    for t in curr_event_types:
+        id_array.extend([[t, _] for _ in get_event_ids_from_gene(gene_id, t, outdir, confidence)])
 
 def _add_ax(axes, fig, gs):
     sharex = None if len(axes) == 0 else axes[0]
     axes.append(fig.add_subplot(gs[len(axes), 0], sharex=sharex))
     return axes[-1]
+
+def _parse_event_info(id_array, gids, event_info, outdir, confidence):
+    for e in event_info:
+        
+        ### if there is no number in the event name, we assume all events of that type
+        if len([_ for _ in re.split(r'[._]', e) if _.isdigit()]) == 0:
+            ### get all relevant events from each gene
+            for gene_id in gids:
+                _add_gene_events(id_array, gene_id, e, outdir, confidence)
+        else:
+            ### normally parse event ID
+            eid = e.rsplit('.', 1)
+            if len(eid) == 1:
+                eid = e.rsplit('_', 1)
+                if len(eid) == 1:
+                    sys.stderr.write('ERROR: provided event ID "%s" could not be parsed, please check for correctness\n' % e)    
+                    sys.exit(1)
+            eid[-1] = int(eid[-1]) - 1
+            id_array.append(eid)
+
 
 def spladder_viz(options):
 
@@ -52,39 +86,43 @@ def spladder_viz(options):
             sys.stderr.write("ERROR: missing package for output format d3. Package mpld3 required")
             sys.exit(1)
 
-    ### collect elements to be plotted
-
-    ### genes
     ### load gene information
-    gene_names = get_gene_names(options)
-    gids = []
-    for g in options.genes:
-        gid = sp.where(gene_names == g)[0]
-        if gid.shape[0] == 0:
-            sys.stderr.write('ERROR: provided gene ID %s could not be found, please check for correctness\n' % g)
-            sys.exit(1)
-        assert gid.shape[0] == 1
-        gids.append(gid[0])
-    genes = load_genes(options, sp.array(gids))
-    gene_names = sp.array([_.name for _ in genes])
+    all_gene_names = get_gene_names(options)
 
-    ### events
+    ### get range information
+    gids = []
+    genes = []
+    gene_names = []
     eids = []
-    for e in options.events:
-        eid = e.rsplit('.', 1)
-        if len(eid) == 1:
-            eid = e.rsplit('_', 1)
-            if len(eid) == 1:
-                sys.stderr.write('ERROR: provided event ID %s could not be parsed, please check for correctness\n' % e)    
-                sys.exit(1)
-        eid[-1] = int(eid[-1]) - 1
-        eids.append(eid)
-    events = load_events(options, sp.array(eids))
+    events = []
+    RangeData = namedtuple('RangeData', ['chr', 'start', 'stop'])
+    coords = []
+    for range_info in options.range:
+        ### genes
+        if range_info[0] == 'gene':
+            for g in range_info[1:]:
+                gid = sp.where(all_gene_names == g)[0]
+                if gid.shape[0] == 0:
+                    sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g)
+                    sys.exit(1)
+                assert gid.shape[0] == 1
+                gids.append(gid[0])
+            genes = load_genes(options, sp.array(gids))
+            gene_names = sp.array([_.name for _ in genes])
+
+        ### events
+        if range_info[0] == 'event':
+            _parse_event_info(eids, gids, range_info[1:], options.outdir, options.confidence)
+            events = load_events(options, sp.array(eids))
+
+        ### coordinate ranges
+        if range_info[0] == 'coordinate':
+            coords.append(RangeData._make(range_info[1:4]))
 
     ### check that everthing is on the same chromosome
-    plotchrm = sp.unique([_.chr for _ in sp.r_[events, genes]])
+    plotchrm = sp.unique([_.chr for _ in sp.r_[events, genes, coords]])
     if plotchrm.shape[0] > 1:
-        sys.stderr.write('ERROR: the provided genes / events are on different chromosomes and canot be plotted jointly\n')
+        sys.stderr.write('ERROR: the provided gene/event/coordinate ranges are on different chromosomes and canot be plotted jointly\n')
         sys.exit(1)
 
     ### identify the plotting range
@@ -101,9 +139,15 @@ def spladder_viz(options):
         else:
             plotrange[0] = min(e.exons2.min(), plotrange[0])
             plotrange[1] = max(e.exons2.max(), plotrange[1])
+    for c in coords:
+        if not plotrange:
+            plotrange = [c.start, c.stop]
+        else:
+            plotrange[0] = min(c.start, plotrange[0])
+            plotrange[1] = max(c.stop, plotrange[1])
 
     if plotrange[1] - plotrange[0] > 1000000:
-        sys.stderr.write('ERROR: plotting area has a width of more than 1 000 000 positions (%i) - aborting\n' % (plotrange[1] - plotrange[0]))
+        sys.stderr.write('ERROR: plotting range has a width of more than 1 000 000 positions (%i) - aborting\n' % (plotrange[1] - plotrange[0]))
         sys.exit(1)
 
     ### data track
@@ -139,13 +183,27 @@ def spladder_viz(options):
                 gene.to_sparse()
             ax.set_title('Splicing graph for %s' % ','.join(gene_names))
         ### plot annotated transcripts
-        if data_track.type == 'transcripts':
+        if data_track.type == 'transcript':
             ax = _add_ax(axes, fig, gs)
             for gene in genes:
                 gene.from_sparse()
                 multiple(gene.exons, ax=ax, x_range=plotrange)
                 gene.to_sparse()
             ax.set_title('Annotated transcripts for %s' % ','.join(gene_names))
+        ### plot events
+        if data_track.type == 'event':
+            ax = _add_ax(axes, fig, gs)
+            ### no event ids given - plot the one from range
+            if len(data_track.event_info) == 0:
+                _events = events
+            ### events are given in the track - plot those instead
+            else:
+                _eids = []
+                _event_info = _parse_event_info(_eids, gids, data_track.event_info, options.outdir, options.confidence)
+                _events = load_events(options, sp.array(_eids))
+            event_list = [_ for event in _events for _ in [event.exons1, event.exons2]]
+            multiple(event_list, ax=ax, x_range=plotrange, color='green', padding=None) 
+            vax.clean_axis(ax, allx=True)
         ### plot coverage tracks
         if data_track.type == 'coverage':
             ax = _add_ax(axes, fig, gs)
@@ -154,9 +212,9 @@ def spladder_viz(options):
             for gene in genes:
                 caxes = []
                 labels = []
+                norm = plt.Normalize(0, len(data_track.bam_fnames))
                 for g, bam_group in enumerate(data_track.bam_fnames):
                     label = 'group %i' % (g + 1) if len(data_track.group_labels) == 0 else data_track.group_labels[g]
-                    norm = plt.Normalize(0, len(bam_group))
                     caxes.append(cov_from_bam(gene.chr, 
                                               plotrange[0], 
                                               plotrange[1], 
@@ -335,16 +393,4 @@ def plot_bam(options, gene, samples, labels, fig, axes, gs, xlim, cmap_cov, cmap
         ax.set_xlabel('')
 
     ax.legend(caxes, labels)
-
-
-def _plot_event(options, event_info, fig, axes, gs, xlim, padding=None):
-    """This function takes the event_id given in the options object and 
-    plots it into ax."""
-
-    axes.append(fig.add_subplot(gs[len(axes), 0]))
-    event_list = [_ for event in load_events(options, event_info) for _ in [event.exons1, event.exons2]]
-    multiple(event_list, ax=axes[-1], x_range=xlim, color='green', padding=padding) 
-    #ax.set_title('Alt event structure') # of %s' % options.event_id)
-    vax.clean_axis(axes[-1], allx=True)
-
 

@@ -97,6 +97,18 @@ def load_events(options, event_info):
 
     return event_list
 
+def get_event_ids_from_gene(gene_id, event_type, outdir, confidence):
+    
+    eids = []
+    IN = h5py.File(os.path.join(outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, confidence)), 'r')
+    if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
+        cidx = IN['conf_idx'][:]
+        gidx = sp.where(IN['gene_idx'][:] == gene_id)[0]
+        eids.extend(sp.intersect1d(cidx, gidx))
+    IN.close()
+
+    return eids
+
 
 def get_gene_ids(options, gene_names=None):
 

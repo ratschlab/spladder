@@ -164,18 +164,6 @@ def parse_args(options, identity='main'):
             if options.environment:
                 options.options_rproc['environment'] = options.environment
 
-    if identity == 'viz':
-
-        if options.bams != '-':
-            options.bam_fnames = options.bams.strip(':').split(':')
-            for g, group in enumerate(options.bam_fnames):
-                options.bam_fnames[g] = group.strip(',').split(',')
-                ### check existence of files
-                for fname in options.bam_fnames[g]:
-                    if not os.path.isfile(fname):
-                        print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
-                        sys.exit(2)
-
     if identity == 'test':
         if options.conditionA == '-':
             print('ERROR: At least one sample for condition A required', file=sys.stderr)
@@ -199,10 +187,6 @@ def parse_args(options, identity='main'):
     if len(options.bam_fnames) > 0:
         if identity == 'main' and options.bam_fnames[0].split('.')[-1] == 'txt':
             options.bam_fnames = [str(x) for x in sp.atleast_1d(sp.loadtxt(options.bam_fnames[0], dtype='str'))]
-        elif identity == 'viz':
-            for g, group in enumerate(options.bam_fnames):
-                if group[0].split('.')[-1] == 'txt':
-                    options.bam_fnames[g] = [str(x) for x in sp.atleast_1d(sp.loadtxt(group[0], dtype='str'))]
 
         ### check existence of alignment files
         for fname in flatten(options.bam_fnames):
@@ -216,18 +200,7 @@ def parse_args(options, identity='main'):
     ### assemble strain list
     options.samples = []
     options.strains = []
-    if identity in ['viz']:
-        for g, group in enumerate(options.bam_fnames):
-            options.strains.append([]) 
-            options.samples.append([])
-            for i in range(len(group)):
-                options.samples[-1].append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', group[i].split('/')[-1]))
-                options.strains[-1].append(options.samples[-1][-1])
-            options.strains[-1] = sp.array(options.strains[-1])
-        #if options.labels != '':
-        #    options.labels = options.labels.split(',')
-        #    assert (len(options.labels) == len(options.bam_fnames)), "Number of labels (%i given) and file names (%i given) needs to match!" % (len(options.labels), len(options.bam_fnames))
-    else:
+    if identity != 'viz':
         for i in range(len(options.bam_fnames)):
             options.samples.append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', options.bam_fnames[i].split('/')[-1]))
             options.strains.append('%s%s' % (ref_tag, options.samples[-1]))
