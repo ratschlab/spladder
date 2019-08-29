@@ -120,7 +120,8 @@ def parse_args(options, identity='main'):
 
     ref_tag = ''
     
-    options.event_types = options.event_types.strip(',').split(',')
+    if hasattr(options, 'event_types'):
+        options.event_types = options.event_types.strip(',').split(',')
 
     if not os.path.exists(options.outdir):
         print('WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir, file=sys.stderr)

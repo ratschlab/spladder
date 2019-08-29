@@ -132,7 +132,7 @@ def spladder_viz(options):
             plotrange = [g.start, g.stop]
         else:
             plotrange[0] = min(g.start, plotrange[0])
-            plotrange[1] = min(g.stop, plotrange[1])
+            plotrange[1] = max(g.stop, plotrange[1])
     for e in events:
         if not plotrange:
             plotrange = [e.exons2.min(), e.exons2.max()]
@@ -285,20 +285,6 @@ def spladder_viz(options):
 
     ### iterate over genes to plot
     #for gid in gids:
-    #    ### gather information about the gene we plot
-    #    gene = load_genes(options, idx=[gid[0]])[0]
-    #    if options.verbose:
-    #        print('plotting information for gene %s' % gene.name)
-    #    gene.from_sparse()
-    #    if gid[1] is not None:
-    #        event_info = [x[::-1] for x in re.split(r'[._]', gid[1][::-1], maxsplit=1)[::-1]]
-    #        event_info[1] = int(event_info[1]) - 1
-    #        event_info = sp.array(event_info, dtype='str')[sp.newaxis, :]
-    #        event_tag = '.%s' % gid[1]
-    #    ### get all confident events of the current gene
-    #    else:
-    #        event_info = get_conf_events(options, gid[0])
-
     #    ### go over different plotting options
     #    axes = []
     #    ### plot result of testing
@@ -306,26 +292,14 @@ def spladder_viz(options):
     #        fig = plt.figure(figsize = (9, 5), dpi=200)
     #        gs = gridspec.GridSpec(2, 1, height_ratios=[4, 1])
     #        _add_ax(fig, axes, gs)
-    #        _add_ax(fig, axes, gs)
     #        _plot_event(options, event_info, fig, axes[1], gs, None, padding=100)
     #        start, stop = axes[1].get_xlim()
     #        plot_bam(options, gene, options.bam_fnames, fig, axes[0], gs, None, cmap_cov, cmap_edg, single=False, sharex=axes[1], start=int(start), stop=int(stop))
-
-    #    ### plot custom layout
-    #    else:
-    #        ### set defaults
-    #        if not options.user:
-    #            options.splicegraph = True
-    #            options.transcripts = True
 
     #        if options.format == 'd3':
     #            fig = plt.figure(figsize = (12, 2*rows), dpi=100)
     #        else:
     #            fig = plt.figure(figsize = (18, 3*rows), dpi=200)
-
-    #        xlim = None
-    #        ### plot structure of a single given event
-    #        _plot_event(options, event_info, fig, axes, gs, xlim)
 
     #    ### we only need to adapt the zoom for one axis object - as we share the x
     #    zoom_x = [float(x) for x in options.zoom_x.split(',')]

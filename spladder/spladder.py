@@ -140,12 +140,9 @@ def parse_options(argv):
     required_viz.add_argument('--range', dest='range', metavar="TYPE SPECS", nargs='+', action='append', help='defines which genomic range should be plotted', required=True)
     required_viz.add_argument('--track', dest='data_tracks', metavar="TYPE [SAMPLES [SAMPLES]]", nargs='+', action='append', help='defines which type of plot should be generated on which samples', required=True)
     optional_viz = parser_viz.add_argument_group('OPTIONAL')
-    optional_viz.add_argument('-g', '--genes', dest='genes', metavar='STR', help='genes to be plotted', nargs='*', default=None)
-    optional_viz.add_argument('-e', '--events', dest='events', metavar='STR', help='events to be plotted', nargs='*', default=None)
     optional_viz.add_argument('--test-result', dest='test_result', metavar='INT', type=int, help='plot top k significant events from test', default=0)
     optional_viz.add_argument('--test-labels', dest='test_labels', metavar='STR', type=str, help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
     optional_viz.add_argument('--testdir', dest='testdir', metavar='DIR', help='directory to testing output, if different from spladder outdir', default='-')
-    optional_viz.add_argument('-t', '--event-types', dest='event_types', metavar='EVENT1,EVENT2,...', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
 
     output_viz = parser_viz.add_argument_group('OUTPUT')
     output_viz.add_argument('-m', '--mincount', dest='mincount', metavar='INT', type=int, help='minimum count of introns to be displayed in coverage plot [0]', default=0)
