@@ -115,7 +115,7 @@ Alternatively, a text file, e.g., ``alignment_list.txt``, can be provided. This 
 absolute path to one alignment file per line. The filename has to end in ``.txt``. SplAdder can then
 be invoked with::
     
-    spladder build --bames alignment_list.txt
+    spladder build --bams alignment_list.txt
 
 **Alignment**
     By default, SplAdder only uses primary alignments (in SAM/BAM the ones not carrying the 256
@@ -404,6 +404,53 @@ The ``viz`` mode
 The purpose of this mode is to generate visual overviews of splicing graphs and events and the
 associated coverage available in the underlying RNA-Seq samples.
 
-.. note:: This mode is currently under construction and will change in the near future. 
+General organisation
+^^^^^^^^^^^^^^^^^^^^
+
+In general, the plots are organized as individual tracks, which can be stacked to visualize several
+sources of information jointly. Thereby, the order, number and repetition of tracks can be defined
+by the user. This allows for the generation of simple overview plots as well as for more complex
+multi-track visualizations. If more than one track is present, all tracks share the same joint
+coordinate system on the x axis.
+
+To determine what is plotted on which genomic range, the user has to provide two pieces of
+information: the `tracks` which are to be considered and the `range` we are operating on. Both
+information will now be discussed in more detail.
+
+Plotting range
+^^^^^^^^^^^^^^
+
+Using the ``--range`` parameter, the user determines which objects are currently considered. The
+syntax thereby is as follows::
+
+    spladder viz --range TYPE TYPE_INFO [TYPE_INFO ...]
+
+Here, ``TYPE`` describes one of the following possibilities:
+
+    - **gene** allows for providing at least one gene ID to be considered. If multiple genes should
+      be used, just list them after the ``gene`` keyword::
+
+        spladder viz --range gene geneID1 geneID2
+
+    - **event** allows for providing at least one event ID to be considered. If multiple events
+      should be used, just list them after the ``event`` keyword::
+
+        spladder viz --range event eventID1 eventID2
+
+    - **coordinate** allows for specifying a coordinate range to be used. Here, the type info
+      contains the list of coordinates to be used. As all ranges will be combined into a joint range
+      eventually, there is little use in providing several coordinate ranges, as the union would be
+      taken. For specifying the genome range of positions 100000 to 101000 on chr1, one would
+      specify::
+
+        spladder viz --range coordinate chr1 100000 101000
+
+.. note:: The ``--range`` parameter can be used multiple times to combine several ranges. Please note that all provided ranges will be combined into a joint range including all other ranges before plotting. Also note that plotting ranges on different chromosomes is currently not supported as well as plotting ranges exceeding a total length of 1 000 000 bases.
+
+Data tracks
+^^^^^^^^^^^
+
+This parameter is concerned with defining which data tracks should be visualized in the plot and in
+which order.
 
 
