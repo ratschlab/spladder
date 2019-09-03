@@ -425,7 +425,8 @@ syntax thereby is as follows::
 
     spladder viz --range TYPE TYPE_INFO [TYPE_INFO ...]
 
-Here, ``TYPE`` describes one of the following possibilities:
+Here, ``TYPE`` describes one of the following possibilities (where ``TYPE_INFO`` is specifically
+defined for each type):
 
     - **gene** allows for providing at least one gene ID to be considered. If multiple genes should
       be used, just list them after the ``gene`` keyword::
@@ -451,6 +452,56 @@ Data tracks
 ^^^^^^^^^^^
 
 This parameter is concerned with defining which data tracks should be visualized in the plot and in
-which order.
+which order. The general syntax for specific a data track is as follows::
 
+    spladder viz --track TYPE [TYPE_INFO [TYPE_INFO ...] ]
+
+Here, ``TYPE`` describes one of the following possibilities (where ``TYPE_INFO`` is specifically
+defined for each type):
+
+    - **splicegraph** shows the structure of the splicing graph for each of the given genes. If no
+      ``TYPE_INFO`` is provided, the gene(s) from the ``--range`` argument are used. To plot the
+      splicing graph for gene with ID `gene1`, one would use::
+        
+        spladder viz --track splicegraph gene1
+
+    - **transcript** shows the structure of all annotated transcripts for each of the given genes.
+      If not ``TYPE_INFO`` is provided, the gene(s) from the ``--range`` argument are used. To plot
+      the splicing graph for gene with ID `gene1`, one would use::
+
+        spladder viz --track transcript gene1
+
+    - **event** shows the structure of the given events, where each event can be specified by its
+      ID. For instance to show the structure of events `exon_skip_2` and `alt_3prime_5`, one can
+      use::
+
+        spladder viz --track event exon_skip_2 alt_3prime_5
+
+      If instead of an event ID a gene ID is given, then all events from that gene are shown.
+      Further, if not a specific event ID is given but only the event type, all events of that type
+      for the genes given in ``--range`` are shown. So to show all `exon_skip` events of gene
+      `gene1`, the correct call would be::
+
+        spladder viz --range gene gene1 --track event exon_skip
+
+    - **coverage** shows the coverage information in the given range for all samples provided in
+      ``TYPE_INFO``. To show coverage for samples `alignment1.bam` and `alignment2.bam`, one would
+      use::
+
+        spladder viz --track coverage alignment1.bam alignment2.bam
+
+      If the coverages of both files should be added up, one can also define them as a group::
+
+        spladder viz --track coverage alignment1.bam,alignment2.bam
+      
+      Sometimes it is useful to assign descriptive labels to single or multiple samples. Given the
+      samples `alignment1.bam` - `alignment4.bam`, which can be separated into groups `wildtype` and
+      `mutant`, respectively, one can use these labels in the plot as follows::
+
+        spladder viz --track coverage \
+                             wildtype:alignment1.bam,alignment2.bam \
+                             mutant:alignment3.bam,alignment4.bam
+
+    - **segments** shows the coverage information in the given range as internally used by SplAdder
+      in the splicing graph, quantifying each exonic segment. The usage is analog to ``--coverage``. 
 
