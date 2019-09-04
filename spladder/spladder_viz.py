@@ -208,9 +208,8 @@ def spladder_viz(options):
                 _parse_gene_info(range_info[1:], _genes, _gene_names, _gids, all_gene_names, options.outdir, options.confidence, options.validate_sg, options.verbose)
             for gene in _genes:
                 gene.from_sparse()
-                multiple(gene.exons, ax=ax, x_range=plotrange, labels=gene.transcripts)
+                multiple(gene.exons, ax=ax, x_range=plotrange, labels=gene.transcripts, grid=True)
                 gene.to_sparse()
-            #ax.set_title('Annotated transcripts for %s' % ','.join(_gene_names))
             ax.set_ylabel('transcripts')
             ax.get_yaxis().set_label_coords(1.02,0.5)
         ### plot events
@@ -224,7 +223,7 @@ def spladder_viz(options):
                 _eids, _events = [], []
                 _parse_event_info(_eids, gids, data_track.event_info, _events, options.outdir, options.confidence, options.verbose)
             event_list = [_ for event in _events for _ in [event.exons1, event.exons2]]
-            multiple(event_list, ax=ax, x_range=plotrange, color='green', padding=None) 
+            multiple(event_list, ax=ax, x_range=plotrange, color='green', padding=None, grid=True) 
             vax.clean_axis(ax, allx=True)
             ax.set_ylabel('events')
             ax.get_yaxis().set_label_coords(1.02,0.5)

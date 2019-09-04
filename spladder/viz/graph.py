@@ -84,7 +84,7 @@ def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='
     else:
         ax.set_xlim([max(start - 20, 0), stop + 20])
     ax.set_ylim([0, 40 + (exon_loc.shape[0] * 20)]) 
-    ax.set_yticklabels([])
+    ax.set_yticks([])
 
     ### highlight if requested
     if highlight is not None:

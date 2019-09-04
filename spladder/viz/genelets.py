@@ -38,14 +38,14 @@ def single(exons, ax=None, x_range=None, count=1, color='blue', grid=False, labe
     if not label is None:
         ax.text(exons.min() + (exons.max() - exons.min()) / 2, (count * -25) + 2, label, verticalalignment='center', horizontalalignment='center') 
 
-    ax.set_ylim(((count * -25) - 5, 0))
-
+    ### axes
     if x_range is None:
         ax.set_xlim((min_ex, max_ex))
     else:
         ax.set_xlim(x_range)
-
+    ax.set_ylim(((count * -25) - 5, 0))
     ax.set_yticks([])
+
 
 def multiple(exon_set, ax=None, x_range=None, color='blue', labels=None, grid=None, padding=None):
 

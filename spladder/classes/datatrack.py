@@ -6,7 +6,6 @@ import scipy as sp
 class DataTrack:
 
     TYPES = ['coverage', 'segments', 'splicegraph', 'event', 'transcript']
-    NODATA = ['splicegraph', 'transcript']
 
     def __init__(self, track_type, data):
         self.type = track_type
@@ -39,6 +38,4 @@ class DataTrack:
                     
                 self.strains.append(sp.array([re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', os.path.basename(_)) for _ in self.bam_fnames[-1]]))
                 self.group_labels.append(label)
-            if self.type in DataTrack.NODATA and len(self.strains) > 0:
-                sys.stderr.write('WARNING: Track types %s do not accept any further data items. Given samples will be ignored!\n' % ','.join(DataTrack.NODATA))
                 
