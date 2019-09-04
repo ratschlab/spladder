@@ -173,15 +173,11 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
     if cmap_edg is None:
         cmap_edg = plt.get_cmap('jet')
 
-    line_patches = []
-    fill_patches = []
-
     ### iterate over segments
     for j in range(gene.segmentgraph.segments.shape[1]):
         s = gene.segmentgraph.segments[:, j]
         ### iterate over samples
         for c, curr_idx in enumerate(sample_idx):
-            #for i in curr_idx:
             if log:
                 counts = sp.log10(seg_counts[j, curr_idx] + 1)
             else:
@@ -189,24 +185,12 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
 
             ### plot segment over all samples (including uncertainty region)
             if counts.shape[0] == 1:
-                ax.plot(s, [counts[0], counts[0]], '-', color=cmap_seg(norm(c)), linewidth=0.5)
-                #line_patches.append(mlines.Line2D(s, [counts[0], counts[0]], color=cmap_seg(norm(c)), linewidth=2, transform=None))
+                ax.plot(s, [counts[0], counts[0]], '-', color=cmap_seg(norm(c)), linewidth=1)
             elif counts.shape[0] > 1:
                 stderr = spst.sem(counts)
                 mean = sp.mean(counts)
-                #ax.fill_between(s, mean, mean+stderr, color=cmap_seg(norm(c)), alpha=0.3)
                 ax.fill_between(s, mean-stderr, mean+stderr, color=cmap_seg(norm(c)), alpha=0.2, edgecolor='none', linewidth=0)
-                #fill_patches.append(mpatches.Rectangle(s, mean-stderr, mean+stderr, color=cmap_seg(norm(c)), alpha=0.3, transform=None))
                 ax.plot(s, [mean, mean], '-', color=cmap_seg(norm(c)), linewidth=0.5)
-                #line_patches.append(mlines.Line2D(s, [mean, mean], color=cmap_seg(norm(c)), linewidth=2, transform=None))
-
-                #ax.plot(s, [mean+stderr, mean+stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
-                #ax.plot(s, [mean-stderr, mean-stderr], ':', color=cmap_seg(norm(c)), linewidth=1)
-
-    #for line in line_patches:
-    #    ax.add_line(line)
-    #for patch in fill_patches:
-    #    ax.add_patch(patch)
 
     ### iterate over intron edges
     for j in range(edge_idx.shape[0]):
@@ -228,7 +212,7 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
         ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
         ax.xaxis.grid(False)
 
-    ax.set_ylim([0, ax.get_ylim()[1]])
+    ax.set_ylim([0, int(seg_counts.max() * 1.1)])
 
 def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
                  bins=None, log=False, ax=None, ymax=0, outfile=None,
@@ -310,7 +294,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
 
     ax.fill_between(counts_x, bin_counts, facecolor=color_cov, edgecolor='none', alpha=0.5)
     #ax.set_xticklabels([str(int(x)) for x in sp.linspace(start, stop, num = len(ax.get_xticklabels()))])
-    ax.set_xlabel('Position on contig %s' % chrm)
+    #ax.set_xlabel('Position on contig %s' % chrm)
 
     ### draw strand
     if strand == '+':
@@ -327,9 +311,9 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
         ax.plot(0, marker_pos, 'or')
 
     if log:
-        ax.set_ylabel('Read Coverage (log10)')
+        ax.set_ylabel('coverage (log10)')
     else:
-        ax.set_ylabel('Read Coverage')
+        ax.set_ylabel('coverage')
 
     if ymax > 0:
         ax.set_ylim([0, ymax])

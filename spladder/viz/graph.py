@@ -10,7 +10,7 @@ import scipy as sp
 import pdb
 
 def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='magenta', node_color='b',
-               edge_color='#999999'):
+               edge_color='#999999', label=None):
     """Takes a graph given as vertices and edges and visualizes its structure"""
 
     start = vertices.ravel().min()
@@ -50,9 +50,6 @@ def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='
     if edges.shape[0] > 1:
         ii, jj = sp.where(sp.triu(edges) > 0)
         for i, j in zip(ii, jj):
-        #for i in range(vertices.shape[1]):
-            #for j in range(i + 1, vertices.shape[1]):
-                #if edges[i ,j] > 0:
             if vertices[0,i] < vertices[0,j]:
                 istart = vertices[1, i]
                 istop = vertices[0, j]
@@ -76,6 +73,10 @@ def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='
         ax.add_patch(node)
     for line in linelist:
         ax.add_line(line)
+
+    ### draw label
+    if label:
+        ax.text(start + (stop - start) / 2, 12, label, verticalalignment='center', horizontalalignment='center') 
 
     ### axes 
     if xlim is not None:

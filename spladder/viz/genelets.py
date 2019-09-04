@@ -36,7 +36,7 @@ def single(exons, ax=None, x_range=None, count=1, color='blue', grid=False, labe
 
     ### set genelet label
     if not label is None:
-        ax.text(exons[0][0] + 10, -5 - ((count - 1) * 25), label)
+        ax.text(exons.min() + (exons.max() - exons.min()) / 2, (count * -25) + 2, label, verticalalignment='center', horizontalalignment='center') 
 
     ax.set_ylim(((count * -25) - 5, 0))
 
@@ -45,7 +45,7 @@ def single(exons, ax=None, x_range=None, count=1, color='blue', grid=False, labe
     else:
         ax.set_xlim(x_range)
 
-    ax.get_yaxis().set_visible(False)
+    ax.set_yticks([])
 
 def multiple(exon_set, ax=None, x_range=None, color='blue', labels=None, grid=None, padding=None):
 

@@ -5,10 +5,11 @@ import re
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.style.use('seaborn')
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import pickle
-import pdb
+import copy
 from collections import namedtuple
 
 from . import settings
@@ -46,9 +47,9 @@ def _add_ax(axes, fig, gs):
     axes.append(fig.add_subplot(gs[len(axes), 0], sharex=sharex))
     return axes[-1]
 
-def _parse_event_info(id_array, gids, event_info, outdir, confidence):
+def _parse_event_info(id_array, gids, event_info, events, outdir, confidence, verbose):
+
     for e in event_info:
-        
         ### if there is no number in the event name, we assume all events of that type
         if len([_ for _ in re.split(r'[._]', e) if _.isdigit()]) == 0:
             ### get all relevant events from each gene
@@ -65,6 +66,18 @@ def _parse_event_info(id_array, gids, event_info, outdir, confidence):
             eid[-1] = int(eid[-1]) - 1
             id_array.append(eid)
 
+    events.extend(load_events(sp.array(id_array), outdir, confidence, verbose))
+
+def _parse_gene_info(track_info, genes, gene_names, gids, all_gene_names, outdir, confidence, validate_sg, verbose):
+    for g in track_info:
+        gid = sp.where(all_gene_names == g)[0]
+        if gid.shape[0] == 0:
+            sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g)
+            sys.exit(1)
+        assert gid.shape[0] == 1
+        gids.append(gid[0])
+    genes.extend(load_genes(outdir, confidence, validate_sg, verbose, sp.array(gids)))
+    gene_names.extend([_.name for _ in genes])
 
 def spladder_viz(options):
 
@@ -87,33 +100,22 @@ def spladder_viz(options):
             sys.exit(1)
 
     ### load gene information
-    all_gene_names = get_gene_names(options)
+    all_gene_names = get_gene_names(options.outdir, options.confidence, options.validate_sg, options.verbose)
+
 
     ### get range information
-    gids = []
-    genes = []
-    gene_names = []
-    eids = []
-    events = []
+    genes, gene_names, gids = [], [], []
+    events, eids = [], []
     RangeData = namedtuple('RangeData', ['chr', 'start', 'stop'])
     coords = []
     for range_info in options.range:
         ### genes
         if range_info[0] == 'gene':
-            for g in range_info[1:]:
-                gid = sp.where(all_gene_names == g)[0]
-                if gid.shape[0] == 0:
-                    sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g)
-                    sys.exit(1)
-                assert gid.shape[0] == 1
-                gids.append(gid[0])
-            genes = load_genes(options, sp.array(gids))
-            gene_names = sp.array([_.name for _ in genes])
+            _parse_gene_info(range_info[1:], genes, gene_names, gids, all_gene_names, options.outdir, options.confidence, options.validate_sg, options.verbose)
 
         ### events
         if range_info[0] == 'event':
-            _parse_event_info(eids, gids, range_info[1:], options.outdir, options.confidence)
-            events = load_events(options, sp.array(eids))
+            _parse_event_info(eids, gids, range_info[1:], events, options.outdir, options.confidence, options.verbose)
 
         ### coordinate ranges
         if range_info[0] == 'coordinate':
@@ -150,6 +152,12 @@ def spladder_viz(options):
         sys.stderr.write('ERROR: plotting range has a width of more than 1 000 000 positions (%i) - aborting\n' % (plotrange[1] - plotrange[0]))
         sys.exit(1)
 
+    ### slightly increase plotrange to get margins to left and right
+    plotrange_orig = copy.copy(plotrange)
+    delta = max(10, int((plotrange[1] - plotrange[0]) * 0.05))
+    plotrange[0] -= delta
+    plotrange[1] += delta
+
     ### data track
     data_tracks = []
     ### parse all elements to be plotted as data tracks
@@ -168,8 +176,8 @@ def spladder_viz(options):
         log_tag = '.log'
     event_tag = ''
 
-    gs = gridspec.GridSpec(len(data_tracks), 1)
-    fig = plt.figure(figsize = (10, 3 * len(data_tracks)), dpi=200)
+    gs = gridspec.GridSpec(len(data_tracks), 1, hspace=0.05)
+    fig = plt.figure(figsize = (10, 2 * len(data_tracks)), dpi=200)
 
     axes = []
     for i,data_track in enumerate(data_tracks):
@@ -177,19 +185,34 @@ def spladder_viz(options):
         ### plot splicing graph
         if data_track.type == 'splicegraph':
             ax = _add_ax(axes, fig, gs)
-            for gene in genes:
+            if len(data_track.event_info) == 0:
+                _genes = genes
+                _gene_names = gene_names
+            else:
+                _genes, _gene_names, _gids = [], [], []
+                _parse_gene_info(range_info[1:], _genes, _gene_names, _gids, all_gene_names, options.outdir, options.confidence, options.validate_sg, options.verbose)
+            for gene in _genes:
                 gene.from_sparse()
-                plot_graph(gene.splicegraph.vertices, gene.splicegraph.edges, ax, xlim=plotrange)
+                plot_graph(gene.splicegraph.vertices, gene.splicegraph.edges, ax, xlim=plotrange, label=gene.name)
                 gene.to_sparse()
-            ax.set_title('Splicing graph for %s' % ','.join(gene_names))
+            ax.set_ylabel('splicing graph')
+            ax.get_yaxis().set_label_coords(1.02,0.5)
         ### plot annotated transcripts
         if data_track.type == 'transcript':
             ax = _add_ax(axes, fig, gs)
-            for gene in genes:
+            if len(data_track.event_info) == 0:
+                _genes = genes
+                _gene_names = gene_names
+            else:
+                _genes, _gene_names, _gids = [], [], []
+                _parse_gene_info(range_info[1:], _genes, _gene_names, _gids, all_gene_names, options.outdir, options.confidence, options.validate_sg, options.verbose)
+            for gene in _genes:
                 gene.from_sparse()
-                multiple(gene.exons, ax=ax, x_range=plotrange)
+                multiple(gene.exons, ax=ax, x_range=plotrange, labels=gene.transcripts)
                 gene.to_sparse()
-            ax.set_title('Annotated transcripts for %s' % ','.join(gene_names))
+            #ax.set_title('Annotated transcripts for %s' % ','.join(_gene_names))
+            ax.set_ylabel('transcripts')
+            ax.get_yaxis().set_label_coords(1.02,0.5)
         ### plot events
         if data_track.type == 'event':
             ax = _add_ax(axes, fig, gs)
@@ -198,12 +221,13 @@ def spladder_viz(options):
                 _events = events
             ### events are given in the track - plot those instead
             else:
-                _eids = []
-                _event_info = _parse_event_info(_eids, gids, data_track.event_info, options.outdir, options.confidence)
-                _events = load_events(options, sp.array(_eids))
+                _eids, _events = [], []
+                _parse_event_info(_eids, gids, data_track.event_info, _events, options.outdir, options.confidence, options.verbose)
             event_list = [_ for event in _events for _ in [event.exons1, event.exons2]]
             multiple(event_list, ax=ax, x_range=plotrange, color='green', padding=None) 
             vax.clean_axis(ax, allx=True)
+            ax.set_ylabel('events')
+            ax.get_yaxis().set_label_coords(1.02,0.5)
         ### plot coverage tracks
         if data_track.type == 'coverage':
             ax = _add_ax(axes, fig, gs)
@@ -223,7 +247,6 @@ def spladder_viz(options):
                                               ax=ax, 
                                               intron_cnt=True,
                                               log=options.log, 
-                                              title='Expression', 
                                               xlim=plotrange, 
                                               color_cov=cmap_cov(norm(g)), 
                                               color_intron_edge= cmap_edg(norm(g)),
@@ -232,6 +255,7 @@ def spladder_viz(options):
                                               return_legend_handle=True, 
                                               label=label))
                     labels.append(label)
+            ax.get_yaxis().set_label_coords(1.02,0.5)
             if len(caxes) > 0:
                 ax.legend(caxes, labels)
         ### plot segment counts
@@ -245,7 +269,16 @@ def spladder_viz(options):
                     for track_strains in data_track.strains:
                         seg_sample_idx.append(sp.where(sp.in1d(strains, track_strains))[0])
                         cov_from_segments(genes[g], segments, edges, edge_idx, ax, xlim=plotrange, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
-            ax.set_title('Segment counts')
+            ax.get_yaxis().set_label_coords(1.02,0.5)
+            ax.set_ylabel('segment counts')
+
+    ### set x axis ticks
+    for i, ax in enumerate(axes):
+        if i == len(axes) - 1:
+            ax.set_xticks(sp.linspace(plotrange_orig[0], plotrange_orig[1], 10))
+            ax.set_xlabel('chromosome ' + plotchrm[0])
+        else:
+            ax.set_xticks([])
 
     ### the plotting happens on the results of spladder test
     ### the user chooses to plot the top k significant events
@@ -307,10 +340,10 @@ def spladder_viz(options):
     #    xdiff = xlim[1] - xlim[0]
     #    axes[0].set_xlim([xlim[0] + (zoom_x[0] * xdiff), xlim[0] + (zoom_x[1] * xdiff)])
 
-    for ax in axes:
-        vax.clean_axis(ax)
+    #for ax in axes:
+    #    vax.clean_axis(ax)
 
-    plt.tight_layout()
+    #plt.tight_layout()
     ### save plot into file
     if options.format == 'd3':
         out_fname = os.path.join(dirname, 'plots', 'gene_overview_C%i_%s%s%s.html' % (options.confidence, ''.join(gene_names), event_tag, log_tag))
