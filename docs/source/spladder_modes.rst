@@ -413,40 +413,13 @@ by the user. This allows for the generation of simple overview plots as well as 
 multi-track visualizations. If more than one track is present, all tracks share the same joint
 coordinate system on the x axis.
 
-To determine what is plotted on which genomic range, the user has to provide two pieces of
-information: the `tracks` which are to be considered and the `range` we are operating on. Both
-information will now be discussed in more detail.
+To determine which genomic range is plotted, all elements provided in ``--tracks`` are considered
+and a region including all of them is generated. This logic can be overruled using the ``--range``
+parameter to specify a specific range. However, there are also data track elements that do not
+necessarily carry any range information (such as a coverage track). In this case the ``--range``
+argument would be required. In the following, we will first explain the definition of tracks in more
+detail and will then provide some information on how to define a specific range.
 
-Plotting range
-^^^^^^^^^^^^^^
-
-Using the ``--range`` parameter, the user determines which objects are currently considered. The
-syntax thereby is as follows::
-
-    spladder viz --range TYPE TYPE_INFO [TYPE_INFO ...]
-
-Here, ``TYPE`` describes one of the following possibilities (where ``TYPE_INFO`` is specifically
-defined for each type):
-
-    - **gene** allows for providing at least one gene ID to be considered. If multiple genes should
-      be used, just list them after the ``gene`` keyword::
-
-        spladder viz --range gene geneID1 geneID2
-
-    - **event** allows for providing at least one event ID to be considered. If multiple events
-      should be used, just list them after the ``event`` keyword::
-
-        spladder viz --range event eventID1 eventID2
-
-    - **coordinate** allows for specifying a coordinate range to be used. Here, the type info
-      contains the list of coordinates to be used. As all ranges will be combined into a joint range
-      eventually, there is little use in providing several coordinate ranges, as the union would be
-      taken. For specifying the genome range of positions 100000 to 101000 on chr1, one would
-      specify::
-
-        spladder viz --range coordinate chr1 100000 101000
-
-.. note:: The ``--range`` parameter can be used multiple times to combine several ranges. Please note that all provided ranges will be combined into a joint range including all other ranges before plotting. Also note that plotting ranges on different chromosomes is currently not supported as well as plotting ranges exceeding a total length of 1 000 000 bases.
 
 Data tracks
 ^^^^^^^^^^^
@@ -477,12 +450,16 @@ defined for each type):
 
         spladder viz --track event exon_skip_2 alt_3prime_5
 
-      If instead of an event ID a gene ID is given, then all events from that gene are shown.
-      Further, if not a specific event ID is given but only the event type, all events of that type
+      If not a specific event ID is given but only the event type, all events of that type
       for the genes given in ``--range`` are shown. So to show all `exon_skip` events of gene
       `gene1`, the correct call would be::
 
         spladder viz --range gene gene1 --track event exon_skip
+
+      If all events of a given gene should be shown, then one can use the special keyword ``any`` to
+      achieve this::
+        
+        spladder viz --range gene gene1 --track event any
 
     - **coverage** shows the coverage information in the given range for all samples provided in
       ``TYPE_INFO``. To show coverage for samples `alignment1.bam` and `alignment2.bam`, one would
@@ -504,4 +481,56 @@ defined for each type):
 
     - **segments** shows the coverage information in the given range as internally used by SplAdder
       in the splicing graph, quantifying each exonic segment. The usage is analog to ``--coverage``. 
+
+Order of multiple tracks
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The order of the tracks is determined by the order they are provided in at the command line. This is
+true for both the order of keywords within a single ``--track`` parameter, as well as for the order
+of multiple ``--track`` parameters. 
+
+Let us consider the following example::
+    
+    spladder viz --range gene gene1 \
+                 --track coverage,segments alignment1.bam,alignment2.bam \
+                 --track event any \
+                 --track splicegraph \
+                 --track event exon_skip
+
+This plot will have **five** tracks: coverage, segments, events (any), splicing graph, events (only
+exon skips). This means, even the same track can be plotted multiple times, if requested.
+
+Plotting range
+^^^^^^^^^^^^^^
+
+Using the ``--range`` parameter, the user determines exactly which genomic range is to be considered
+for plotting the data tracks. This information can be provided as coordinates or the ID information
+of one or many elements. The usage of ``--range`` overrules any range determined based on the
+elements given via ``--tracks``. The syntax thereby is as follows::
+
+    spladder viz --range TYPE TYPE_INFO [TYPE_INFO ...]
+
+Here, ``TYPE`` describes one of the following possibilities (where ``TYPE_INFO`` is specifically
+defined for each type):
+
+    - **gene** allows for providing at least one gene ID to be considered. If multiple genes should
+      be used, just list them after the ``gene`` keyword::
+
+        spladder viz --range gene geneID1 geneID2
+
+    - **event** allows for providing at least one event ID to be considered. If multiple events
+      should be used, just list them after the ``event`` keyword::
+
+        spladder viz --range event eventID1 eventID2
+
+    - **coordinate** allows for specifying a coordinate range to be used. Here, the type info
+      contains the list of coordinates to be used. As all ranges will be combined into a joint range
+      eventually, there is little use in providing several coordinate ranges, as the union would be
+      taken. For specifying the genome range of positions 100000 to 101000 on chr1, one would
+      specify::
+
+        spladder viz --range coordinate chr1 100000 101000
+
+.. note:: The ``--range`` parameter can be used multiple times to combine several ranges. Please note that all provided ranges will be combined into a joint range including all other ranges before plotting. Also note that plotting ranges on different chromosomes is currently not supported as well as plotting ranges exceeding a total length of 1 000 000 bases.
+
 

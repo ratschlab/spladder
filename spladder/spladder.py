@@ -136,18 +136,13 @@ def parse_options(argv):
     ### RUN MODE "VIZ"
     parser_viz = subparsers.add_parser('viz', help='run mode to visualize graphs and events')
     required_viz = parser_viz.add_argument_group('MANDATORY')
-    required_viz.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', default='-', required=True)
-    required_viz.add_argument('--range', dest='range', metavar="TYPE SPECS", nargs='+', action='append', help='defines which genomic range should be plotted', required=True)
-    required_viz.add_argument('--track', dest='data_tracks', metavar="TYPE [SAMPLES [SAMPLES]]", nargs='+', action='append', help='defines which type of plot should be generated on which samples', required=True)
-    optional_viz = parser_viz.add_argument_group('OPTIONAL')
-    optional_viz.add_argument('--test-result', dest='test_result', metavar='INT', type=int, help='plot top k significant events from test', default=0)
-    optional_viz.add_argument('--test-labels', dest='test_labels', metavar='STR', type=str, help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
-    optional_viz.add_argument('--testdir', dest='testdir', metavar='DIR', help='directory to testing output, if different from spladder outdir', default='-')
+    required_viz.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='spladder directory containing the spladder results', required=True)
+    required_viz.add_argument('--range', dest='range', metavar="TYPE SPECS", nargs='+', action='append', help='defines which genomic range should be plotted', default=[])
+    required_viz.add_argument('--track', dest='data_tracks', metavar="TYPE [SAMPLES [SAMPLES]]", nargs='+', action='append', help='defines which type of plot should be generated on which samples', default=[])
 
     output_viz = parser_viz.add_argument_group('OUTPUT')
     output_viz.add_argument('-m', '--mincount', dest='mincount', metavar='INT', type=int, help='minimum count of introns to be displayed in coverage plot [0]', default=0)
     output_viz.add_argument('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
-    output_viz.add_argument('--zoom-x', dest='zoom_x', metavar='percent_left,percent_right', help='zoom x axis from percent_left to percent_right [0.0,1.0]', default='0.0,1.0')
     output_viz.add_argument('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
 
     general_viz = parser_viz.add_argument_group('GENERAL')
@@ -155,9 +150,15 @@ def parse_options(argv):
     general_viz.add_argument('-V', '--validate-sg', dest='validate_sg', action='store_true', help='validate splice graph [off]', default=False)
     general_viz.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='user verbose output mode [off]', default=False)
     general_viz.add_argument('-d', '--debug', dest='debug', action='store_true', help='use debug mode [off]', default=False)
+
+    optional_viz = parser_viz.add_argument_group('EXPERIMENTAL')
+    optional_viz.add_argument('--test', dest='test', metavar='[GROUP EVENT_TYPE TOPK]', nargs='+', action='append', help='plot results for differential test (optionally provide test group, event_type(s) and top k cutoff')
+    optional_viz.add_argument('--test-result', dest='test_result', metavar='INT', type=int, help='plot top k significant events from test', default=0)
+    optional_viz.add_argument('--test-labels', dest='test_labels', metavar='STR', type=str, help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
+    optional_viz.add_argument('--testdir', dest='testdir', metavar='DIR', help='directory to testing output, if different from spladder outdir', default='-')
     parser_viz.set_defaults(func=spladder_viz)
 
-    ### RUN MODE "VIZ"
+    ### RUN MODE "PYPROC"
     parser_pyproc = subparsers.add_parser('pyproc')
     required_pyproc = parser_pyproc.add_argument_group('MANDATORY')
     required_pyproc.add_argument('proc', metavar='PROC_FILE', help='pyproc pickle file', default='-')

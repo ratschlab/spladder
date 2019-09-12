@@ -5,7 +5,7 @@ import scipy as sp
 
 class DataTrack:
 
-    TYPES = ['coverage', 'segments', 'splicegraph', 'event', 'transcript']
+    TYPES = ['coverage', 'segments', 'splicegraph', 'event', 'transcript', 'gene']
 
     def __init__(self, track_type, data):
         self.type = track_type
@@ -30,11 +30,12 @@ class DataTrack:
                     self.bam_fnames.extend([str(x) for x in sp.atleast_1d(sp.loadtxt(data_items, dtype='str'))])
                 else:
                     self.bam_fnames.append(sp.array(data_items.split(',')))
-                for group in self.bam_fnames:
-                    for fname in group:
-                        if not os.path.isfile(fname):
-                            print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
-                            sys.exit(2)
+                if track_type == 'coverage':
+                    for group in self.bam_fnames:
+                        for fname in group:
+                            if not os.path.isfile(fname):
+                                print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
+                                sys.exit(2)
                     
                 self.strains.append(sp.array([re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', os.path.basename(_)) for _ in self.bam_fnames[-1]]))
                 self.group_labels.append(label)

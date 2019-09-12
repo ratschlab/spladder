@@ -150,10 +150,6 @@ def parse_args(options, identity='main'):
             print('ERROR: Annotation file %s can not be found\n\n' % options.annotation, file=sys.stderr)
             sys.exit(2)
         
-        #if options.refstrain != '-':
-        #    CFG['reference_strain'] = options.refstrain
-        #    ref_tag = '%s:' % options.refstrain
-
         ### pyproc options
         if options.pyproc:
             options.options_rproc = dict()
