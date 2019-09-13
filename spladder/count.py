@@ -119,7 +119,6 @@ def count_graph_coverage(genes, fn_bam=None, options=None, fn_out=None):
         return counts
 
 
-
 def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, qmode='all'):
 
     (genes, inserted) = pickle.load(open(fname_in, 'rb')) 
@@ -286,12 +285,16 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
 
             CIN = h5py.File(fname, 'r')
             if i == 0:
-                for k in ['segments', 'seg_pos', 'gene_ids_segs', 'edge_idx', 'gene_ids_edges', 'gene_names', 'seg_len']:
+                for k in ['gene_ids_segs', 'edge_idx', 'gene_ids_edges', 'gene_names', 'seg_len']:
                     h5fid.create_dataset(name=k, data=CIN[k][:], chunks=True, compression='gzip')
                 h5fid.create_dataset(name='edges', data=CIN['edges'][:], chunks=True, compression='gzip', maxshape=(CIN['edges'].shape[0], None))
+                h5fid.create_dataset(name='segments', data=CIN['segments'][:], chunks=True, compression='gzip', maxshape=(CIN['segments'].shape[0], None))
+                h5fid.create_dataset(name='seg_pos', data=CIN['seg_pos'][:], chunks=True, compression='gzip', maxshape=(CIN['seg_pos'].shape[0], None))
                 h5fid.create_dataset(name='strains', data=CIN['strains'][:], chunks=True, compression='gzip', maxshape=(None,))
             else:
                 appendToHDF5(h5fid, CIN['edges'][:], 'edges', faxis=1, daxis=1)
+                appendToHDF5(h5fid, CIN['segments'][:], 'segments', faxis=1, daxis=1)
+                appendToHDF5(h5fid, CIN['seg_pos'][:], 'seg_pos', faxis=1, daxis=1)
                 appendToHDF5(h5fid, CIN['strains'][:], 'strains', faxis=0, daxis=0)
         h5fid.close() 
 
