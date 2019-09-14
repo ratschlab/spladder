@@ -151,11 +151,8 @@ def parse_options(argv):
     general_viz.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='user verbose output mode [off]', default=False)
     general_viz.add_argument('-d', '--debug', dest='debug', action='store_true', help='use debug mode [off]', default=False)
 
-    optional_viz = parser_viz.add_argument_group('EXPERIMENTAL')
-    optional_viz.add_argument('--test', dest='test', metavar='[GROUP EVENT_TYPE TOPK]', nargs='+', action='append', help='plot results for differential test (optionally provide test group, event_type(s) and top k cutoff')
-    optional_viz.add_argument('--test-result', dest='test_result', metavar='INT', type=int, help='plot top k significant events from test', default=0)
-    optional_viz.add_argument('--test-labels', dest='test_labels', metavar='STR', type=str, help='labels used for the groups in the test (order matters) [condA:condB]', default='condA:condB')
-    optional_viz.add_argument('--testdir', dest='testdir', metavar='DIR', help='directory to testing output, if different from spladder outdir', default='-')
+    optional_viz = parser_viz.add_argument_group('EXPERIMENTAL - BETA STATE')
+    optional_viz.add_argument('--test', dest='test', metavar='[GROUP EVENT_TYPE TOP_K]', nargs='+', action='append', help='plot results for differential test (optionally provide test name, event_type(s) and top k cutoff')
     parser_viz.set_defaults(func=spladder_viz)
 
     ### RUN MODE "PYPROC"
