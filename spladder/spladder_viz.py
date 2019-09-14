@@ -79,7 +79,7 @@ def _parse_gene_info(track_info, genes, gene_names, gids, all_gene_names, outdir
     genes.extend(load_genes(outdir, confidence, validate_sg, verbose, sp.array(gids)))
     gene_names.extend([_.name for _ in genes])
 
-def _parse_test_info(test_info, outdir, confidence, data_tracks):
+def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
 
     ### get correct testing directory
     if len(test_info) == 0 or test_info[0] == 'default':
@@ -117,6 +117,7 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks):
             data_tracks[-1].append(['segments', ','.join(test_setup[1][idxA]), ','.join(test_setup[1][idxB])])
             data_tracks[-1].append(['event', sl[0]])
             data_tracks[-1].append(['gene', sl[1]]) 
+            test_tag.append('.difftest_%s' % sl[0])
 
 
 def _set_plotting_range(genes, events, coords):
@@ -183,26 +184,22 @@ def spladder_viz(options):
     ### Data Range
     RangeData = namedtuple('RangeData', ['chr', 'start', 'stop'])
 
-    ### plot log scale?
-    log_tag = ''
-    if options.log:
-        log_tag = '.log'
-    event_tag = ''
-
     plots = []
+    test_tag = []
     ### if the --test option was given, populate the options object with additional track fields
     ### otherwise just create a single plot
     if options.test is None:
         plots.append(options.data_tracks)
+        test_tag.append('')
     else:
         for test_info in options.test:
-            _parse_test_info(test_info, options.outdir, options.confidence, plots)
+            _parse_test_info(test_info, options.outdir, options.confidence, plots, test_tag)
         for plot_data in plots:
             if len(options.data_tracks) > 0:
                 plot_data.append(options.data_tracks)
 
     ### generate all plots to be completed
-    for plot_data in plots:
+    for p, plot_data in enumerate(plots):
     
         ### get range information
         genes, gene_names, gids = [], [], []
@@ -355,15 +352,12 @@ def spladder_viz(options):
 
         ### save plot into file
         if options.format == 'd3':
-            out_fname = os.path.join(dirname, 'plots', 'gene_overview_C%i_%s%s%s.html' % (options.confidence, ''.join(gene_names), event_tag, log_tag))
+            out_fname = os.path.join(dirname, 'plots', '%s%s.html' % (options.outbase, test_tag[p]))
             plugins.clear(fig)
             plugins.connect(fig, plugins.Zoom(enabled=True))
             mpld3.save_html(fig, open(out_fname, 'w'))
         else:
-            if options.test_result > 0:
-                out_fname = os.path.join(dirname, 'plots', 'gene_overview_C%i_%s%s%s.%s' % (options.confidence, ''.join(gene_names), event_tag, log_tag, options.format))
-            else:
-                out_fname = os.path.join(dirname, 'plots', 'gene_overview_C%i_%s%s%s.%s' % (options.confidence, ''.join(gene_names), event_tag, log_tag, options.format))
+            out_fname = os.path.join(dirname, 'plots', '%s%s.%s' % (options.outbase, test_tag[p], options.format))
             plt.savefig(out_fname, format=options.format, bbox_inches='tight')
         plt.close(fig)
 

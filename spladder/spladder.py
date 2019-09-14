@@ -141,6 +141,7 @@ def parse_options(argv):
     required_viz.add_argument('--track', dest='data_tracks', metavar="TYPE [SAMPLES [SAMPLES]]", nargs='+', action='append', help='defines which type of plot should be generated on which samples', default=[])
 
     output_viz = parser_viz.add_argument_group('OUTPUT')
+    output_viz.add_argument('-O', '--outbase', dest='outbase', metavar='NAME', help='name of the plot output file, excluding extension [gene_overview]. Will be placed in <outdir>/plots/', default='gene_overview')
     output_viz.add_argument('-m', '--mincount', dest='mincount', metavar='INT', type=int, help='minimum count of introns to be displayed in coverage plot [0]', default=0)
     output_viz.add_argument('-f', '--format', dest='format', metavar='STR', help='plot file format [pdf, png, d3]', default='pdf')
     output_viz.add_argument('-l', '--log', dest='log', action='store_true', help='plot coverage information in log scale [off]', default=False)
@@ -153,6 +154,7 @@ def parse_options(argv):
 
     optional_viz = parser_viz.add_argument_group('EXPERIMENTAL - BETA STATE')
     optional_viz.add_argument('--test', dest='test', metavar='[GROUP EVENT_TYPE TOP_K]', nargs='+', action='append', help='plot results for differential test (optionally provide test name, event_type(s) and top k cutoff')
+    optional_viz.add_argument('--testdir', dest='testdir', metavar='DIR', help='specify here in case testing results were written to different directory', default='-')
     parser_viz.set_defaults(func=spladder_viz)
 
     ### RUN MODE "PYPROC"
