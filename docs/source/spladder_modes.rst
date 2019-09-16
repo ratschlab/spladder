@@ -533,4 +533,66 @@ defined for each type):
 
 .. note:: The ``--range`` parameter can be used multiple times to combine several ranges. Please note that all provided ranges will be combined into a joint range including all other ranges before plotting. Also note that plotting ranges on different chromosomes is currently not supported as well as plotting ranges exceeding a total length of 1 000 000 bases.
 
+Output names and formats
+^^^^^^^^^^^^^^^^^^^^^^^^
 
+The user has to choose an output file name for each plot generated. This is specified as the
+basename of the output file, not containing the output directory or the file ending (which is chosen
+based on the format). The relevant parameter for this is ``--outbase`` (or short ``-O``). The
+default format of the plots is `pdf`, but any format supported by Matplotlib can be used. The
+following two calls for using the output basename `mytest` and the format `png` are equivalent::
+
+    spladder viz ... --outbase mytest --format png ...
+    spladder viz ... -O mytest --format png ...
+
+Please note that when using the special plotting mode ``--test`` and providing a test directory with
+``--testdir`` (see below), the plots are not placed in the SplAdder output directory but in the
+given test directory.
+
+
+Plotting test results
+^^^^^^^^^^^^^^^^^^^^^
+
+For visualizing events based on the outcome of the testing mode, there is a special track mode
+available, which is called ``--test``. In principle it works as the other tracks but follows a
+specific syntax of its elements. The general structure is::
+
+    --test TESTCASE EVENT_TYPE TOP_K
+
+While any of the elements is optional, the order is important and elements can only be omitted at
+the end but not in the middle.
+
+Depending on how the groups are named in testing mode, the output can be found in different
+subdirectories. So if you groups were `WT` and `MUT`, your output name used by SplAdder would be
+`testing_WT_vs_MUT`. However, if you did not use any group names, you can just use `default`.
+Following are two examples for using the default and the specific group mode, respectively::
+
+    spladder viz ... --test default ...
+    spladder viz ... --test testing_WT_vs_MUT ...
+
+The ``EVENT_TYPE`` specifies the test result of which event type should be considered. For each of the
+`k` top events, a separate plot will be generated. You can comma-separate multiple event types or
+write `any`, for all event types. Here two examples for plotting exon skips and intron retentions or
+any event, respectively::
+
+    spladder viz ... --test default exon_skip,intron_retention ...
+    spladder viz ... --test default any
+
+Lastly, the user can specify the number of top events (following the ranking in the testing result
+file) that should be plotted. If the value is omitted, the default of 1 is used. To plot for
+instance the top 5 exon skip events, one would use::
+
+    spladder viz ... --test default exon_skip 5
+
+This will create 5 separate plots. The output name will have descriptive suffixes, to tell them
+apart.
+
+It can happen that the output for testing with SplAdder was written into a user-defined directory
+and not into the default SplAdder output directory. In this case, the directory can be specified
+using ``--testdir``. For instance, if the test results can be found in `mytestingdir`, the SplAdder
+call would need to be adapted as follows::
+
+    spladder viz ... --test default exon_skip 5 --testdir mytestingdir
+
+As already noted earlier, this will also influence where the plots for the test are placed. For the
+above example, all plots will be written to ``mytestingdir/plots/``.

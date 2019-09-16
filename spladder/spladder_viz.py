@@ -91,8 +91,10 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
     ### get event types to be plotted
     if len(test_info) < 2:
         event_types = EVENT_TYPES 
+    elif test_info[1] == 'any':
+        event_types = EVENT_TYPES
     else:
-        event_types = [test_info[1]]
+        event_types = test_info[1].split(',')
 
     ### get number of top events to be plotted
     if len(test_info) < 3:
@@ -101,6 +103,14 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
         topk = int(test_info[2])
 
     for event_type in event_types:
+        
+        fname_pickle = os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (confidence, event_type))
+        fname_result = os.path.join(testdir, 'test_results_C%i_%s.tsv' % (confidence, event_type))
+        if not os.path.exists(fname_pickle) or not os.path.exists(fname_result):
+            if test_info[0] != 'any':
+                sys.stderr.write('WARNING: no test information found for event type %s.\nPlease make sure that test results for this event type are available. If this is the case, try to re-run the test using the latest version of SplAdder.\n' % (event_type))
+            continue
+
         ### load test setup
         test_setup = pickle.load(open(os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (confidence, event_type)), 'rb'), encoding='latin1')
         halfsize = test_setup[3].shape[0] // 2
