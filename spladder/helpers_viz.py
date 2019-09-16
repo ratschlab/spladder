@@ -169,3 +169,9 @@ def get_seg_counts(gid, outdir, confidence, validate_sg):
 
     return (segments, edges, edge_idx, strains)
 
+def stack_exons(exons1, exons2):
+    
+    if len(exons2.shape) > 1:
+        return sp.r_[exons1, exons2]
+    else:
+        return sp.r_[exons1, exons2[sp.newaxis, :]]

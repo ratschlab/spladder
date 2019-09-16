@@ -44,7 +44,7 @@ def _add_gene_events(id_array, gene_id, event_type, outdir, confidence):
 
 def _add_ax(axes, fig, gs):
     sharex = None if len(axes) == 0 else axes[0]
-    axes.append(fig.add_subplot(gs[len(axes), 0], sharex=sharex))
+    axes.append(fig.add_subplot(gs[len(axes), 0])) 
     return axes[-1]
 
 def _parse_event_info(id_array, gids, event_info, events, outdir, confidence, verbose):
@@ -248,7 +248,7 @@ def spladder_viz(options):
 
         ### set up figure and layout
         gs = gridspec.GridSpec(len(data_tracks), 1, hspace=0.05)
-        fig = plt.figure(figsize = (10, 2 * len(data_tracks)), dpi=200)
+        fig = plt.figure(figsize = (15, 3 * len(data_tracks)), dpi=200)
 
         axes = []
         for i,data_track in enumerate(data_tracks):
@@ -293,8 +293,9 @@ def spladder_viz(options):
                 else:
                     _eids, _events = [], []
                     _parse_event_info(_eids, gids, data_track.event_info, _events, options.outdir, options.confidence, options.verbose)
-                event_list = [_ for event in _events for _ in [event.exons1, event.exons2]]
-                multiple(event_list, ax=ax, x_range=plotrange, color='green', padding=None, grid=True) 
+                event_list = [[event.exons1, event.exons2] for event in _events]
+                labels = ['_'.join([_.event_type, str(_.id)]) for _ in _events]
+                multiple(event_list, ax=ax, x_range=plotrange, color='green', padding=None, grid=True, labels=labels) 
                 vax.clean_axis(ax, allx=True)
                 ax.set_ylabel('events')
                 ax.get_yaxis().set_label_coords(1.02,0.5)
@@ -345,7 +346,7 @@ def spladder_viz(options):
         ### set x axis ticks
         for i, ax in enumerate(axes):
             if i == len(axes) - 1:
-                ax.set_xticks(sp.linspace(plotrange_orig[0], plotrange_orig[1], 10))
+                ax.set_xticks(sp.around(sp.linspace(plotrange_orig[0], plotrange_orig[1], 10)))
                 ax.set_xlabel('chromosome ' + plotchrm[0])
             else:
                 ax.set_xticks([])
