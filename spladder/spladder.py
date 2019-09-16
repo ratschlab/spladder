@@ -161,6 +161,7 @@ def parse_options(argv):
     general_viz = parser_viz.add_argument_group('GENERAL')
     general_viz.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)
     general_viz.add_argument('-V', '--validate-sg', dest='validate_sg', action='store_true', help='validate splice graph [off]', default=False)
+    general_viz.add_argument('--validate-sg-count', dest='sg_min_edge_count', metavar='INT', type=int, help='confirmation threshold for edge to be kept [min(10, #samples)]', default=10)
     general_viz.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='user verbose output mode [off]', default=False)
     general_viz.add_argument('-d', '--debug', dest='debug', action='store_true', help='use debug mode [off]', default=False)
     parser_viz.set_defaults(func=spladder_viz)

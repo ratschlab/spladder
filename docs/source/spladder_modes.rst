@@ -251,6 +251,18 @@ be invoked with::
 
         spladder build ... --merge_strat merge_all ...
 
+**Validation**
+    SplAdder has the option to validate edges in the graph. This is relevant when working on larger
+    cohorts of samples. In this filtering step an edge is removed if it is not present in the
+    initial annotation and is supported in less than a certain number of input samples. By default
+    this threshold is 10 or the number of input samples in cases where less than 10 samples are
+    given. The threshold can be adapted using ``--validate-sg-count``. If nodes get orphaned
+    through the pruning process, they will be also removed from the graph. Following an example that
+    removes all edges from the graph that are present in less than 5 input samples::
+
+        spladder build ... --validate-sg --validate-sg-count 5 ...
+
+
 .. _graph_quantification:
 
 3 Graph quantification
