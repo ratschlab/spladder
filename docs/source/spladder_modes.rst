@@ -549,13 +549,14 @@ Please note that when using the special plotting mode ``--test`` and providing a
 ``--testdir`` (see below), the plots are not placed in the SplAdder output directory but in the
 given test directory.
 
-
 Plotting test results
 ^^^^^^^^^^^^^^^^^^^^^
 
 For visualizing events based on the outcome of the testing mode, there is a special track mode
 available, which is called ``--test``. In principle it works as the other tracks but follows a
-specific syntax of its elements. The general structure is::
+specific syntax of its elements. There is a default set of 2 tracks that is generated using this
+option: an event track showing the event of interest and a segements track showing the
+quantification of segments used for the test for each of the two groups. The general structure is::
 
     --test TESTCASE EVENT_TYPE TOP_K
 
@@ -596,3 +597,6 @@ call would need to be adapted as follows::
 
 As already noted earlier, this will also influence where the plots for the test are placed. For the
 above example, all plots will be written to ``mytestingdir/plots/``.
+
+.. note:: If in addition to ``--test`` further tracks are also defined with ``--track``, then each of the tracks is added to **each** of the plots generated for the test results.
+
