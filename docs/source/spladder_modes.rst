@@ -115,7 +115,7 @@ Alternatively, a text file, e.g., ``alignment_list.txt``, can be provided. This 
 absolute path to one alignment file per line. The filename has to end in ``.txt``. SplAdder can then
 be invoked with::
     
-    spladder build --bames alignment_list.txt
+    spladder build --bams alignment_list.txt
 
 **Alignment**
     By default, SplAdder only uses primary alignments (in SAM/BAM the ones not carrying the 256
@@ -250,6 +250,18 @@ be invoked with::
     try it nevertheless, you can do so with::
 
         spladder build ... --merge_strat merge_all ...
+
+**Validation**
+    SplAdder has the option to validate edges in the graph. This is relevant when working on larger
+    cohorts of samples. In this filtering step an edge is removed if it is not present in the
+    initial annotation and is supported in less than a certain number of input samples. By default
+    this threshold is 10 or the number of input samples in cases where less than 10 samples are
+    given. The threshold can be adapted using ``--validate-sg-count``. If nodes get orphaned
+    through the pruning process, they will be also removed from the graph. Following an example that
+    removes all edges from the graph that are present in less than 5 input samples::
+
+        spladder build ... --validate-sg --validate-sg-count 5 ...
+
 
 .. _graph_quantification:
 
@@ -404,6 +416,199 @@ The ``viz`` mode
 The purpose of this mode is to generate visual overviews of splicing graphs and events and the
 associated coverage available in the underlying RNA-Seq samples.
 
-.. note:: This mode is currently under construction and will change in the near future. 
+General organisation
+^^^^^^^^^^^^^^^^^^^^
 
+In general, the plots are organized as individual tracks, which can be stacked to visualize several
+sources of information jointly. Thereby, the order, number and repetition of tracks can be defined
+by the user. This allows for the generation of simple overview plots as well as for more complex
+multi-track visualizations. If more than one track is present, all tracks share the same joint
+coordinate system on the x axis.
+
+To determine which genomic range is plotted, all elements provided in ``--tracks`` are considered
+and a region including all of them is generated. This logic can be overruled using the ``--range``
+parameter to specify a specific range. However, there are also data track elements that do not
+necessarily carry any range information (such as a coverage track). In this case the ``--range``
+argument would be required. In the following, we will first explain the definition of tracks in more
+detail and will then provide some information on how to define a specific range.
+
+
+Data tracks
+^^^^^^^^^^^
+
+This parameter is concerned with defining which data tracks should be visualized in the plot and in
+which order. The general syntax for specific a data track is as follows::
+
+    spladder viz --track TYPE [TYPE_INFO [TYPE_INFO ...] ]
+
+Here, ``TYPE`` describes one of the following possibilities (where ``TYPE_INFO`` is specifically
+defined for each type):
+
+    - **splicegraph** shows the structure of the splicing graph for each of the given genes. If no
+      ``TYPE_INFO`` is provided, the gene(s) from the ``--range`` argument are used. To plot the
+      splicing graph for gene with ID `gene1`, one would use::
+        
+        spladder viz --track splicegraph gene1
+
+    - **transcript** shows the structure of all annotated transcripts for each of the given genes.
+      If not ``TYPE_INFO`` is provided, the gene(s) from the ``--range`` argument are used. To plot
+      the splicing graph for gene with ID `gene1`, one would use::
+
+        spladder viz --track transcript gene1
+
+    - **event** shows the structure of the given events, where each event can be specified by its
+      ID. For instance to show the structure of events `exon_skip_2` and `alt_3prime_5`, one can
+      use::
+
+        spladder viz --track event exon_skip_2 alt_3prime_5
+
+      If not a specific event ID is given but only the event type, all events of that type
+      for the genes given in ``--range`` are shown. So to show all `exon_skip` events of gene
+      `gene1`, the correct call would be::
+
+        spladder viz --range gene gene1 --track event exon_skip
+
+      If all events of a given gene should be shown, then one can use the special keyword ``any`` to
+      achieve this::
+        
+        spladder viz --range gene gene1 --track event any
+
+    - **coverage** shows the coverage information in the given range for all samples provided in
+      ``TYPE_INFO``. To show coverage for samples `alignment1.bam` and `alignment2.bam`, one would
+      use::
+
+        spladder viz --track coverage alignment1.bam alignment2.bam
+
+      If the coverages of both files should be added up, one can also define them as a group::
+
+        spladder viz --track coverage alignment1.bam,alignment2.bam
+      
+      Sometimes it is useful to assign descriptive labels to single or multiple samples. Given the
+      samples `alignment1.bam` - `alignment4.bam`, which can be separated into groups `wildtype` and
+      `mutant`, respectively, one can use these labels in the plot as follows::
+
+        spladder viz --track coverage \
+                             wildtype:alignment1.bam,alignment2.bam \
+                             mutant:alignment3.bam,alignment4.bam
+
+    - **segments** shows the coverage information in the given range as internally used by SplAdder
+      in the splicing graph, quantifying each exonic segment. The usage is analog to ``--coverage``. 
+
+Order of multiple tracks
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The order of the tracks is determined by the order they are provided in at the command line. This is
+true for both the order of keywords within a single ``--track`` parameter, as well as for the order
+of multiple ``--track`` parameters. 
+
+Let us consider the following example::
+    
+    spladder viz --range gene gene1 \
+                 --track coverage,segments alignment1.bam,alignment2.bam \
+                 --track event any \
+                 --track splicegraph \
+                 --track event exon_skip
+
+This plot will have **five** tracks: coverage, segments, events (any), splicing graph, events (only
+exon skips). This means, even the same track can be plotted multiple times, if requested.
+
+Plotting range
+^^^^^^^^^^^^^^
+
+Using the ``--range`` parameter, the user determines exactly which genomic range is to be considered
+for plotting the data tracks. This information can be provided as coordinates or the ID information
+of one or many elements. The usage of ``--range`` overrules any range determined based on the
+elements given via ``--tracks``. The syntax thereby is as follows::
+
+    spladder viz --range TYPE TYPE_INFO [TYPE_INFO ...]
+
+Here, ``TYPE`` describes one of the following possibilities (where ``TYPE_INFO`` is specifically
+defined for each type):
+
+    - **gene** allows for providing at least one gene ID to be considered. If multiple genes should
+      be used, just list them after the ``gene`` keyword::
+
+        spladder viz --range gene geneID1 geneID2
+
+    - **event** allows for providing at least one event ID to be considered. If multiple events
+      should be used, just list them after the ``event`` keyword::
+
+        spladder viz --range event eventID1 eventID2
+
+    - **coordinate** allows for specifying a coordinate range to be used. Here, the type info
+      contains the list of coordinates to be used. As all ranges will be combined into a joint range
+      eventually, there is little use in providing several coordinate ranges, as the union would be
+      taken. For specifying the genome range of positions 100000 to 101000 on chr1, one would
+      specify::
+
+        spladder viz --range coordinate chr1 100000 101000
+
+.. note:: The ``--range`` parameter can be used multiple times to combine several ranges. Please note that all provided ranges will be combined into a joint range including all other ranges before plotting. Also note that plotting ranges on different chromosomes is currently not supported as well as plotting ranges exceeding a total length of 1 000 000 bases.
+
+Output names and formats
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The user has to choose an output file name for each plot generated. This is specified as the
+basename of the output file, not containing the output directory or the file ending (which is chosen
+based on the format). The relevant parameter for this is ``--outbase`` (or short ``-O``). The
+default format of the plots is `pdf`, but any format supported by Matplotlib can be used. The
+following two calls for using the output basename `mytest` and the format `png` are equivalent::
+
+    spladder viz ... --outbase mytest --format png ...
+    spladder viz ... -O mytest --format png ...
+
+Please note that when using the special plotting mode ``--test`` and providing a test directory with
+``--testdir`` (see below), the plots are not placed in the SplAdder output directory but in the
+given test directory.
+
+Plotting test results
+^^^^^^^^^^^^^^^^^^^^^
+
+For visualizing events based on the outcome of the testing mode, there is a special track mode
+available, which is called ``--test``. In principle it works as the other tracks but follows a
+specific syntax of its elements. There is a default set of 2 tracks that is generated using this
+option: an event track showing the event of interest and a segements track showing the
+quantification of segments used for the test for each of the two groups. The general structure is::
+
+    --test TESTCASE EVENT_TYPE TOP_K
+
+While any of the elements is optional, the order is important and elements can only be omitted at
+the end but not in the middle.
+
+Depending on how the groups are named in testing mode, the output can be found in different
+subdirectories. So if you groups were `WT` and `MUT`, your output name used by SplAdder would be
+`testing_WT_vs_MUT`. However, if you did not use any group names, you can just use `default`.
+Following are two examples for using the default and the specific group mode, respectively::
+
+    spladder viz ... --test default ...
+    spladder viz ... --test testing_WT_vs_MUT ...
+
+The ``EVENT_TYPE`` specifies the test result of which event type should be considered. For each of the
+`k` top events, a separate plot will be generated. You can comma-separate multiple event types or
+write `any`, for all event types. Here two examples for plotting exon skips and intron retentions or
+any event, respectively::
+
+    spladder viz ... --test default exon_skip,intron_retention ...
+    spladder viz ... --test default any
+
+Lastly, the user can specify the number of top events (following the ranking in the testing result
+file) that should be plotted. If the value is omitted, the default of 1 is used. To plot for
+instance the top 5 exon skip events, one would use::
+
+    spladder viz ... --test default exon_skip 5
+
+This will create 5 separate plots. The output name will have descriptive suffixes, to tell them
+apart.
+
+It can happen that the output for testing with SplAdder was written into a user-defined directory
+and not into the default SplAdder output directory. In this case, the directory can be specified
+using ``--testdir``. For instance, if the test results can be found in `mytestingdir`, the SplAdder
+call would need to be adapted as follows::
+
+    spladder viz ... --test default exon_skip 5 --testdir mytestingdir
+
+As already noted earlier, this will also influence where the plots for the test are placed. For the
+above example, all plots will be written to ``mytestingdir/plots/``.
+
+.. note:: If in addition to ``--test`` further tracks are also defined with ``--track``, then each of the tracks is added to **each** of the plots generated for the test results.
 

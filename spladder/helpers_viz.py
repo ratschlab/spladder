@@ -7,6 +7,8 @@ import h5py
 import scipy as sp
 import re
 
+from . import helpers as hp
+
 ### return a gene object
 def get_gene(gene):
     """This function returns a deep copy of the gene object"""
@@ -14,23 +16,23 @@ def get_gene(gene):
     return copy.deepcopy(gene)
 
 
-def _get_gene_fname(options):
+def _get_gene_fname(outdir, confidence, validate_sg):
 
     val_tag = ''
-    if options.validate_sg:
+    if validate_sg:
         val_tag = '.validated'
-    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%s.merge_graphs%s.pickle' % (options.confidence, val_tag))
+    return os.path.join(outdir, 'spladder', 'genes_graph_conf%s.merge_graphs%s.pickle' % (confidence, val_tag))
 
 
-def get_gene_names(options):
+def get_gene_names(outdir, confidence, validate_sg, verbose):
     """Return the list of gene names used in this run"""
     
-    gene_file = _get_gene_fname(options)
+    gene_file = _get_gene_fname(outdir, confidence, validate_sg)
     gene_name_file = re.sub(r'.pickle$', '', gene_file) + '.names.pickle'
     if not os.path.exists(gene_name_file):
-        if options.verbose:
+        if verbose:
             print('Generating list of gene names for easy access')
-        tmp_genes = load_genes(options)
+        tmp_genes = load_genes(outdir, confidence, validate_sg, verbose)
         gene_names = sp.array([x.name.split('.')[0] for x in tmp_genes])
         pickle.dump(gene_names, open(gene_name_file, 'wb'), -1)
     else:
@@ -40,16 +42,16 @@ def get_gene_names(options):
 
 
 ### load the gene list in the right format
-def load_genes(options, idx=None, genes=None):
+def load_genes(outdir, confidence, validate_sg, verbose, idx=None, genes=None):
     """This is a helper function to load the gene data from file"""
 
     if not genes is None:
         if not idx is None:
             return copy.deepcopy(genes[idx])
     else:
-        gene_file = _get_gene_fname(options)
+        gene_file = _get_gene_fname(outdir, confidence, validate_sg)
 
-        if options.verbose:
+        if verbose:
             print('loading annotation information from %s' % gene_file)
         if idx is None:
             (genes, events) = pickle.load(open(gene_file, 'rb'), encoding='latin1')
@@ -68,22 +70,24 @@ def load_genes(options, idx=None, genes=None):
                 genes = sp.array(genes)
             else:
                 (genes, events) = pickle.load(open(gene_file, 'rb'), encoding='latin1')
-                genes = genes[tuple(idx)]
+                genes = genes[idx]
 
     return genes
 
 
 ### load a single event from file
-def load_events(options, event_info):
+def load_events(event_info, outdir, confidence, verbose):
 
     event_list = [] 
     for event_type in sp.unique(event_info[:, 0]):
-        event_file = os.path.join(options.outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, options.confidence))
+        event_file = os.path.join(outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, confidence))
         event_db_file = re.sub(r'.pickle$', '', event_file) + '.db.pickle'
         event_idx_file = re.sub(r'.pickle$', '', event_file) + '.idx.pickle'
         s_idx = sp.where(event_info[:, 0] == event_type)[0]
         if not os.path.exists(event_db_file):
-            events = pickle.load(open(os.path.join(options.outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, options.confidence)),'rb'), encoding='latin1')
+            if verbose:
+                print('Indexing event files for faster future access')
+            events = pickle.load(open(os.path.join(outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, confidence)),'rb'), encoding='latin1')
             for e in s_idx:
                 event_list.append(events[int(event_info[e, 1])])
         else:
@@ -93,8 +97,20 @@ def load_events(options, event_info):
                 events_handle.seek(offsets[int(event_info[e, 1])], 0)
                 event_list.append(pickle.load(events_handle))
 
-
     return event_list
+
+def get_event_ids_from_gene(gene_id, event_type, outdir, confidence):
+    
+    eids = []
+    IN = h5py.File(os.path.join(outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, confidence)), 'r')
+    if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
+        cidx = IN['conf_idx'][:]
+        gidx = sp.where(IN['gene_idx'][:] == gene_id)[0]
+        eids.extend(sp.intersect1d(cidx, gidx))
+    IN.close()
+
+    return eids
+
 
 def get_gene_ids(options, gene_names=None):
 
@@ -137,19 +153,25 @@ def get_conf_events(options, gid):
     return sp.array(event_info, dtype='str')
 
 
-def get_seg_counts(options, gid):
+def get_seg_counts(gid, outdir, confidence, validate_sg):
 
-    if options.validate_sg:
-        IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.validated.count.hdf5' % (options.confidence)), 'r')
+    if validate_sg:
+        IN = h5py.File(os.path.join(outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.validated.count.hdf5' % confidence), 'r')
     else:
-        IN = h5py.File(os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % (options.confidence)), 'r')
+        IN = h5py.File(os.path.join(outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % confidence), 'r')
     idx = sp.where(IN['gene_ids_edges'][:] == gid)[0]
     edges = IN['edges'][idx, :]
-    edge_idx = IN['edge_idx'][:][idx]
+    edge_idx = IN['edge_idx'][:][idx].astype('int')
     idx = sp.where(IN['gene_ids_segs'][:] == gid)[0]
     segments = IN['segments'][idx, :]
-    strains = IN['strains'][:]
+    strains = hp.decodeUTF8(IN['strains'][:])
     IN.close()
 
     return (segments, edges, edge_idx, strains)
 
+def stack_exons(exons1, exons2):
+    
+    if len(exons2.shape) > 1:
+        return sp.r_[exons1, exons2]
+    else:
+        return sp.r_[exons1, exons2[sp.newaxis, :]]

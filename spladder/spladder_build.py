@@ -162,7 +162,7 @@ def spladder(options):
         if options.merge == 'merge_graphs':
             run_merge(options)
 
-    if options.spladderfile != '-' and options.merge == 'merge_graphs' and options.validate_sg and not os.path.exists(fn_out_merge_val):
+    if options.spladderfile == '-' and options.merge == 'merge_graphs' and options.validate_sg and not os.path.exists(fn_out_merge_val):
         (genes, inserted) = pickle.load(open(fn_out_merge, 'rb'))
         genes = filter_by_edgecount(genes, options)
         pickle.dump((genes, inserted), open(fn_out_merge_val, 'wb'), -1)
