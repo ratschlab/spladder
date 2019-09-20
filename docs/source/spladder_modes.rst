@@ -320,7 +320,7 @@ SplAdder can currently extract 6 different types of alternative splicing events:
 - alternative 3' splice sites (`alt_3prime`)
 - alternative 5' splice sites (`alt_5prime`)
 - mutually exclusive exons (`mutex_exons`)
-- multiple (coordinated) exons skips (`mult_exon_skips`)
+- multiple (coordinated) exons skips (`mult_exon_skip`)
 
 Per default all events of all types are extracted from the graph. To specify a single type or a
 subset of types (e.g., exon skips and mutually exclusive exons only), the user can specify the short
