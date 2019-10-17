@@ -79,7 +79,7 @@ def parse_options(argv):
     graph.add_argument('--re-infer-sg', dest='infer_sg', action='store_true', help='re-infer splice graph [off] (advanced)', default=False)
     graph.add_argument('--no-re-infer-sg', dest='infer_sg', action='store_false', default=False)
     splice = parser_build.add_argument_group('SPLICE OPTIONS')
-    splice.add_argument('--event-types', dest='event_types', metavar='STRING', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mtex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
+    splice.add_argument('--event-types', dest='event_types', metavar='STRING', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
     splice.add_argument('--extract-ase', dest='extract_as', action='store_true', help='extract alternative splicing events [on]', default=True)
     splice.add_argument('--no-extract-ase', dest='extract_as', action='store_false', default=True)
     splice.add_argument('--ase-edge-limit', dest='detect_edge_limit', metavar='INT', help='max number of edges in the graph to still extract events for a gene [500]', default=500)

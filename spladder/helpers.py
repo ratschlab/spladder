@@ -178,3 +178,5 @@ def codeUTF8(s):
 def decodeUTF8(s):
     return s.view(sp.chararray).decode('utf-8')
 
+def isUTF8(s):
+    return hasattr(s.view(sp.chararray), 'decode')
