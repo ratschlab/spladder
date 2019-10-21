@@ -63,7 +63,7 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
     for ii,i in enumerate(event_idx):
         if verbose and ii > 0 and (ii+1) % 1000 == 0:
             print('%i/%i' % (ii+1, event_idx.shape[0]))
-        fd.write('%s\t%c\t%s_%i\t%s' % (events[i].chr, events[i].strand, events[i].event_type, events[i].id, events[i].gene_name[0]))
+        fd.write('%s\t%c\t%s.%i\t%s' % (events[i].chr, events[i].strand, events[i].event_type, events[i].id, events[i].gene_name[0]))
         if anno_fn is not None:
             a_idx = anno_names.index(events[i].gene_name[0])
             fd.write('\t%i\t%i' % (anno[a_idx].start, anno[a_idx].stop))
@@ -159,7 +159,7 @@ def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
         if sp.all(sp.isnan(psi)):
             continue
 
-        fd.write('%s_%s\t%s\t%s\t' % (event_type, events[i].id, event_type_dict[event_type], events[i].chr))
+        fd.write('%s.%s\t%s\t%s\t' % (event_type, events[i].id, event_type_dict[event_type], events[i].chr))
         if event_type == 'intron_retention':
             fd.write('%i:%i:%i:%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1]))
             fd.write('\t%i:%i' % (events[i].exons1[0, 1], events[i].exons1[1, 0]))
