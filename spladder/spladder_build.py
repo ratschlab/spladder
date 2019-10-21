@@ -212,6 +212,12 @@ def spladder(options):
         idxs = [0]
 
     for idx in idxs:
+        ### don't do any counting in chunked merge mode
+        if len(options.chunked_merge) > 0:
+            curr_level, max_level, chunk_start, chunk_end = [int(_) for _ in options.chunked_merge[0]]
+            if curr_level < max_level:
+                break
+
         ### get count output file
         if options.merge == 'single':
             fn_in_count = get_filename('fn_count_in', options, sample_idx=idx)
