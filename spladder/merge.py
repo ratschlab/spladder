@@ -3,6 +3,7 @@ import os
 import sys
 import pickle
 import math
+import glob
 
 if __package__ is None:
     __package__ = 'modules'
@@ -352,6 +353,7 @@ def run_merge(options):
         prune_tag = '_pruned'
 
     chunksize = 10
+    assert chunksize > 0
 
     fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir , options.confidence, options.merge, prune_tag)
     if options.validate_sg:
@@ -360,44 +362,55 @@ def run_merge(options):
         fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.count.hdf5' % (options.outdir, options.confidence, options.merge , prune_tag)
 
     if not os.path.exists(fn_out):
-        if not options.pyproc:
-            merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
-            merge_genes_by_splicegraph(options, merge_list=merge_list, fn_out=fn_out)
-        else:
+        if options.pyproc:
             jobinfo = []
             PAR = dict()
             PAR['options'] = options
-            if chunksize > 0:
-                levels = int(math.ceil(math.log(len(options.samples), chunksize)))
-                level_files = dict()
-                for level in range(1, levels + 1):
-                    print('merging files on level %i' % level)
-                    if level == 1:
-                        merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
+            levels = int(math.ceil(math.log(len(options.samples), chunksize)))
+            for level in range(1, levels + 1):
+                print('merging files on level %i' % level)
+                if level == 1:
+                    merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
+                else:
+                    merge_list = sp.array(level_files)
+                level_files = []
+                for c_idx in range(0, len(merge_list), chunksize):
+                    if level == levels:
+                        assert(len(merge_list) <= chunksize)
+                        fn = fn_out
                     else:
-                        merge_list = sp.array(level_files[level - 1])
-                    level_files[level] = []
-                    for c_idx in range(0, len(merge_list), chunksize):
-                        if level == levels:
-                            assert(len(merge_list) <= chunksize)
-                            fn = fn_out
-                        else:
-                            fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, level, c_idx, min(len(merge_list), c_idx + chunksize))
-                        level_files[level].append(fn)
-                        if os.path.exists(fn):
-                            continue
-                        else:
-                            print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + chunksize)))
-                            chunk_idx = sp.arange(c_idx, min(len(merge_list), c_idx + chunksize))
-                            PAR['merge_list'] = merge_list[chunk_idx]
-                            PAR['fn_out'] = fn
-                            jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, options.options_rproc, 40*60))
-                    rp.rproc_wait(jobinfo, 30, 1.0, -1)
-            else:
-                PAR['merge_list'] = options.samples
-                PAR['fn_out'] = fn_out
-                jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000, options.options_rproc, 40*60))
+                        fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, level, c_idx, min(len(merge_list), c_idx + chunksize))
+                    level_files.append(fn)
+                    if os.path.exists(fn):
+                        continue
+                    print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + chunksize)))
+                    chunk_idx = sp.arange(c_idx, min(len(merge_list), c_idx + chunksize))
+                    PAR['merge_list'] = merge_list[chunk_idx]
+                    PAR['fn_out'] = fn
+                    jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, options.options_rproc, 40*60))
                 rp.rproc_wait(jobinfo, 30, 1.0, -1)
+        elif len(options.chunked_merge) > 0:
+            curr_level, max_level, chunk_start, chunk_end = [int(_) for _ in options.chunked_merge[0]]
+            if curr_level == 1:
+                merge_list = sp.array(sorted(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples]))
+            else:
+                merge_list = sp.array(sorted(glob.glob('%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk*.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, curr_level - 1))))
+            chunk_end = min(len(merge_list), chunk_end)
+
+            if curr_level == max_level:
+                assert(len(merge_list) <= chunksize)
+                fn = fn_out
+            else:
+                fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, curr_level, chunk_start, chunk_end)
+            ### nothing to be done
+            if os.path.exists(fn):
+                print('%s already exists' % fn)
+                return
+            print('merging level %i chunk %i to %i' % (curr_level, chunk_start, chunk_end))
+            merge_genes_by_splicegraph(options, merge_list=merge_list[chunk_start:chunk_end], fn_out=fn)
+        else:
+            merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
+            merge_genes_by_splicegraph(options, merge_list=merge_list, fn_out=fn_out)
     else:
         print('File %s already exists!' % fn_out)
 
