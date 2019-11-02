@@ -175,8 +175,8 @@ def parse_args(options, identity='main'):
             options.conditionA = [str(x) for x in sp.loadtxt(options.conditionA[0], dtype='str')]
         if len(options.conditionB) > 0 and options.conditionB[0].lower().endswith('txt'):
             options.conditionB = [str(x) for x in sp.loadtxt(options.conditionB[0], dtype='str')]
-        options.conditionA = [re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[nN][pP][zZ]$', '', x) for x in options.conditionA]
-        options.conditionB = [re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[nN][pP][zZ]$', '', x) for x in options.conditionB]
+        options.conditionA = [re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[nN][pP][zZ]|.[cC][rR][aA][mM]$', '', x) for x in options.conditionA]
+        options.conditionB = [re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[nN][pP][zZ]|.[cC][rR][aA][mM]$', '', x) for x in options.conditionB]
         options.conditionA = [os.path.basename(x) for x in options.conditionA]
         options.conditionB = [os.path.basename(x) for x in options.conditionB]
 
@@ -190,16 +190,20 @@ def parse_args(options, identity='main'):
             if not os.path.isfile(fname):
                 print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                 sys.exit(2)
-            if not fname.endswith('.hdf5') and not os.path.isfile(fname + '.bai'):
+            if not re.search(r'.[bB][aA][mM]$', fname) is None and not os.path.isfile(fname + '.bai'):
                 print('ERROR: Input file %s is not indexed. %s.bai can not be found\n\n' % (fname, fname), file=sys.stderr)
                 sys.exit(2)
+            if not re.search(r'.[cC][rR][aA][mM]$', fname) is None and not (os.path.isfile(fname + '.crai') or os.path.isfile(re.sub(r'.[cC][rR][aA][mM]$', '.crai', fname))):
+                print('ERROR: Input file %s is not indexed. %s.crai can not be found\n\n' % (fname, fname), file=sys.stderr)
+                sys.exit(2)
+
 
     ### assemble strain list
     options.samples = []
     options.strains = []
     if identity != 'viz':
         for i in range(len(options.bam_fnames)):
-            options.samples.append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', options.bam_fnames[i].split('/')[-1]))
+            options.samples.append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[cC][rR][aA][mM]$', '', options.bam_fnames[i].split('/')[-1]))
             options.strains.append('%s%s' % (ref_tag, options.samples[-1]))
         options.strains = sp.array(options.strains)
 

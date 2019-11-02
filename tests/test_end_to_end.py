@@ -292,3 +292,64 @@ def test_end_to_end_testing(test_id, tmpdir):
     #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps'])
 
 
+@pytest.mark.parametrize("test_id", [
+    'events'
+])
+def test_end_to_end_testing_cram(test_id, tmpdir):
+    data_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'data')
+    result_dir = os.path.join(os.path.dirname(__file__), 'testcase_{}'.format(test_id), 'results_merged_cram')
+
+    out_dir = str(tmpdir)
+
+    my_args = ['spladder',
+               'build',
+               '-a', os.path.join(data_dir, 'testcase_{}_spladder.gtf'.format(test_id)),
+               '-o', out_dir,
+               '-b', ','.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+1)) for idx in range(20)]),
+               '--event-types', 'exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip',
+               '--merge-strat', 'merge_graphs',
+               '--extract-ase',
+               '--readlen', '50',
+               '--output-conf-icgc',
+               '--output-txt',
+               '--output-txt-conf',
+               '--output-gff3',
+               '--output-struc',
+               '--output-struc-conf',
+               '--output-bed',
+               '--output-conf-bed',
+               '--output-conf-tcga',
+               '--output-conf-icgc',
+               '-v']
+
+    spladder.main(my_args)
+
+    ### check that event files are identical
+    _check_files_spladder(result_dir, out_dir, prefix='merge_graphs')
+
+    bamsA = os.path.join(out_dir, 'cramlistA.txt')
+    bamsB = os.path.join(out_dir, 'cramlistB.txt')
+    with open(bamsA, 'w') as fh:
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+1)) for idx in range(10)]) + '\n')
+    with open(bamsB, 'w') as fh:
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+11)) for idx in range(10)]) + '\n')
+
+    my_args = ['spladder',
+               'test',
+               '-o', out_dir,
+               '-v',
+               '--diagnose-plots',
+               '-f', 'ps',
+               '--readlen', '50',
+               '--merge-strat', 'merge_graphs',
+               '--event-types', 'exon_skip',
+               '-a', bamsA,
+               '-b', bamsB]
+
+    spladder.main(my_args)
+
+    ### check that files are identical
+    _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv'])
+    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps'])
+
+

@@ -336,7 +336,14 @@ def init_regions(fn_bams, conf, options=None, sparse_bam=False):
                         processed.append((chrm, lens))
             else:
                 ### load bamfile
-                IN = pysam.Samfile(fn_bams[i], 'rb')
+                if not re.search(r'.[bB][aA][mM]$', fn_bams[i]) is None:
+                    IN = pysam.AlignmentFile(fn_bams[i], 'rb')
+                ### load cramfile
+                elif not re.search(r'.[cC][rR][aA][mM]$', fn_bams[i]) is None:
+                    IN = pysam.AlignmentFile(fn_bams[i], 'rc')
+                else:
+                    sys.stderr.write('Error: Unknown input alignment format for: %s\n' % fn_bams[i])
+                    sys.exit(1)
                 #header_info = IN.header['SQ']
                 header_info = parse_header(IN.text)['SQ']
                 

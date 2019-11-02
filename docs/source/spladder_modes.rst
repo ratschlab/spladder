@@ -117,6 +117,12 @@ be invoked with::
     
     spladder build --bams alignment_list.txt
 
+In its latest version, SplAdder also supports (on an experimental level) CRAM compressed alignment
+files as input. If you are using such files, in addition to the input filenames of the
+alignment files, also the path to the indexed reference sequence used for compression is required::
+
+    spladder build --bams alignment1.cram,alignment2.cram,... --cram-reference path/to/cram_ref.fa 
+
 **Alignment**
     By default, SplAdder only uses primary alignments (in SAM/BAM the ones not carrying the 256
     bit-flag). This can be changed by also allowing for secondary alignments to be used::
