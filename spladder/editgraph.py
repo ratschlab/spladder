@@ -316,7 +316,7 @@ def insert_intron_retentions(genes, options):
                                 tracks += tmp_
                     tracks = sp.asarray(tracks)
                 else:
-                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag)
+                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.cram_ref)
 
                 exon_coverage = sp.zeros((gg.splicegraph.vertices.shape[1],), dtype='float')
                 for k in range(gg.splicegraph.vertices.shape[1]):
@@ -577,7 +577,7 @@ def insert_intron_edges(genes, options):
                                         tracks += tmp_
                             tracks = sp.asarray(tracks)
                         else:
-                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag)
+                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.cram_ref)
 
                         ### TODO: make the following a configurable
                         if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
@@ -673,7 +673,7 @@ def insert_intron_edges(genes, options):
                                         tracks += tmp_
                             tracks = sp.asarray(tracks)
                         else:
-                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag)
+                            tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.cram_ref)
 
                         ### TODO: make configurable
                         if sp.mean(sp.sum(tracks, axis=0) > 10) < 0.9:
@@ -871,7 +871,7 @@ def insert_cassette_exons(genes, options):
                                 tracks += tmp_
                     tracks = sp.asarray(tracks)
                 else:
-                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag)
+                    tracks = add_reads_from_bam(sp.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.cram_ref)
 
                 ### add introns implied by splicegraph to the list
                 all_introns = gg.introns[si][:, :2]

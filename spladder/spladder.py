@@ -44,6 +44,7 @@ def parse_options(argv):
     inputs.add_argument('--filter-overlap-exons', dest='filter_overlap_exons', action='store_true', help='remove exons from annotation that overlap each other [off]', default=False)
     inputs.add_argument('--filter-overlap-transcripts', dest='filter_overlap_transcripts', action='store_true', help='remove transcripts from annotation that overlap each other [off]', default=False)
     inputs.add_argument('--ignore-mismatches', dest='ignore_mismatches', action='store_true', help='does not filter by edit operations - does not require NM in BAM [off]', default=False)
+    inputs.add_argument('--cram-reference', dest='cram_ref', metavar='FILE', help='reference genome used for CRAM file compression (only needed for CRAM input)', default='')
     outputs = parser_build.add_argument_group('OUTPUT OPTIONS')
     outputs.add_argument('-l', '--logfile', dest='logfile', metavar='FILE', help='log file name [stdout]', default='-')
     outputs.add_argument('--output-txt', dest='output_txt', action='store_true', help='outputs all events in txt format (can be big) [off]', default=False)
