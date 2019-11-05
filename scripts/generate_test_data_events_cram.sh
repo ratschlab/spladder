@@ -18,5 +18,5 @@ do
     echo $genome
     #samtools view -h -F4 $fname | cramtools cram -O ${outbase}.cram -n --capture-tags 'NM' -L '*8' -R $genome
     samtools view -T $genome -C -o ${outbase}.cram $fname
-    cramtools index -I ${outbase}.cram -O ${outbase}.crai
+    samtools index ${outbase}.cram 
 done
