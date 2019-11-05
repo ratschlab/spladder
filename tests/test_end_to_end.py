@@ -306,6 +306,7 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
                '-a', os.path.join(data_dir, 'testcase_{}_spladder.gtf'.format(test_id)),
                '-o', out_dir,
                '-b', ','.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+1)) for idx in range(20)]),
+               '--cram-reference', os.path.join(data_dir, 'genome.fa'),
                '--event-types', 'exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip',
                '--merge-strat', 'merge_graphs',
                '--extract-ase',

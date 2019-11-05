@@ -1,0 +1,19 @@
+##gff-version 3
+1	intron_retention	gene	1301	1600	.	+	.	ID=intron_retention.1;GeneName="gene3"
+1	intron_retention	mRNA	1301	1600	.	+	.	ID=intron_retention.1_iso1;Parent=intron_retention.1;GeneName="gene3"
+1	intron_retention	exon	1301	1400	.	+	.	Parent=intron_retention.1_iso1
+1	intron_retention	exon	1501	1600	.	+	.	Parent=intron_retention.1_iso1
+1	intron_retention	mRNA	1301	1600	.	+	.	ID=intron_retention.1_iso2;Parent=intron_retention.1;GeneName="gene3"
+1	intron_retention	exon	1301	1600	.	+	.	Parent=intron_retention.1_iso2
+1	intron_retention	gene	6301	6750	.	+	.	ID=intron_retention.3;GeneName="gene10"
+1	intron_retention	mRNA	6301	6750	.	+	.	ID=intron_retention.3_iso1;Parent=intron_retention.3;GeneName="gene10"
+1	intron_retention	exon	6301	6450	.	+	.	Parent=intron_retention.3_iso1
+1	intron_retention	exon	6601	6750	.	+	.	Parent=intron_retention.3_iso1
+1	intron_retention	mRNA	6301	6750	.	+	.	ID=intron_retention.3_iso2;Parent=intron_retention.3;GeneName="gene10"
+1	intron_retention	exon	6301	6750	.	+	.	Parent=intron_retention.3_iso2
+1	intron_retention	gene	6301	6750	.	+	.	ID=intron_retention.5;GeneName="gene10"
+1	intron_retention	mRNA	6301	6750	.	+	.	ID=intron_retention.5_iso1;Parent=intron_retention.5;GeneName="gene10"
+1	intron_retention	exon	6301	6500	.	+	.	Parent=intron_retention.5_iso1
+1	intron_retention	exon	6601	6750	.	+	.	Parent=intron_retention.5_iso1
+1	intron_retention	mRNA	6301	6750	.	+	.	ID=intron_retention.5_iso2;Parent=intron_retention.5;GeneName="gene10"
+1	intron_retention	exon	6301	6750	.	+	.	Parent=intron_retention.5_iso2
