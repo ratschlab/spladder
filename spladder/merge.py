@@ -9,6 +9,7 @@ if __package__ is None:
     __package__ = 'modules'
 
 from .utils import *
+from .classes.segmentgraph import Segmentgraph
 from .count import count_graph_coverage_wrapper
 from .editgraph import filter_by_edgecount
 from . import rproc as rp
@@ -330,6 +331,8 @@ def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
 
     for g in genes:
         g.label_alt()
+        if not g.segmentgraph.is_empty():
+            g.segmentgraph = Segmentgraph(g)
         g.to_sparse()
 
     ### re-sort genes by position - makes quantification more efficient
