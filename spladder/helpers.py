@@ -100,7 +100,7 @@ def get_filename(which, options, sample_idx=None):
     if which in ['fn_count_in', 'fn_count_out']:
         if options.spladderfile == '-':
             if options.merge == 'single':
-                fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.single.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
+                fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
             else:
                 if (options.qmode == 'single' and which != 'fn_count_in') or (options.qmode == 'collect' and which == 'fn_count_in'):
                     fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.pickle' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
