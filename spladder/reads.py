@@ -282,7 +282,7 @@ def add_reads_from_sparse_bam(gg, fname, contig, conf, types=None, filter=None, 
             if not filter is None:
                 IN = h5py.File(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fname) + 'conf_%i.' % conf + 'filt.' + 'hdf5', 'r')
             else:
-                IN = h5py.File(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fname) + 'hdf5')
+                IN = h5py.File(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fname) + 'hdf5', 'r')
 
         ### re-build sparse matrix
         cache['reads'] = scipy.sparse.coo_matrix((IN[contig + '_reads_dat'][:], (IN[contig + '_reads_row'][:], IN[contig + '_reads_col'][:])), shape=IN[contig + '_reads_shp'][:], dtype='uint32').tocsc()
