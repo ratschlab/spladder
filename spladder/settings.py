@@ -188,6 +188,8 @@ def parse_args(options, identity='main'):
         ### check existence of alignment files
         for fname in flatten(options.bam_fnames):
             if not os.path.isfile(fname):
+                if options.sparse_bam and os.path.isfile(re.sub(r'.[bB][aA][mM]$', '.hdf5', fname)):
+                    continue
                 print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                 sys.exit(2)
             if not re.search(r'.[bB][aA][mM]$', fname) is None and not os.path.isfile(fname + '.bai'):

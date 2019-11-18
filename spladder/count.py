@@ -71,9 +71,9 @@ def count_graph_coverage(genes, fn_bam=None, options=None, fn_out=None):
 
                 if options.sparse_bam and \
                   (fn_bam[f].endswith('npz') or \
-                   os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'npz') or \
+                   os.path.exists(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fn_bam[f]) + 'npz') or \
                    fn_bam[f].endswith('hdf5') or \
-                   os.path.exists(re.sub(r'bam$', '', fn_bam[f]) + 'hdf5')):
+                   os.path.exists(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fn_bam[f]) + 'hdf5')):
                     ### make sure that we query the right contig from cache
                     assert(gg.chr == contig)
                     (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, options.confidence, types=['exon_track','intron_list'], filter=None, cache=bam_cache)
@@ -290,7 +290,7 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
                 h5fid.create_dataset(name='edges', data=CIN['edges'][:], chunks=True, compression='gzip', maxshape=(CIN['edges'].shape[0], None))
                 h5fid.create_dataset(name='segments', data=CIN['segments'][:], chunks=True, compression='gzip', maxshape=(CIN['segments'].shape[0], None))
                 h5fid.create_dataset(name='seg_pos', data=CIN['seg_pos'][:], chunks=True, compression='gzip', maxshape=(CIN['seg_pos'].shape[0], None))
-                h5fid.create_dataset(name='strains', data=CIN['strains'][:], chunks=True, compression='gzip', maxshape=(None,))
+                h5fid.create_dataset(name='strains', data=CIN['strains'][:], dtype='|S255', chunks=True, compression='gzip', maxshape=(None,))
             else:
                 appendToHDF5(h5fid, CIN['edges'][:], 'edges', faxis=1, daxis=1)
                 appendToHDF5(h5fid, CIN['segments'][:], 'segments', faxis=1, daxis=1)
