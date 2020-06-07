@@ -1,7 +1,6 @@
 import pickle
-import scipy as sp
+import numpy as np
 import os
-import pdb
 
 
 if __package__ is None:
@@ -68,12 +67,12 @@ def collect_events(options):
             print('... done.')
             
             if not hasattr(options, 'chrm_lookup'):
-                options = append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), options)
+                options = append_chrms(np.unique(np.array([x.chr for x in genes], dtype='str')), options)
 
             ### detect intron retentions from splicegraph
             if do_intron_retention:
                 if not os.path.exists(fn_out_ir):
-                    idx_intron_reten, intron_intron_reten = detect_events(genes, 'intron_retention', sp.where([x.is_alt for x in genes])[0], options)
+                    idx_intron_reten, intron_intron_reten = detect_events(genes, 'intron_retention', np.where([x.is_alt for x in genes])[0], options)
                     for k in range(len(idx_intron_reten)):
                         gene = genes[idx_intron_reten[k]]
 
@@ -91,16 +90,16 @@ def collect_events(options):
 
                         ### build intron retention data structure
                         event = Event('intron_retention', gene.chr, gene.strand)
-                        event.strain = sp.array([strain])
-                        event.exons1 = sp.c_[exons[:, intron_intron_reten[k][0]], exons[:, intron_intron_reten[k][1]]].T
-                        event.exons2 = sp.array([exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]])
+                        event.strain = np.array([strain])
+                        event.exons1 = np.c_[exons[:, intron_intron_reten[k][0]], exons[:, intron_intron_reten[k][1]]].T
+                        event.exons2 = np.array([exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]])
                         #event.exons2 = exons[:, intron_intron_reten[k][2]]
-                        event.exons1_col = sp.c_[exons_col[:, intron_intron_reten[k][0]], exons_col[:, intron_intron_reten[k][1]]]
-                        event.exons2_col = sp.array([exons_col[:, intron_intron_reten[k][0]][0], exons_col[:, intron_intron_reten[k][1]][1]])
+                        event.exons1_col = np.c_[exons_col[:, intron_intron_reten[k][0]], exons_col[:, intron_intron_reten[k][1]]]
+                        event.exons2_col = np.array([exons_col[:, intron_intron_reten[k][0]][0], exons_col[:, intron_intron_reten[k][1]][1]])
                         #event.exons2_col = exons_col[:, intron_intron_reten[k][2]]
-                        event.gene_name = sp.array([gene.name])
+                        event.gene_name = np.array([gene.name])
                         event.gene_idx = idx_intron_reten[k]
-                        #event.transcript_type = sp.array([gene.transcript_type])
+                        #event.transcript_type = np.array([gene.transcript_type])
                         intron_reten_pos.append(event)
                 else:
                     print('%s already exists' % fn_out_ir)
@@ -108,7 +107,7 @@ def collect_events(options):
             ### detect exon_skips from splicegraph
             if do_exon_skip:
                 if not os.path.exists(fn_out_es):
-                    idx_exon_skip, exon_exon_skip = detect_events(genes, 'exon_skip', sp.where([x.is_alt for x in genes])[0], options)
+                    idx_exon_skip, exon_exon_skip = detect_events(genes, 'exon_skip', np.where([x.is_alt for x in genes])[0], options)
                     for k in range(len(idx_exon_skip)):
                         gene = genes[idx_exon_skip[k]]
 
@@ -126,14 +125,14 @@ def collect_events(options):
 
                         ### build exon skip data structure
                         event = Event('exon_skip', gene.chr, gene.strand)
-                        event.strain = sp.array([strain])
-                        event.exons1 = sp.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][2]]].T
-                        event.exons2 = sp.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][1]], exons[:, exon_exon_skip[k][2]]].T
-                        event.exons1_col = sp.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][2]]].T
-                        event.exons2_col = sp.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][1]], exons_col[:, exon_exon_skip[k][2]]].T
-                        event.gene_name = sp.array([gene.name])
+                        event.strain = np.array([strain])
+                        event.exons1 = np.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][2]]].T
+                        event.exons2 = np.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][1]], exons[:, exon_exon_skip[k][2]]].T
+                        event.exons1_col = np.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][2]]].T
+                        event.exons2_col = np.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][1]], exons_col[:, exon_exon_skip[k][2]]].T
+                        event.gene_name = np.array([gene.name])
                         event.gene_idx = idx_exon_skip[k]
-                        #event.transcript_type = sp.array([gene.transcript_type])
+                        #event.transcript_type = np.array([gene.transcript_type])
                         exon_skip_pos.append(event)
                 else:
                     print('%s already exists' % fn_out_es)
@@ -141,7 +140,7 @@ def collect_events(options):
             ### detect alternative intron_ends from splicegraph
             if do_alt_3prime or do_alt_5prime:
                 if not os.path.exists(fn_out_a5) or not os.path.exists(fn_out_a3):
-                    idx_alt_end_5prime, exon_alt_end_5prime, idx_alt_end_3prime, exon_alt_end_3prime = detect_events(genes, 'alt_prime', sp.where([x.is_alt for x in genes])[0], options)
+                    idx_alt_end_5prime, exon_alt_end_5prime, idx_alt_end_3prime, exon_alt_end_3prime = detect_events(genes, 'alt_prime', np.where([x.is_alt for x in genes])[0], options)
                     ### handle 5 prime events
                     for k in range(len(idx_alt_end_5prime)):
                         gene = genes[idx_alt_end_5prime[k]]
@@ -169,22 +168,22 @@ def collect_events(options):
                                     continue
 
                                 event = Event('alt_5prime', gene.chr, gene.strand)
-                                event.strain = sp.array([strain])
+                                event.strain = np.array([strain])
                                 if gene.strand == '+':
-                                    event.exons1 = sp.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
-                                    event.exons2 = sp.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
-                                    event.exons1_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons_col[:, exon_alt_end_5prime[k]['threeprimesite']]].T
-                                    event.exons2_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]], exons_col[:, exon_alt_end_5prime[k]['threeprimesite']]].T
+                                    event.exons1 = np.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
+                                    event.exons2 = np.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
+                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons_col[:, exon_alt_end_5prime[k]['threeprimesite']]].T
+                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]], exons_col[:, exon_alt_end_5prime[k]['threeprimesite']]].T
                                 else:
-                                    event.exons1 = sp.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite']], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
-                                    event.exons2 = sp.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite']], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
-                                    event.exons1_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
-                                    event.exons2_col = sp.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
-                                event.gene_name = sp.array([gene.name])
+                                    event.exons1 = np.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite']], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
+                                    event.exons2 = np.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite']], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
+                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
+                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
+                                event.gene_name = np.array([gene.name])
                                 event.gene_idx = idx_alt_end_5prime[k]
 
                                 ### assert that first isoform is always the shorter one
-                                if sp.sum(event.exons1[:, 1] - event.exons1[:, 0]) > sp.sum(event.exons2[:, 1] - event.exons2[:, 0]):
+                                if np.sum(event.exons1[:, 1] - event.exons1[:, 0]) > np.sum(event.exons2[:, 1] - event.exons2[:, 0]):
                                     event.exons1, event.exons2 = event.exons2, event.exons1
 
                                 if do_alt_5prime:
@@ -217,22 +216,22 @@ def collect_events(options):
                                     continue
 
                                 event = Event('alt_3prime', gene.chr, gene.strand)
-                                event.strain = sp.array([strain])
+                                event.strain = np.array([strain])
                                 if gene.strand == '+':
-                                    event.exons1 = sp.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
-                                    event.exons2 = sp.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
-                                    event.exons1_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
-                                    event.exons2_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]], exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
+                                    event.exons1 = np.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
+                                    event.exons2 = np.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
+                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
+                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]], exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
                                 else:
-                                    event.exons1 = sp.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite']], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
-                                    event.exons2 = sp.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite']], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
-                                    event.exons1_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
-                                    event.exons2_col = sp.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
-                                event.gene_name = sp.array([gene.name])
+                                    event.exons1 = np.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite']], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
+                                    event.exons2 = np.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite']], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
+                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
+                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
+                                event.gene_name = np.array([gene.name])
                                 event.gene_idx = idx_alt_end_3prime[k]
 
                                 ### assert that first isoform is always the shorter one
-                                if sp.sum(event.exons1[:, 1] - event.exons1[:, 0]) > sp.sum(event.exons2[:, 1] - event.exons2[:, 0]):
+                                if np.sum(event.exons1[:, 1] - event.exons1[:, 0]) > np.sum(event.exons2[:, 1] - event.exons2[:, 0]):
                                     event.exons1, event.exons2 = event.exons2, event.exons1
 
                                 if do_alt_3prime:
@@ -243,7 +242,7 @@ def collect_events(options):
             ### detect multiple_exon_skips from splicegraph
             if do_mult_exon_skip:
                 if not os.path.exists(fn_out_mes):
-                    idx_mult_exon_skip, exon_mult_exon_skip = detect_events(genes, 'mult_exon_skip', sp.where([x.is_alt for x in genes])[0], options)
+                    idx_mult_exon_skip, exon_mult_exon_skip = detect_events(genes, 'mult_exon_skip', np.where([x.is_alt for x in genes])[0], options)
                     for k, gidx in enumerate(idx_mult_exon_skip):
                         gene = genes[gidx] 
 
@@ -261,14 +260,14 @@ def collect_events(options):
 
                         ### build multiple exon skip data structure
                         event = Event('mult_exon_skip', gene.chr, gene.strand)
-                        event.strain = sp.array([strain])
-                        event.exons1 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][2]]].T
-                        event.exons2 = sp.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][1]], exons[:, exon_mult_exon_skip[k][2]]].T
-                        event.exons1_col = sp.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][2]]].T
-                        event.exons2_col = sp.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][1]], exons_col[:, exon_mult_exon_skip[k][2]]].T
-                        event.gene_name = sp.array([gene.name])
+                        event.strain = np.array([strain])
+                        event.exons1 = np.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][2]]].T
+                        event.exons2 = np.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][1]], exons[:, exon_mult_exon_skip[k][2]]].T
+                        event.exons1_col = np.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][2]]].T
+                        event.exons2_col = np.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][1]], exons_col[:, exon_mult_exon_skip[k][2]]].T
+                        event.gene_name = np.array([gene.name])
                         event.gene_idx = gidx
-                        #event.transcript_type = sp.array([gene.transcript_type])
+                        #event.transcript_type = np.array([gene.transcript_type])
                         mult_exon_skip_pos.append(event)
                 else:
                     print('%s already exists' % fn_out_mes)
@@ -276,7 +275,7 @@ def collect_events(options):
             ### detect mutually exclusive exons from splicegraph
             if do_mutex_exons:
                 if not os.path.exists(fn_out_mex):
-                    idx_mutex_exons, exon_mutex_exons = detect_events(genes, 'mutex_exons', sp.where([x.is_alt for x in genes])[0], options)
+                    idx_mutex_exons, exon_mutex_exons = detect_events(genes, 'mutex_exons', np.where([x.is_alt for x in genes])[0], options)
                     if len(idx_mutex_exons) > 0:
                         for k in range(len(exon_mutex_exons)):
                             gene = genes[idx_mutex_exons[k]]
@@ -296,19 +295,19 @@ def collect_events(options):
 
                             ### build data structure for mutually exclusive exons
                             event = Event('mutex_exons', gene.chr, gene.strand)
-                            event.strain = sp.array([strain])
-                            event.exons1 = sp.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][1]], exons[:, exon_mutex_exons[k][3]]].T
-                            event.exons2 = sp.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][2]], exons[:, exon_mutex_exons[k][3]]].T
-                            event.exons1_col = sp.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][1]], exons_col[:, exon_mutex_exons[k][3]]].T
-                            event.exons2_col = sp.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][2]], exons_col[:, exon_mutex_exons[k][3]]].T
-                            event.gene_name = sp.array([gene.name])
+                            event.strain = np.array([strain])
+                            event.exons1 = np.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][1]], exons[:, exon_mutex_exons[k][3]]].T
+                            event.exons2 = np.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][2]], exons[:, exon_mutex_exons[k][3]]].T
+                            event.exons1_col = np.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][1]], exons_col[:, exon_mutex_exons[k][3]]].T
+                            event.exons2_col = np.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][2]], exons_col[:, exon_mutex_exons[k][3]]].T
+                            event.gene_name = np.array([gene.name])
                             event.gene_idx = idx_mutex_exons[k]
 
                             ### assert that first isoform is always the shorter one
-                            if sp.sum(event.exons1[:, 1] - event.exons1[:, 0]) > sp.sum(event.exons2[:, 1] - event.exons2[:, 0]):
+                            if np.sum(event.exons1[:, 1] - event.exons1[:, 0]) > np.sum(event.exons2[:, 1] - event.exons2[:, 0]):
                                 event.exons1, event.exons2 = event.exons2, event.exons1
 
-                            #event.transcript_type = sp.array([gene.transcript_type])
+                            #event.transcript_type = np.array([gene.transcript_type])
                             mutex_exons_pos.append(event)
                 else:
                     print('%s already exists' % fn_out_mex)
@@ -324,7 +323,7 @@ def collect_events(options):
         if not os.path.exists(fn_out_ir):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(intron_reten_pos), options)
+            events_all = post_process_event_struct(np.array(intron_reten_pos), options)
 
             ### store intron retentions
             print('saving intron retentions to %s' % fn_out_ir)
@@ -339,7 +338,7 @@ def collect_events(options):
         if not os.path.exists(fn_out_es):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(exon_skip_pos), options)
+            events_all = post_process_event_struct(np.array(exon_skip_pos), options)
 
             ### store exon skip events
             print('saving exon skips to %s' % fn_out_es)
@@ -354,7 +353,7 @@ def collect_events(options):
         if not os.path.exists(fn_out_mes):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(mult_exon_skip_pos), options)
+            events_all = post_process_event_struct(np.array(mult_exon_skip_pos), options)
 
             ### store multiple exon skip events
             print('saving multiple exon skips to %s' % fn_out_mes)
@@ -369,7 +368,7 @@ def collect_events(options):
         if not os.path.exists(fn_out_a5):
           
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(alt_end_5prime_pos), options)
+            events_all = post_process_event_struct(np.array(alt_end_5prime_pos), options)
 
             ### curate alt prime events
             ### cut to min len, if alt exon lengths differ
@@ -390,7 +389,7 @@ def collect_events(options):
         if not os.path.exists(fn_out_a3):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(alt_end_3prime_pos), options)
+            events_all = post_process_event_struct(np.array(alt_end_3prime_pos), options)
 
             ### curate alt prime events
             ### cut to min len, if alt exon lengths differ
@@ -411,7 +410,7 @@ def collect_events(options):
         if not os.path.exists(fn_out_mex):
 
             ### post process event structure by sorting and making events unique
-            events_all = post_process_event_struct(sp.array(mutex_exons_pos), options)
+            events_all = post_process_event_struct(np.array(mutex_exons_pos), options)
 
             ### store multiple exon skip events
             print('saving mutually exclusive exons to %s' % fn_out_mex)

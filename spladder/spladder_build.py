@@ -13,7 +13,7 @@
 
 import sys
 import os
-import scipy as sp
+import numpy as np
 import pickle
 import h5py
 
@@ -84,7 +84,7 @@ def spladder(options):
             genes = pickle.load(open(options.annotation, 'rb'), encoding='latin1')
         else:
             genes = options.genes
-        options = init.append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), options)
+        options = init.append_chrms(np.unique(np.array([x.chr for x in genes], dtype='str')), options)
         del genes
 
         ### convert input BAMs to sparse arrays - filtered case

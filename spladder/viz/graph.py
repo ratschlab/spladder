@@ -6,8 +6,7 @@ import matplotlib.lines as mlines
 from matplotlib.collections import PatchCollection
 import pickle
 import sys
-import scipy as sp
-import pdb
+import numpy as np
 
 def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='magenta', node_color='b',
                edge_color='#999999', label=None):
@@ -22,21 +21,21 @@ def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='
 
     ### nodes
     patchlist = []
-    exon_num = sp.zeros((stop - start,))
-    exon_loc = sp.zeros((1, stop - start))
-    exon_level = sp.zeros((vertices.shape[1], )) #vertices.shape[1]))
+    exon_num = np.zeros((stop - start,))
+    exon_loc = np.zeros((1, stop - start))
+    exon_level = np.zeros((vertices.shape[1], )) #vertices.shape[1]))
     for i in range(vertices.shape[1]):
         cur_vertex = vertices[:, i] - start
         exon_num[cur_vertex[0]:cur_vertex[1]] += 1
-        if sp.all(exon_num < 2):
+        if np.all(exon_num < 2):
             exon_loc[0, :] = exon_num
             level = 0
         elif exon_num.max() > exon_loc.shape[0]:
-            exon_loc = sp.r_[exon_loc, sp.zeros((1, stop - start))]
+            exon_loc = np.r_[exon_loc, np.zeros((1, stop - start))]
             exon_loc[-1, cur_vertex[0]:cur_vertex[1]] = 1 
             level = exon_loc.shape[0] - 1
         elif exon_num.max() <= exon_loc.shape[0]:
-            idx = sp.where(sp.all(exon_loc[:, cur_vertex[0]:cur_vertex[1]] == 0, 1))[0].min() 
+            idx = np.where(np.all(exon_loc[:, cur_vertex[0]:cur_vertex[1]] == 0, 1))[0].min() 
             exon_loc[idx, cur_vertex[0]:cur_vertex[1]] = 1
             level = idx
        
@@ -46,9 +45,9 @@ def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='
 
     ### edges
     linelist = []
-    intron_loc = sp.zeros((1, stop - start))
+    intron_loc = np.zeros((1, stop - start))
     if edges.shape[0] > 1:
-        ii, jj = sp.where(sp.triu(edges) > 0)
+        ii, jj = np.where(np.triu(edges) > 0)
         for i, j in zip(ii, jj):
             if vertices[0,i] < vertices[0,j]:
                 istart = vertices[1, i]

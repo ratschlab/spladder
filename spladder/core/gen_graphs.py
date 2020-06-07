@@ -1,5 +1,4 @@
-import scipy as sp
-import pdb
+import numpy as np
 import sys
 import copy
 
@@ -51,9 +50,9 @@ def gen_graphs(genes, options=None):
         genes[ix].label_alt()
     if options.verbose:
         print('\nTotal genes:\t\t\t\t\t\t\t%d' % genes.shape[0], file=fd_log)
-        print('Total genes with alternative isoforms:\t\t\t\t%d' % sp.sum([x.is_alt for x in genes]), file=fd_log)
-        print('Total genes alternatively spliced:\t\t\t\t%d' % sp.sum([x.is_alt_spliced for x in genes]), file=fd_log)
-        print('Total constitutively spliced:\t\t\t\t\t%d' % (genes.shape[0] - sp.sum([x.is_alt_spliced for x in genes])), file=fd_log)
+        print('Total genes with alternative isoforms:\t\t\t\t%d' % np.sum([x.is_alt for x in genes]), file=fd_log)
+        print('Total genes alternatively spliced:\t\t\t\t%d' % np.sum([x.is_alt_spliced for x in genes]), file=fd_log)
+        print('Total constitutively spliced:\t\t\t\t\t%d' % (genes.shape[0] - np.sum([x.is_alt_spliced for x in genes])), file=fd_log)
 
     ### update terminals, start terminals in row 1, end terminals in row 2
     for i in range(genes.shape[0]):
@@ -66,11 +65,11 @@ def gen_graphs(genes, options=None):
     print('...done.\n', file=fd_log)
 
     ### sort genes by positions
-    s_idx = sp.argsort([x.stop for x in genes])
+    s_idx = np.argsort([x.stop for x in genes])
     genes = genes[s_idx]
-    s_idx = sp.argsort([x.start for x in genes], kind='mergesort')
+    s_idx = np.argsort([x.start for x in genes], kind='mergesort')
     genes = genes[s_idx]
-    s_idx = sp.argsort([x.chr for x in genes], kind='mergesort')
+    s_idx = np.argsort([x.chr for x in genes], kind='mergesort')
     genes = genes[s_idx]
 
     # append list of introns supported by RNA-seq data to 
@@ -125,7 +124,7 @@ def gen_graphs(genes, options=None):
         print('Removing short exons ...', file=fd_log)
         genes = remove_short_exons(genes, options)
         for i in range(genes.shape[0]):
-            if sp.any(genes[i].splicegraph.vertices[:, 1] - genes[i].splicegraph.vertices[:, 0] < options.remove_exons['min_exon_len_remove']):
+            if np.any(genes[i].splicegraph.vertices[:, 1] - genes[i].splicegraph.vertices[:, 0] < options.remove_exons['min_exon_len_remove']):
                 print('WARNING: could not remove all short exons', file=sys.stderr)
         print('... done.\n', file=fd_log)
 
@@ -150,9 +149,9 @@ def gen_graphs(genes, options=None):
             genes[i].introns = introns[i, :]
 
         print('Inserting new intron edges ...', file=fd_log)
-        chrms = sp.array([x.chr for x in genes], dtype='str')
-        for chr_idx in sp.unique(chrms):
-            genes_before = genes[sp.where(chrms == chr_idx)[0]]
+        chrms = np.array([x.chr for x in genes], dtype='str')
+        for chr_idx in np.unique(chrms):
+            genes_before = genes[np.where(chrms == chr_idx)[0]]
             tmp_genes = copy.deepcopy(genes_before)
             #
             ##############################################################################%%
@@ -177,8 +176,8 @@ def gen_graphs(genes, options=None):
                 if isequal(genes_mod, genes_before):
                     break
                 tmp_genes = genes_mod
-            chrms = sp.array([x.chr for x in genes], dtype='str')
-            genes[sp.where(chrms == chr_idx)[0]] = copy.deepcopy(genes_mod)
+            chrms = np.array([x.chr for x in genes], dtype='str')
+            genes[np.where(chrms == chr_idx)[0]] = copy.deepcopy(genes_mod)
         print('... done.\n', file=fd_log)
 
     print('Re-labeleling new alternative genes ...', file=fd_log)

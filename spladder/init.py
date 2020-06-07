@@ -2,7 +2,7 @@ import sys
 import pickle
 import os
 import pysam
-import scipy as sp
+import numpy as np
 import h5py
 import re
 
@@ -72,7 +72,7 @@ def init_genes_gtf(options):
             genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
             chrms.append(sl[0])
 
-    options = append_chrms(sp.sort(sp.unique(chrms)), options)
+    options = append_chrms(np.sort(np.unique(chrms)), options)
 
     counter = 1
     warn_infer_count = 0
@@ -129,7 +129,7 @@ def init_genes_gtf(options):
                 t_idx = len(genes[gene_id].transcripts)
                 genes[gene_id].transcripts.append(trans_id)
                 inferred_genes = True
-            genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
+            genes[gene_id].add_exon(np.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
 
     ### post-process in case we have inferred genes
     if warn_infer_count >= 5:
@@ -146,7 +146,7 @@ def init_genes_gtf(options):
         genes[gene].splicegraph = Splicegraph(genes[gene])
 
     ### convert to scipy array
-    genes = sp.array([genes[gene] for gene in genes], dtype='object')
+    genes = np.array([genes[gene] for gene in genes], dtype='object')
 
     ### check for consistency and validity of genes
     genes = check_annotation(options, genes)
@@ -218,7 +218,7 @@ def init_genes_gff3(options):
             genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2])
             chrms.append(sl[0])
 
-    options = append_chrms(sp.sort(sp.unique(chrms)), options)
+    options = append_chrms(np.sort(np.unique(chrms)), options)
 
     counter = 1
     for line in open(options.annotation, 'r'):
@@ -256,14 +256,14 @@ def init_genes_gff3(options):
             except ValueError:
                 t_idx = len(genes[gene_id].transcripts)
                 genes[gene_id].transcripts.append(trans_id)
-            genes[gene_id].add_exon(sp.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
+            genes[gene_id].add_exon(np.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
 
     ### add splicegraphs
     for gene in genes:
         genes[gene].splicegraph = Splicegraph(genes[gene])
 
     ### convert to scipy array
-    genes = sp.array([genes[gene] for gene in genes], dtype='object')
+    genes = np.array([genes[gene] for gene in genes], dtype='object')
 
     ### check for consistency and validity of genes
     genes = check_annotation(options, genes)
@@ -366,7 +366,7 @@ def init_regions(fn_bams, conf, options=None, sparse_bam=False):
                 IN.close()
         break
 
-    return (sp.array(regions, dtype = 'object'), options)
+    return (np.array(regions, dtype = 'object'), options)
 
 
 def check_annotation(options, genes):
@@ -382,31 +382,31 @@ def check_annotation(options, genes):
     if len(rm_ids) > 0:
         print('WARNING: removing %i genes from given annotation that had no exons annotated:' % len(rm_ids), file=sys.stderr)
         print('list of excluded genes written to: %s' % (options.annotation + '.genes_excluded_no_exons'), file=sys.stderr)
-        sp.savetxt(options.annotation + '.genes_excluded_no_exons', rm_ids, fmt='%s', delimiter='\t')
-        gene_names = sp.array([x.name for x in genes], dtype='str')
-        k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+        np.savetxt(options.annotation + '.genes_excluded_no_exons', rm_ids, fmt='%s', delimiter='\t')
+        gene_names = np.array([x.name for x in genes], dtype='str')
+        k_idx = np.where(~np.in1d(gene_names, rm_ids))[0]
         genes = genes[k_idx]
 
     ### check whether we run unstranded analysis and have to exclude overlapping gene annotations
     if options.filter_overlap_genes:
         rm_ids = []
-        chrms = sp.array([x.chr for x in genes])
-        strands = sp.array([x.strand for x in genes])
-        starts = sp.array([x.start for x in genes], dtype='int')
-        stops = sp.array([x.stop for x in genes], dtype='int')
-        for c in sp.unique(chrms):
-            for s in sp.unique(strands):
-                c_idx = sp.where((chrms == c) & (strands == s))[0]
+        chrms = np.array([x.chr for x in genes])
+        strands = np.array([x.strand for x in genes])
+        starts = np.array([x.start for x in genes], dtype='int')
+        stops = np.array([x.stop for x in genes], dtype='int')
+        for c in np.unique(chrms):
+            for s in np.unique(strands):
+                c_idx = np.where((chrms == c) & (strands == s))[0]
                 for i in c_idx:
-                    if sp.sum((starts[i] <= stops[c_idx]) & (stops[i] >= starts[c_idx])) > 1:
+                    if np.sum((starts[i] <= stops[c_idx]) & (stops[i] >= starts[c_idx])) > 1:
                         rm_ids.append(genes[i].name)
         if len(rm_ids) > 0:
-            rm_ids = sp.unique(rm_ids)
+            rm_ids = np.unique(rm_ids)
             print('WARNING: removing %i genes from given annotation that overlap to each other:' % rm_ids.shape[0], file=sys.stderr)
             print('list of excluded genes written to: %s' % (options.annotation + '.genes_excluded_gene_overlap'), file=sys.stderr)
-            sp.savetxt(options.annotation + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
-            gene_names = sp.array([x.name for x in genes], dtype='str')
-            k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+            np.savetxt(options.annotation + '.genes_excluded_gene_overlap', rm_ids, fmt='%s', delimiter='\t')
+            gene_names = np.array([x.name for x in genes], dtype='str')
+            k_idx = np.where(~np.in1d(gene_names, rm_ids))[0]
             genes = genes[k_idx]
 
     ### check whether exons are part of multiple genes
@@ -422,15 +422,15 @@ def check_annotation(options, genes):
                         exon_map[k] = [g.name]
         rm_ids = []
         for exon in exon_map:
-            if sp.unique(exon_map[exon]).shape[0] > 1:
+            if np.unique(exon_map[exon]).shape[0] > 1:
                 rm_ids.extend(exon_map[exon])
         if len(rm_ids) > 0:
-            rm_ids = sp.unique(rm_ids)
+            rm_ids = np.unique(rm_ids)
             print('WARNING: removing %i genes from given annotation that share exact exon coordinates:' % rm_ids.shape[0], file=sys.stderr)
             print('list of excluded exons written to: %s' % (options.annotation + '.genes_excluded_exon_shared'), file=sys.stderr)
-            sp.savetxt(options.annotation + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
-            gene_names = sp.array([x.name for x in genes], dtype='str')
-            k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+            np.savetxt(options.annotation + '.genes_excluded_exon_shared', rm_ids, fmt='%s', delimiter='\t')
+            gene_names = np.array([x.name for x in genes], dtype='str')
+            k_idx = np.where(~np.in1d(gene_names, rm_ids))[0]
             genes = genes[k_idx]
 
     ### check whether exons within the same transcript overlap
@@ -439,15 +439,15 @@ def check_annotation(options, genes):
         for i, g in enumerate(genes):
             for t in range(len(g.exons)):
                 for e in range(g.exons[t].shape[0] - 1):
-                    if sp.any(g.exons[t][e+1:, 0] < g.exons[t][e, 1]):
+                    if np.any(g.exons[t][e+1:, 0] < g.exons[t][e, 1]):
                         rm_ids.append(g.name)
         if len(rm_ids) > 0:
-            rm_ids = sp.unique(rm_ids)
+            rm_ids = np.unique(rm_ids)
             print('WARNING: removing %i genes from given annotation that have at least one transcript with overlapping exons.' % rm_ids.shape[0], file=sys.stderr)
             print('list of excluded genes written to: %s' % (options.annotation + '.genes_excluded_exon_overlap'), file=sys.stderr)
-            sp.savetxt(options.annotation + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
-            gene_names = sp.array([x.name for x in genes], dtype='str')
-            k_idx = sp.where(~sp.in1d(gene_names, rm_ids))[0]
+            np.savetxt(options.annotation + '.genes_excluded_exon_overlap', rm_ids, fmt='%s', delimiter='\t')
+            gene_names = np.array([x.name for x in genes], dtype='str')
+            k_idx = np.where(~np.in1d(gene_names, rm_ids))[0]
             genes = genes[k_idx]
 
     ### do we have any genes left?

@@ -1,4 +1,4 @@
-import scipy as sp
+import numpy as np
 
 from ..utils import *
 from ..init import get_tags_gtf
@@ -7,9 +7,9 @@ class Splicegraph:
 
     def __init__(self, gene = None):
         
-        self.vertices = sp.zeros((2, 0), dtype='int')
-        self.edges = sp.zeros((0, 0), dtype='int')
-        self.terminals = sp.zeros((2, 0), dtype='int')
+        self.vertices = np.zeros((2, 0), dtype='int')
+        self.edges = np.zeros((0, 0), dtype='int')
+        self.terminals = np.zeros((2, 0), dtype='int')
 
         if gene:
             self.from_gene(gene)
@@ -20,8 +20,8 @@ class Splicegraph:
 
     def new_edge(self):
 
-        self.edges = sp.c_[self.edges, sp.zeros((self.edges.shape[0], 1), dtype='int')]
-        self.edges = sp.r_[self.edges, sp.zeros((1, self.edges.shape[1]), dtype='int')]
+        self.edges = np.c_[self.edges, np.zeros((self.edges.shape[0], 1), dtype='int')]
+        self.edges = np.r_[self.edges, np.zeros((1, self.edges.shape[1]), dtype='int')]
     
     def subset(self, keep_idx):
         
@@ -31,9 +31,9 @@ class Splicegraph:
 
     def update_terminals(self):
         
-        self.terminals = sp.zeros(self.vertices.shape, dtype='int')
-        self.terminals[0, sp.where(sp.sum(sp.tril(self.edges), axis=1) == 0)[0]] = 1
-        self.terminals[1, sp.where(sp.sum(sp.triu(self.edges), axis=1) == 0)[0]] = 1
+        self.terminals = np.zeros(self.vertices.shape, dtype='int')
+        self.terminals[0, np.where(np.sum(np.tril(self.edges), axis=1) == 0)[0]] = 1
+        self.terminals[1, np.where(np.sum(np.triu(self.edges), axis=1) == 0)[0]] = 1
 
     def reorder(self, idx):
         
@@ -43,7 +43,7 @@ class Splicegraph:
 
     def sort(self):
         
-        s_idx = sp.lexsort([self.vertices[1, :], self.vertices[0, :]])
+        s_idx = np.lexsort([self.vertices[1, :], self.vertices[0, :]])
         self.reorder(s_idx)
 
     def from_gene(self, gene):
@@ -57,10 +57,10 @@ class Splicegraph:
                 exon1_end = exon_start_end[0, 1]
 
                 if self.vertices.shape[1] == 0:
-                    self.vertices = sp.array([[exon1_start], [exon1_end]], dtype='int')
-                    self.edges = sp.array([[0]], dtype='int')
+                    self.vertices = np.array([[exon1_start], [exon1_end]], dtype='int')
+                    self.edges = np.array([[0]], dtype='int')
                 else:
-                    self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
+                    self.vertices = np.c_[self.vertices, [exon1_start, exon1_end]]
                     self.new_edge()
             ### more than one exon in the transcript
             else:
@@ -71,8 +71,8 @@ class Splicegraph:
                     exon2_end = exon_start_end[exon_idx + 1, 1]
           
                     if self.vertices.shape[1] == 0:
-                        self.vertices = sp.array([[exon1_start, exon2_start], [exon1_end, exon2_end]], dtype='int')
-                        self.edges = sp.array([[0, 1], [1, 0]], dtype='int')
+                        self.vertices = np.array([[exon1_start, exon2_start], [exon1_end, exon2_end]], dtype='int')
+                        self.edges = np.array([[0, 1], [1, 0]], dtype='int')
                     else:
                         exon1_idx = -1
                         exon2_idx = -1
@@ -90,33 +90,33 @@ class Splicegraph:
                         else:
                             ### 2nd exon occured
                             if ((exon1_idx == -1) and (exon2_idx != -1)):
-                                self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
+                                self.vertices = np.c_[self.vertices, [exon1_start, exon1_end]]
                                 self.new_edge()
                                 self.edges[exon2_idx, -1] = 1
                                 self.edges[-1, exon2_idx] = 1
                             ### 1st exon occured
                             elif ((exon2_idx == -1) and (exon1_idx != -1)):
-                                self.vertices = sp.c_[self.vertices, [exon2_start, exon2_end]]
+                                self.vertices = np.c_[self.vertices, [exon2_start, exon2_end]]
                                 self.new_edge()
                                 self.edges[exon1_idx, -1] = 1
                                 self.edges[-1, exon1_idx] = 1
                             ### no exon occured
                             else:
                                 assert((exon1_idx == -1) and (exon2_idx == -1))
-                                self.vertices = sp.c_[self.vertices, [exon1_start, exon1_end]]
-                                self.vertices = sp.c_[self.vertices, [exon2_start, exon2_end]]
+                                self.vertices = np.c_[self.vertices, [exon1_start, exon1_end]]
+                                self.vertices = np.c_[self.vertices, [exon2_start, exon2_end]]
                                 self.new_edge()
                                 self.new_edge()
                                 self.edges[-2, -1] = 1
                                 self.edges[-1, -2] = 1
 
         ### take care of the sorting by exon start
-        s_idx = sp.argsort(self.vertices[0, :])
+        s_idx = np.argsort(self.vertices[0, :])
         self.vertices = self.vertices[:, s_idx]
         self.edges = self.edges[s_idx, :][:, s_idx]
-        self.terminals = sp.zeros(self.vertices.shape, dtype='int')
-        self.terminals[0, sp.where(sp.tril(self.edges).sum(axis=1) == 0)[0]] = 1
-        self.terminals[1, sp.where(sp.triu(self.edges).sum(axis=1) == 0)[0]] = 1
+        self.terminals = np.zeros(self.vertices.shape, dtype='int')
+        self.terminals[0, np.where(np.tril(self.edges).sum(axis=1) == 0)[0]] = 1
+        self.terminals[1, np.where(np.triu(self.edges).sum(axis=1) == 0)[0]] = 1
 
     def from_sg_gtf(self, fname):
         """generate a splicing graph from a Splicegrapher GTF"""
@@ -159,9 +159,9 @@ class Splicegraph:
                     parent_pairs.append(tags['ID'], c)
 
         ### use information to build up graph data structure
-        self.vertices = sp.array(exon_coords, dtype='int')
-        self.edges = sp.zeros((self.vertices.shape[1], self.vertices.shape[1]), dtype='int')
-        self.terminals = sp.zeros_like(self.vertices, dtype='int')
+        self.vertices = np.array(exon_coords, dtype='int')
+        self.edges = np.zeros((self.vertices.shape[1], self.vertices.shape[1]), dtype='int')
+        self.terminals = np.zeros_like(self.vertices, dtype='int')
         for pair in child_pairs:
             self.edges[exon_ids[pair[0]], exon_ids[pair[1]]] = 1
             self.edges[exon_ids[pair[1]], exon_ids[pair[0]]] = 1
@@ -187,32 +187,32 @@ class Splicegraph:
         ### if flag2, all start terminal exons in idx2 are preserved
 
         if idx2.shape[0] > 0:
-            adj_mat = sp.triu(self.edges)
+            adj_mat = np.triu(self.edges)
 
             if flag1:
                 for i1 in idx1:
 
                     ### if exon is end-terminal
-                    if sp.all(adj_mat[i1, :] == 0):
+                    if np.all(adj_mat[i1, :] == 0):
 
-                        self.vertices = sp.c_[self.vertices, self.vertices[:, i1]]
+                        self.vertices = np.c_[self.vertices, self.vertices[:, i1]]
 
                         self.new_edge()
                         self.edges[:, -1] = self.edges[:, i1]
                         self.edges[-1, :] = self.edges[i1, :]
 
-                        self.terminals = sp.c_[self.terminals, self.terminals[:, i1]]
+                        self.terminals = np.c_[self.terminals, self.terminals[:, i1]]
             if flag2:
                 for i2 in idx2:
                     ### if exon is start-terminal
-                    if sp.all(adj_mat[:, i2] == 0):
-                        self.vertices = sp.c_[self.vertices, self.vertices[:, i2]]
+                    if np.all(adj_mat[:, i2] == 0):
+                        self.vertices = np.c_[self.vertices, self.vertices[:, i2]]
 
                         self.new_edge()
                         self.edges[:, -1] = self.edges[:, i2]
                         self.edges[-1, :] = self.edges[i2, :]
 
-                        self.terminals = sp.c_[self.terminals, self.terminals[:, i2]]
+                        self.terminals = np.c_[self.terminals, self.terminals[:, i2]]
 
         for i1 in idx1:
             for i2 in idx2:
@@ -225,7 +225,7 @@ class Splicegraph:
         ### exon_pre contains the indices of preceding exons
         ### exon_aft contains the indices of successing exons
         
-        self.vertices = sp.c_[self.vertices, new_exon]
+        self.vertices = np.c_[self.vertices, new_exon]
 
         self.new_edge()
 
@@ -233,23 +233,23 @@ class Splicegraph:
         self.edges[exons_aft, -1] = 1
         self.edges[-1, :] = self.edges[:, -1].T
 
-        self.terminals = sp.c_[self.terminals, sp.zeros((2,), dtype='int')]
+        self.terminals = np.c_[self.terminals, np.zeros((2,), dtype='int')]
 
 
     def add_intron_retention(self, idx1, idx2):
         
-        adj_mat = sp.triu(self.edges)
+        adj_mat = np.triu(self.edges)
 
-        self.vertices = sp.c_[self.vertices, sp.array([self.vertices[0, idx1], self.vertices[1, idx2]], dtype='int')]
+        self.vertices = np.c_[self.vertices, np.array([self.vertices[0, idx1], self.vertices[1, idx2]], dtype='int')]
 
         self.new_edge()
 
-        adj_mat = sp.r_[adj_mat, sp.zeros((1, adj_mat.shape[1]), dtype='int')]
-        adj_mat = sp.c_[adj_mat, sp.zeros((adj_mat.shape[0], 1), dtype='int')]
+        adj_mat = np.r_[adj_mat, np.zeros((1, adj_mat.shape[1]), dtype='int')]
+        adj_mat = np.c_[adj_mat, np.zeros((adj_mat.shape[0], 1), dtype='int')]
 
         ### check if adjacency matrix is symmetric
         ### otherwise or is not justyfied
-        assert(sp.all(sp.all(adj_mat - (self.edges - adj_mat).T == 0)))
+        assert(np.all(np.all(adj_mat - (self.edges - adj_mat).T == 0)))
 
         ### AK: under the assumption that our splice graph representation is symmetric
         ### I preserve symmetry by using OR over the adj_mat column and row
@@ -257,7 +257,7 @@ class Splicegraph:
         self.edges[:, -1] = adj_mat[:, idx1] | adj_mat[idx2, :].T
         self.edges[-1, :] = adj_mat[:, idx1].T | adj_mat[idx2, :]
 
-        self.terminals = sp.c_[self.terminals, sp.array([self.terminals[0, idx1], self.terminals[1, idx2]], dtype='int')]
+        self.terminals = np.c_[self.terminals, np.array([self.terminals[0, idx1], self.terminals[1, idx2]], dtype='int')]
 
     def uniquify(self):
         # OUTPUT: splice graph that has been made unique on exons for each gene
@@ -270,12 +270,12 @@ class Splicegraph:
 
         rm_idx = []
         for j in range(1, self.vertices.shape[1]):
-            if sp.all(self.vertices[:, j-1] == self.vertices[:, j]):
+            if np.all(self.vertices[:, j-1] == self.vertices[:, j]):
                 self.edges[:, j] = self.edges[:, j-1] | self.edges[:, j]
                 self.edges[j, :] = self.edges[j-1, :] | self.edges[j, :]
                 rm_idx.append(j - 1)
 
-        keep_idx = sp.where(~sp.in1d(sp.array(sp.arange(self.vertices.shape[1])), rm_idx))[0]
+        keep_idx = np.where(~np.in1d(np.array(np.arange(self.vertices.shape[1])), rm_idx))[0]
         self.vertices = self.vertices[:, keep_idx]
         self.edges = self.edges[keep_idx, :][:, keep_idx]
         self.terminals = self.terminals[:, keep_idx]

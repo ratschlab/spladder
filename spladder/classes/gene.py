@@ -1,4 +1,4 @@
-import scipy as sp
+import numpy as np
 import scipy.sparse as spsp
 import warnings
 
@@ -32,8 +32,8 @@ class Gene:
 
     def add_exon(self, exon, idx):
         if idx > (len(self.exons) - 1): 
-            self.exons.append(sp.zeros((0, 2), dtype='int'))
-        self.exons[idx] = sp.r_[self.exons[idx], sp.expand_dims(exon, axis=0)]
+            self.exons.append(np.zeros((0, 2), dtype='int'))
+        self.exons[idx] = np.r_[self.exons[idx], np.expand_dims(exon, axis=0)]
 
     def label_alt(self):
 
@@ -61,18 +61,18 @@ class Gene:
         term_alt_idx = []
         for i in range(num_exons):
             ### handle start terminal exons -> no incoming edges
-            if not sp.any(edges[:i, i]):
+            if not np.any(edges[:i, i]):
                 ### find other exons with same end
-                idx = sp.where(~sp.in1d(sp.where(vertices[1, i] == vertices[1, :])[0], i))[0]
+                idx = np.where(~np.in1d(np.where(vertices[1, i] == vertices[1, :])[0], i))[0]
                 if idx.shape[0] > 0:
                     is_simple = True
                     for j in idx:
                         ### not simple, if different introns follow --> break
-                        if not isequal(sp.where(edges[j, j+1:])[0] + j, sp.where(edges[i, i+1:])[0] + i):
+                        if not isequal(np.where(edges[j, j+1:])[0] + j, np.where(edges[i, i+1:])[0] + i):
                             is_simple = False
                             break
                         ### not simple, if exons previous to j overlap the start of i --> break
-                        idx_prev = sp.where(edges[:j, j])[0]
+                        idx_prev = np.where(edges[:j, j])[0]
                         for k in idx_prev:
                             if vertices[1, k] > vertices[0, i]:
                                 is_simple = False
@@ -82,18 +82,18 @@ class Gene:
                     ### if simple, report alternative initial exon
                     init_alt_idx.append(i)
             ### handle end terminal exons -> no outgoing edges
-            if not sp.any(edges[i, i+1:]):
+            if not np.any(edges[i, i+1:]):
                 ### find other exons with the same start
-                idx = sp.where(~sp.in1d(sp.where(vertices[0, i] == vertices[0, :])[0], i))[0]
+                idx = np.where(~np.in1d(np.where(vertices[0, i] == vertices[0, :])[0], i))[0]
                 if idx.shape[0] > 0: 
                     is_simple = True
                     for j in idx:
                         ### not simple, if different introns precede --> break
-                        if not isequal(sp.where(edges[:j, j])[0], sp.where(edges[:i, i])[0]):
+                        if not isequal(np.where(edges[:j, j])[0], np.where(edges[:i, i])[0]):
                             is_simple = False
                             break
                         ### not simple, if exons following to j start before i ends --> break
-                        idx_next = sp.where(edges[j, j+1:])[0] + j
+                        idx_next = np.where(edges[j, j+1:])[0] + j
                         for k in idx_next:
                             if vertices[0, k] < vertices[1, i]:
                                 is_simple = False
@@ -104,20 +104,20 @@ class Gene:
                     term_alt_idx.append(i)
       
         ### further only consider exons that are neither init_alt nor term_alt
-        take_idx = sp.where(~sp.in1d(sp.arange(num_exons), [init_alt_idx + term_alt_idx]))[0]
+        take_idx = np.where(~np.in1d(np.arange(num_exons), [init_alt_idx + term_alt_idx]))[0]
         if take_idx.shape[0] > 0:
             vertices = self.splicegraph.vertices[:, take_idx]
             edges = self.splicegraph.edges[take_idx, :][:, take_idx]
           
             start = vertices[0, :].min()
             stop = vertices[1, :].max()
-            exon_loc = sp.zeros((stop - start,))
+            exon_loc = np.zeros((stop - start,))
             
             ### map all edges (introns) to genomic coordinates
             for i in range(edges.shape[0]):
                 for j in range(i + 1, edges.shape[0]):
                     if edges[i, j] == 1:
-                        cur_edge = sp.array([vertices[1, i], vertices[0, j]]) - start
+                        cur_edge = np.array([vertices[1, i], vertices[0, j]]) - start
                         exon_loc[cur_edge[0]:cur_edge[1]] += 1
           
             ### map all vertices (exons) to genomic coordinates 
@@ -125,7 +125,7 @@ class Gene:
                 cur_vertex = vertices[:, i] - start
                 exon_loc[cur_vertex[0]:cur_vertex[1]] += 1
         else:
-            exon_loc = sp.zeros((1,))
+            exon_loc = np.zeros((1,))
       
         ### if at any position more than one exon or intron -> is_alt_spliced
         if max(exon_loc) > 1:
@@ -148,15 +148,15 @@ class Gene:
            considered as non-alternative, so we use this approximation for now.
         """
 
-        tmp = sp.ones((self.segmentgraph.seg_edges.shape[0],), dtype='bool')
+        tmp = np.ones((self.segmentgraph.seg_edges.shape[0],), dtype='bool')
         for i in range(self.segmentgraph.seg_edges.shape[0] - 1):
             ### get index of last acceptor
-            idx = sp.where(self.segmentgraph.seg_edges[i, i + 1:])[0]
+            idx = np.where(self.segmentgraph.seg_edges[i, i + 1:])[0]
             ### mask all segments between current segment and acceptor
             if idx.shape[0] > 0:
                 tmp[i + 1:idx[-1] + i + 1] = 0
 
-        return sp.where(tmp)[0]
+        return np.where(tmp)[0]
 
     def to_sparse(self):
         

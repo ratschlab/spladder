@@ -1,6 +1,6 @@
 import sys
 import os
-import scipy as sp
+import numpy as np
 import h5py
 import gzip
 
@@ -12,7 +12,7 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
         return
 
     if event_idx is None:
-        event_idx = sp.arange(events.shape[0])
+        event_idx = np.arange(events.shape[0])
 
     if anno_fn is not None:
        anno = load(anno_fn);
@@ -86,9 +86,9 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
                 else:
                     fd.write('\t-1\t-1\t-1\t-1')
         elif ev.event_type in ['alt_3prime', 'alt_5prime']:
-            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+            if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
                 fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1]))
-            elif sp.all(ev.exons1[1, :] == ev.exons2[1, :]):
+            elif np.all(ev.exons1[1, :] == ev.exons2[1, :]):
                 fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons2[0, 0] + 1, ev.exons2[0, 1]))
             for j in range(len(strains)):
                 if counts[j, 0]:
@@ -129,7 +129,7 @@ def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
         return
 
     if event_idx is None:
-        event_idx = sp.arange(events.shape[0])
+        event_idx = np.arange(events.shape[0])
 
     event_type = events[0].event_type
 
@@ -156,7 +156,7 @@ def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
 
     for i in event_idx:
         psi = IN['psi'][:, i]
-        if sp.all(sp.isnan(psi)):
+        if np.all(np.isnan(psi)):
             continue
 
         fd.write('%s.%s\t%s\t%s\t' % (event_type, events[i].id, event_type_dict[event_type], events[i].chr))
@@ -164,7 +164,7 @@ def write_events_icgc(fn_out, strains, events, fn_counts, event_idx=None):
             fd.write('%i:%i:%i:%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1]))
             fd.write('\t%i:%i' % (events[i].exons1[0, 1], events[i].exons1[1, 0]))
         elif event_type in ['alt_3prime', 'alt_5prime']:
-            if sp.all(events[i].exons1[0, :] == events[i].exons2[0, :]):
+            if np.all(events[i].exons1[0, :] == events[i].exons2[0, :]):
                 fd.write('%i:%i:%i:%i:%i:%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1]))
                 fd.write('\t%i:%i' % (min(events[i].exons1[1, 0], events[i].exons2[1, 0]), max(events[i].exons1[1, 0], events[i].exons2[1, 0])))
             else:
@@ -200,7 +200,7 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
         return
 
     if event_idx is None:
-        event_idx = sp.arange(events.shape[0])
+        event_idx = np.arange(events.shape[0])
 
     event_type = events[0].event_type
 
@@ -226,7 +226,7 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
         if event_type == 'intron_retention':
             print(':%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1]), end=' ', file=fd)
         elif event_type in ['alt_3prime', 'alt_5prime']:
-            if sp.all(events[i].exons1[0, :] == events[i].exons2[0, :]):
+            if np.all(events[i].exons1[0, :] == events[i].exons2[0, :]):
                 print(':%i-%i:%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1]), end=' ', file=fd)
             else:
                 print(':%i-%i:%i-%i:%i-%i' % (events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons2[0, 0], events[i].exons2[0, 1]), end=' ', file=fd)
@@ -285,7 +285,7 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
         return
 
     if idx is None:
-        idx = sp.arange(events.shape[0])
+        idx = np.arange(events.shape[0])
 
     print('writing %s events in gff3 format to %s' % (events[0].event_type, fn_out_gff3))
 
@@ -303,9 +303,9 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
         ### get order of isoforms o_idx(1) -> iso1 and o_idx(2) -> iso2
         ### assert that first isoform is always the shorter one
         #if ev.event_type == 'intron_retention':
-        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[1] - ev.exons2[0]))
+        #    assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < np.sum(ev.exons2[1] - ev.exons2[0]))
         #else:
-        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+        #    assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < np.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
 
         name = '%s.%i' % (ev.event_type, ev.id)
 
@@ -344,7 +344,7 @@ def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
         return
 
     if idx is None:
-        idx = sp.arange(events.shape[0])
+        idx = np.arange(events.shape[0])
 
     print('writing %s events in generic structured format to %s' % (events[0].event_type, fn_out_struc))
     mult_exon_skip_bool = True
@@ -378,11 +378,11 @@ def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
                 flanks = '%i^,%i-' % (ev.exons1[0, 1], ev.exons1[-1, 0] + 1)
                 schain = ',%i-%i^' % (ev.exons2[1, 0] + 1, ev.exons2[1, 1])
             elif ev.event_type in ['alt_3prime', 'alt_5prime']:
-                if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
                     struc = '1-,2-'
                     flanks = '%i^,%i^' % (ev.exons1[0, 1], min(ev.exons1[-1, 1], ev.exons2[-1, 1]))
                     schain = '%i-,%i-' % (min(ev.exons1[-1, 0] + 1, ev.exons2[-1, 0]) + 1, max(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1)
-                elif sp.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
+                elif np.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
                     struc = '1^,2^'
                     flanks = '%i-,%i-' % (max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1, ev.exons1[-1, 0] + 1)
                     schain = '%i^,%i^' % (min(ev.exons1[0, 1], ev.exons2[0, 1]), max(ev.exons1[0, 1], ev.exons2[0, 1]))
@@ -410,11 +410,11 @@ def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
                 flanks = '%i^,%i-' % (ev.exons1[-1, 0] + 1, ev.exons1[0, 1])
                 schain = ',%i-%i^' % (ev.exons2[1, 1], ev.exons2[1, 0] + 1)
             elif ev.event_type in ['alt_3prime', 'alt_5prime']:
-                if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+                if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
                     struc = '1^,2^'
                     flanks = '%i-,%i-' % (min(ev.exons1[-1, 1], ev.exons2[-1, 1]), ev.exons1[0, 1])
                     schain = '%i^,%i^' % (max(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1, min(ev.exons1[-1, 0], ev.exons2[-1, 0]) + 1)
-                elif sp.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
+                elif np.all(ev.exons1[-1, :] == ev.exons2[-1, :]):
                     struc = '1-,2-'
                     flanks = '%i^,%i^' % (ev.exons1[-1, 0] + 1, max(ev.exons1[0, 0], ev.exons2[0, 0]) + 1)
                     schain = '%i-,%i-' % (max(ev.exons1[0, 1], ev.exons2[0, 1]), min(ev.exons1[0, 1], ev.exons2[0, 1]))
@@ -449,7 +449,7 @@ def write_events_bed(fn_out_bed, events, idx=None):
         return
 
     if idx is None:
-        idx = sp.arange(events.shape[0])
+        idx = np.arange(events.shape[0])
 
     print('writing %s events in bed format to %s' % (events[0].event_type, fn_out_bed))
 
@@ -466,9 +466,9 @@ def write_events_bed(fn_out_bed, events, idx=None):
         ### get order of isoforms o_idx(1) -> iso1 and o_idx(2) -> iso2
         ### assert that first isoform is always the shorter one
         #if ev.event_type == 'intron_retention':
-        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[1] - ev.exons2[0]))
+        #    assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < np.sum(ev.exons2[1] - ev.exons2[0]))
         #else:
-        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+        #    assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < np.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
 
         name = '%s.%i' % (ev.event_type, ev.id)
 
@@ -488,7 +488,7 @@ def write_events_bed(fn_out_bed, events, idx=None):
             block_starts.append(str(ev.exons1[1, 0] - start_pos))
             block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
         elif ev.event_type == 'alt_3prime':
-            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+            if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
                 block_starts.append('0')
                 block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
                 if ev.exons2[1, 0] < ev.exons1[1, 0]:
@@ -518,7 +518,7 @@ def write_events_bed(fn_out_bed, events, idx=None):
                 block_starts.append(str(ev.exons1[1, 0] - start_pos))
                 block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
         elif ev.event_type == 'alt_5prime':
-            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+            if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
                 block_starts.append('0')
                 block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
                 if ev.exons1[1, 0] > ev.exons2[1, 0]:
@@ -563,7 +563,7 @@ def write_events_bed(fn_out_bed, events, idx=None):
         return
 
     if idx is None:
-        idx = sp.arange(events.shape[0])
+        idx = np.arange(events.shape[0])
 
     print('writing %s events in bed format to %s' % (events[0].event_type, fn_out_bed))
 
@@ -580,9 +580,9 @@ def write_events_bed(fn_out_bed, events, idx=None):
         ### get order of isoforms o_idx(1) -> iso1 and o_idx(2) -> iso2
         ### assert that first isoform is always the shorter one
         #if ev.event_type == 'intron_retention':
-        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[1] - ev.exons2[0]))
+        #    assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < np.sum(ev.exons2[1] - ev.exons2[0]))
         #else:
-        #    assert(sp.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < sp.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+        #    assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) < np.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
 
         name = '%s.%i' % (ev.event_type, ev.id)
 
@@ -602,7 +602,7 @@ def write_events_bed(fn_out_bed, events, idx=None):
             block_starts.append(str(ev.exons1[1, 0] - start_pos))
             block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
         elif ev.event_type == 'alt_3prime':
-            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+            if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
                 block_starts.append('0')
                 block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
                 if ev.exons2[1, 0] < ev.exons1[1, 0]:
@@ -632,7 +632,7 @@ def write_events_bed(fn_out_bed, events, idx=None):
                 block_starts.append(str(ev.exons1[1, 0] - start_pos))
                 block_lens.append(str(ev.exons1[1, 1] - ev.exons1[1, 0]))
         elif ev.event_type == 'alt_5prime':
-            if sp.all(ev.exons1[0, :] == ev.exons2[0, :]):
+            if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
                 block_starts.append('0')
                 block_lens.append(str(ev.exons1[0, 1] - ev.exons1[0, 0]))
                 if ev.exons1[1, 0] > ev.exons2[1, 0]:

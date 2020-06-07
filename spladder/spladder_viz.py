@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn')
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
+import numpy as np
 import pickle
 import copy
 from collections import namedtuple
@@ -66,17 +67,17 @@ def _parse_event_info(id_array, gids, event_info, events, outdir, confidence, ve
             eid[-1] = int(eid[-1]) - 1
             id_array.append(eid)
 
-    events.extend(load_events(sp.array(id_array), outdir, confidence, verbose))
+    events.extend(load_events(np.array(id_array), outdir, confidence, verbose))
 
 def _parse_gene_info(track_info, genes, gene_names, gids, all_gene_names, outdir, confidence, validate_sg, verbose):
     for g in track_info:
-        gid = sp.where(all_gene_names == g)[0]
+        gid = np.where(all_gene_names == g)[0]
         if gid.shape[0] == 0:
             sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g)
             sys.exit(1)
         assert gid.shape[0] == 1
         gids.append(gid[0])
-    genes.extend(load_genes(outdir, confidence, validate_sg, verbose, sp.array(gids)))
+    genes.extend(load_genes(outdir, confidence, validate_sg, verbose, np.array(gids)))
     gene_names.extend([_.name for _ in genes])
 
 def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
@@ -114,8 +115,8 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
         ### load test setup
         test_setup = pickle.load(open(os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (confidence, event_type)), 'rb'), encoding='latin1')
         halfsize = test_setup[3].shape[0] // 2
-        idxA = sp.where(test_setup[3][:halfsize, 2] == 0)[0]
-        idxB = sp.where(test_setup[3][:halfsize, 2] == 1)[0]
+        idxA = np.where(test_setup[3][:halfsize, 2] == 0)[0]
+        idxB = np.where(test_setup[3][:halfsize, 2] == 1)[0]
         ### iterate over top k test results
         for k, line in enumerate(open(os.path.join(testdir, 'test_results_C%i_%s.tsv' % (confidence, event_type)), 'r')):
             if k == 0:
@@ -241,7 +242,7 @@ def spladder_viz(options):
                     
 
         ### check that everything is on the same chromosome
-        plotchrm = sp.unique([_.chr for _ in sp.r_[events, genes, coords]])
+        plotchrm = np.unique([_.chr for _ in np.r_[events, genes, coords]])
         if plotchrm.shape[0] > 1:
             sys.stderr.write('ERROR: the provided gene/event/coordinate ranges are on different chromosomes and canot be plotted jointly\n')
             sys.exit(1)
@@ -348,7 +349,7 @@ def spladder_viz(options):
                     if len(data_track.strains) > 0:
                         seg_sample_idx = []
                         for track_strains in data_track.strains:
-                            seg_sample_idx.append(sp.where(sp.in1d(strains, track_strains))[0])
+                            seg_sample_idx.append(np.where(np.in1d(strains, track_strains))[0])
                             cov_from_segments(genes[g], segments, edges, edge_idx, ax, xlim=plotrange, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
                 ax.get_yaxis().set_label_coords(1.02,0.5)
                 ax.set_ylabel('segment counts')
@@ -356,7 +357,7 @@ def spladder_viz(options):
         ### set x axis ticks
         for i, ax in enumerate(axes):
             if i == len(axes) - 1:
-                ax.set_xticks(sp.around(sp.linspace(plotrange_orig[0], plotrange_orig[1], 10)))
+                ax.set_xticks(np.around(np.linspace(plotrange_orig[0], plotrange_orig[1], 10)))
                 ax.set_xlabel('chromosome ' + plotchrm[0])
             else:
                 ax.set_xticks([])

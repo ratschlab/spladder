@@ -1,4 +1,4 @@
-import scipy as sp
+import numpy as np
 import warnings
 import intervaltree as it
 
@@ -9,15 +9,15 @@ from .reads import *
 
 def make_introns_feasible(introns, genes, options):
 
-    tmp1 = sp.array([x.shape[0] for x in introns[:, 0]])
-    tmp2 = sp.array([x.shape[0] for x in introns[:, 1]])
+    tmp1 = np.array([x.shape[0] for x in introns[:, 0]])
+    tmp2 = np.array([x.shape[0] for x in introns[:, 1]])
 
     if options.logfile == '-':
         fd_log = sys.stdout
     else:
         fd_log = open(options.logfile, 'w')
     
-    unfeas = sp.where((tmp1 > 200) | (tmp2 > 200))[0]
+    unfeas = np.where((tmp1 > 200) | (tmp2 > 200))[0]
     print('found %i unfeasible genes' % unfeas.shape[0], file=fd_log)
 
     while unfeas.shape[0] > 0:
@@ -31,11 +31,11 @@ def make_introns_feasible(introns, genes, options):
         introns[unfeas, :] = tmp_introns
 
         ### still unfeasible?
-        tmp1 = sp.array([x.shape[0] for x in introns[:, 0]])
-        tmp2 = sp.array([x.shape[0] for x in introns[:, 1]])
+        tmp1 = np.array([x.shape[0] for x in introns[:, 0]])
+        tmp2 = np.array([x.shape[0] for x in introns[:, 1]])
 
-        still_unfeas = sp.where((tmp1 > 200) | (tmp2 > 200))[0]
-        idx = sp.where(~sp.in1d(unfeas, still_unfeas))[0]
+        still_unfeas = np.where((tmp1 > 200) | (tmp2 > 200))[0]
+        idx = np.where(~np.in1d(unfeas, still_unfeas))[0]
 
         for i in unfeas[idx]:
             print('[feasibility] set criteria for gene %s to: min_ex %i, min_conf %i, max_mism %i' % (genes[i].name, options.read_filter['exon_len'], options.read_filter['mincount'], options.read_filter['mismatch']), file=fd_log)
@@ -51,13 +51,13 @@ def make_introns_feasible(introns, genes, options):
 def filter_introns(introns, genes, options):
     
     ### build interval trees of all genes starts and ends
-    chrms = sp.array([_.strand for _ in genes])
-    strands = sp.array([_.chr for _ in genes])
+    chrms = np.array([_.strand for _ in genes])
+    strands = np.array([_.chr for _ in genes])
     gene_trees = dict()
-    for c in sp.unique(chrms):
-        for s in sp.unique(strands):
+    for c in np.unique(chrms):
+        for s in np.unique(strands):
             gene_trees[(c, s)] = it.IntervalTree()
-            c_idx = sp.where((chrms == c) & (strands == s))[0]
+            c_idx = np.where((chrms == c) & (strands == s))[0]
             for i in c_idx:
                 gene_trees[(c, s)][genes[i].start:genes[i].stop] = i
 
@@ -130,7 +130,7 @@ def compute_psi(counts, event_type, options):
     if event_type == 'exon_skip':
         #a = counts[:, 4] + counts[:, 5]
         #b = 2 * counts[:, 6]
-        a = sp.c_[counts[:, 4], counts[:, 5]].min(axis=1)
+        a = np.c_[counts[:, 4], counts[:, 5]].min(axis=1)
         b = counts[:, 6]
     elif event_type == 'intron_retention':
         a = counts[:, 1] # intron cov
@@ -153,8 +153,8 @@ def compute_psi(counts, event_type, options):
         psi = a / (a + b)  
 
     ### filter for sufficient read support
-    n_idx = sp.where((a + b) < options.psi_min_reads)
-    psi[n_idx] = sp.nan
+    n_idx = np.where((a + b) < options.psi_min_reads)
+    psi[n_idx] = np.nan
 
     return (psi, a, b)
 
@@ -173,10 +173,10 @@ def log_progress(idx, total, bins=50):
     sys.stdout.flush()
 
 def codeUTF8(s):
-    return s.view(sp.chararray).encode('utf-8')
+    return s.view(np.chararray).encode('utf-8')
 
 def decodeUTF8(s):
-    return s.view(sp.chararray).decode('utf-8')
+    return s.view(np.chararray).decode('utf-8')
 
 def isUTF8(s):
-    return hasattr(s.view(sp.chararray), 'decode')
+    return hasattr(s.view(np.chararray), 'decode')
