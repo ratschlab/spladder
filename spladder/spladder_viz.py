@@ -161,6 +161,7 @@ def _set_plotting_range(genes, events, coords):
     delta = max(10, int((plotrange[1] - plotrange[0]) * 0.05))
     plotrange[0] -= delta
     plotrange[1] += delta
+    plotrange[0] = max(plotrange[0], 0)
 
     return plotrange, plotrange_orig
 
