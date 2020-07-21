@@ -8,6 +8,7 @@ if __package__ is None:
     __package__ = 'modules.alt_splice'
 
 from ..utils import *
+from ..classes.segmentgraph import Segmentgraph
 
 def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
 
@@ -471,6 +472,11 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
             g_idx = ev[i].gene_idx
             ev[i].verified = [] ### TODO: maybe solve that differently
 
+            if genes[g_idx].segmentgraph is None or genes[g_idx].segmentgraph.segments.shape[1] == 0:
+                genes[g_idx].from_sparse()
+                genes[g_idx].segmentgraph = Segmentgraph(genes[g_idx])
+                genes[g_idx].to_sparse()
+
             ### there are no edges present in the event
             if gene_ids_edges.shape[0] == 0:
                 ver, info = verify_empty(event_type)
@@ -496,10 +502,8 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
             curr_edge_idx = edge_idx[gr_idx_edges]
 
             for s_idx in range(len(strain_idx)):
-                #if s_idx > 0 and s_idx % 50 == 0:
-                #    sys.stdout.write('%i (%i)\n' % (s_idx, len(strain_idx)))
                # ev_tmp.subset_strain(s_idx) ### TODO 
-                #sys.stdout.flush()
+
                 if event_type == 'exon_skip':
                     ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
                 elif event_type in ['alt_3prime', 'alt_5prime']:
