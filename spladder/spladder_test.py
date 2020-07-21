@@ -235,6 +235,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, options, dmatrix1, event_typ
     upperBound = np.percentile(np.unique(disp_raw[index]), 99)
 
     idx = np.where((disp_raw > lowerBound) & (disp_raw < upperBound))[0]
+    #disp_raw[sp.isnan(disp_raw)] = -1
 
     matrix = np.ones((idx.shape[0], 2), dtype='float')
     matrix[:, 0] /= mean_count[idx].ravel()
@@ -249,7 +250,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, options, dmatrix1, event_typ
     ok_idx = np.where(~np.isnan(disp_fitted))[0]
     disp_fitted[ok_idx] = Lambda[0] / mean_count[ok_idx] + Lambda[1]
 
-    if np.sum(disp_fitted > 0) > 0:
+    if np.sum(disp_fitted[ok_idx] > 0) > 0:
         print("\nFound dispersion fit")
 
     if options.diagnose_plots:
@@ -568,6 +569,7 @@ def run_testing(cov, dmatrix0, dmatrix1, sf, options, event_type, test_idx, r_id
     cov_used = np.array([cov[i, :] if m_idx[i] == 0 else cov[i + offset, :] for i in range(pvals.shape[0])], dtype=cov.dtype)
     disp_raw_used = np.array([disp_raw[i] if m_idx[i] == 0 else disp_raw[i + offset] for i in range(pvals.shape[0])], dtype=disp_raw.dtype)
     disp_adj_used = np.array([disp_adj[i] if m_idx[i] == 0 else disp_adj[i + offset] for i in range(pvals.shape[0])], dtype=disp_adj.dtype)
+    pvals[np.isnan(pvals)] = 1
     pvals[pvals > 1] = 1
 
     return (pvals, cov_used, disp_raw_used, disp_adj_used)
@@ -781,10 +783,12 @@ def spladder_test(options):
         s = event_strains.shape[0]
         m_ev1 = np.nanmean(cov_used[:, :idx1.shape[0]] / sf_ev[:idx1.shape[0]], axis=1)
         m_ev2 = np.nanmean(cov_used[:, idx1.shape[0]:s] / sf_ev[idx1.shape[0]:], axis=1)
-        fc_ev = np.log2(m_ev1) - np.log2(m_ev2)
         m_ge1 = np.nanmean(cov_used[:, s:s+idx1.shape[0]] / sf_ge[:idx1.shape[0]], axis=1)
         m_ge2 = np.nanmean(cov_used[:, s+idx1.shape[0]:] / sf_ge[idx1.shape[0]:], axis=1)
-        fc_ge = np.log2(m_ge1) - np.log2(m_ge2)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            fc_ev = np.log2(m_ev1) - np.log2(m_ev2)
+            fc_ge = np.log2(m_ge1) - np.log2(m_ge2)
         m_all = np.c_[m_ev1, m_ev2, fc_ev, m_ge1, m_ge2, fc_ge]
 
         if options.diagnose_plots:
