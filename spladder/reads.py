@@ -15,9 +15,9 @@ from .init import *
 
 def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=True, spliced=True, var_aware=None, collapse=False, primary_only=False, no_mm=False, mm_tag='NM', cram_ref=None):
     
-    if not re.search(r'.[bB][aA][mM]$', fname) is None:
+    if not re.search(r'\.[bB][aA][mM]$', fname) is None:
         infile = pysam.AlignmentFile(fname, 'rb')
-    elif not re.search(r'.[cC][rR][aA][mM]$', fname) is None:
+    elif not re.search(r'\.[cC][rR][aA][mM]$', fname) is None:
         infile = pysam.AlignmentFile(fname, 'rc', reference_filename=cram_ref, ignore_truncation=True)
     else:
         sys.stderr.write('Error: Unknown input alignment format for: %s\n' % fname)
@@ -280,9 +280,9 @@ def add_reads_from_sparse_bam(gg, fname, contig, conf, types=None, filter=None, 
             IN = h5py.File(fname, 'r')
         else:
             if not filter is None:
-                IN = h5py.File(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fname) + 'conf_%i.' % conf + 'filt.' + 'hdf5', 'r')
+                IN = h5py.File(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', fname) + '.conf_%i.' % conf + 'filt.' + 'hdf5', 'r')
             else:
-                IN = h5py.File(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fname) + 'hdf5', 'r')
+                IN = h5py.File(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', fname) + '.hdf5', 'r')
 
         ### re-build sparse matrix
         cache['reads'] = scipy.sparse.coo_matrix((IN[contig + '_reads_dat'][:], (IN[contig + '_reads_row'][:], IN[contig + '_reads_col'][:])), shape=IN[contig + '_reads_shp'][:], dtype='uint32').tocsc()

@@ -71,9 +71,9 @@ def count_graph_coverage(genes, fn_bam=None, options=None, fn_out=None):
 
                 if options.sparse_bam and \
                   (fn_bam[f].endswith('npz') or \
-                   os.path.exists(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fn_bam[f]) + 'npz') or \
+                   os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', fn_bam[f]) + '.npz') or \
                    fn_bam[f].endswith('hdf5') or \
-                   os.path.exists(re.sub(r'[bB][aA][mM]|[cC][rR][aA][mM]$', '', fn_bam[f]) + 'hdf5')):
+                   os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', fn_bam[f]) + '.hdf5')):
                     ### make sure that we query the right contig from cache
                     assert(gg.chr == contig)
                     (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, options.confidence, types=['exon_track','intron_list'], filter=None, cache=bam_cache)
