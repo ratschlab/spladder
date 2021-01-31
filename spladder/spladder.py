@@ -80,6 +80,7 @@ def parse_options(argv):
     graph.add_argument('--no-validate-sg', dest='validate_sg', action='store_false', default=False)
     graph.add_argument('--re-infer-sg', dest='infer_sg', action='store_true', help='re-infer splice graph [off] (advanced)', default=False)
     graph.add_argument('--no-re-infer-sg', dest='infer_sg', action='store_false', default=False)
+    graph.add_argument('--validate-sg-count', dest='sg_min_edge_count', metavar='INT', type=int, help='number of samples supporting an edge for it to be kept [min(10, #samples)]', default=10)
     splice = parser_build.add_argument_group('SPLICE OPTIONS')
     splice.add_argument('--event-types', dest='event_types', metavar='STRING', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
     splice.add_argument('--extract-ase', dest='extract_as', action='store_true', help='extract alternative splicing events [on]', default=True)
@@ -151,7 +152,6 @@ def parse_options(argv):
     general_viz = parser_viz.add_argument_group('GENERAL')
     general_viz.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)
     general_viz.add_argument('-V', '--validate-sg', dest='validate_sg', action='store_true', help='validate splice graph [off]', default=False)
-    general_viz.add_argument('--validate-sg-count', dest='sg_min_edge_count', metavar='INT', type=int, help='confirmation threshold for edge to be kept [min(10, #samples)]', default=10)
     general_viz.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='user verbose output mode [off]', default=False)
     general_viz.add_argument('-d', '--debug', dest='debug', action='store_true', help='use debug mode [off]', default=False)
 
