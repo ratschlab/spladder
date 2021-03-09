@@ -67,6 +67,7 @@ def parse_options(argv):
     graph.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)
     graph.add_argument('-I', '--iterations', dest='insert_intron_iterations', metavar='INT', type=int, help='number of iterations to insert new introns into the graph [5]', default=5)
     graph.add_argument('-M', '--merge-strat', dest='merge', metavar='<STRAT>', help='merge strategy, where <STRAT> is one of: single, merge_bams, merge_graphs, merge_all [merge_graphs]', default='merge_graphs')
+    graph.add_argument('--validate-sg-count', dest='sg_min_edge_count', metavar='INT', type=int, help='confirmation threshold for edge to be kept [min(10, #samples)]', default=10)
     graph.add_argument('--chunked-merge', dest='chunked_merge', metavar="LEVEL MAX_LEVEL START END", nargs='+', action='append', help='provide infor for external merge with START being 0-based and END non-inclusive', default=[])
     graph.add_argument('--insert-ir', dest='insert_ir', action='store_true', help='insert intron retentions [on]', default=True)
     graph.add_argument('--no-insert-ir', dest='insert_ir', action='store_false', default=True)

@@ -90,7 +90,6 @@ def default_settings(options):
    #options.intron_retention['max_retention_rel_cov'] = 1.5
     options.intron_retention['min_retention_max_exon_fold_diff']  = 4
 
-    options.sg_min_edge_count = 10
     options.no_reset_conf = False
 
     options.do_prune = False
@@ -210,7 +209,8 @@ def parse_args(options, identity='main'):
         options.strains = np.array(options.strains)
 
     ### adapt graph validation requirement to max number of samples
-    options.sg_min_edge_count = min(options.sg_min_edge_count, len(options.samples))
+    if hasattr(options, 'sg_min_edge_count'):
+        options.sg_min_edge_count = min(options.sg_min_edge_count, len(options.samples))
 
     return options
 
