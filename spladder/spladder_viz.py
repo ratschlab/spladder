@@ -71,9 +71,9 @@ def _parse_event_info(id_array, gids, event_info, events, outdir, confidence, ve
 
 def _parse_gene_info(track_info, genes, gene_names, gids, all_gene_names, outdir, confidence, validate_sg, verbose):
     for g in track_info:
-        gid = np.where(all_gene_names == g)[0]
+        gid = np.where(all_gene_names == g.split('.')[0])[0]
         if gid.shape[0] == 0:
-            sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g)
+            sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g.split('.')[0])
             sys.exit(1)
         assert gid.shape[0] == 1
         gids.append(gid[0])
@@ -240,7 +240,6 @@ def spladder_viz(options):
                 ### gene (this is only needed internally for --test mode)
                 elif range_info[0] == 'gene':
                     _parse_gene_info(range_info[1:], genes, gene_names, gids, all_gene_names, options.outdir, options.confidence, options.validate_sg, options.verbose)
-                    
 
         ### check that everything is on the same chromosome
         plotchrm = np.unique([_.chr for _ in np.r_[events, genes, coords]])
