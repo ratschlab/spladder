@@ -102,18 +102,28 @@ def get_gene_expression(options, fn_out=None, strain_subset=None):
     return (gene_counts, strains[strain_idx_all], strains[strain_idx], gene_names)
 
 
-def get_size_factors(gene_counts, options):
+def get_size_factors(gene_counts, options, kind='geomean'):
 
     if options.verbose:
         print('Estimating size factors')
 
-    ### take geometric mean of counts
-    gmean = np.exp(np.mean(np.log(gene_counts + 1), axis=1))
-
     size_factors = []
-    for i in range(gene_counts.shape[1]):
-        idx = gene_counts[:, i] > 0
-        size_factors.append(np.median(gene_counts[idx, i] / gmean[idx]))
+
+    ### take geometric mean of counts
+    if kind == 'geomean':
+        gmean = np.exp(np.mean(np.log(gene_counts + 1), axis=1))
+        for i in range(gene_counts.shape[1]):
+            idx = gene_counts[:, i] > 0
+            size_factors.append(np.median(gene_counts[idx, i] / gmean[idx]))
+    elif kind == 'tc': # total count
+        for i in range(gene_counts.shape[1]):
+            size_factors.append(gene_counts[:, i].sum() / 100000000) 
+    elif kind == 'uq': # upper quartile
+        for i in range(gene_counts.shape[1]):
+            size_factors.append(scoreatpercentile(gene_counts[:, i], 75) + 1) 
+    else:
+        sys.stderr.write('ERROR: unknown normalization method %s\n' % kind)
+        sys.exit(1)
 
     size_factors = np.array(size_factors, dtype='float')
 
@@ -680,7 +690,7 @@ def spladder_test(options):
                 continue
 
         ### quantify events
-        (cov, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1_all, idx2_all, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
+        (cov, psi, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1_all, idx2_all, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
 
         if options.cap_outliers:
             log_counts = np.log2(cov[0] + 1)

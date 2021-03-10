@@ -366,10 +366,6 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     ### get counts for introns
     if options.verbose:
         print('Collecting intron confirmation values')
-
-
-    ### get gene index
-    gene_idx = IN['gene_idx'][:].astype('int')
     cnt1 = []
     cnt2 = []
     for f in fidx0i:
@@ -391,6 +387,9 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         cov[1][:, :idx1_len] += np.array(cnt1).min(axis=0)
         cov[1][:, idx1_len:] += np.array(cnt2).min(axis=0)
     del cnt1, cnt2
+
+    ### get psi values
+    psi = np.r_[IN['psi'][:, conf_idx][strain_idx1, :].T), IN['psi'][:, conf_idx][strain_idx2, :].T)]
 
     ### get strain list
     strains1 = decodeUTF8(IN['strains'][:][strain_idx1])
@@ -415,6 +414,8 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
 
     IN.close()
 
+    ### get gene index
+    gene_idx = IN['gene_idx'][:].astype('int')
     ### only keep confident events
     gene_idx = gene_idx[conf_idx]
 
@@ -422,7 +423,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     cov[0] = np.floor(cov[0])
     cov[1] = np.floor(cov[1])
 
-    return (cov, gene_idx, event_idx, event_ids, strains)
+    return (cov, psi, gene_idx, event_idx, event_ids, strains)
 
 
 def quantify_from_graph(ev, strain_idx=None, event_type=None, options=None, out_fn=None, fn_merge=None):
