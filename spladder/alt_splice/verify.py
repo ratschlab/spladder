@@ -1,4 +1,4 @@
-import scipy as sp
+import numpy as np
 import pickle
 import h5py
 import sys
@@ -24,11 +24,11 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
     # (7) sum_inner_exon_conf, (8) num_inner_exon, (9) len_inner_exon
 
     ### check validity of exon coordinates (>=0)
-    if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
+    if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
         info[0] = 0
         return (verified, info)
     ### check validity of exon coordinates (start < stop && non-overlapping)
-    elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any(event.exons2[:, 1] - event.exons2[:, 0] < 1):
+    elif np.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or np.any(event.exons2[:, 1] - event.exons2[:, 0] < 1):
         info[0] = 0
         return (verified, info)
 
@@ -36,26 +36,26 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
     segs = gene.segmentgraph
 
     ### find exons corresponding to event
-    idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
-    idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons2[-1, 0]) & (sg.vertices[1, :] == event.exons2[-1, 1]))[0]
+    idx_exon_pre  = np.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
+    idx_exon_aft  = np.where((sg.vertices[0, :] == event.exons2[-1, 0]) & (sg.vertices[1, :] == event.exons2[-1, 1]))[0]
     seg_exons = []
     for i in range(1, event.exons2.shape[0] - 1):
-        tmp = sp.where((sg.vertices[0, :] == event.exons2[i, 0]) & (sg.vertices[1, :] == event.exons2[i, 1]))[0]
-        seg_exons.append(sp.where(segs.seg_match[tmp, :])[1])
+        tmp = np.where((sg.vertices[0, :] == event.exons2[i, 0]) & (sg.vertices[1, :] == event.exons2[i, 1]))[0]
+        seg_exons.append(np.where(segs.seg_match[tmp, :])[1])
     
     ### find segments corresponding to exons
-    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
-    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
-    seg_exons_u = sp.sort(sp.unique([x for sublist in seg_exons for x in sublist]))
+    seg_exon_pre = np.sort(np.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = np.sort(np.where(segs.seg_match[idx_exon_aft, :])[1])
+    seg_exons_u = np.sort(np.unique([x for sublist in seg_exons for x in sublist]))
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon_pre_cov
-    info[1] = sp.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) / sp.sum(seg_lens[seg_exon_pre])
+    info[1] = np.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) / np.sum(seg_lens[seg_exon_pre])
     # exon_aft_cov
-    info[3] = sp.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) / sp.sum(seg_lens[seg_exon_aft])
+    info[3] = np.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) / np.sum(seg_lens[seg_exon_aft])
     # exons_cov
-    info[2] = sp.sum(counts_segments[seg_exons_u] * seg_lens[seg_exons_u]) / sp.sum(seg_lens[seg_exons_u])
+    info[2] = np.sum(counts_segments[seg_exons_u] * seg_lens[seg_exons_u]) / np.sum(seg_lens[seg_exons_u])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
     if info[2] >= options.mult_exon_skip['min_skip_rel_cov'] * (info[1] + info[3]) / 2:
@@ -64,26 +64,26 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
     ### check intron confirmation as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # exon_pre_exon_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exons[0][0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exons[0][0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[4] = counts_edges[idx[0], 1]
     # exon_exon_aft_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exons[-1][-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exons[-1][-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[5] = counts_edges[idx[0], 1]
     # exon_pre_exon_aft_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[6] = counts_edges[idx[0], 1]
     for i in range(len(seg_exons) - 1):
         # sum_inner_exon_conf
-        idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exons[i][-1], seg_exons[i+1][0]], segs.seg_edges.shape))[0]
+        idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exons[i][-1], seg_exons[i+1][0]], segs.seg_edges.shape))[0]
         if len(idx.shape) > 0 and idx.shape[0] > 0:
             info[7] += counts_edges[idx[0], 1]
 
     # num_inner_exon
     info[8] = event.exons2.shape[0] - 2
-    info[9] = sp.sum(event.exons2[1:-1, 1] - event.exons2[1:-1, 0])
+    info[9] = np.sum(event.exons2[1:-1, 1] - event.exons2[1:-1, 0])
     if info[4] >= options.mult_exon_skip['min_non_skip_count']:
         verified[1] = 1
     if info[5] >= options.mult_exon_skip['min_non_skip_count']:
@@ -107,11 +107,11 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     # (4) intron_conf, (5) intron_cov_region
 
     ### check validity of exon coordinates (>=0)
-    if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
+    if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
         info[0] = 0
         return (verified, info)
     ### check validity of exon coordinates (start < stop && non-overlapping)
-    elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any((event.exons2[1] - event.exons2[0]) < 1):
+    elif np.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or np.any((event.exons2[1] - event.exons2[0]) < 1):
         info[0] = 0
         return (verified, info)
 
@@ -119,29 +119,29 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     segs = gene.segmentgraph
 
     ### find exons corresponding to event
-    idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
-    idx_exon2  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
+    idx_exon1  = np.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon2  = np.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
 
     ### find segments corresponding to exons
-    seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
-    seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
-    seg_all = sp.arange(seg_exon1[0], seg_exon2[-1])
+    seg_exon1 = np.sort(np.where(segs.seg_match[idx_exon1, :])[1])
+    seg_exon2 = np.sort(np.where(segs.seg_match[idx_exon2, :])[1])
+    seg_all = np.arange(seg_exon1[0], seg_exon2[-1])
 
-    seg_intron = sp.setdiff1d(seg_all, seg_exon1)
-    seg_intron = sp.setdiff1d(seg_intron, seg_exon2)
+    seg_intron = np.setdiff1d(seg_all, seg_exon1)
+    seg_intron = np.setdiff1d(seg_intron, seg_exon2)
     assert(seg_intron.shape[0] > 0)
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     ### compute exon coverages as mean of position wise coverage
     # exon1_cov
-    info[2] = sp.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / sp.sum(seg_lens[seg_exon1])
+    info[2] = np.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / np.sum(seg_lens[seg_exon1])
     # exon2_cov
-    info[3] = sp.sum(counts_segments[seg_exon2] * seg_lens[seg_exon2]) / sp.sum(seg_lens[seg_exon2])
+    info[3] = np.sum(counts_segments[seg_exon2] * seg_lens[seg_exon2]) / np.sum(seg_lens[seg_exon2])
     # intron_cov
-    info[1] = sp.sum(counts_segments[seg_intron] * seg_lens[seg_intron]) / sp.sum(seg_lens[seg_intron])
+    info[1] = np.sum(counts_segments[seg_intron] * seg_lens[seg_intron]) / np.sum(seg_lens[seg_intron])
     # intron_cov_region
-    info[5] = sp.sum(counts_seg_pos[seg_intron]) / sp.sum(seg_lens[seg_intron])
+    info[5] = np.sum(counts_seg_pos[seg_intron]) / np.sum(seg_lens[seg_intron])
 
     ### check if counts match verification criteria
     if info[1] > options.intron_retention['min_retention_cov'] and \
@@ -152,7 +152,7 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     ### check intron confirmation as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # intron conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon1[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon1[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
 
     if info[4] >= options.intron_retention['min_non_retention_count']:
@@ -174,11 +174,11 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
 
     ### check validity of exon coordinates (>=0)
-    if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
+    if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
         info[0] = False
         return (verified, info)
     ### check validity of exon coordinates (start < stop && non-overlapping)
-    elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any(event.exons2[:, 1] - event.exons2[:, 0] < 1):
+    elif np.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or np.any(event.exons2[:, 1] - event.exons2[:, 0] < 1):
         info[0] = False
         return (verified, info)
 
@@ -186,23 +186,23 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     segs = gene.segmentgraph
 
     ### find exons corresponding to event
-    idx_exon_pre = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
-    idx_exon = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
-    idx_exon_aft = sp.where((sg.vertices[0, :] == event.exons2[2, 0]) & (sg.vertices[1, :] == event.exons2[2, 1]))[0]
+    idx_exon_pre = np.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
+    idx_exon = np.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    idx_exon_aft = np.where((sg.vertices[0, :] == event.exons2[2, 0]) & (sg.vertices[1, :] == event.exons2[2, 1]))[0]
 
     ### find segments corresponding to exons
-    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
-    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
-    seg_exon = sp.sort(sp.where(segs.seg_match[idx_exon, :])[1])
+    seg_exon_pre = np.sort(np.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = np.sort(np.where(segs.seg_match[idx_exon_aft, :])[1])
+    seg_exon = np.sort(np.where(segs.seg_match[idx_exon, :])[1])
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon pre cov
-    info[2] = sp.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) /sp.sum(seg_lens[seg_exon_pre])
+    info[2] = np.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) /np.sum(seg_lens[seg_exon_pre])
     # exon aft cov
-    info[3] = sp.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) /sp.sum(seg_lens[seg_exon_aft])
+    info[3] = np.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) /np.sum(seg_lens[seg_exon_aft])
     # exon cov
-    info[1] = sp.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /sp.sum(seg_lens[seg_exon])
+    info[1] = np.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /np.sum(seg_lens[seg_exon])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
     if info[1] >= options.exon_skip['min_skip_rel_cov'] * (info[2] + info[3]) / 2: 
@@ -211,17 +211,17 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     ### check intron confirmation as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # exon_pre_exon_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
     if info[4] >= options.exon_skip['min_non_skip_count']:
         verified[1] = 1
     # exon_exon_aft_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[5] = counts_edges[idx, 1]
     if info[5] >= options.exon_skip['min_non_skip_count']:
         verified[2] = 1
     # exon_pre_exon_aft_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[6] = counts_edges[idx, 1]
     if info[6] >= options.exon_skip['min_skip_count']:
         verified[3] = 1
@@ -241,7 +241,7 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     # (3) intron1_conf, (4) intron2_conf
 
     ### check validity of exon coordinates (>=0)
-    if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
+    if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
         info[0] = 0 
         return (verified, info)
 
@@ -254,55 +254,55 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     segs = gene.segmentgraph
 
     ### find exons corresponding to event
-    idx_exon11 = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon11 = np.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
     if idx_exon11.shape[0] == 0:
-        segs_exon11 = sp.where((segs.segments[0, :] >= event.exons1[0, 0]) & (segs.segments[1, :] <= event.exons1[0, 1]))[0]
+        segs_exon11 = np.where((segs.segments[0, :] >= event.exons1[0, 0]) & (segs.segments[1, :] <= event.exons1[0, 1]))[0]
     else:
-        segs_exon11 = sp.where(segs.seg_match[idx_exon11, :])[1]
-    idx_exon12 = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
+        segs_exon11 = np.where(segs.seg_match[idx_exon11, :])[1]
+    idx_exon12 = np.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
     if idx_exon12.shape[0] == 0:
-        segs_exon12 = sp.where((segs.segments[0, :] >= event.exons1[1, 0]) & (segs.segments[1, :] <= event.exons1[1, 1]))[0]
+        segs_exon12 = np.where((segs.segments[0, :] >= event.exons1[1, 0]) & (segs.segments[1, :] <= event.exons1[1, 1]))[0]
     else:
-        segs_exon12 = sp.where(segs.seg_match[idx_exon12, :])[1]
-    idx_exon21 = sp.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
+        segs_exon12 = np.where(segs.seg_match[idx_exon12, :])[1]
+    idx_exon21 = np.where((sg.vertices[0, :] == event.exons2[0, 0]) & (sg.vertices[1, :] == event.exons2[0, 1]))[0]
     if idx_exon21.shape[0] == 0:
-        segs_exon21 = sp.where((segs.segments[0, :] >= event.exons2[0, 0]) & (segs.segments[1, :] <= event.exons2[0, 1]))[0]
+        segs_exon21 = np.where((segs.segments[0, :] >= event.exons2[0, 0]) & (segs.segments[1, :] <= event.exons2[0, 1]))[0]
     else:
-        segs_exon21 = sp.where(segs.seg_match[idx_exon21, :])[1]
-    idx_exon22 = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+        segs_exon21 = np.where(segs.seg_match[idx_exon21, :])[1]
+    idx_exon22 = np.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
     if idx_exon22.shape[0] == 0:
-        segs_exon22 = sp.where((segs.segments[0, :] >= event.exons2[1, 0]) & (segs.segments[1, :] <= event.exons2[1, 1]))[0]
+        segs_exon22 = np.where((segs.segments[0, :] >= event.exons2[1, 0]) & (segs.segments[1, :] <= event.exons2[1, 1]))[0]
     else:
-        segs_exon22 = sp.where(segs.seg_match[idx_exon22, :] > 0)[1]
+        segs_exon22 = np.where(segs.seg_match[idx_exon22, :] > 0)[1]
 
     assert(segs_exon11.shape[0] > 0)
     assert(segs_exon12.shape[0] > 0)
     assert(segs_exon21.shape[0] > 0)
     assert(segs_exon22.shape[0] > 0)
 
-    if segs_exon11.shape == segs_exon21.shape and sp.all(segs_exon11 == segs_exon21):
+    if segs_exon11.shape == segs_exon21.shape and np.all(segs_exon11 == segs_exon21):
         seg_exon_const = segs_exon11
-        seg_diff = sp.setdiff1d(segs_exon12, segs_exon22)
+        seg_diff = np.setdiff1d(segs_exon12, segs_exon22)
         if seg_diff.shape[0] == 0:
-            seg_diff = sp.setdiff1d(segs_exon22, segs_exon12)
-        seg_const = sp.intersect1d(segs_exon12, segs_exon22)
-    elif segs_exon12.shape == segs_exon22.shape and sp.all(segs_exon12 == segs_exon22):
+            seg_diff = np.setdiff1d(segs_exon22, segs_exon12)
+        seg_const = np.intersect1d(segs_exon12, segs_exon22)
+    elif segs_exon12.shape == segs_exon22.shape and np.all(segs_exon12 == segs_exon22):
         seg_exon_const = segs_exon12
-        seg_diff = sp.setdiff1d(segs_exon11, segs_exon21)
+        seg_diff = np.setdiff1d(segs_exon11, segs_exon21)
         if seg_diff.shape[0] == 0:
-            seg_diff = sp.setdiff1d(segs_exon21, segs_exon11)
-        seg_const = sp.intersect1d(segs_exon21, segs_exon11)
+            seg_diff = np.setdiff1d(segs_exon21, segs_exon11)
+        seg_const = np.intersect1d(segs_exon21, segs_exon11)
     else:
         print("ERROR: both exons differ in alt prime event in verify_alt_prime", file=sys.stderr)
         sys.exit(1)
-    seg_const = sp.r_[seg_exon_const, seg_const]
+    seg_const = np.r_[seg_exon_const, seg_const]
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon_diff_cov
-    info[1] = sp.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / sp.sum(seg_lens[seg_diff])
+    info[1] = np.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / np.sum(seg_lens[seg_diff])
     # exon_const_cov
-    info[2] = sp.sum(counts_segments[seg_const] * seg_lens[seg_const]) / sp.sum(seg_lens[seg_const])
+    info[2] = np.sum(counts_segments[seg_const] * seg_lens[seg_const]) / np.sum(seg_lens[seg_const])
 
     if info[1] >= options.alt_prime['min_diff_rel_cov'] * info[2]:
         verified[0] = 1
@@ -310,11 +310,11 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     ### check intron confirmations as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # intron1_conf 
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], segs.seg_edges.shape))[0]
     assert(idx.shape[0] > 0)
     info[3] = counts_edges[idx, 1]
     # intron2_conf 
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], segs.seg_edges.shape))[0]
     assert(idx.shape[0] > 0)
     info[4] = counts_edges[idx, 1]
 
@@ -337,11 +337,11 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     # (5) exon_pre_exon1_conf, (6) exon_pre_exon2_conf, (7) exon1_exon_aft_conf, (8) exon2_exon_aft_conf
 
     ### check validity of exon coordinates (>=0)
-    if sp.any(event.exons1 < 0) or sp.any(event.exons2 < 0):
+    if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
         info[0] = 0
         return (verified, info)
     ### check validity of exon coordinates (start < stop && non-overlapping)
-    elif sp.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or sp.any(event.exons2[:, 1] - event.exons2[:, 0] < 1) or \
+    elif np.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or np.any(event.exons2[:, 1] - event.exons2[:, 0] < 1) or \
          (event.exons1[1, 1] > event.exons2[1, 0] and event.exons1[1, 0] < event.exons2[1, 0]) or \
          (event.exons2[1, 1] > event.exons1[1, 0] and event.exons2[1, 0] < event.exons1[1, 0]):
         info[0] = 0
@@ -351,27 +351,27 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     segs = gene.segmentgraph
 
     ### find exons corresponding to event
-    idx_exon_pre  = sp.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
-    idx_exon_aft  = sp.where((sg.vertices[0, :] == event.exons1[-1, 0]) & (sg.vertices[1, :] == event.exons1[-1, 1]))[0]
-    idx_exon1  = sp.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
-    idx_exon2  = sp.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
+    idx_exon_pre  = np.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
+    idx_exon_aft  = np.where((sg.vertices[0, :] == event.exons1[-1, 0]) & (sg.vertices[1, :] == event.exons1[-1, 1]))[0]
+    idx_exon1  = np.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
+    idx_exon2  = np.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
     
     ### find segments corresponding to exons
-    seg_exon_pre = sp.sort(sp.where(segs.seg_match[idx_exon_pre, :])[1])
-    seg_exon_aft = sp.sort(sp.where(segs.seg_match[idx_exon_aft, :])[1])
-    seg_exon1 = sp.sort(sp.where(segs.seg_match[idx_exon1, :])[1])
-    seg_exon2 = sp.sort(sp.where(segs.seg_match[idx_exon2, :])[1])
+    seg_exon_pre = np.sort(np.where(segs.seg_match[idx_exon_pre, :])[1])
+    seg_exon_aft = np.sort(np.where(segs.seg_match[idx_exon_aft, :])[1])
+    seg_exon1 = np.sort(np.where(segs.seg_match[idx_exon1, :])[1])
+    seg_exon2 = np.sort(np.where(segs.seg_match[idx_exon2, :])[1])
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon pre cov
-    info[1] = sp.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) / sp.sum(seg_lens[seg_exon_pre])
+    info[1] = np.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) / np.sum(seg_lens[seg_exon_pre])
     # exon1 cov
-    info[2] = sp.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / sp.sum(seg_lens[seg_exon1])
+    info[2] = np.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / np.sum(seg_lens[seg_exon1])
     # exon2 cov
-    info[3] = sp.sum(counts_segments[seg_exon2] * seg_lens[seg_exon2]) / sp.sum(seg_lens[seg_exon2])
+    info[3] = np.sum(counts_segments[seg_exon2] * seg_lens[seg_exon2]) / np.sum(seg_lens[seg_exon2])
     # exon aft cov
-    info[4] = sp.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) / sp.sum(seg_lens[seg_exon_aft])
+    info[4] = np.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) / np.sum(seg_lens[seg_exon_aft])
 
     ### check if coverage of first exon is >= than FACTOR times average of pre and after
     if info[2] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2:
@@ -382,19 +382,19 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     ### check intron confirmation as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # exon_pre_exon1_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon1[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon1[0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[5] = counts_edges[idx[0], 1]
     # exon_pre_exon2_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon_pre[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[6] = counts_edges[idx[0], 1]
     # exon1_exon_aft_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon1[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon1[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[7] = counts_edges[idx[0], 1]
     # exon2_exon_aft_conf
-    idx = sp.where(counts_edges[:, 0] == sp.ravel_multi_index([seg_exon2[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon2[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     if len(idx.shape) > 0 and idx.shape[0] > 0:
         info[8] = counts_edges[idx[0], 1]
 
@@ -456,9 +456,9 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
             pickle.dump(edge_idx, open(fn_count + '.quick_edge_idx', 'wb'), -1)
 
         ### sort events by gene idx
-        s_idx = sp.argsort([x.gene_idx for x in ev])
+        s_idx = np.argsort([x.gene_idx for x in ev])
         ev = ev[s_idx]
-        old_idx = sp.argsort(s_idx)
+        old_idx = np.argsort(s_idx)
 
         counts = []
         for i in range(ev.shape[0]):
@@ -474,25 +474,25 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
             ### there are no edges present in the event
             if gene_ids_edges.shape[0] == 0:
                 ver, info = verify_empty(event_type)
-                counts.append(sp.array([info]))
-                ev[i].verified = sp.array(ev[i].verified, dtype='bool')
+                counts.append(np.array([info]))
+                ev[i].verified = np.array(ev[i].verified, dtype='bool')
                 continue
 
-            gr_idx_segs = sp.where(gene_ids_segs == g_idx)[0]
-            gr_idx_edges = sp.where(gene_ids_edges == g_idx)[0]
+            gr_idx_segs = np.where(gene_ids_segs == g_idx)[0]
+            gr_idx_edges = np.where(gene_ids_edges == g_idx)[0]
             if gr_idx_edges.shape[0] == 0:
                 ver, info = verify_empty(event_type)
-                counts.append(sp.array([info]))
-                ev[i].verified = sp.array(ev[i].verified, dtype='bool')
+                counts.append(np.array([info]))
+                ev[i].verified = np.array(ev[i].verified, dtype='bool')
                 continue
 
             if isinstance(strain_idx, int):
                 strain_idx = [strain_idx]
 
             ### laod relevant count data from HDF5
-            segments = sp.atleast_2d(IN['segments'][gr_idx_segs, :])[:, strain_idx]
-            seg_pos = sp.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, strain_idx]
-            edges = sp.atleast_2d(IN['edges'][gr_idx_edges, :])[:, strain_idx]
+            segments = np.atleast_2d(IN['segments'][gr_idx_segs, :])[:, strain_idx]
+            seg_pos = np.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, strain_idx]
+            edges = np.atleast_2d(IN['edges'][gr_idx_edges, :])[:, strain_idx]
             curr_edge_idx = edge_idx[gr_idx_edges]
 
             for s_idx in range(len(strain_idx)):
@@ -501,25 +501,25 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
                # ev_tmp.subset_strain(s_idx) ### TODO 
                 #sys.stdout.flush()
                 if event_type == 'exon_skip':
-                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
+                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
                 elif event_type in ['alt_3prime', 'alt_5prime']:
-                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
+                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
                 elif event_type == 'intron_retention':
-                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, options)
+                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, options)
                 elif event_type == 'mult_exon_skip':
-                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
+                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
                 elif event_type == 'mutex_exons':
-                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  sp.c_[curr_edge_idx, edges[:, s_idx]], options)
+                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
 
                 ev[i].verified.append(ver)
                 if s_idx == 0:
-                    counts.append(sp.array([info], dtype='float'))
+                    counts.append(np.array([info], dtype='float'))
                 else:
-                    counts[-1] = sp.r_[counts[-1], sp.array([info], dtype='float')]
-            ev[i].verified = sp.array(ev[i].verified, dtype='bool')
+                    counts[-1] = np.r_[counts[-1], np.array([info], dtype='float')]
+            ev[i].verified = np.array(ev[i].verified, dtype='bool')
 
         IN.close()
-        counts = sp.dstack(counts)
+        counts = np.dstack(counts)
     ev = ev[old_idx]
     counts = counts[:, :, old_idx]
 

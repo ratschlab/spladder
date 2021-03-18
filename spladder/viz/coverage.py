@@ -1,8 +1,8 @@
 """This libray contains a collection of useful plot functions regarding coverage."""
 
-import scipy as sp
 import scipy.stats as spst
 import scipy.sparse as spsp
+import numpy as np
 import numpy.random as npr
 import pysam
 import sys
@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import math
-import pdb
 
 from .highlight import *
 
@@ -29,8 +28,8 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
     # X   BAM_CDIFF   8
 
     ### init counts
-    counts = sp.zeros((len(files), stop - start + 1))
-    intron_counts = sp.zeros((len(files), stop - start + 1))
+    counts = np.zeros((len(files), stop - start + 1))
+    intron_counts = np.zeros((len(files), stop - start + 1))
     intron_list = [dict() for i in range(len(files))]
 
     for f_i, fn in enumerate(files):
@@ -73,7 +72,7 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
         elif fn.lower().endswith('npz'):
 
             try:
-                infile = sp.load(str(fn))
+                infile = np.load(str(fn))
             except:
                 print('Could not load file %s - skipping' % fn, file=sys.stderr)
                 continue
@@ -81,9 +80,9 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
             bam_reads = spsp.coo_matrix((infile[chr_name + '_reads_dat'], (infile[chr_name + '_reads_row'], infile[chr_name + '_reads_col'])), shape=infile[chr_name + '_reads_shp'], dtype='uint32').tocsc()
             bam_introns_m = infile[chr_name + '_introns_m']
             bam_introns_p = infile[chr_name + '_introns_p']
-            counts[f_i, :] = sp.sum(bam_reads[:, start:stop + 1].todense(), axis=0)
+            counts[f_i, :] = np.sum(bam_reads[:, start:stop + 1].todense(), axis=0)
             if intron_cnt:
-                idx = sp.where((bam_introns_m[:, 0] > start) & (bam_introns_m[:, 1] < stop))[0]
+                idx = np.where((bam_introns_m[:, 0] > start) & (bam_introns_m[:, 1] < stop))[0]
                 for _i in idx:
                     try:
                         intron_list[f_i][(bam_introns_m[_i, 0] - start, bam_introns_m[_i, 1] - bam_introns_m[_i, 0])] += bam_introns_m[_i, 2]
@@ -91,7 +90,7 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
                         intron_list[f_i][(bam_introns_m[_i, 0] - start, bam_introns_m[_i, 1] - bam_introns_m[_i, 0])] = bam_introns_m[_i, 2]
                     if intron_cov: 
                         intron_counts[f_i,bam_introns_m[_i, 0]:bam_introns_m[_i, 1]] += bam_introns_m[_i, 2] 
-                idx = sp.where((bam_introns_p[:, 0] > start) & (bam_introns_p[:, 1] < stop))[0]
+                idx = np.where((bam_introns_p[:, 0] > start) & (bam_introns_p[:, 1] < stop))[0]
                 for _i in idx:
                     try:
                         intron_list[f_i][(bam_introns_p[_i, 0] - start, bam_introns_p[_i, 1] - bam_introns_p[_i, 0])] += bam_introns_p[_i, 2]
@@ -101,8 +100,8 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
                         intron_counts[f_i,bam_introns_p[_i, 0]:bam_introns_p[_i, 1]] += bam_introns_p[_i, 2] 
 
     if collapsed:
-        counts = sp.sum(counts, axis=0)
-        intron_counts = sp.sum(intron_counts, axis=0)
+        counts = np.sum(counts, axis=0)
+        intron_counts = np.sum(intron_counts, axis=0)
         if intron_cnt:
             for f in range(1, len(files)):
                 for intron in intron_list[f]:
@@ -124,7 +123,7 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
     ### subsampling
     if subsample > 0 and len(files) > subsample:
         npr.seed(23)
-        files = sp.array(files)
+        files = np.array(files)
         files = npr.choice(files, subsample)
 
     ### augment chromosome name
@@ -146,7 +145,7 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
         data = data[:, col_idx]
     
     if log:
-        data = sp.log10(data + 1)
+        data = np.log10(data + 1)
 
     if cmap is not None:
         ax.matshow(data, cmap=cmap, aspect='auto')
@@ -164,7 +163,7 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
     produce a coverage overview plot."""
 
     if sample_idx is None:
-        sample_idx = [sp.arange(seg_counts.shape[1])]
+        sample_idx = [np.arange(seg_counts.shape[1])]
 
     norm = plt.Normalize(0, len(sample_idx))
 
@@ -179,7 +178,7 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
         ### iterate over samples
         for c, curr_idx in enumerate(sample_idx):
             if log:
-                counts = sp.log10(seg_counts[j, curr_idx] + 1)
+                counts = np.log10(seg_counts[j, curr_idx] + 1)
             else:
                 counts = seg_counts[j, curr_idx]
 
@@ -188,7 +187,7 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
                 ax.plot(s, [counts[0], counts[0]], '-', color=cmap_seg(norm(c)), linewidth=1)
             elif counts.shape[0] > 1:
                 stderr = spst.sem(counts)
-                mean = sp.mean(counts)
+                mean = np.mean(counts)
                 ax.fill_between(s, mean-stderr, mean+stderr, color=cmap_seg(norm(c)), alpha=0.2, edgecolor='none', linewidth=0)
                 ax.plot(s, [mean, mean], '-', color=cmap_seg(norm(c)), linewidth=0.5)
 
@@ -196,12 +195,12 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
     for j in range(edge_idx.shape[0]):
         ### iterate over samples
         for c, curr_idx in enumerate(sample_idx):
-            [s, t] = sp.unravel_index(edge_idx[j], gene.segmentgraph.seg_edges.shape, order=order) 
+            [s, t] = np.unravel_index(edge_idx[j], gene.segmentgraph.seg_edges.shape, order=order) 
             if log:
-                counts = sp.log10(edge_counts[j, curr_idx] + 1)
+                counts = np.log10(edge_counts[j, curr_idx] + 1)
             else:
                 counts = edge_counts[j, curr_idx]
-            mean = sp.mean(counts)
+            mean = np.mean(counts)
             add_intron_patch2(ax, gene.segmentgraph.segments[1, s], gene.segmentgraph.segments[0, t], mean, color=cmap_edg(norm(c)))
 
     if xlim is not None:
@@ -227,7 +226,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
     ### subsampling
     if subsample > 0 and len(files) > subsample:
         npr.seed(23)
-        files = sp.array(files)
+        files = np.array(files)
         files = npr.choice(files, subsample)
 
     ### augment chromosome name
@@ -259,32 +258,32 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
         bin_counts = counts
         bin_intron_counts = intron_counts
         if col_idx is not None:
-            counts_x = sp.arange(col_idx.shape[0])
+            counts_x = np.arange(col_idx.shape[0])
         else:
             counts_x = list(range(start, stop + 1))
     else:
         if verbose:
             print('... binning counts ...', file=sys.stdout)
-        bin_counts = sp.zeros((bins,))
-        bin_intron_counts = sp.zeros((bins, ))
-        binsize = int(sp.ceil(float(counts.shape[0]) / bins))
+        bin_counts = np.zeros((bins,))
+        bin_intron_counts = np.zeros((bins, ))
+        binsize = int(np.ceil(float(counts.shape[0]) / bins))
         for ii, i in enumerate(range(0, counts.shape[0], binsize)):
-            bin_counts[ii] = sp.sum(counts[i:min(i + binsize, counts.shape[0] - 1)]) / binsize
+            bin_counts[ii] = np.sum(counts[i:min(i + binsize, counts.shape[0] - 1)]) / binsize
             if intron_cov:
-                bin_intron_counts[ii] = sp.sum(intron_counts[i:min(i + binsize, intron_counts.shape[0] - 1)]) / binsize
+                bin_intron_counts[ii] = np.sum(intron_counts[i:min(i + binsize, intron_counts.shape[0] - 1)]) / binsize
         if col_idx is not None:
-            counts_x = sp.linspace(0, col_idx.shape[0], num = bins)
+            counts_x = np.linspace(0, col_idx.shape[0], num = bins)
         else:
-            counts_x = sp.linspace(start, stop, num = bins)
+            counts_x = np.linspace(start, stop, num = bins)
 
     ### use log if chosen
     if log:
-        bin_counts = sp.log10(bin_counts + 1)
-        bin_intron_counts = sp.log10(bin_intron_counts + 1)
+        bin_counts = np.log10(bin_counts + 1)
+        bin_intron_counts = np.log10(bin_intron_counts + 1)
         if intron_cnt:
             for intron in intron_list:
                 if intron_list[intron] > 0:
-                    intron_list[intron] = sp.log10(intron_list[intron] + 1)
+                    intron_list[intron] = np.log10(intron_list[intron] + 1)
 
     if ax is None:
         fig = plt.figure(figsize = (10, 4))
@@ -293,7 +292,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
         ax.fill_between(counts_x, bin_intron_counts, facecolor=color_intron_cov, edgecolor='none', alpha=0.5)
 
     ax.fill_between(counts_x, bin_counts, facecolor=color_cov, edgecolor='none', alpha=0.5)
-    #ax.set_xticklabels([str(int(x)) for x in sp.linspace(start, stop, num = len(ax.get_xticklabels()))])
+    #ax.set_xticklabels([str(int(x)) for x in np.linspace(start, stop, num = len(ax.get_xticklabels()))])
     #ax.set_xlabel('Position on contig %s' % chrm)
 
     ### draw strand
@@ -389,10 +388,10 @@ def add_intron_patch2(ax, start, stop, cnt, color='green'):
     b = float(cnt) * (-1*(x3*x3)) / z
 
     ### get points
-    #x = sp.linspace(start, stop, 100)
-    x = sp.linspace(0, stop-start, 100)
+    #x = np.linspace(start, stop, 100)
+    x = np.linspace(0, stop-start, 100)
     #y = (a*x*x) + (b*x) + c
     y = (a*x*x) + (b*x)
-    ax.plot(sp.linspace(start, stop, 100), y, '-', color=color)
+    ax.plot(np.linspace(start, stop, 100), y, '-', color=color)
 
 

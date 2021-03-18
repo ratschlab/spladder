@@ -1,6 +1,6 @@
 from scipy.sparse import lil_matrix
 from numpy.matlib import repmat
-import scipy as sp
+import numpy as np
 import sys
 import operator
 
@@ -25,24 +25,24 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
         genes[iix].from_sparse()
         num_exons = genes[iix].splicegraph.get_len()
         edges = genes[iix].splicegraph.edges.copy()
-        labels = repmat(sp.arange(num_exons), num_exons, 1).T
+        labels = repmat(np.arange(num_exons), num_exons, 1).T
         genes[iix].to_sparse()
         
         # adjecency matrix: upper half only
-        A = sp.zeros((num_exons, num_exons))
+        A = np.zeros((num_exons, num_exons))
         for i in range(num_exons - 1):
             for j in range(i + 1, num_exons):
                 A[i, j] = edges[i, j]
         
         # possible starting and ending exons of a multiple exon skip
         Pairs = lil_matrix((num_exons, num_exons))
-        Ai = sp.dot(sp.dot(A, A), A) #paths of length 3
-        while sp.any(Ai.ravel() > 0):
-            coords = sp.where((A > 0 ) & (Ai > 0)) # multiple skip
+        Ai = np.dot(np.dot(A, A), A) #paths of length 3
+        while np.any(Ai.ravel() > 0):
+            coords = np.where((A > 0 ) & (Ai > 0)) # multiple skip
             Pairs[coords[0], coords[1]] = 1
-            Ai = sp.dot(Ai, A)  # paths of length ..+1
+            Ai = np.dot(Ai, A)  # paths of length ..+1
         
-        edge = sp.where(Pairs.toarray() == 1)
+        edge = np.where(Pairs.toarray() == 1)
         
 
         if edge[0].shape[0] > edge_limit:
@@ -56,46 +56,46 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
             if edges[exon_idx_first, exon_idx_last] == 1:
                 
                 # find all pairs shortest path
-                exist_path = sp.triu(edges).astype('double')
+                exist_path = np.triu(edges).astype('double')
                 exist_path[exon_idx_first, exon_idx_last] = 0
-                exist_path[exist_path == 0] = sp.inf
+                exist_path[exist_path == 0] = np.inf
                 # set diagonal to 0
-                exist_path[sp.arange(exist_path.shape[0]), sp.arange(exist_path.shape[0])] = 0
+                exist_path[np.arange(exist_path.shape[0]), np.arange(exist_path.shape[0])] = 0
                 
-                long_exist_path = -sp.triu(edges).astype('double')
+                long_exist_path = -np.triu(edges).astype('double')
                 long_exist_path[exon_idx_first, exon_idx_last] = 0
-                long_exist_path[long_exist_path == 0] = sp.inf
+                long_exist_path[long_exist_path == 0] = np.inf
                 # set diagonal to 0
-                long_exist_path[sp.arange(long_exist_path.shape[0]), sp.arange(long_exist_path.shape[0])] = 0
+                long_exist_path[np.arange(long_exist_path.shape[0]), np.arange(long_exist_path.shape[0])] = 0
                 
-                path = sp.isfinite(exist_path) * labels
-                long_path = sp.isfinite(long_exist_path) * labels
+                path = np.isfinite(exist_path) * labels
+                long_path = np.isfinite(long_exist_path) * labels
                 
                 for k in range(num_exons):
                     for i in range(num_exons):
-                        idx = sp.where((exist_path[i, k] + exist_path[k, :]) < exist_path[i, :])[0]
+                        idx = np.where((exist_path[i, k] + exist_path[k, :]) < exist_path[i, :])[0]
                         exist_path[i, idx] = exist_path[i, k] + exist_path[k, idx]
                         path[i, idx] = path[k, idx]
                         
-                        idx = sp.where((long_exist_path[i,k] + long_exist_path[k, :]) < long_exist_path[i, :])[0]
+                        idx = np.where((long_exist_path[i,k] + long_exist_path[k, :]) < long_exist_path[i, :])[0]
                         long_exist_path[i, idx] = long_exist_path[i, k] + long_exist_path[k, idx]
                         long_path[i, idx] = long_path[k, idx]
                 
-                temp_ix = sp.isfinite(long_exist_path)
+                temp_ix = np.isfinite(long_exist_path)
                 long_exist_path[temp_ix] = -long_exist_path[temp_ix]
                 
-                if (exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(exist_path[exon_idx_first, exon_idx_last]):
-                    backtrace = sp.array([path[exon_idx_first, exon_idx_last]])
+                if (exist_path[exon_idx_first, exon_idx_last] > 2) and np.isfinite(exist_path[exon_idx_first, exon_idx_last]):
+                    backtrace = np.array([path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
-                        backtrace = sp.r_[backtrace, path[exon_idx_first, backtrace[-1]]]
+                        backtrace = np.r_[backtrace, path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
                     idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
-                elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and sp.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
-                    backtrace = sp.array([long_path[exon_idx_first, exon_idx_last]])
+                elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and np.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
+                    backtrace = np.array([long_path[exon_idx_first, exon_idx_last]])
                     while backtrace[-1] > exon_idx_first:
-                        backtrace = sp.r_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
+                        backtrace = np.r_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
                     idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
@@ -130,24 +130,24 @@ def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
             continue
         
         #introns  = []
-        introns = sp.zeros((0, 2), dtype='int')
+        introns = np.zeros((0, 2), dtype='int')
         for exon_idx in range(num_exons - 1):  # start of intron
-            idx = sp.where(edges[exon_idx, exon_idx + 1 : num_exons] == 1)[0]
+            idx = np.where(edges[exon_idx, exon_idx + 1 : num_exons] == 1)[0]
             if idx.shape[0] == 0:
                 continue
             idx += (exon_idx + 1)
             for exon_idx2 in idx: # end of intron
                 #is_intron_reten = False
-                if sp.sum((introns[:, 0] == vertices[1, exon_idx]) & (introns[:, 1] == vertices[0, exon_idx2])) > 0:
+                if np.sum((introns[:, 0] == vertices[1, exon_idx]) & (introns[:, 1] == vertices[0, exon_idx2])) > 0:
                     continue
 
                 ### find shortest fully overlapping exon
-                iidx = sp.where((vertices[0, :] < vertices[1, exon_idx]) & (vertices[1, :] > vertices[0, exon_idx2]))[0]
+                iidx = np.where((vertices[0, :] < vertices[1, exon_idx]) & (vertices[1, :] > vertices[0, exon_idx2]))[0]
                 if len(iidx) > 0:
-                    iidx = iidx[sp.argmin(vertices[1, iidx] - vertices[0, iidx])]
+                    iidx = iidx[np.argmin(vertices[1, iidx] - vertices[0, iidx])]
                     idx_intron_reten.append(ix)
                     intron_intron_reten.append([exon_idx, exon_idx2, iidx])
-                    introns = sp.r_[introns, [[vertices[1, exon_idx], vertices[0, exon_idx2]]]]
+                    introns = np.r_[introns, [[vertices[1, exon_idx], vertices[0, exon_idx2]]]]
 
                 #for exon_idx1 in range(num_exons): # exon
                 #    # check that the exon covers the intron
@@ -239,9 +239,9 @@ def detect_altprime(genes, gidx, log=False, edge_limit=1000):
         for exon_idx in range(num_exons - 2):
             rightsites = []
             rightidx = []
-            nr_exons = sp.sum(edges[exon_idx, exon_idx + 1:])
+            nr_exons = np.sum(edges[exon_idx, exon_idx + 1:])
             if nr_exons >= 2:
-                which_exons = sp.where(edges[exon_idx, exon_idx + 1:])[0] + exon_idx + 1
+                which_exons = np.where(edges[exon_idx, exon_idx + 1:])[0] + exon_idx + 1
                 exons = vertices[:, which_exons]
                 for i in range(nr_exons - 1):
                     for j in range(i + 1, nr_exons):
@@ -277,11 +277,11 @@ def detect_altprime(genes, gidx, log=False, edge_limit=1000):
         # Find alternative sites on the left of the intron,
         # same site on the right of the intron.
         for exon_idx in range(2, num_exons):
-            nr_exons = sp.sum(edges[:exon_idx, exon_idx])
+            nr_exons = np.sum(edges[:exon_idx, exon_idx])
             leftsites = []
             leftidx = []
             if nr_exons >= 2:
-                which_exons = sp.where(edges[:exon_idx, exon_idx])[0]
+                which_exons = np.where(edges[:exon_idx, exon_idx])[0]
                 exons = vertices[:, which_exons]
                 for i in range(nr_exons - 1):
                     for j in range(i + 1, nr_exons):
@@ -381,8 +381,8 @@ def detect_events(genes, event_type, idx, options):
         pool = mp.Pool(processes=options.parallel, initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
         binsize = 3
         maxsize = idx.shape[0]
-        idx_chunks = [sp.arange(x, min(x + binsize, maxsize)) for x in range(0, maxsize, binsize)]
-        result_list = sp.empty((len(idx_chunks), ), dtype='object')
+        idx_chunks = [np.arange(x, min(x + binsize, maxsize)) for x in range(0, maxsize, binsize)]
+        result_list = np.empty((len(idx_chunks), ), dtype='object')
 
         try:
             result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c, options.detect_edge_limit)) for c,cidx in enumerate(idx_chunks)]

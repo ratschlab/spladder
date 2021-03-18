@@ -1,7 +1,7 @@
 import gzip
 import h5py
 import os
-import scipy as sp
+import numpy as np
 import glob
 
 import pytest
@@ -17,12 +17,12 @@ def _compare_hdf5(expected, actual):
     for k in expected:
         if isinstance(expected[k], h5py._hl.group.Group):
             for l in expected[k]:
-                assert sp.all(expected[k][l][:] == actual[k][l][:])
+                assert np.all(expected[k][l][:] == actual[k][l][:])
         else:
             if k in ['psi']:
-                assert sp.all(expected[k][:].astype('str') == actual[k][:].astype('str'))
+                assert np.all(expected[k][:].astype('str') == actual[k][:].astype('str'))
             else:
-                assert sp.all(expected[k][:] == actual[k][:])
+                assert np.all(expected[k][:] == actual[k][:])
 
 def _compare_ps(expected, actual):
 
@@ -40,23 +40,23 @@ def _compare_ps(expected, actual):
 
 def _assert_files_equal_testing(e, a):
 
-    da = sp.loadtxt(a, dtype='str', delimiter='\t')
-    de = sp.loadtxt(e, dtype='str', delimiter='\t')
+    da = np.loadtxt(a, dtype='str', delimiter='\t')
+    de = np.loadtxt(e, dtype='str', delimiter='\t')
 
     ### check header
-    assert sp.all(da[0, :] == de[0, :])
+    assert np.all(da[0, :] == de[0, :])
     da = da[1:, ]
     de = de[1:, ]
 
     ### check text cols
-    assert sp.all(da[:, [0, 1]] == de[:, [0, 1]])
+    assert np.all(da[:, [0, 1]] == de[:, [0, 1]])
     da = da[:, 2:]
     de = de[:, 2:]
 
     ### check p-values (up to certain precision)
-    da = sp.around(da.astype('float'), decimals=6)
-    de = sp.around(de.astype('float'), decimals=6)
-    assert sp.all(da == de)
+    da = np.around(da.astype('float'), decimals=6)
+    de = np.around(de.astype('float'), decimals=6)
+    assert np.all(da == de)
 
 def _assert_files_equal(expected_path, actual_path):
     def o(f):
@@ -80,33 +80,33 @@ def _assert_files_equal(expected_path, actual_path):
             elif expected_path.endswith('.pickle'):
                 ta = pickle.load(a, encoding='latin1')
                 te = pickle.load(e, encoding='latin1')
-                if len(ta) == 0 or isinstance(ta[0], sp.int64):
-                    assert sp.all(ta == te)
+                if len(ta) == 0 or isinstance(ta[0], np.int64):
+                    assert np.all(ta == te)
                 else:
-                    assert sp.all([_compare_gene(_[0], _[1]) for _ in zip(ta, te)])
+                    assert np.all([_compare_gene(_[0], _[1]) for _ in zip(ta, te)])
             elif os.path.basename(expected_path).startswith('test_results'):
                 _assert_files_equal_testing(e, a)
             else:
                 assert e.read() == a.read(), 'actual and expected content differ!\nactual path: %s\nexpected path: %s\n' % (expected_path, actual_path)
 
 def _codeUTF8(s):
-    return s.view(sp.chararray).encode('utf-8')
+    return s.view(np.chararray).encode('utf-8')
 
 def _compare_gene(a, b):
-    if sp.issubdtype(a.strain.dtype, sp.str_):
+    if np.issubdtype(a.strain.dtype, np.str_):
         _astrain = _codeUTF8(a.strain)
     else:
         _astrain = a.strain
-    if sp.issubdtype(b.strain.dtype, sp.str_):
+    if np.issubdtype(b.strain.dtype, np.str_):
         _bstrain = _codeUTF8(b.strain)
     else:
         _bstrain = b.strain
 
     return ((a.chr == b.chr) &
             (a.strand == b.strand) &
-            (sp.all(a.exons1 == b.exons1)) &
-            (sp.all(a.exons2 == b.exons2)) &
-            (sp.all(_astrain == _bstrain)) &
+            (np.all(a.exons1 == b.exons1)) &
+            (np.all(a.exons2 == b.exons2)) &
+            (np.all(_astrain == _bstrain)) &
             (a.event_type == b.event_type) &
             (a.gene_idx == b.gene_idx) &
             (a.num_detected == b.num_detected))

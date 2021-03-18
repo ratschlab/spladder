@@ -4,6 +4,7 @@ import sys
 import pickle
 import math
 import glob
+import numpy as np
 
 if __package__ is None:
     __package__ = 'modules'
@@ -33,12 +34,12 @@ def merge_duplicate_exons(genes, options):
         initial = genes[i].splicegraph.terminals[0, :]
         terminal = genes[i].splicegraph.terminals[1, :]
 
-        remove = sp.zeros((exons.shape[1],), dtype='bool')
+        remove = np.zeros((exons.shape[1],), dtype='bool')
         for j in range(exons.shape[1]):
             if remove[j]:
                 continue
-            idx = sp.where((exons[0, j] == exons[0, :]) & (exons[1, j] == exons[1, :]))[0]
-            idx = idx[sp.where(~sp.in1d(idx, j))[0]]
+            idx = np.where((exons[0, j] == exons[0, :]) & (exons[1, j] == exons[1, :]))[0]
+            idx = idx[np.where(~np.in1d(idx, j))[0]]
             if idx.shape[0] > 0:
                 remove[idx] = True
                 for k in idx:
@@ -47,14 +48,14 @@ def merge_duplicate_exons(genes, options):
                     admat[j, :] = (admat[j, :] | admat[k, :])
                     admat[:, j] = (admat[:, j] | admat[:, k])
 
-        if sp.sum(remove) == 0:
+        if np.sum(remove) == 0:
             continue
 
         genes[i].splicegraph.edges = admat.copy()
         genes[i].splicegraph.terminals[0, :] = initial
         genes[i].splicegraph.terminals[1, :] = terminal
 
-        k_idx = sp.where(~remove)[0]
+        k_idx = np.where(~remove)[0]
         genes[i].splicegraph.vertices = genes[i].splicegraph.vertices[:, k_idx]
         genes[i].splicegraph.edges = genes[i].splicegraph.edges[k_idx, :][:, k_idx]
         genes[i].splicegraph.terminals = genes[i].splicegraph.terminals[:, k_idx]
@@ -98,8 +99,8 @@ def merge_genes_by_isoform(options):
         print('... done')
 
         ### sort
-        name_list = sp.array([x.name for x in genes])
-        s_idx = sp.argsort(name_list)
+        name_list = np.array([x.name for x in genes])
+        s_idx = np.argsort(name_list)
         name_list = name_list[s_idx]
         genes = genes[s_idx]
 
@@ -111,8 +112,8 @@ def merge_genes_by_isoform(options):
 
         ### did we append genes in the last round? --> re-sort
         if appended:
-            name_list = sp.array([x.name for x in genes2])
-            s_idx = sp.argsort(name_list)
+            name_list = np.array([x.name for x in genes2])
+            s_idx = np.argsort(name_list)
             name_list = name_list[s_idx]
             genes2 = genes2[s_idx]
             appended = False
@@ -136,10 +137,10 @@ def merge_genes_by_isoform(options):
                     broken = False
                     for l in range(len(genes2[g_idx].exons)):
                         ### transcripts are not identical in size --> continue
-                        if not sp.all(genes[j].exons[k].shape == genes2[g_idx].exons[l].shape):
+                        if not np.all(genes[j].exons[k].shape == genes2[g_idx].exons[l].shape):
                             continue 
                         ### found transcript in genes2 that is identical to current transcript --> break
-                        if sp.all(genes[j].exons[k] == genes2[g_idx].exons[l]):
+                        if np.all(genes[j].exons[k] == genes2[g_idx].exons[l]):
                             broken = True
                             break 
                     ### we did not find any identical transcript in genes2 --> append transcript
@@ -152,7 +153,7 @@ def merge_genes_by_isoform(options):
             ### we did non find the gene name --> append new gene to genes2
             elif genes2[g_idx].name > genes[j].name:
                 g_idx = g_idx_
-                genes2 = sp.c_[genes2, genes[j]]
+                genes2 = np.c_[genes2, genes[j]]
                 appended = True
         print('... done\n')
         del genes
@@ -171,7 +172,7 @@ def merge_genes_by_isoform(options):
     for i in range(genes.shape[0]):
         if len(genes[i].transcripts) > max_num_isoforms:
             print('Subsample for gene %i from %i transcripts.' % (i, len(genes[i].transcripts)))
-            for r_idx in sorted(random.sample(sp.arange(len(genes[i].transcripts)), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
+            for r_idx in sorted(random.sample(np.arange(len(genes[i].transcripts)), len(genes[i].transcripts) - max_num_isoforms), reverse=True):
                 del genes[i].transcripts[r_idx]
                 del genes[i].exons[r_idx]
             genes[i].start = min(genes[i].start, genes[i].exons[0][:, 0].min())
@@ -218,8 +219,8 @@ def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
         print('... done (%i / %i)' % (i + 1, len(merge_list)))
 
         ### sort genes by name
-        name_list = sp.array([x.name for x in genes])
-        s_idx = sp.argsort(name_list)
+        name_list = np.array([x.name for x in genes])
+        s_idx = np.argsort(name_list)
         genes = genes[s_idx]
 
         ### make sure, that splicegraph is unique
@@ -237,8 +238,8 @@ def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
 
         ### did we append genes in the last round? --> re-sort
         if appended:
-            name_list = sp.array([x.name for x in genes2])
-            s_idx = sp.argsort(name_list)
+            name_list = np.array([x.name for x in genes2])
+            s_idx = np.argsort(name_list)
             genes2 = genes2[s_idx]
             appended = False
 
@@ -278,23 +279,23 @@ def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
                     if c_idx.shape[0] > 0:
                         genes2[g_idx].edge_count = replace_sub_matrix(genes2[g_idx].edge_count, c_idx, genes2[g_idx].edge_count[c_idx, :][:, c_idx] + edgecnt1[a_idx, :][:, a_idx])
                 else:
-                    m_graph = sp.r_[sp.c_[genes[j].splicegraph.vertices.T, sp.ones((s1_len, 1), dtype='int')], sp.c_[genes2[g_idx].splicegraph.vertices.T, 2 * sp.ones((s2_len, 1), dtype='int')]]
+                    m_graph = np.r_[np.c_[genes[j].splicegraph.vertices.T, np.ones((s1_len, 1), dtype='int')], np.c_[genes2[g_idx].splicegraph.vertices.T, 2 * np.ones((s2_len, 1), dtype='int')]]
                     tmp, s_idx = sort_rows(m_graph[:, 0:3], index=True)
                     m_graph = m_graph[s_idx, :]
 
                     um_graph, u_f = unique_rows(m_graph[:, 0:2], index=True)
-                    u_l = sp.r_[u_f[1:] - 1, m_graph.shape[0] - 1]
+                    u_l = np.r_[u_f[1:] - 1, m_graph.shape[0] - 1]
                     u_graph = u_l - u_f
                     
-                    f_idx = sp.where(u_graph == 0)[0]
+                    f_idx = np.where(u_graph == 0)[0]
 
                     if f_idx.shape[0] > 0:
-                        splice1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
-                        splice2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
-                        edgecnt1_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
-                        edgecnt2_ = sp.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
-                        idx1_ = sp.where(m_graph[u_f, 2] == 1)[0]
-                        idx2_ = sp.where(m_graph[u_l, 2] == 2)[0]
+                        splice1_ = np.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        splice2_ = np.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        edgecnt1_ = np.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        edgecnt2_ = np.zeros((u_graph.shape[0], u_graph.shape[0]), dtype='int')
+                        idx1_ = np.where(m_graph[u_f, 2] == 1)[0]
+                        idx2_ = np.where(m_graph[u_l, 2] == 2)[0]
 
                         splice1_ = replace_sub_matrix(splice1_, idx1_, splice1)
                         splice2_ = replace_sub_matrix(splice2_, idx2_, splice2)
@@ -306,21 +307,21 @@ def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
                         edgecnt1_ = edgecnt1
                         edgecnt2_ = edgecnt2
 
-                    if not sp.all(splice1_.shape == splice2_.shape):
+                    if not np.all(splice1_.shape == splice2_.shape):
                         print('ERROR: splice1_ and splice2_ differ in size!', file=sys.stderr)
                         sys.exit(1)
 
                     genes2[g_idx].splicegraph.edges = (splice1_ | splice2_)
                     genes2[g_idx].splicegraph.vertices = um_graph.T
-                    genes2[g_idx].splicegraph.terminals = sp.vstack([(sp.tril(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0),
-                                                                     (sp.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0)]).astype('int')
+                    genes2[g_idx].splicegraph.terminals = np.vstack([(np.tril(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0),
+                                                                     (np.triu(genes2[g_idx].splicegraph.edges).sum(axis=1) == 0)]).astype('int')
                     genes2[g_idx].edge_count = edgecnt1_ + edgecnt2_
 
 
             ### we did not find the gene name --> append new gene to genes2
             elif g_idx > genes2.shape[0] or genes2[g_idx].name > genes[j].name:
                 g_idx = g_idx_
-                genes2 = sp.c_[genes2, genes[j]]
+                genes2 = np.c_[genes2, genes[j]]
                 genes2[-1].edge_count = genes[j].splicegraph.edges
                 appended = True
         print('... done\n')
@@ -336,8 +337,8 @@ def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
         g.to_sparse()
 
     ### re-sort genes by position - makes quantification more efficient
-    s1_idx = sp.argsort([x.start for x in genes])
-    s2_idx = sp.argsort([x.chr for x in genes[s1_idx]], kind='mergesort')
+    s1_idx = np.argsort([x.start for x in genes])
+    s2_idx = np.argsort([x.chr for x in genes[s1_idx]], kind='mergesort')
     genes = genes[s1_idx[s2_idx]]
 
     print('Store genes at: %s' % fn_out)
@@ -373,9 +374,9 @@ def run_merge(options):
             for level in range(1, levels + 1):
                 print('merging files on level %i' % level)
                 if level == 1:
-                    merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
+                    merge_list = np.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
                 else:
-                    merge_list = sp.array(level_files)
+                    merge_list = np.array(level_files)
                 level_files = []
                 for c_idx in range(0, len(merge_list), chunksize):
                     if level == levels:
@@ -387,7 +388,7 @@ def run_merge(options):
                     if os.path.exists(fn):
                         continue
                     print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + chunksize)))
-                    chunk_idx = sp.arange(c_idx, min(len(merge_list), c_idx + chunksize))
+                    chunk_idx = np.arange(c_idx, min(len(merge_list), c_idx + chunksize))
                     PAR['merge_list'] = merge_list[chunk_idx]
                     PAR['fn_out'] = fn
                     jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, options.options_rproc, 40*60))
@@ -395,9 +396,9 @@ def run_merge(options):
         elif len(options.chunked_merge) > 0:
             curr_level, max_level, chunk_start, chunk_end = [int(_) for _ in options.chunked_merge[0]]
             if curr_level == 1:
-                merge_list = sp.array(sorted(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples]))
+                merge_list = np.array(sorted(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples]))
             else:
-                merge_list = sp.array(sorted(glob.glob('%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk*.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, curr_level - 1))))
+                merge_list = np.array(sorted(glob.glob('%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk*.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, curr_level - 1))))
             chunk_end = min(len(merge_list), chunk_end)
 
             if curr_level == max_level:
@@ -412,7 +413,7 @@ def run_merge(options):
             print('merging level %i chunk %i to %i' % (curr_level, chunk_start, chunk_end))
             merge_genes_by_splicegraph(options, merge_list=merge_list[chunk_start:chunk_end], fn_out=fn)
         else:
-            merge_list = sp.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
+            merge_list = np.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
             merge_genes_by_splicegraph(options, merge_list=merge_list, fn_out=fn_out)
     else:
         print('File %s already exists!' % fn_out)

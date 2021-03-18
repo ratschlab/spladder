@@ -1,8 +1,8 @@
 File formats
 ============
 
-Input Formats
--------------
+Input Formats -- ``build`` mode
+-------------------------------
 
 Annotation Files
 ^^^^^^^^^^^^^^^^
@@ -26,8 +26,8 @@ have successfully tested SplAdder with the following aligners:
 - `PALMapper`_
 - `TopHat`_
 
-Output Formats
---------------
+Output Formats -- ``build`` mode
+--------------------------------
 SplAdder produces a variety of different output files. Here we will mainly discuss files that are
 aimed at the user and omit intermediate files that mainly necessary for internal processes of
 SplAdder. Most of the latter will be stored in the ``spladder`` subdirectory in the output

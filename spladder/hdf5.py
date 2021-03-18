@@ -1,5 +1,5 @@
 import sys
-import scipy as sp
+import numpy as np
 
 def appendToHDF5(file, data, name, faxis=0, daxis=0):
     """
@@ -17,7 +17,7 @@ def appendToHDF5(file, data, name, faxis=0, daxis=0):
 
     ### force one dimensional input data into the right form
     if len(fshape) > 1 and len(dshape) == 1 and faxis == 0:
-        data = data[sp.newaxis, :]
+        data = data[np.newaxis, :]
         dshape = data.shape
 
     shapediff = len(fshape) - len(dshape)
@@ -33,7 +33,7 @@ def appendToHDF5(file, data, name, faxis=0, daxis=0):
         cdaxis = [x for i, x in enumerate(dshape) if i != daxis]
     else:
         cdaxis = daxis
-    assert(sp.all(cfaxis == cdaxis))
+    assert(np.all(cfaxis == cdaxis))
 
     ### compute new shape, resize and add
     newshape = [x if i != faxis else x + data.shape[daxis] for i, x in enumerate(fshape)]

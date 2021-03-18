@@ -1,7 +1,7 @@
 import sys
 import os
 import re
-import scipy as sp
+import numpy as np
 
 class DataTrack:
 
@@ -27,9 +27,9 @@ class DataTrack:
                     assert len(data_items.split(':')) < 3, 'ERROR: At most one label can be given per data group!\n'
                     label, data_items = data_items.split(':')
                 if data_items.endswith('.txt'):
-                    self.bam_fnames.extend([str(x) for x in sp.atleast_1d(sp.loadtxt(data_items, dtype='str'))])
+                    self.bam_fnames.extend([str(x) for x in np.atleast_1d(np.loadtxt(data_items, dtype='str'))])
                 else:
-                    self.bam_fnames.append(sp.array(data_items.split(',')))
+                    self.bam_fnames.append(np.array(data_items.split(',')))
                 if track_type == 'coverage':
                     for group in self.bam_fnames:
                         for fname in group:
@@ -37,6 +37,6 @@ class DataTrack:
                                 print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                                 sys.exit(2)
                     
-                self.strains.append(sp.array([re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', os.path.basename(_)) for _ in self.bam_fnames[-1]]))
+                self.strains.append(np.array([re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', os.path.basename(_)) for _ in self.bam_fnames[-1]]))
                 self.group_labels.append(label)
                 

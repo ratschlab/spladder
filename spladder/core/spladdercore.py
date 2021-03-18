@@ -1,6 +1,6 @@
 import sys
 import os
-import scipy as sp
+import numpy as np
 import pickle
 
 from .gen_graphs import gen_graphs 

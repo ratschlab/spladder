@@ -1,6 +1,6 @@
 import os
 import sys
-import scipy as sp
+import numpy as np
 import math
 import re
 
@@ -172,30 +172,30 @@ def parse_args(options, identity='main'):
         options.conditionA = options.conditionA.strip(',').split(',')
         options.conditionB = options.conditionB.strip(',').split(',')
         if len(options.conditionA) > 0 and options.conditionA[0].lower().endswith('txt'):
-            options.conditionA = [str(x) for x in sp.loadtxt(options.conditionA[0], dtype='str')]
+            options.conditionA = [str(x) for x in np.loadtxt(options.conditionA[0], dtype='str')]
         if len(options.conditionB) > 0 and options.conditionB[0].lower().endswith('txt'):
-            options.conditionB = [str(x) for x in sp.loadtxt(options.conditionB[0], dtype='str')]
-        options.conditionA = [re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[nN][pP][zZ]|.[cC][rR][aA][mM]$', '', x) for x in options.conditionA]
-        options.conditionB = [re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[nN][pP][zZ]|.[cC][rR][aA][mM]$', '', x) for x in options.conditionB]
+            options.conditionB = [str(x) for x in np.loadtxt(options.conditionB[0], dtype='str')]
+        options.conditionA = [re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[nN][pP][zZ]|\.[cC][rR][aA][mM]$', '', x) for x in options.conditionA]
+        options.conditionB = [re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[nN][pP][zZ]|\.[cC][rR][aA][mM]$', '', x) for x in options.conditionB]
         options.conditionA = [os.path.basename(x) for x in options.conditionA]
         options.conditionB = [os.path.basename(x) for x in options.conditionB]
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
     if len(options.bam_fnames) > 0:
         if identity == 'main' and options.bam_fnames[0].split('.')[-1] == 'txt':
-            options.bam_fnames = [str(x) for x in sp.atleast_1d(sp.loadtxt(options.bam_fnames[0], dtype='str'))]
+            options.bam_fnames = [str(x) for x in np.atleast_1d(np.loadtxt(options.bam_fnames[0], dtype='str'))]
 
         ### check existence of alignment files
         for fname in flatten(options.bam_fnames):
             if not os.path.isfile(fname):
-                if options.sparse_bam and os.path.isfile(re.sub(r'.[bB][aA][mM]$', '.hdf5', fname)):
+                if options.sparse_bam and os.path.isfile(re.sub(r'\.[bB][aA][mM]$', '.hdf5', fname)):
                     continue
                 print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                 sys.exit(2)
-            if not re.search(r'.[bB][aA][mM]$', fname) is None and not os.path.isfile(fname + '.bai'):
+            if not re.search(r'\.[bB][aA][mM]$', fname) is None and not os.path.isfile(fname + '.bai'):
                 print('ERROR: Input file %s is not indexed. %s.bai can not be found\n\n' % (fname, fname), file=sys.stderr)
                 sys.exit(2)
-            if not re.search(r'.[cC][rR][aA][mM]$', fname) is None and not (os.path.isfile(fname + '.crai') or os.path.isfile(re.sub(r'.[cC][rR][aA][mM]$', '.crai', fname))):
+            if not re.search(r'\.[cC][rR][aA][mM]$', fname) is None and not (os.path.isfile(fname + '.crai') or os.path.isfile(re.sub(r'\.[cC][rR][aA][mM]$', '.crai', fname))):
                 print('ERROR: Input file %s is not indexed. %s.crai can not be found\n\n' % (fname, fname), file=sys.stderr)
                 sys.exit(2)
 
@@ -205,9 +205,9 @@ def parse_args(options, identity='main'):
     options.strains = []
     if identity != 'viz':
         for i in range(len(options.bam_fnames)):
-            options.samples.append(re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)|.[cC][rR][aA][mM]$', '', options.bam_fnames[i].split('/')[-1]))
+            options.samples.append(re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[cC][rR][aA][mM]$', '', options.bam_fnames[i].split('/')[-1]))
             options.strains.append('%s%s' % (ref_tag, options.samples[-1]))
-        options.strains = sp.array(options.strains)
+        options.strains = np.array(options.strains)
 
     ### adapt graph validation requirement to max number of samples
     options.sg_min_edge_count = min(options.sg_min_edge_count, len(options.samples))

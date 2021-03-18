@@ -13,7 +13,7 @@
 
 import sys
 import os
-import scipy as sp
+import numpy as np
 import pickle
 import h5py
 
@@ -84,20 +84,20 @@ def spladder(options):
             genes = pickle.load(open(options.annotation, 'rb'), encoding='latin1')
         else:
             genes = options.genes
-        options = init.append_chrms(sp.unique(sp.array([x.chr for x in genes], dtype='str')), options)
+        options = init.append_chrms(np.unique(np.array([x.chr for x in genes], dtype='str')), options)
         del genes
 
         ### convert input BAMs to sparse arrays - filtered case
         if options.sparse_bam:
             for bfn in options.bam_fnames:
-                if bfn.endswith('bam') and not os.path.exists(re.sub(r'.[bB][aA][mM]|[cC][rR][aA][mM]$', '', bfn) + '.conf_%i' % options.confidence + '.filt.hdf5'):
+                if bfn.endswith('.bam') and not os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.conf_%i' % options.confidence + '.filt.hdf5'):
 
                     if not hasattr(options, 'chrm_lookup'):
                         IN = pysam.Samfile(bfn, 'rb')
                         options = append_chrms([x['SN'] for x in parse_header(IN.text)['SQ']], options)
                         IN.close()
 
-                    OUT = h5py.File(re.sub(r'.[bB][aA][mM]|[cC][rR][aA][mM]$', '', bfn) + '.conf_%i' % options.confidence + '.filt.hdf5', 'w')
+                    OUT = h5py.File(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.conf_%i' % options.confidence + '.filt.hdf5', 'w')
                     if options.parallel > 1:
                         import multiprocessing as mp
                         pool = mp.Pool(processes=options.parallel)
@@ -171,7 +171,7 @@ def spladder(options):
     ### convert input BAMs to sparse arrays - unfiltered case
     if options.sparse_bam:
         for bfn in options.bam_fnames:
-            if bfn.endswith('bam') and not os.path.exists(re.sub(r'.[bB][aA][mM]|[cC][rR][aA][mM]$', '', bfn) + '.hdf5'):
+            if bfn.endswith('.bam') and not os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.hdf5'):
                 #cnts = dict()
 
                 if not hasattr(options, 'chrm_lookup'):
@@ -179,7 +179,7 @@ def spladder(options):
                     options = append_chrms([x['SN'] for x in parse_header(IN.text)['SQ']], options)
                     IN.close()
 
-                OUT = h5py.File(re.sub(r'.[bB][aA][mM]|[cC][rR][aA][mM]$', '', bfn) + '.hdf5', 'w') 
+                OUT = h5py.File(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.hdf5', 'w') 
                 if options.parallel > 1:
                     import multiprocessing as mp
                     pool = mp.Pool(processes=options.parallel)
