@@ -18,7 +18,7 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
     # (3) avg inclusion count inner exons >= threshold
     # (4) skip count >= threshold
 
-    info = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    info = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype='float')
     # (0) valid, (1) exon_pre_cov, (2) exons_cov, (3) exon_aft_cov
     # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
     # (7) sum_inner_exon_conf, (8) num_inner_exon, (9) len_inner_exon
@@ -102,7 +102,7 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     # (0) counts meet criteria for min_retention_cov, min_retention_region and min_retetion_rel_cov 
     # (1) min_non_retention_count >= threshold
 
-    info = [1, 0, 0, 0, 0, 0]
+    info = np.array([1, 0, 0, 0, 0, 0], dtype='float')
     # (0) valid, (1) intron_cov, (2) exon1_cov, (3), exon2_cov
     # (4) intron_conf, (5) intron_cov_region
 
@@ -169,7 +169,7 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     # (2) inclusion count of second intron >= threshold
     # (3) skip count of exon >= threshold
 
-    info = [1, 0, 0, 0, 0, 0, 0]
+    info = np.array([1, 0, 0, 0, 0, 0, 0], dtype='float')
     # (0) valid, (1) exon_cov, (2) exon_pre_cov, (3) exon_aft_cov, 
     # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
 
@@ -236,7 +236,7 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     # (0) coverage of diff region is at least FACTOR * coverage constant region
     # (1) both alternative introns are >= threshold 
 
-    info = [1, 0, 0, 0, 0]
+    info = np.array([1, 0, 0, 0, 0], dtype='float')
     # (0) valid, (1) exon_diff_cov, (2) exon_const_cov
     # (3) intron1_conf, (4) intron2_conf
 
@@ -332,7 +332,7 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     # (2) both introns neighboring first alt exon are confirmed >= threshold
     # (3) both introns neighboring second alt exon are confirmed >= threshold
 
-    info = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+    info = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0], dtype='float')
     # (0) valid, (1) exon_pre_cov, (2) exon1_cov, (3) exon2_cov, (4) exon_aft_cov, 
     # (5) exon_pre_exon1_conf, (6) exon_pre_exon2_conf, (7) exon1_exon_aft_conf, (8) exon2_exon_aft_conf
 
@@ -513,9 +513,9 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
 
                 ev[i].verified.append(ver)
                 if s_idx == 0:
-                    counts.append(np.array([info], dtype='float'))
+                    counts.append(info[np.newaxis, :])
                 else:
-                    counts[-1] = np.r_[counts[-1], np.array([info], dtype='float')]
+                    counts[-1] = np.append(counts[-1], info[np.newaxis, :], axis=0) 
             ev[i].verified = np.array(ev[i].verified, dtype='bool')
 
         IN.close()
@@ -532,18 +532,18 @@ def verify_empty(event_type):
     
     if event_type == 'exon_skip':
         verified = [0, 0, 0, 0]
-        info = [1, 0, 0, 0, 0, 0, 0]
+        info = np.array([1, 0, 0, 0, 0, 0, 0], dtype='float')
     elif event_type in ['alt_3prime', 'alt_5prime']:
         verified = [0, 0]
-        info = [1, 0, 0, 0, 0]
+        info = np.array([1, 0, 0, 0, 0], dtype='float')
     elif event_type == 'intron_retention':
         verified = [0, 0]
-        info = [1, 0, 0, 0, 0, 0]
+        info = np.array([1, 0, 0, 0, 0, 0], dtype='float')
     elif event_type == 'mult_exon_skip':
         verified = [0, 0, 0, 0, 0]
-        info = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        info = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype='float')
     elif event_type == 'mutex_exons':
         verified = [0, 0, 0, 0]
-        info = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+        info = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0], dtype='float')
 
     return (verified, info)
