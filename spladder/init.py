@@ -69,7 +69,8 @@ def init_genes_gtf(options):
                 gene_type = tags['gene_biotype']
             else:
                 gene_type = None
-            genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
+            gene_symbol = tags['gene_name'] if 'gene_name' in tags else None
+            genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type, gene_symbol=gene_symbol)
             chrms.append(sl[0])
 
     options = append_chrms(np.sort(np.unique(chrms)), options)
@@ -215,7 +216,8 @@ def init_genes_gff3(options):
                 stop = int(sl[4])
             except ValueError:
                 stop = -1
-            genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2])
+            gene_symbol = tags['gene_name'] if 'gene_name' in tags else None
+            genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2], gene_symbol=gene_symbol)
             chrms.append(sl[0])
 
     options = append_chrms(np.sort(np.unique(chrms)), options)

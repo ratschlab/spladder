@@ -11,7 +11,7 @@ from .splicegraph import Splicegraph
 
 class Gene:
     
-    def __init__(self, name=None, start=None, stop=None, chr=None, strand=None, source=None, gene_type=None):
+    def __init__(self, name=None, start=None, stop=None, chr=None, strand=None, source=None, gene_type=None, gene_symbol=None):
         self.name = name
         self.start = start
         self.stop = stop
@@ -29,6 +29,7 @@ class Gene:
         self.gene_type = gene_type
         self.is_alt = None
         self.is_alt_spliced = None
+        self.symbol = gene_symbol
 
     def add_exon(self, exon, idx):
         if idx > (len(self.exons) - 1): 

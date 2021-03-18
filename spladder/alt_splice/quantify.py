@@ -389,7 +389,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     del cnt1, cnt2
 
     ### get psi values
-    psi = np.r_[IN['psi'][:, conf_idx][strain_idx1, :].T), IN['psi'][:, conf_idx][strain_idx2, :].T)]
+    psi = np.c_[IN['psi'][:, conf_idx][strain_idx1, :].T, IN['psi'][:, conf_idx][strain_idx2, :].T]
 
     ### get strain list
     strains1 = decodeUTF8(IN['strains'][:][strain_idx1])
@@ -412,12 +412,12 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     if gen_event_ids:
         event_ids = get_event_ids(IN, event_type, conf_idx, options)
 
-    IN.close()
-
     ### get gene index
     gene_idx = IN['gene_idx'][:].astype('int')
     ### only keep confident events
     gene_idx = gene_idx[conf_idx]
+
+    IN.close()
 
     ### round to the closest int
     cov[0] = np.floor(cov[0])
