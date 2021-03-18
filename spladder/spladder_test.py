@@ -244,6 +244,9 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, options, dmatrix1, event_typ
     lowerBound = np.percentile(np.unique(disp_raw[index]), 1)
     upperBound = np.percentile(np.unique(disp_raw[index]), 99)
 
+    ### replace NaN with lower bound (will be ignored)
+    disp_raw[np.isnan(disp_raw)] = lowerBound
+
     idx = np.where((disp_raw > lowerBound) & (disp_raw < upperBound))[0]
     #disp_raw[sp.isnan(disp_raw)] = -1
 
@@ -261,7 +264,7 @@ def fit_dispersion(counts, disp_raw, disp_conv, sf, options, dmatrix1, event_typ
     disp_fitted[ok_idx] = Lambda[0] / mean_count[ok_idx] + Lambda[1]
 
     if np.sum(disp_fitted[ok_idx] > 0) > 0:
-        print("\nFound dispersion fit")
+        print("Found dispersion fit")
 
     if options.diagnose_plots:
         plot.mean_variance_plot(counts=counts,
@@ -724,7 +727,14 @@ def spladder_test(options):
         k_idx2 = ((np.mean(cov[1][:, idx1.shape[0]:] <= 1, axis=1) <= options.max_0_frac) | \
                   (np.mean(cov[1][:, :idx1.shape[0]] <= 1, axis=1) <= options.max_0_frac))
 
-        k_idx = np.where(k_idx1 | k_idx2)[0]
+        ### filter for dPSI
+        naidx = np.all(np.isnan(psi[:, :idx1.shape[0]]), axis=1) | \
+                np.all(np.isnan(psi[:, idx1.shape[0]:]), axis=1)
+        psi[naidx, :] = 0
+        delta_psi = np.nanmean(psi[:, :idx1.shape[0]], axis=1) - np.nanmean(psi[:, idx1.shape[0]:], axis=1)
+        k_idx3 = (np.absolute(delta_psi) >= 0.05)
+    
+        k_idx = np.where((k_idx1 | k_idx2) & k_idx3)[0]
 
         if options.verbose:
             print('Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100))
@@ -741,6 +751,7 @@ def spladder_test(options):
             event_ids = [x[k_idx] for x in event_ids]
         k_idx1 = k_idx1[k_idx]
         k_idx2 = k_idx2[k_idx]
+        delta_psi = delta_psi[k_idx]
 
         cov[0] = np.around(np.hstack([cov[0], curr_gene_counts]))
         cov[1] = np.around(np.hstack([cov[1], curr_gene_counts]))
@@ -832,13 +843,13 @@ def spladder_test(options):
 
         ### write test results
         s_idx = np.argsort(pvals)
-        header = np.array(['event_id', 'gene', 'p_val', 'p_val_adj', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'])
+        header = np.array(['event_id', 'gene', 'p_val', 'p_val_adj', 'dPSI', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'])
         event_ids = np.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
 
         out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
         if options.verbose:
             print('Writing test results to %s' % out_fname)
-        data_out = np.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), m_all[s_idx, :]]
+        data_out = np.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), delta_psi[s_idx].astype('str'), m_all[s_idx, :]]
         np.savetxt(out_fname, np.r_[header[np.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
         ### write extended output
@@ -864,7 +875,7 @@ def spladder_test(options):
             taken.add(gid)
         ks_idx = np.array(ks_idx)
 
-        data_out = np.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), m_all[ks_idx, :]]
+        data_out = np.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), delta_psi[ks_idx].astype('str'), m_all[ks_idx, :]]
         data_out = np.r_[header[np.newaxis, :], data_out]
         np.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 
