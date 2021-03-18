@@ -1,5 +1,4 @@
 from scipy.sparse import lil_matrix
-from numpy.matlib import repmat
 import numpy as np
 import sys
 import operator
@@ -25,7 +24,7 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
         genes[iix].from_sparse()
         num_exons = genes[iix].splicegraph.get_len()
         edges = genes[iix].splicegraph.edges.copy()
-        labels = repmat(np.arange(num_exons), num_exons, 1).T
+        labels = np.hstack([np.arange(num_exons)[:, np.newaxis]] * num_exons)
         genes[iix].to_sparse()
         
         # adjecency matrix: upper half only
@@ -90,7 +89,7 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
                         backtrace = np.r_[backtrace, path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
+                    idx_multiple_skips.append(ix) 
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
                 elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and np.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
                     backtrace = np.array([long_path[exon_idx_first, exon_idx_last]])
@@ -98,7 +97,7 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
                         backtrace = np.r_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
                     backtrace = backtrace[:-1]
                     backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(ix) #repmat(ix, 1, backtrace.shape[0] + 2))
+                    idx_multiple_skips.append(ix) 
                     exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
 
     if log:
