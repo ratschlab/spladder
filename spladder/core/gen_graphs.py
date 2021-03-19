@@ -181,6 +181,11 @@ def gen_graphs(genes, options=None):
                 # inserted
                 if isequal(genes_mod, genes_before):
                     break
+                else:
+                    _updated = np.where([genes_mod[i] != genes_before[i] for i in range(len(genes_mod))])[0].shape[0]
+                    print('... updated %i genes' % _updated)
+
+                genes_before = copy.deepcopy(genes_mod)
                 tmp_genes = genes_mod
             chrms = np.array([x.chr for x in genes], dtype='str')
             genes[np.where(chrms == chr_idx)[0]] = copy.deepcopy(genes_mod)

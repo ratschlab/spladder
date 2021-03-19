@@ -20,7 +20,7 @@ def merge_duplicate_exons(genes, options):
 
     num_removed = 0
     for i in range(genes.shape[0]):
-        if options.verbose and i % 100 == 0: 
+        if options.verbose and i % 1000 == 0: 
             print('%i\r' % i)
 
         ### check if there are non unique exons
