@@ -31,6 +31,25 @@ class Gene:
         self.is_alt_spliced = None
         self.symbol = gene_symbol
 
+    def __eq__(self, other):
+        return isinstance(other, Gene) and \
+               (self.name == other.name) and \
+               (self.start == other.start) and \
+               (self.stop == other.stop) and \
+               (len(self.exons) == len(other.exons)) and \
+               min([np.all(self.exons[i] == other.exons[i]) for i in range(len(self.exons))]) and \
+               (self.chr == other.chr) and \
+               (self.strand == other.strand) and \
+               (self.source == other.source) and \
+               (self.transcripts == other.transcripts) and \
+               (self.splicegraph == other.splicegraph) and \
+               (self.segmentgraph == other.segmentgraph) and \
+               (self.gene_type == other.gene_type) and \
+               (self.is_alt == other.is_alt) and \
+               (self.is_alt_spliced == other.is_alt_spliced) and \
+               (self.symbol == other.symbol)
+
+
     def add_exon(self, exon, idx):
         if idx > (len(self.exons) - 1): 
             self.exons.append(np.zeros((0, 2), dtype='int'))

@@ -14,6 +14,15 @@ class Splicegraph:
         if gene:
             self.from_gene(gene)
 
+    def __eq__(self, other):
+        return isinstance(other, Splicegraph) and \
+               np.all(self.vertices.shape == other.vertices.shape) and \
+               np.all(self.vertices == other.vertices) and \
+               np.all(self.edges.shape == other.edges.shape) and \
+               np.all(self.edges == other.edges) and \
+               np.all(self.terminals.shape == other.terminals.shape) and \
+               np.all(self.terminals == other.terminals)
+
     def get_len(self):
         
         return self.vertices.shape[1]

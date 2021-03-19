@@ -11,6 +11,15 @@ class Segmentgraph:
         if gene is not None:
             self.from_gene(gene)
 
+    def __eq__(self, other):
+        return isinstance(other, Segmentgraph) and \
+               np.all(self.segments.shape == other.segments.shape) and \
+               np.all(self.segments == other.segments) and \
+               np.all(self.seg_match.shape == other.seg_match.shape) and \
+               np.all(self.seg_match == other.seg_match) and \
+               np.all(self.seg_edges.shape == other.seg_edges.shape) and \
+               np.all(self.seg_edges == other.seg_edges)
+
     def is_empty(self):
         
         return (self.segments.shape[1] == 0) and (self.seg_match.shape[0] == 0) and (self.seg_edges.shape[0] == 0)
