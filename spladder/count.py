@@ -79,7 +79,7 @@ def count_graph_coverage(genes, fn_bam=None, options=None, fn_out=None):
                     (tracks, intron_list) = add_reads_from_sparse_bam(gg, fn_bam[f], contig, options.confidence, types=['exon_track','intron_list'], filter=None, cache=bam_cache)
                 else:
                     ### add RNA-seq evidence to the gene structure
-                    (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, options.var_aware, options.primary_only, mm_tag=options.mm_tag, cram_ref=options.cram_ref);
+                    (tracks, intron_list) = add_reads_from_bam(gg, fn_bam[f], ['exon_track','intron_list'], None, options.var_aware, options.primary_only, mm_tag=options.mm_tag, cram_ref=options.ref_genome);
                     intron_list = intron_list[0] ### TODO
 
                 ### extract mean exon coverage for all segments

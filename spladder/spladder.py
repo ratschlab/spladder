@@ -43,8 +43,9 @@ def parse_options(argv):
     inputs.add_argument('--filter-overlap-genes', dest='filter_overlap_genes', action='store_true', help='remove genes from annotation that overlap each other [off]', default=False)
     inputs.add_argument('--filter-overlap-exons', dest='filter_overlap_exons', action='store_true', help='remove exons from annotation that overlap each other [off]', default=False)
     inputs.add_argument('--filter-overlap-transcripts', dest='filter_overlap_transcripts', action='store_true', help='remove transcripts from annotation that overlap each other [off]', default=False)
+    inputs.add_argument('--filter-consensus', dest='filter_consensus', metavar='STRING', help='require new junctions to have consensus (needs ref genome) [off]; choices: strict (GT/AG), lenient (G[TC]/AG)', default='')
     inputs.add_argument('--ignore-mismatches', dest='ignore_mismatches', action='store_true', help='does not filter by edit operations - does not require NM in BAM [off]', default=False)
-    inputs.add_argument('--cram-reference', dest='cram_ref', metavar='FILE', help='reference genome used for CRAM file compression (only needed for CRAM input)', default='')
+    inputs.add_argument('--reference', dest='ref_genome', metavar='FILE', help='reference genome (only needed for CRAM file de-compression or consensus filtering)', default='')
     outputs = parser_build.add_argument_group('OUTPUT OPTIONS')
     outputs.add_argument('-l', '--logfile', dest='logfile', metavar='FILE', help='log file name [stdout]', default='-')
     outputs.add_argument('--output-txt', dest='output_txt', action='store_true', help='outputs all events in txt format (can be big) [off]', default=False)
@@ -181,12 +182,26 @@ def parse_options(argv):
             parser.print_help()
         sys.exit(2)
 
-    return parser.parse_args(argv[1:])
+    return (argv[1], parser.parse_args(argv[1:]))
+
+
+def check_options(options, mode):
+    
+    if mode == 'build':
+        if len(options.filter_consensus) > 0:
+            if len(options.ref_genome) == 0:
+                sys.stderr.write('\nERROR: using --filter-consensus requires setting a reference via --reference\n')
+                sys.exit(1)
+            if not options.filter_consensus in ['strict', 'lenient']:
+                sys.stderr.write('\nERROR: --filter-consensus only allows the following choices: strict, lenient\n')
+                sys.exit(1)
+
 
 def main(argv=sys.argv):
 
     ### get command line options
-    options = parse_options(argv)
+    (mode, options) = parse_options(argv)
+    check_options(options, mode)
     options.func(options)
 
 if __name__ == "__main__":

@@ -81,6 +81,12 @@ def gen_graphs(genes, options=None):
         print('...done.\n', file=fd_log)
 
         ### clean intron list
+        ### remove all introns that do not conform to the splice site consensus
+        if len(options.filter_consensus) > 0:
+            print('Filtering introns for adherence to %s splice site consensus ...' % options.filter_consensus, file=fd_log)
+            introns = filter_introns_consensus(introns, genes, options)
+            print('...done.\n', file=fd_log)
+
         ### remove all introns that overlap more than one gene on the same strand
         print('Filtering introns for ambiguity ...', file=fd_log)
         introns = filter_introns(introns, genes, options)
@@ -90,7 +96,7 @@ def gen_graphs(genes, options=None):
         ### TODO when working exclusively with sparse bam, we need to skip this ...
         print('Testing for infeasible genes ...', file=fd_log)
         introns = make_introns_feasible(introns, genes, options)
-        print('...done.\n', fd_log)
+        print('...done.\n', file=fd_log)
 
         for i in range(genes.shape[0]):
             genes[i].introns = introns[i, :]

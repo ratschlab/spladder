@@ -464,7 +464,7 @@ def get_intron_list(genes, options):
                                 k_idx = np.setdiff1d(np.arange(intron_list_tmp.shape[0]), rm_idx)
                                 intron_list_tmp = intron_list_tmp[k_idx, :]
                 else:
-                    [intron_list_tmp] = add_reads_from_bam(gg, options.bam_fnames, ['intron_list'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, unstranded=options.introns_unstranded, mm_tag=options.mm_tag, cram_ref=options.cram_ref)
+                    [intron_list_tmp] = add_reads_from_bam(gg, options.bam_fnames, ['intron_list'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, unstranded=options.introns_unstranded, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
                 num_introns_filtered += intron_list_tmp.shape[0]
                 introns[i, si] = sort_rows(intron_list_tmp)
 

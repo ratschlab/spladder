@@ -46,6 +46,45 @@ def make_introns_feasible(introns, genes, options):
 
     return introns
 
+### remove introns that do not conform to the splice site consensus sequences
+def filter_introns_consensus(introns, genes, options):
+
+    ### defined based on https://academic.oup.com/nar/article/28/21/4364/2376280
+    ACC_CONSENSUS = ['AG']
+    DON_CONSENSUS = ['GT']
+    if options.filter_consensus == 'lenient':
+        DON_CONSENSUS.append('GC')
+
+    ### check that genome file is indexed and create index if not present
+    if not os.path.exists(options.ref_genome + '.fai'):
+        pysam.faidx(options.ref_genome)
+
+    ### get reference genome handle
+    with pysam.FastaFile(options.ref_genome) as REF:
+        cnt_tot = 0
+        cnt_rem = 0
+        strand_list = ['+', '-']
+        for si, s in enumerate(strand_list):
+            for i in range(introns.shape[0]):
+                if introns[i, si].shape[0] == 0:
+                    continue
+                k_idx = []
+                cnt_tot += introns[i, si].shape[0]
+                for j in range(introns[i, si].shape[0]):
+                    if s == '+':
+                        don = REF.fetch(genes[i].chr, introns[i, si][j, 0], introns[i, si][j, 0] + 2)
+                        acc = REF.fetch(genes[i].chr, introns[i, si][j, 1] - 2, introns[i, si][j, 1])
+                    else:
+                        don = rev_comp(REF.fetch(genes[i].chr, introns[i, si][j, 1] - 2, introns[i, si][j, 1]))
+                        acc = rev_comp(REF.fetch(genes[i].chr, introns[i, si][j, 0], introns[i, si][j, 0] + 2))
+                    if acc in ACC_CONSENSUS and don in DON_CONSENSUS:
+                        k_idx.append(j)
+                if len(k_idx) < introns[i, si].shape[0]:
+                    cnt_rem += (introns[i, si].shape[0] - len(k_idx))
+                    introns[i, si] = introns[i, si][k_idx, :]
+    print('removed %i of %i (%.2f percent) introns not adhering to the %s splicing consensus' % (cnt_rem, cnt_tot, cnt_rem / float(max(cnt_tot, 1)) * 100, options.filter_consensus))
+
+    return introns
 
 ### remove introns overlapping to more than one gene
 def filter_introns(introns, genes, options):
@@ -183,3 +222,10 @@ def decodeUTF8(s):
 
 def isUTF8(s):
     return hasattr(s.view(np.chararray), 'decode')
+
+def rev_comp(s):
+    R = {'A':'T', 'T':'A', 'a':'t', 't':'a',
+         'G':'C', 'C':'G', 'g':'c', 'c':'g',
+         'N':'N', 'n':'n'}
+
+    return ''.join([R[_] for _ in s][::-1])
