@@ -137,27 +137,21 @@ def get_filename(which, options, sample_idx=None):
 
     ### iterate over return file types    
     if which in ['fn_count_in', 'fn_count_out']:
-        if options.spladderfile == '-':
-            if options.merge == 'single':
-                if which == 'fn_count_in':
-                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
-                else:
-                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.single.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
+        if options.merge == 'single':
+            if which == 'fn_count_in':
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
             else:
-                if (options.qmode == 'single' and which != 'fn_count_in') or (options.qmode == 'collect' and which == 'fn_count_in'):
-                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.pickle' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
-                else:
-                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, prune_tag, validate_tag))
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, options.samples[sample_idx], prune_tag))
         else:
-            fname = options.spladderfile
-        
-        if which == 'fn_count_in':
-            if options.qmode == 'collect':
-                return fname.replace('.pickle', '') + '.count.hdf5'
+            if which == 'fn_count_out':
+                if options.qmode == 'single':
+                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
+                else:
+                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.count.hdf5' % (options.confidence, options.merge, prune_tag, validate_tag))
             else:
-                return fname
-        elif which == 'fn_count_out':
-            return fname.replace('.pickle', '') + '.count.hdf5'
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, prune_tag, validate_tag))
+    elif which == 'fn_collect_in':
+        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
     elif which == 'fn_out_merge':
         if options.merge == 'merge_graphs':
             return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, prune_tag))

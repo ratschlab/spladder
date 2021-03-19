@@ -439,9 +439,12 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, options=None, out_
         options = PAR['options']
 
     if fn_merge is None:
-        fn_merge = get_filename('fn_out_merge_val', options)
+        if options.validate_sg:
+            fn_merge = get_filename('fn_out_merge_val', options)
+        else:
+            fn_merge = get_filename('fn_out_merge', options)
 
-    genes = pickle.load(open(fn_merge_val, 'r'))[0]
+    genes = pickle.load(open(fn_merge, 'r'))[0]
     fn_count = fn_merge.replace('pickle', 'count.hdf5')
 
     ### load count index data from hdf5

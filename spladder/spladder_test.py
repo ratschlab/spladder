@@ -732,7 +732,7 @@ def spladder_test(options):
                 np.all(np.isnan(psi[:, idx1.shape[0]:]), axis=1)
         psi[naidx, :] = 0
         delta_psi = np.nanmean(psi[:, :idx1.shape[0]], axis=1) - np.nanmean(psi[:, idx1.shape[0]:], axis=1)
-        k_idx3 = (np.absolute(delta_psi) >= 0.05)
+        k_idx3 = (np.absolute(delta_psi) >= options.min_dpsi)
     
         k_idx = np.where((k_idx1 | k_idx2) & k_idx3)[0]
 

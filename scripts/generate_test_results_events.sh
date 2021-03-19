@@ -27,5 +27,5 @@ for i in $(seq 11 20)
 do
     echo "align/testcase_${testname}_1_sample${i}.bam" >> $bamsB
 done
-python -m spladder.spladder test -o ${outdir} -v --diagnose-plots -f ps --readlen 50 --merge-strat merge_graphs --event-types exon_skip -a $bamsA -b $bamsB
+python -m spladder.spladder test -o ${outdir} -v --diagnose-plots -f pdf --readlen 50 --merge-strat merge_graphs --event-types exon_skip -a $bamsA -b $bamsB --dpsi 0
 rm bamlistA.txt bamlistB.txt

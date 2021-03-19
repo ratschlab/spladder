@@ -276,7 +276,7 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
         h5fid = h5py.File(fname_out, 'w')
         for i, idx in enumerate(sample_idxs):
 
-            fname = get_filename('fn_count_in', options, sample_idx=idx)
+            fname = get_filename('fn_collect_in', options, sample_idx=idx)
             if options.verbose:
                 print('collecting counts from %s (%i/%i)' % (fname, i+1, len(sample_idxs)))
             if not os.path.exists(fname):

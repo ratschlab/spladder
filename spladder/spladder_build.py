@@ -44,7 +44,7 @@ def spladder(options):
     fn_out_merge = get_filename('fn_out_merge', options)
     fn_out_merge_val = get_filename('fn_out_merge_val', options)
 
-    if options.spladderfile == '-' and not os.path.exists(fn_out_merge):
+    if not os.path.exists(fn_out_merge):
         ### iterate over files, if merge strategy is single
         if options.merge in ['single', 'merge_graphs']:
             idxs = list(range(len(options.samples)))
@@ -162,7 +162,7 @@ def spladder(options):
         if options.merge == 'merge_graphs':
             run_merge(options)
 
-    if options.spladderfile == '-' and options.merge == 'merge_graphs' and options.validate_sg and not os.path.exists(fn_out_merge_val):
+    if options.merge == 'merge_graphs' and options.validate_sg and not os.path.exists(fn_out_merge_val):
         (genes, inserted) = pickle.load(open(fn_out_merge, 'rb'))
         genes = filter_by_edgecount(genes, options)
         pickle.dump((genes, inserted), open(fn_out_merge_val, 'wb'), -1)
@@ -212,7 +212,7 @@ def spladder(options):
         idxs = [0]
 
     for idx in idxs:
-        ### don't do any counting in chunked merge mode
+        ### don't do any counting in chunked merge mode, unless we are in the final chunk level
         if len(options.chunked_merge) > 0:
             curr_level, max_level, chunk_start, chunk_end = [int(_) for _ in options.chunked_merge[0]]
             if curr_level < max_level:
@@ -226,8 +226,7 @@ def spladder(options):
             fn_in_count = get_filename('fn_count_in', options)
             fn_out_count = get_filename('fn_count_out', options, sample_idx=0)
         else:
-            if options.qmode != 'collect':
-                fn_in_count = get_filename('fn_count_in', options)
+            fn_in_count = get_filename('fn_count_in', options)
             fn_out_count = get_filename('fn_count_out', options)
 
         ### count segment graph
@@ -241,11 +240,6 @@ def spladder(options):
                     collect_single_quantification_results(fn_out_count, idxs, options)
                 else:
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, options)
-
-        ### count intron coverage phenotype
-        if options.intron_cov:
-            fn_out_intron_count = fn_out_count.replace('pickle', 'introns.pickle')
-            count_intron_coverage_wrapper(fn_in_count, fn_out_intron_count, options)
 
     ### handle alternative splicing part
     if options.extract_as:

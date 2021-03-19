@@ -24,16 +24,16 @@ def _compare_hdf5(expected, actual):
             else:
                 assert np.all(expected[k][:] == actual[k][:])
 
-def _compare_ps(expected, actual):
+def _compare_pdf(expected, actual):
 
     e_str = []
     for line in expected:
-        if line.startswith('%'):
+        if line.startswith('<< /CreationDate'):
             continue
         e_str.append(line)
     a_str = []
     for line in actual:
-        if line.startswith('%'):
+        if line.startswith('<< /CreationDate'):
             continue
         a_str.append(line)
     assert ''.join(e_str) == ''.join(a_str)
@@ -64,7 +64,7 @@ def _assert_files_equal(expected_path, actual_path):
             return gzip.open(f, 'rb')
         elif f.endswith('.hdf5'):
             return h5py.File(f, 'r')
-        elif f.endswith('.ps'):
+        elif f.endswith('.pdf'):
             return open(f, 'r')
         elif f.endswith('.pickle'):
             return open(f, 'rb')
@@ -75,8 +75,8 @@ def _assert_files_equal(expected_path, actual_path):
         with o(actual_path) as a:
             if expected_path.endswith('.hdf5'):
                 _compare_hdf5(e, a)
-            elif expected_path.endswith('.ps'):
-                _compare_ps(e, a)
+            elif expected_path.endswith('.pdf'):
+                _compare_pdf(e, a)
             elif expected_path.endswith('.pickle'):
                 ta = pickle.load(a, encoding='latin1')
                 te = pickle.load(e, encoding='latin1')
@@ -278,10 +278,11 @@ def test_end_to_end_testing(test_id, tmpdir):
                '-o', out_dir,
                '-v',
                '--diagnose-plots',
-               '-f', 'ps',
+               '-f', 'pdf',
                '--readlen', '50',
                '--merge-strat', 'merge_graphs',
                '--event-types', 'exon_skip',
+               '--dpsi', '0.0',
                '-a', bamsA,
                '-b', bamsB]
 
@@ -289,7 +290,7 @@ def test_end_to_end_testing(test_id, tmpdir):
 
     ### check that files are identical
     _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv'])
-    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps'])
+    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.pdf'])
 
 
 @pytest.mark.parametrize("test_id", [
@@ -306,7 +307,7 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
                '-a', os.path.join(data_dir, 'testcase_{}_spladder.gtf'.format(test_id)),
                '-o', out_dir,
                '-b', ','.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+1)) for idx in range(20)]),
-               '--cram-reference', os.path.join(data_dir, 'genome.fa'),
+               '--reference', os.path.join(data_dir, 'genome.fa'),
                '--event-types', 'exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip',
                '--merge-strat', 'merge_graphs',
                '--extract-ase',
@@ -340,10 +341,11 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
                '-o', out_dir,
                '-v',
                '--diagnose-plots',
-               '-f', 'ps',
+               '-f', 'pdf',
                '--readlen', '50',
                '--merge-strat', 'merge_graphs',
                '--event-types', 'exon_skip',
+               '--dpsi', '0',
                '-a', bamsA,
                '-b', bamsB]
 
@@ -351,6 +353,6 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
 
     ### check that files are identical
     _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv'])
-    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps'])
+    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.pdf'])
 
 

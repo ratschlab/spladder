@@ -39,7 +39,6 @@ def parse_options(argv):
     inputs.add_argument('--labels', dest='labels', metavar='STRING', help='use labels instead of bam file names (comma separated list) [-]', default='-')
     #inputs.add_argument('-S', '--ref-strain', dest='refstrain', metavar='STRING', help='reference strain [-]', default='-')
     #inputs.add_argument('-x', '--same-genome', dest='same_genome', metavar='y|n', help='input alignments share the same genome [y]', default='y')
-    inputs.add_argument('--input-graph', dest='spladderfile', metavar='FILE', help='use existing SplAdder graph as input (advanced) [-]', default='-')
     inputs.add_argument('--filter-overlap-genes', dest='filter_overlap_genes', action='store_true', help='remove genes from annotation that overlap each other [off]', default=False)
     inputs.add_argument('--filter-overlap-exons', dest='filter_overlap_exons', action='store_true', help='remove exons from annotation that overlap each other [off]', default=False)
     inputs.add_argument('--filter-overlap-transcripts', dest='filter_overlap_transcripts', action='store_true', help='remove transcripts from annotation that overlap each other [off]', default=False)
@@ -95,7 +94,6 @@ def parse_options(argv):
     experimental.add_argument('--pyproc', dest='pyproc', action='store_true', help='use parallel implementation [off]', default=False)
     experimental.add_argument('--environment', dest='environment', metavar='STRING', help='conda environment to by used for pyproc', default=None)
     #experimental.add_argument('-R', '--replicates', dest='replicates', metavar='1,1,2,2,...', help='replicate structure of files (same number as alignment files) [all 1 - no replicated]', default='-')
-    experimental.add_argument('--intron-cov', dest='intron_cov', action='store_true', help='count intron coverage [off]', default=False)
     experimental.add_argument('--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, collect, all [all]', default='all')
     parser_build.set_defaults(func=spladder)
 
@@ -117,6 +115,7 @@ def parse_options(argv):
     testing = parser_test.add_argument_group('TESTING OPTIONS')
     testing.add_argument('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
     testing.add_argument('-0', '--max-zero-frac', dest='max_0_frac', metavar='FLOAT', type=float, help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)
+    testing.add_argument('--dpsi', dest='min_dpsi', metavar='FLOAT', type=float, help='Delta PSI cutoff between tested groups for events to be considered for testing [0.05]', default=0.05)
     testing.add_argument('-i', '--min-count', dest='min_count', metavar='INT', type=int, help='min read count sum over all samples for an event isoform to be tested [10]', default=10)
     testing.add_argument('--cap-outliers', dest='cap_outliers', action='store_true', help='replace splice outliers with a max value [off]', default=False)
     testing.add_argument('--no-cap-outliers', dest='cap_outliers', action='store_false', default=False)
