@@ -162,6 +162,7 @@ def spladder(options):
         if options.merge == 'merge_graphs':
             run_merge(options)
 
+    ### generate validated version of splice graph
     if options.merge == 'merge_graphs' and options.validate_sg and not os.path.exists(fn_out_merge_val):
         (genes, inserted) = pickle.load(open(fn_out_merge, 'rb'))
         genes = filter_by_edgecount(genes, options)

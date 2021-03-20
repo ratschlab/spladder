@@ -12,7 +12,6 @@ if __package__ is None:
 from .utils import *
 from .classes.segmentgraph import Segmentgraph
 from .count import count_graph_coverage_wrapper
-from .editgraph import filter_by_edgecount
 from . import rproc as rp
 
 
@@ -417,19 +416,6 @@ def run_merge(options):
             merge_genes_by_splicegraph(options, merge_list=merge_list, fn_out=fn_out)
     else:
         print('File %s already exists!' % fn_out)
-
-    ### generate validated version of splice graph
-    #if options.validate_sg and not os.path.exists(fn_out_val):
-    #    (genes, inserted) = cPickle.load(open(fn_out, 'r'))
-    #    genes = filter_by_edgecount(genes, options)
-    #    cPickle.dump((genes, inserted), open(fn_out_val, 'w'), -1)
-    #    del genes
-
-    ### count segment graph
-    #if options.validate_sg:
-    #   count_graph_coverage_wrapper(fn_out_val, fn_out_count, options)
-    #else:
-    #   count_graph_coverage_wrapper(fn_out, fn_out_count, options)
 
     if options.do_gen_isoforms:
         fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.pickle' % (options.outdir, options.confidence, options.merge, prune_tag)
