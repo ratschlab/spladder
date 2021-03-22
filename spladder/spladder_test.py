@@ -46,7 +46,8 @@ def get_gene_expression(options, fn_out=None, strain_subset=None):
     else:
         strain_idx = strain_idx_all[np.in1d(strains[strain_idx_all], strain_subset)]
     gene_counts = np.zeros((numgenes, strain_idx.shape[0]), dtype='float')
-    gene_names = np.array([x.name for x in genes], dtype='str')
+    gene_ids = np.array([x.name for x in genes], dtype='str')
+    gene_symbols = np.array([x.symbol if not x is None else 'NA' for x in genes], dtype='str')
 
     seg_lens = IN['seg_len'][:]
     gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
@@ -71,7 +72,7 @@ def get_gene_expression(options, fn_out=None, strain_subset=None):
             gene_idx = gene_idx[0]
 
         assert(decodeUTF8(IN['gene_names'][:][gene_idx]) == genes[gidx].name)
-        assert(genes[gidx].name == gene_names[gidx])
+        assert(genes[gidx].name == gene_ids[gidx])
 
         if options.non_alt_norm:
             seg_idx = seg_idx[non_alt_idx]
@@ -95,11 +96,12 @@ def get_gene_expression(options, fn_out=None, strain_subset=None):
         OUT = h5py.File(fn_out, 'w')
         OUT.create_dataset(name='all_strains', data=codeUTF8(strains[strain_idx_all]))
         OUT.create_dataset(name='strains', data=codeUTF8(strains[strain_idx]))
-        OUT.create_dataset(name='genes', data=codeUTF8(gene_names))
+        OUT.create_dataset(name='gene_ids', data=codeUTF8(gene_ids))
+        OUT.create_dataset(name='gene_symbols', data=codeUTF8(gene_symbols))
         OUT.create_dataset(name='raw_count', data=gene_counts, compression="gzip")
         OUT.close()
 
-    return (gene_counts, strains[strain_idx_all], strains[strain_idx], gene_names)
+    return (gene_counts, strains[strain_idx_all], strains[strain_idx], gene_ids, gene_symbols)
 
 
 def get_size_factors(gene_counts, options, kind='geomean'):
@@ -639,10 +641,11 @@ def spladder_test(options):
         gene_counts = IN['raw_count'][:]
         gene_strains = decodeUTF8(IN['strains'][:])
         gene_strains_all = decodeUTF8(IN['all_strains'][:])
-        gene_ids = decodeUTF8(IN['genes'][:])
+        gene_ids = decodeUTF8(IN['gene_ids'][:])
+        gene_symbols = decodeUTF8(IN['gene_symbols'][:])
         IN.close()
     else:
-        gene_counts, gene_strains_all, gene_strains, gene_ids = get_gene_expression(options, fn_out=options.fname_exp_hdf5, strain_subset=condition_strains)
+        gene_counts, gene_strains_all, gene_strains, gene_ids, gene_symbols = get_gene_expression(options, fn_out=options.fname_exp_hdf5, strain_subset=condition_strains)
 
     gene_strains = np.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
     gene_strains_all = np.array([x.split(':')[1] if ':' in x else x for x in gene_strains_all])
@@ -843,13 +846,13 @@ def spladder_test(options):
 
         ### write test results
         s_idx = np.argsort(pvals)
-        header = np.array(['event_id', 'gene', 'p_val', 'p_val_adj', 'dPSI', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'])
+        header = np.array(['event_id', 'gene_id', 'gene_name', 'p_val', 'p_val_adj', 'dPSI', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'])
         event_ids = np.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
 
         out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
         if options.verbose:
             print('Writing test results to %s' % out_fname)
-        data_out = np.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), delta_psi[s_idx].astype('str'), m_all[s_idx, :]]
+        data_out = np.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], gene_symbols[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), delta_psi[s_idx].astype('str'), m_all[s_idx, :]]
         np.savetxt(out_fname, np.r_[header[np.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
         ### write extended output
@@ -875,7 +878,7 @@ def spladder_test(options):
             taken.add(gid)
         ks_idx = np.array(ks_idx)
 
-        data_out = np.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), delta_psi[ks_idx].astype('str'), m_all[ks_idx, :]]
+        data_out = np.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], gene_symbols[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), delta_psi[ks_idx].astype('str'), m_all[ks_idx, :]]
         data_out = np.r_[header[np.newaxis, :], data_out]
         np.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 
