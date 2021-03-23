@@ -21,7 +21,7 @@ from . import settings
 from .core.spladdercore import spladder_core
 from .alt_splice.collect import collect_events
 from .alt_splice.analyze import analyze_events
-from .count import count_graph_coverage_wrapper, collect_single_quantification_results
+from .count import count_graph_coverage_wrapper, collect_single_quantification_results, compute_gene_expression
 from .editgraph import filter_by_edgecount
 from . import init
 from . import rproc as rp
@@ -229,10 +229,12 @@ def spladder(options):
         else:
             fn_in_count = get_filename('fn_count_in', options)
             fn_out_count = get_filename('fn_count_out', options)
+        fn_out_gene_count = re.sub(r'.count.hdf5$', '', fn_out_count) + '.gene_exp.hdf5'
 
         ### count segment graph
         if options.extract_as or options.quantify_graph:
             if not os.path.exists(fn_out_count):
+                ### collect graph counts
                 if options.merge == 'single':
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, options, sample_idx=idx)
                 elif options.merge == 'merge_graphs' and options.qmode == 'single':
@@ -241,6 +243,10 @@ def spladder(options):
                     collect_single_quantification_results(fn_out_count, idxs, options)
                 else:
                     count_graph_coverage_wrapper(fn_in_count, fn_out_count, options)
+                
+            ### collect gene expression counts from graph
+            if not os.path.exists(fn_out_gene_count):
+                compute_gene_expression(options, fn_out_count, fn_out_gene_count)
 
     ### handle alternative splicing part
     if options.extract_as:

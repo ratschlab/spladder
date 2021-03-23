@@ -9,7 +9,7 @@ import re
 
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
-from .helpers import *
+from .helpers import log_progress, decodeUTF8, codeUTF8
 from .reads import *
 from .hdf5 import appendToHDF5
 from . import rproc as rp
@@ -297,4 +297,124 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
                 appendToHDF5(h5fid, CIN['seg_pos'][:], 'seg_pos', faxis=1, daxis=1)
                 appendToHDF5(h5fid, CIN['strains'][:], 'strains', faxis=0, daxis=0)
         h5fid.close() 
+
+def compute_gene_expression(options, fname_count_in, fn_out=None, strain_subset=None):
+
+    if options.verbose:
+        sys.stdout.write('Quantifying gene expression ...\n')
+
+    if options.validate_sg:
+        fname_genes = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.validated.pickle' % (options.confidence, options.merge))
+    else:
+        fname_genes = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.pickle' % (options.confidence, options.merge))
+
+    ### load gene information
+    genes = pickle.load(open(fname_genes, 'rb'), encoding='latin1')[0]
+    numgenes = genes.shape[0]
+
+    ### open hdf5 file containing graph count information
+    IN = h5py.File(fname_count_in, 'r')
+    strains = IN['strains'][:].astype('str')
+    ### sort by strain ID
+    strain_idx_all = np.argsort(strains)
+    if strain_subset is None:
+        strain_idx = strain_idx_all.copy()
+    else:
+        strain_idx = strain_idx_all[np.in1d(strains[strain_idx_all], strain_subset)]
+    gene_counts = np.zeros((numgenes, strain_idx.shape[0]), dtype='float')
+    gene_ids = np.array([x.name for x in genes], dtype='str')
+    gene_symbols = np.array([x.symbol if not x is None else 'NA' for x in genes], dtype='str')
+
+    seg_lens = IN['seg_len'][:]
+    gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
+
+    ### no longer assume that the gene_ids_segs are sorted by gene ID
+    s_idx = np.argsort(gene_ids_segs[:, 0], kind='mergesort')
+    _, u_idx = np.unique(gene_ids_segs[s_idx, 0], return_index=True)
+    s_idx = s_idx[u_idx]
+
+    ### buffer seg_counts
+    cs = IN['segments'].chunks[0] if not IN['segments'].chunks is None else 1  # chunk size
+    co = 0 # chunk offset
+    cn = 10000 // cs # chunk number
+    seg_buffer = IN['segments'][co:(co+(cn*cs)), :]
+
+    ### iterate over genes
+    for gidx, iidx in enumerate(s_idx):
+
+        if options.verbose:
+            log_progress(gidx, numgenes, 100)
+
+        seg_idx = np.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
+        ### do we need a new chunk?
+        if seg_idx.max() >= co+(cn*cs):
+            co = seg_idx.min()
+            seg_buffer = IN['segments'][co:(co+(cn*cs)), :]
+
+        gene_idx = gene_ids_segs[seg_idx, 0]
+        if len(gene_idx.shape) > 0:
+            gene_idx = gene_idx[0]
+
+        assert(decodeUTF8(IN['gene_names'][:][gene_idx]) == genes[gidx].name)
+        assert(genes[gidx].name == gene_ids[gidx])
+
+        ### compute gene expression as the read count over all non alternative segments
+        if hasattr(options, 'non_alt_norm') and options.non_alt_norm:
+            ### get idx of non alternative segments
+            non_alt_idx = genes[gidx].get_non_alt_seg_ids()
+            seg_idx = seg_idx[non_alt_idx]
+
+        if seg_idx.shape[0] > 1:
+            gene_counts[gidx, :] = np.squeeze(np.dot(seg_buffer[seg_idx - co, :][:, strain_idx].T, seg_lens[seg_idx])) / options.readlen
+        else:
+            gene_counts[gidx, :] = seg_buffer[seg_idx[0] - co, :][strain_idx] * seg_lens[seg_idx] / options.readlen
+
+    IN.close()
+
+    if options.verbose:
+        sys.stdout.write('\n... done.\n')
+
+    ### compute size factors
+    sf = get_size_factors(gene_counts, options)
+
+    ### write results to hdf5
+    if fn_out is not None:
+        OUT = h5py.File(fn_out, 'w')
+        OUT.create_dataset(name='strains', data=codeUTF8(strains[strain_idx_all]), compression='gzip')
+        if not strain_subset is None:
+            OUT.create_dataset(name='strain_subset', data=codeUTF8(strains[strain_idx]))
+        OUT.create_dataset(name='gene_ids', data=codeUTF8(gene_ids), compression='gzip')
+        OUT.create_dataset(name='gene_symbols', data=codeUTF8(gene_symbols), compression='gzip')
+        OUT.create_dataset(name='raw_count', data=gene_counts, compression='gzip', chunks=True)
+        OUT.create_dataset(name='size_factors', data=sf, compression='gzip')
+        OUT.close()
+
+
+def get_size_factors(gene_counts, options, kind='geomean'):
+
+    if options.verbose:
+        print('Estimating size factors ...')
+
+    size_factors = []
+
+    ### take geometric mean of counts
+    if kind == 'geomean':
+        gmean = np.exp(np.mean(np.log(gene_counts + 1), axis=1))
+        for i in range(gene_counts.shape[1]):
+            idx = gene_counts[:, i] > 0
+            size_factors.append(np.median(gene_counts[idx, i] / gmean[idx]))
+    elif kind == 'tc': # total count
+        for i in range(gene_counts.shape[1]):
+            size_factors.append(gene_counts[:, i].sum() / 100000000) 
+    elif kind == 'uq': # upper quartile
+        for i in range(gene_counts.shape[1]):
+            size_factors.append(scoreatpercentile(gene_counts[:, i], 75) + 1) 
+    else:
+        sys.stderr.write('ERROR: unknown normalization method %s\n' % kind)
+        sys.exit(1)
+
+    if options.verbose:
+        sys.stdout.write('\n... done.\n')
+
+    return np.array(size_factors, dtype='float')
 

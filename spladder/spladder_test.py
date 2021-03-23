@@ -16,6 +16,7 @@ import numpy.random as npr
 import hashlib
 
 from .alt_splice import quantify
+from .count import get_size_factors
 from .testing import likelihood
 from . import settings
 from .viz import diagnose as plot
@@ -27,118 +28,31 @@ from .helpers import log_progress, decodeUTF8, codeUTF8
 
 TIME0 = time.time()
 
-def get_gene_expression(options, fn_out=None, strain_subset=None):
+def _get_gene_expression(options, fname_exp_hdf5, strain_subset=None):
 
-    if options.verbose:
-        sys.stdout.write('Quantifying gene expression ...\n')
-
-    ### load gene information
-    genes = pickle.load(open(options.fname_genes, 'rb'), encoding='latin1')[0]
-    numgenes = genes.shape[0]
-
-    ### open hdf5 file containing graph count information
-    IN = h5py.File(options.fname_count_in, 'r')
-    strains = IN['strains'][:].astype('str')
-    ### sort by strain ID
-    strain_idx_all = np.argsort(strains)
-    if strain_subset is None:
-        strain_idx = strain_idx_all.copy()
-    else:
-        strain_idx = strain_idx_all[np.in1d(strains[strain_idx_all], strain_subset)]
-    gene_counts = np.zeros((numgenes, strain_idx.shape[0]), dtype='float')
-    gene_ids = np.array([x.name for x in genes], dtype='str')
-    gene_symbols = np.array([x.symbol if not x is None else 'NA' for x in genes], dtype='str')
-
-    seg_lens = IN['seg_len'][:]
-    gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
-
-    ### no longer assume that the gene_ids_segs are sorted by gene ID
-    s_idx = np.argsort(gene_ids_segs[:, 0], kind='mergesort')
-    _, u_idx = np.unique(gene_ids_segs[s_idx, 0], return_index=True)
-    s_idx = s_idx[u_idx]
-
-    ### iterate over genes
-    for gidx, iidx in enumerate(s_idx):
-
-        if options.verbose:
-            log_progress(gidx, numgenes, 100)
-
-        ### get idx of non alternative segments
-        non_alt_idx = genes[gidx].get_non_alt_seg_ids()
-        seg_idx = np.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
-
-        gene_idx = gene_ids_segs[seg_idx, 0]
-        if len(gene_idx.shape) > 0:
-            gene_idx = gene_idx[0]
-
-        assert(decodeUTF8(IN['gene_names'][:][gene_idx]) == genes[gidx].name)
-        assert(genes[gidx].name == gene_ids[gidx])
-
-        if options.non_alt_norm:
-            seg_idx = seg_idx[non_alt_idx]
-
-        ### compute gene expression as the read count over all non alternative segments
-        #gene_counts[gidx, :] = np.dot(IN['segments'][seg_idx, :].T, IN['seg_len'][:][seg_idx]) / np.sum(IN['seg_len'][:][seg_idx])
-        if seg_idx.shape[0] > 1:
-            gene_counts[gidx, :] = np.squeeze(np.dot(IN['segments'][seg_idx, :][:, strain_idx].T, seg_lens[seg_idx])) / options.readlen
-        else:
-            gene_counts[gidx, :] = IN['segments'][seg_idx[0], :][strain_idx] * seg_lens[seg_idx] / options.readlen
-        #seg_offset += genes[gidx].segmentgraph.seg_edges.shape[0]
-
+    IN = h5py.File(fname_exp_hdf5, 'r')
+    gene_counts = IN['raw_count'][:]
+    strains = decodeUTF8(IN['strains'][:])
+    gene_ids = decodeUTF8(IN['gene_ids'][:])
+    gene_symbols = decodeUTF8(IN['gene_symbols'][:])
     IN.close()
 
-    if options.verbose:
-        sys.stdout.write('\n... done.\n')
-
-
-    ### write results to hdf5
-    if fn_out is not None:
-        OUT = h5py.File(fn_out, 'w')
-        OUT.create_dataset(name='all_strains', data=codeUTF8(strains[strain_idx_all]))
-        OUT.create_dataset(name='strains', data=codeUTF8(strains[strain_idx]))
-        OUT.create_dataset(name='gene_ids', data=codeUTF8(gene_ids))
-        OUT.create_dataset(name='gene_symbols', data=codeUTF8(gene_symbols))
-        OUT.create_dataset(name='raw_count', data=gene_counts, compression="gzip")
-        OUT.close()
-
-    return (gene_counts, strains[strain_idx_all], strains[strain_idx], gene_ids, gene_symbols)
-
-
-def get_size_factors(gene_counts, options, kind='geomean'):
-
-    if options.verbose:
-        print('Estimating size factors')
-
-    size_factors = []
-
-    ### take geometric mean of counts
-    if kind == 'geomean':
-        gmean = np.exp(np.mean(np.log(gene_counts + 1), axis=1))
-        for i in range(gene_counts.shape[1]):
-            idx = gene_counts[:, i] > 0
-            size_factors.append(np.median(gene_counts[idx, i] / gmean[idx]))
-    elif kind == 'tc': # total count
-        for i in range(gene_counts.shape[1]):
-            size_factors.append(gene_counts[:, i].sum() / 100000000) 
-    elif kind == 'uq': # upper quartile
-        for i in range(gene_counts.shape[1]):
-            size_factors.append(scoreatpercentile(gene_counts[:, i], 75) + 1) 
+    if strain_subset is None:
+        strain_idx = np.arange(strains.shape[0])
     else:
-        sys.stderr.write('ERROR: unknown normalization method %s\n' % kind)
-        sys.exit(1)
+        strain_idx = np.where(np.in1d(strains, strain_subset))[0]
 
-    size_factors = np.array(size_factors, dtype='float')
-
-    return size_factors
+    return (gene_counts[:, strain_idx], strains, strains[strain_idx], gene_ids, gene_symbols)
 
 
 def re_quantify_events(options):
-    """This is more a legacy function for testing that requantifies events on a given graph"""
+    """This is a legacy function for testing that requantifies events on a given graph"""
 
     ev = pickle.load(open(options.fname_events, 'rb'))[0]
     cov = quantify.quantify_from_graph(ev, np.arange(1000), 'exon_skip', options, fn_merge=sys.argv[1])
 
     return cov
+
 
 def estimate_dispersion_chunk(gene_counts, matrix, sf, options, test_idx, idx, log=False):
 
@@ -631,21 +545,9 @@ def spladder_test(options):
     condition_strains = None
     if options.subset_samples:
         condition_strains = np.unique(np.r_[np.array(options.conditionA), np.array(options.conditionB)])
-        _hash = hashlib.sha256()
-        _hash.update(np.unique(condition_strains))
-        options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.%s.hdf5' % (options.confidence, options.merge, val_tag, non_alt_tag, _hash.hexdigest()))
-    if os.path.exists(options.fname_exp_hdf5):
-        if options.verbose:
-            print('Loading expression counts from %s' % options.fname_exp_hdf5)
-        IN = h5py.File(options.fname_exp_hdf5, 'r')
-        gene_counts = IN['raw_count'][:]
-        gene_strains = decodeUTF8(IN['strains'][:])
-        gene_strains_all = decodeUTF8(IN['all_strains'][:])
-        gene_ids = decodeUTF8(IN['gene_ids'][:])
-        gene_symbols = decodeUTF8(IN['gene_symbols'][:])
-        IN.close()
-    else:
-        gene_counts, gene_strains_all, gene_strains, gene_ids, gene_symbols = get_gene_expression(options, fn_out=options.fname_exp_hdf5, strain_subset=condition_strains)
+    if options.verbose:
+        print('Loading expression counts from %s' % options.fname_exp_hdf5)
+        gene_counts, gene_strains_all, gene_strains, gene_ids, gene_symbols = _get_gene_expression(options, options.fname_exp_hdf5, strain_subset=condition_strains)
 
     gene_strains = np.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
     gene_strains_all = np.array([x.split(':')[1] if ':' in x else x for x in gene_strains_all])
@@ -718,6 +620,7 @@ def spladder_test(options):
         sf_ev = get_size_factors(np.vstack(cov), options)
 
         sf = np.r_[sf_ev, sf_ge]
+        #sf = np.r_[sf_ge, sf_ge]
 
         assert(np.all(gene_strains == event_strains))
 
@@ -837,11 +740,12 @@ def spladder_test(options):
         ###
 
         ### write test summary (what has been tested, which bam files, etc. ...)
-        pickle.dump((gene_strains,
-                      event_strains,
-                      dmatrix0,
-                      dmatrix1,
-                      event_type),
+        pickle.dump({'gene_strains':gene_strains,
+                     'event_strains':event_strains,
+                     'dmatrix0':dmatrix0,
+                     'dmatrix1':dmatrix1,
+                     'event_type':event_type,
+                     'labels':[options.labelA, options.labelB]},
                      open(os.path.join(outdir, 'test_setup_C%i_%s.pickle' % (options.confidence, event_type)), 'wb'), -1)
 
         ### write test results

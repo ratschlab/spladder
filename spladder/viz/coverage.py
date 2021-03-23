@@ -5,6 +5,7 @@ import scipy.sparse as spsp
 import numpy as np
 import numpy.random as npr
 import pysam
+import re
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -13,7 +14,7 @@ import math
 
 from .highlight import *
 
-def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verbose=False, collapsed=True, bins=0):
+def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verbose=False, collapsed=True, bins=0, size_factors=None, sf_strains=None):
     """Internal function that queries the bam files and produces the counts"""
 
     ### PYSAM CIGAR ENCODING
@@ -99,6 +100,14 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
                     if intron_cov: 
                         intron_counts[f_i,bam_introns_p[_i, 0]:bam_introns_p[_i, 1]] += bam_introns_p[_i, 2] 
 
+    ### handle size factors
+    sf = np.ones((len(files), ), dtype='float')
+    if not size_factors is None:
+        for f, fn in enumerate(files):
+            strain = re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[cC][rR][aA][mM]$', '', fn.split('/')[-1])
+            sf[f] = size_factors[np.where(sf_strains == strain)[0]]
+    counts /= sf[:, np.newaxis]
+
     if collapsed:
         counts = np.sum(counts, axis=0)
         intron_counts = np.sum(intron_counts, axis=0)
@@ -116,7 +125,7 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
 def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
                      bins = None, log = False, ax = None, ymax = 0, outfile = None,
                      frm = 'pdf', xlim = None, title = None, xoff = None, yoff = None,
-                     intron_cov = False, cmap=None, col_idx=None):
+                     intron_cov = False, cmap=None, col_idx=None, size_factors=None, sf_strains=None):
     """This function takes a list of bam files and a set of coordinates (chrm, start, stop), to 
        plot a coverage heatmap over all files in that region."""
 
@@ -130,7 +139,7 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
     #chr_name = 'chr%s' % chrm
     chr_name = chrm
 
-    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, verbose=verbose, collapsed=False)
+    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, verbose=verbose, collapsed=False, size_factors=size_factors, sf_strains=sf_strains)
 
     if ax is None:
         fig = plt.figure(figsize = (10, 4))
@@ -156,7 +165,7 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
         plt.savefig(outfile, dpi=300, format=frm)
 
 
-def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=None,
+def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, size_factors, ax, sample_idx=None,
                       log=False, cmap_seg=None, cmap_edg=None, xlim=None, grid=False,
                       order='C'):
     """This function takes a gene and its corresponding segment and edge counts to
@@ -168,19 +177,23 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
     norm = plt.Normalize(0, len(sample_idx))
 
     if cmap_seg is None:
-        cmap_seg = plt.get_cmap('jet') 
+        cmap_seg = plt.get_cmap('tab10') 
     if cmap_edg is None:
-        cmap_edg = plt.get_cmap('jet')
+        cmap_edg = plt.get_cmap('tab10')
 
     ### iterate over segments
     for j in range(gene.segmentgraph.segments.shape[1]):
         s = gene.segmentgraph.segments[:, j]
         ### iterate over samples
         for c, curr_idx in enumerate(sample_idx):
+
+            counts = seg_counts[j, curr_idx]
+
+            ### size factor correction
+            counts /= size_factors[curr_idx]
+
             if log:
-                counts = np.log10(seg_counts[j, curr_idx] + 1)
-            else:
-                counts = seg_counts[j, curr_idx]
+                counts = np.log10(counts + 1)
 
             ### plot segment over all samples (including uncertainty region)
             if counts.shape[0] == 1:
@@ -196,12 +209,16 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, ax, sample_idx=No
         ### iterate over samples
         for c, curr_idx in enumerate(sample_idx):
             [s, t] = np.unravel_index(edge_idx[j], gene.segmentgraph.seg_edges.shape, order=order) 
+
+            counts = edge_counts[j, curr_idx]
+
+            ### size factor correction
+            counts /= size_factors[curr_idx]
+
             if log:
-                counts = np.log10(edge_counts[j, curr_idx] + 1)
-            else:
-                counts = edge_counts[j, curr_idx]
-            mean = np.mean(counts)
-            add_intron_patch2(ax, gene.segmentgraph.segments[1, s], gene.segmentgraph.segments[0, t], mean, color=cmap_edg(norm(c)))
+                counts = np.log10(counts + 1)
+
+            add_intron_patch2(ax, gene.segmentgraph.segments[1, s], gene.segmentgraph.segments[0, t], np.mean(counts), color=cmap_edg(norm(c)))
 
     if xlim is not None:
         ax.set_xlim(xlim)
@@ -219,7 +236,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
                  intron_cov=False, intron_cnt=False, marker_pos=None, col_idx=None,
                  color_cov='blue', color_intron_cov='red', color_intron_edge='green', 
                  grid=False, strand=None, highlight=None, highlight_color='magenta', highlight_label=None,
-                 min_intron_cnt=0, return_legend_handle=False, label=None):
+                 min_intron_cnt=0, return_legend_handle=False, label=None, size_factors=None, sf_strains=None):
     """This function takes a list of bam files and a set of coordinates (chrm, start, stop), to 
        plot a coverage overview of that files in that region."""
 
@@ -233,7 +250,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
     #chr_name = 'chr%s' % chrm
     chr_name = chrm
 
-    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt, verbose, collapsed=True)
+    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt, verbose, collapsed=True, size_factors=size_factors, sf_strains=sf_strains)
 
     ### get mean counts over all bam files
     counts /= len(files)

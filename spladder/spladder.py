@@ -30,7 +30,7 @@ def parse_options(argv):
     general.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='use verbose output mode [off]', default=False)
     general.add_argument('-d', '--debug', dest='debug', action='store_true', help='use debug output mode [off]', default=False)
     inputs = parser_build.add_argument_group('INPUT OPTIONS')
-    inputs.add_argument('-n', '--readlen', dest='readlen', metavar='INT', type=int, help='read length (used for automatic confidence levele settings) [36]', default=36)
+    inputs.add_argument('-n', '--readlen', dest='readlen', metavar='INT', type=int, help='read length (used for automatic confidence levele settings) [36]', default=50)
     inputs.add_argument('--primary-only', dest='primary_only', action='store_true', help='only use primary alignments [on]', default=True)
     inputs.add_argument('--no-primary-only', dest='primary_only', action='store_false', default=True)
     inputs.add_argument('--var-aware', dest='var_aware', action='store_true', help='alignment files are variation aware (presence of XM and XG tags) [off]', default=False)
