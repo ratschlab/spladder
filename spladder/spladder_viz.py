@@ -175,7 +175,8 @@ def _load_size_factors(options):
 
     if not os.path.exists(fname_gene_exp):
         fname_count = re.sub(r'.gene_exp.hdf5$', '.count.hdf5', fname_gene_exp) 
-        compute_gene_expression(options, fname_count, fname_gene_exp) 
+        fname_events = re.sub(r'.gene_exp.hdf5$', '.pickle', fname_gene_exp)
+        compute_gene_expression(options, fname_events, fname_count, fname_gene_exp) 
 
     IN = h5py.File(fname_gene_exp, 'r')
     sf = IN['size_factors'][:]

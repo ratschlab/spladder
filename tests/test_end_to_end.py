@@ -50,8 +50,8 @@ def _assert_files_equal_testing(e, a):
 
     ### check text cols
     assert np.all(da[:, [0, 1]] == de[:, [0, 1]])
-    da = da[:, 2:]
-    de = de[:, 2:]
+    da = da[:, 3:]
+    de = de[:, 3:]
 
     ### check p-values (up to certain precision)
     da = np.around(da.astype('float'), decimals=6)

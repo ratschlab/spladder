@@ -298,15 +298,10 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
                 appendToHDF5(h5fid, CIN['strains'][:], 'strains', faxis=0, daxis=0)
         h5fid.close() 
 
-def compute_gene_expression(options, fname_count_in, fn_out=None, strain_subset=None):
+def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, strain_subset=None):
 
     if options.verbose:
         sys.stdout.write('Quantifying gene expression ...\n')
-
-    if options.validate_sg:
-        fname_genes = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.validated.pickle' % (options.confidence, options.merge))
-    else:
-        fname_genes = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.pickle' % (options.confidence, options.merge))
 
     ### load gene information
     genes = pickle.load(open(fname_genes, 'rb'), encoding='latin1')[0]
