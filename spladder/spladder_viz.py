@@ -208,7 +208,7 @@ def spladder_viz(options):
             _parse_test_info(test_info, options.outdir, options.confidence, plots, test_tag)
         for plot_data in plots:
             if len(options.data_tracks) > 0:
-                plot_data.append(options.data_tracks)
+                plot_data.extend(options.data_tracks)
 
     ### generate all plots to be completed
     for p, plot_data in enumerate(plots):
@@ -226,7 +226,7 @@ def spladder_viz(options):
                 _parse_event_info(eids, gids, range_info[1:], events, options.outdir, options.confidence, options.verbose)
             ### coordinate ranges
             elif range_info[0] == 'coordinate':
-                coords.append(RangeData._make(range_info[1:4]))
+                coords.append(RangeData._make([range_info[1], int(range_info[2]), int(range_info[3])]))
 
         ### check data tracks for additional range information if no --range was given
         if len(genes) + len(events) + len(coords) == 0:
@@ -242,7 +242,7 @@ def spladder_viz(options):
                     _parse_gene_info(range_info[1:], genes, gene_names, gids, all_gene_names, options.outdir, options.confidence, options.validate_sg, options.verbose)
 
         ### check that everything is on the same chromosome
-        plotchrm = np.unique([_.chr for _ in np.r_[events, genes, coords]])
+        plotchrm = np.unique([_.chr for _ in events + genes + coords])
         if plotchrm.shape[0] > 1:
             sys.stderr.write('ERROR: the provided gene/event/coordinate ranges are on different chromosomes and canot be plotted jointly\n')
             sys.exit(1)
@@ -315,28 +315,26 @@ def spladder_viz(options):
                 ax = _add_ax(axes, fig, gs)
                 min_sample_size = 5 ### TODO make that an option
                 caxes = []
-                for gene in genes:
-                    caxes = []
-                    labels = []
-                    norm = plt.Normalize(0, len(data_track.bam_fnames))
-                    for g, bam_group in enumerate(data_track.bam_fnames):
-                        label = 'group %i' % (g + 1) if len(data_track.group_labels) == 0 else data_track.group_labels[g]
-                        caxes.append(cov_from_bam(gene.chr, 
-                                                  plotrange[0], 
-                                                  plotrange[1], 
-                                                  bam_group, 
-                                                  subsample=min_sample_size, 
-                                                  ax=ax, 
-                                                  intron_cnt=True,
-                                                  log=options.log, 
-                                                  xlim=plotrange, 
-                                                  color_cov=cmap_cov(norm(g)), 
-                                                  color_intron_edge= cmap_edg(norm(g)),
-                                                  grid=True, 
-                                                  min_intron_cnt=options.mincount, 
-                                                  return_legend_handle=True, 
-                                                  label=label))
-                        labels.append(label)
+                labels = []
+                norm = plt.Normalize(0, len(data_track.bam_fnames))
+                for g, bam_group in enumerate(data_track.bam_fnames):
+                    label = 'group %i' % (g + 1) if len(data_track.group_labels) == 0 else data_track.group_labels[g]
+                    caxes.append(cov_from_bam(plotchrm[0],
+                                              plotrange[0], 
+                                              plotrange[1], 
+                                              bam_group, 
+                                              subsample=min_sample_size, 
+                                              ax=ax, 
+                                              intron_cnt=True,
+                                              log=options.log, 
+                                              xlim=plotrange, 
+                                              color_cov=cmap_cov(norm(g)), 
+                                              color_intron_edge= cmap_edg(norm(g)),
+                                              grid=True, 
+                                              min_intron_cnt=options.mincount, 
+                                              return_legend_handle=True, 
+                                              label=label))
+                    labels.append(label)
                 ax.get_yaxis().set_label_coords(1.02,0.5)
                 if len(caxes) > 0:
                     ax.legend(caxes, labels)
