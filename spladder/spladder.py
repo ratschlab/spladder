@@ -90,6 +90,7 @@ def parse_options(argv):
     splice.add_argument('--no-curate-alt-prime', dest='curate_alt_prime', action='store_false', default=True)
     splice.add_argument('--quantify-graph', dest='quantify_graph', action='store_true', help='quantify graph (implicitly on when --extract-ase is used) [off]', default=False)
     splice.add_argument('--no-quantify-graph', dest='quantify_graph', action='store_false', default=False)
+    splice.add_argument('--psi-min-reads', dest='psi_min_reads', metavar='INT', help='minimum number of spliced reads covering either isoform to compute PSI [10]', default=10)
     experimental = parser_build.add_argument_group('EXPERIMENTAL - BETA STATE')
     experimental.add_argument('--pyproc', dest='pyproc', action='store_true', help='use parallel implementation [off]', default=False)
     experimental.add_argument('--environment', dest='environment', metavar='STRING', help='conda environment to by used for pyproc', default=None)

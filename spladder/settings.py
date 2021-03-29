@@ -103,9 +103,6 @@ def default_settings(options):
     options.detect_trunc = False
     options.min_truncation_cov = 5
 
-    ### min number of reads to compute PSI
-    options.psi_min_reads = 10
-
     ### treat introns as unstranded
     options.introns_unstranded = False
 
