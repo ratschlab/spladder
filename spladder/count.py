@@ -298,7 +298,7 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
                 appendToHDF5(h5fid, CIN['strains'][:], 'strains', faxis=0, daxis=0)
         h5fid.close() 
 
-def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, strain_subset=None):
+def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, strain_idx=None):
 
     if options.verbose:
         sys.stdout.write('Quantifying gene expression ...\n')
@@ -311,12 +311,9 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
     IN = h5py.File(fname_count_in, 'r')
     strains = IN['strains'][:].astype('str')
     ### sort by strain ID
-    strain_idx_all = np.argsort(strains)
-    if strain_subset is None:
-        strain_idx = strain_idx_all.copy()
-    else:
-        strain_idx = strain_idx_all[np.in1d(strains[strain_idx_all], strain_subset)]
-    gene_counts = np.zeros((numgenes, strain_idx.shape[0]), dtype='float')
+    if strain_idx is None:
+        strain_idx = np.arange(strains.shape[0])
+    gene_counts = np.zeros((numgenes, len(strain_idx)), dtype='float')
     gene_ids = np.array([x.name for x in genes], dtype='str')
     gene_symbols = np.array([x.symbol if not x is None else 'NA' for x in genes], dtype='str')
 
@@ -375,9 +372,7 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
     ### write results to hdf5
     if fn_out is not None:
         OUT = h5py.File(fn_out, 'w')
-        OUT.create_dataset(name='strains', data=codeUTF8(strains[strain_idx_all]), compression='gzip')
-        if not strain_subset is None:
-            OUT.create_dataset(name='strain_subset', data=codeUTF8(strains[strain_idx]))
+        OUT.create_dataset(name='strains', data=codeUTF8(strains[strain_idx]), compression='gzip')
         OUT.create_dataset(name='gene_ids', data=codeUTF8(gene_ids), compression='gzip')
         OUT.create_dataset(name='gene_symbols', data=codeUTF8(gene_symbols), compression='gzip')
         OUT.create_dataset(name='raw_count', data=gene_counts, compression='gzip', chunks=True)

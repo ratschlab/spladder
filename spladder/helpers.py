@@ -169,7 +169,7 @@ def compute_psi(counts, event_type, options):
         a = np.c_[counts[:, 4], counts[:, 5]].min(axis=1)
         b = counts[:, 6]
     elif event_type == 'intron_retention':
-        a = counts[:, 1] # intron cov
+        a = counts[:, 2] # intron cov
         b = counts[:, 4] # intron conf
     elif event_type in ['alt_3prime', 'alt_5prime']:
         a = counts[:, 5] # intron2 conf

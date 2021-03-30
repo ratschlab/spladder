@@ -246,7 +246,10 @@ def spladder(options):
                 
             ### collect gene expression counts from graph
             if not os.path.exists(fn_out_gene_count):
-                compute_gene_expression(options, fn_in_count, fn_out_count, fn_out_gene_count)
+                if options.merge == 'single':
+                    compute_gene_expression(options, fn_in_count, fn_out_count, fn_out_gene_count, strain_idx=[0])
+                else:
+                    compute_gene_expression(options, fn_in_count, fn_out_count, fn_out_gene_count)
 
     ### handle alternative splicing part
     if options.extract_as:

@@ -33,25 +33,25 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
         gene_header = ''
 
     if events[0].event_type == 'exon_skip':
-        fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_start\texon_end\texon_aft_start\texon_aft_end' % gene_header)
+        fd.write('contig\tstrand\tevent_id\tgene_name%s\te1_start\te1_end\te2_start\te2_end\te3_start\te3_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_aft_conf\t%s:intron_skip_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:e1_cov\t%s:e2_cov\t%s:e3_cov\t%s:e1e2_conf\t%s:e2e3_conf\t%s:e1e3_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type in ['alt_3prime', 'alt_5prime']:
-        fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_const_start\texon_const_end\texon_alt1_start\texon_alt1_end\texon_alt2_start\texon_alt2_end' % gene_header)
+        fd.write('contig\tstrand\tevent_id\tgene_name%s\te1_start\te1_end\te2_start\te2_end\te3_start\te3_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_diff_cov\t%s:exon_const1_cov\t%s:exon_const2_cov\t%s:intron1_conf\t%s:intron2_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:e1_cov\t%s:e2_cov\t%s:e3_cov\t%s:e1e3_conf\t%s:e2_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type == 'intron_retention':
-        fd.write('contig\tstrand\tevent_id\tgene_name%s\texon1_start\texon1_end\tintron_start\tintron_end\texon2_start\texon2_end' % gene_header)
+        fd.write('contig\tstrand\tevent_id\tgene_name%s\te1_start\te1_end\te2_start\te2_end\te3_start\te3_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon1_cov\t%s:intron_cov\t%s:exon2_cov\t%s:intron_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:e1_cov\t%s:e2_cov\t%s:e3_cov\t%s:e1e3_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type == 'mult_exon_skip':
-        fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon_starts\texon_ends\texon_aft_start\texon_aft_end' % gene_header)
+        fd.write('contig\tstrand\tevent_id\tgene_name%s\te1_start\te1_end\te2_starts\te2_ends\te3_start\te3_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_pre_cov\t%s:exon_cov\t%s:exon_aft_cov\t%s:intron_pre_conf\t%s:intron_inner_conf\t%s:exon_inner_count\t%s:intron_aft_conf\t%s:intron_skip_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:e1_cov\t%s:e2_cov\t%s:e3_cov\t%s:e1e2_conf\t%s:sum_e2_conf\t%s:num_e2\t%s:e2e3_conf\t%s:e1e3_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type == 'mutex_exons':
-        fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_pre_start\texon_pre_end\texon1_start\texon1_end\texon2_start\texon2_end\texon_aft_start\texon_aft_end' % gene_header)
+        fd.write('contig\tstrand\tevent_id\tgene_name%s\te1_start\te1_end\te2_start\te2_end\te3_start\te3_end\te4_start\te4_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_pre_cov\t%s:exon1_cov\t%s:exon2_cov\t%s:exon_aft_cov\t%s:pre_exon1_conf\t%s:pre_exon2_conf\t%s:exon1_aft_conf\t%s:exon2_aft_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:e1_cov\t%s:e2_cov\t%s:e3_cov\t%s:e4_cov\t%s:e1e2_conf\t%s:e1e3_conf\t%s:e2e4_conf\t%s:e3e4_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     else:
         print('Unknown event type: %s' % events[0].event_type, file=sys.stderr)
     fd.write('\n')
@@ -75,21 +75,27 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons2[0, 0] + 1, ev.exons2[0, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1], ev.exons2[2, 0] + 1, ev.exons2[2, 1]))
             for j in range(len(strains)):
                 if counts[j, 0] == 1:
-                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%.2f' % (counts[j, 2], counts[j, 1], counts[j, 3], counts[j, 4], counts[j, 5], counts[j, 6], psi[j]))
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%i\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 5], counts[j, 6], psi[j]))
                 else:
                     fd.write('\t-1\t-1\t-1\t-1\t-1')
         elif ev.event_type == 'intron_retention':
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[0, 1] + 1, ev.exons1[1, 0], ev.exons1[1, 0] + 1, ev.exons1[1, 1,]))
             for j in range(len(strains)):
                 if counts[j, 0] == 1:
-                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%.2f' % (counts[j, 2], counts[j, 1], counts[j, 3], counts[j, 4], psi[j]))
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], psi[j]))
                 else:
                     fd.write('\t-1\t-1\t-1\t-1')
         elif ev.event_type in ['alt_3prime', 'alt_5prime']:
             if np.all(ev.exons1[0, :] == ev.exons2[0, :]):
-                fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1]))
+                if ev.exons1[1, 0] < ev.exons2[1, 0]:
+                    fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[1, 0] + 1, ev.exons2[1, 0], ev.exons2[1, 0] + 1, ev.exons2[1, 1]))
+                else:
+                    fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons2[1, 0] + 1, ev.exons1[1, 0], ev.exons1[1, 0] + 1, ev.exons1[1, 1]))
             elif np.all(ev.exons1[1, :] == ev.exons2[1, :]):
-                fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons2[0, 0] + 1, ev.exons2[0, 1]))
+                if ev.exons1[0, 1] < ev.exons2[0, 1]:
+                    fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[0, 1] + 1, ev.exons2[0, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1]))
+                else:
+                    fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons2[0, 0] + 1, ev.exons2[0, 1], ev.exons2[0, 1] + 1, ev.exons1[0, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1]))
             for j in range(len(strains)):
                 if counts[j, 0]:
                     fd.write('\t%1.1f\t%1.1f\t%1.1f\t%i\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 5], psi[j]))
@@ -214,31 +220,31 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
     else:
         fd = open(fn_out, 'wt', encoding='utf-8')
 
-    print('gene\teventtype\tcoordinates', end=' ', file=fd)
+    print('gene\teventtype\tcoordinates', end='', file=fd)
     for s in strains:
-        print('\t%s', s, end=' ', file=fd)
-    print('\n', end=' ', file=fd)
+        print('\t%s' % s, end='', file=fd)
+    print('\n', end='', file=fd)
 
     for i in event_idx:
         counts = IN['event_counts'][:, :, i]
 
-        print('%s\t%s\t%s:' % (events[i].gene_name[0], event_type, events[i].chr), end=' ', file=fd)
+        print('%s\t%s\t%s:' % (events[i].gene_name[0], event_type, events[i].chr), end='', file=fd)
         if event_type == 'intron_retention':
-            print(':%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1]), end=' ', file=fd)
+            print(':%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1]), end='', file=fd)
         elif event_type in ['alt_3prime', 'alt_5prime']:
             if np.all(events[i].exons1[0, :] == events[i].exons2[0, :]):
-                print(':%i-%i:%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1]), end=' ', file=fd)
+                print(':%i-%i:%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1]), end='', file=fd)
             else:
-                print(':%i-%i:%i-%i:%i-%i' % (events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons2[0, 0], events[i].exons2[0, 1]), end=' ', file=fd)
+                print(':%i-%i:%i-%i:%i-%i' % (events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons2[0, 0], events[i].exons2[0, 1]), end='', file=fd)
         elif event_type == 'exon_skip':
-            print(':%i-%i:%i-%i:%i-%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons2[2, 0], events[i].exons2[2, 1]), end=' ', file=fd)
+            print(':%i-%i:%i-%i:%i-%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons2[2, 0], events[i].exons2[2, 1]), end='', file=fd)
         elif event_type == 'mult_exon_skip':
-            print(':%i-%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1]), end=' ', file=fd)
+            print(':%i-%i' % (events[i].exons2[0, 0], events[i].exons2[0, 1]), end='', file=fd)
             for j in range(1, events[i].exons2.shape[0] - 1):
-                print(':%i-%i:' % (events[i].exons2[j, 0], events[i].exons2[j, 1]), end=' ', file=fd)
-            print(':%i-%i' % (events[i].exons2[-1, 0], events[i].exons2[-1, 1]), end=' ', file=fd)
+                print(':%i-%i:' % (events[i].exons2[j, 0], events[i].exons2[j, 1]), end='', file=fd)
+            print(':%i-%i' % (events[i].exons2[-1, 0], events[i].exons2[-1, 1]), end='', file=fd)
         elif event_type == 'mutex_exons':
-            print(':%i-%i:%i-%i:%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons1[2, 0], events[i].exons1[2, 1]), end=' ', file=fd)
+            print(':%i-%i:%i-%i:%i-%i:%i-%i' % (events[i].exons1[0, 0], events[i].exons1[0, 1], events[i].exons1[1, 0], events[i].exons1[1, 1], events[i].exons2[1, 0], events[i].exons2[1, 1], events[i].exons1[2, 0], events[i].exons1[2, 1]), end='', file=fd)
         for j in range(len(strains)):
             if counts[j, 0] == 1:
                 if events[i].event_type in ['alt_3prime', 'alt_5prime']:
@@ -269,12 +275,12 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
                     sys.exit(1)
 
                 if confirmation < 10:
-                    print('\tNA', end=' ', file=fd)
+                    print('\tNA', end='', file=fd)
                 else:
-                    print('\t%1.1f' % (num / float(denom)), end=' ', file=fd)
+                    print('\t%1.1f' % (num / float(denom)), end='', file=fd)
             else:
-                print('\tNA', end=' ', file=fd)
-        print('\n', end=' ', file=fd)
+                print('\tNA', end='', file=fd)
+        print('\n', end='', file=fd)
     fd.close()
 
 
@@ -370,7 +376,7 @@ def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
 
         name = '%s.%i' % (ev.event_type, ev.id)
 
-        print('%s\tundefined\t%s\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s"; gene_name "%s";' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, gene_name), end=' ', file=fd_out)
+        print('%s\tundefined\t%s\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s"; gene_name "%s";' % (ev.chr, ev.event_type, start_pos, stop_pos, ev.strand, name, name, gene_name), end='', file=fd_out)
         ### handle + strand
         if ev.strand == '+':
             if ev.event_type == 'exon_skip':

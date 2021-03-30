@@ -32,9 +32,7 @@ def _prepare_count_hdf5(options, OUT, event_features, sample_idx=None):
 
     ### write strain and gene indices to hdf5
     OUT.create_dataset(name='strains', data=codeUTF8(options.strains))
-    feat = OUT.create_group(name='event_features')
-    for f in event_features:
-        feat.create_dataset(name=f, data=codeUTF8(np.array(event_features[f], dtype='str')))
+    OUT.create_dataset(name='event_features', data=codeUTF8(np.array(event_features, dtype='str')))
     OUT.create_dataset(name='gene_names', data=codeUTF8(np.array([x.name for x in genes], dtype='str')))
     OUT.create_dataset(name='gene_chr', data=codeUTF8(np.array([x.chr for x in genes], dtype='str')))
     OUT.create_dataset(name='gene_strand', data=codeUTF8(np.array([x.strand for x in genes], dtype='str')))
@@ -76,12 +74,12 @@ def analyze_events(options, event_type, sample_idx=None):
         print('All output files for %s exist.\n' % event_type)
         return
 
-    event_features = {'mult_exon_skip': ['valid', 'exon_pre_cov', 'exons_cov', 'exon_aft_cov', 'exon_pre_exon_conf', 'exon_exon_aft_conf', 'exon_pre_exon_aft_conf', 'sum_inner_exon_conf', 'num_inner_exon', 'len_inner_exon'],
-                      'intron_retention': ['valid', 'intron_cov', 'exon1_cov', 'exon2_cov', 'intron_conf', 'intron_cov_region'],
-                      'exon_skip': ['valid', 'exon_cov', 'exon_pre_cov', 'exon_aft_cov', 'exon_pre_exon_conf', 'exon_exon_aft_conf', 'exon_pre_exon_aft_conf'],
-                      'mutex_exons': ['valid', 'exon_pre_cov', 'exon1_cov', 'exon2_cov', 'exon_aft_cov', 'exon_pre_exon1_conf', 'exon_pre_exon2_conf', 'exon1_exon_aft_conf', 'exon2_exon_aft_conf'],
-                      'alt_3prime': ['valid', 'exon_diff_cov', 'exon1_const_cov', 'exon2_const_cov', 'intron1_conf', 'intron2_conf'],
-                      'alt_5prime': ['valid', 'exon_diff_cov', 'exon1_const_cov', 'exon2_const_cov', 'intron1_conf', 'intron2_conf']}
+    event_features = {'mult_exon_skip': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e2_conf', 'e2e3_conf', 'e1e3_conf', 'sum_e2_conf', 'num_e2', 'len_e2'],
+                      'intron_retention': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e2_conf', 'e2_cov_region'],
+                      'exon_skip': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e2_conf', 'e2e3_conf', 'e1e3_conf'],
+                      'mutex_exons': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e4_cov', 'e1e2_conf', 'e1e3_conf', 'e2e4_conf', 'e3e4_conf'],
+                      'alt_3prime': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e3_conf', 'e2_conf'],
+                      'alt_5prime': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e3_conf', 'e2_conf']}
 
     ### check, if confirmed version exists
     if not os.path.exists(fn_out_count):
@@ -93,7 +91,7 @@ def analyze_events(options, event_type, sample_idx=None):
         if np.sum([x.event_type == event_type for x in events_all]) == 0:
             OUT = h5py.File(fn_out_count, 'w')
             OUT.create_dataset(name='event_counts', data=[0])
-            _prepare_count_hdf5(options, OUT, event_features, sample_idx=sample_idx)
+            _prepare_count_hdf5(options, OUT, event_features[event_type], sample_idx=sample_idx)
             OUT.close()
             confirmed_idx = np.array([], dtype='int')
         else:
@@ -119,7 +117,7 @@ def analyze_events(options, event_type, sample_idx=None):
                 OUT.create_dataset(name='iso2', data=iso2, compression='gzip')
                 OUT.create_dataset(name='gene_idx', data=np.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
                 OUT.create_dataset(name='verified', data=verified, compression='gzip')
-                _prepare_count_hdf5(options, OUT, event_features, sample_idx=sample_idx)
+                _prepare_count_hdf5(options, OUT, event_features[event_type], sample_idx=sample_idx)
             else:
                 jobinfo = []
                 PAR = dict()
@@ -207,7 +205,7 @@ def analyze_events(options, event_type, sample_idx=None):
 
                 OUT.create_dataset(name='verified', data=verified, dtype='bool', compression='gzip')
                 OUT.create_dataset(name='gene_idx', data=gene_idx_)
-                _prepare_count_hdf5(options, OUT, event_features, sample_idx=sample_idx)
+                _prepare_count_hdf5(options, OUT, event_features[event_type], sample_idx=sample_idx)
             
             ### write more event infos to hdf5
             if event_type == 'exon_skip':

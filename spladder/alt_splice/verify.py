@@ -20,9 +20,9 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
     # (4) skip count >= threshold
 
     info = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype='float')
-    # (0) valid, (1) exon_pre_cov, (2) exons_cov, (3) exon_aft_cov
-    # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
-    # (7) sum_inner_exon_conf, (8) num_inner_exon, (9) len_inner_exon
+    # (0) valid, (1) exon_pre_cov (e1_cov), (2) exons_cov (e2_cov), (3) exon_aft_cov (e3_cov),
+    # (4) exon_pre_exon_conf (e1e2_conf), (5) exon_exon_aft_conf (e2e3_conf), (6) exon_pre_exon_aft_conf (e1e3_conf),
+    # (7) sum_inner_exon_conf (sum_e2_conf), (8) num_inner_exon (num_e2), (9) len_inner_exon (len_e2)
 
     ### check validity of exon coordinates (>=0)
     if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
@@ -104,8 +104,8 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     # (1) min_non_retention_count >= threshold
 
     info = np.array([1, 0, 0, 0, 0, 0], dtype='float')
-    # (0) valid, (1) intron_cov, (2) exon1_cov, (3), exon2_cov
-    # (4) intron_conf, (5) intron_cov_region
+    # (0) valid, (1) exon1_cov (e1_cov), (2) intron_cov (e2_cov), (3) exon2_cov (e3_cov),
+    # (4) intron_conf (e1e3_conf), (5) intron_cov_region (e2_cov_region)
 
     ### check validity of exon coordinates (>=0)
     if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
@@ -136,18 +136,18 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
 
     ### compute exon coverages as mean of position wise coverage
     # exon1_cov
-    info[2] = np.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / np.sum(seg_lens[seg_exon1])
+    info[1] = np.sum(counts_segments[seg_exon1] * seg_lens[seg_exon1]) / np.sum(seg_lens[seg_exon1])
     # exon2_cov
     info[3] = np.sum(counts_segments[seg_exon2] * seg_lens[seg_exon2]) / np.sum(seg_lens[seg_exon2])
     # intron_cov
-    info[1] = np.sum(counts_segments[seg_intron] * seg_lens[seg_intron]) / np.sum(seg_lens[seg_intron])
+    info[2] = np.sum(counts_segments[seg_intron] * seg_lens[seg_intron]) / np.sum(seg_lens[seg_intron])
     # intron_cov_region
     info[5] = np.sum(counts_seg_pos[seg_intron]) / np.sum(seg_lens[seg_intron])
 
     ### check if counts match verification criteria
-    if info[1] > options.intron_retention['min_retention_cov'] and \
+    if info[2] > options.intron_retention['min_retention_cov'] and \
        info[5] > options.intron_retention['min_retention_region'] and \
-       info[1] >= options.intron_retention['min_retention_rel_cov'] * (info[2] + info[3]) / 2:
+       info[2] >= options.intron_retention['min_retention_rel_cov'] * (info[1] + info[3]) / 2:
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -171,8 +171,8 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     # (3) skip count of exon >= threshold
 
     info = np.array([1, 0, 0, 0, 0, 0, 0], dtype='float')
-    # (0) valid, (1) exon_cov, (2) exon_pre_cov, (3) exon_aft_cov, 
-    # (4) exon_pre_exon_conf, (5) exon_exon_aft_conf, (6) exon_pre_exon_aft_conf
+    # (0) valid, (1) exon_pre_cov (e1_cov), (2) exon_cov (e2_cov), (3) exon_aft_cov (e3_cov), 
+    # (4) exon_pre_exon_conf (e1e2_conf), (5) exon_exon_aft_conf (e2e3_conf), (6) exon_pre_exon_aft_conf (e1e3_conf)
 
     ### check validity of exon coordinates (>=0)
     if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
@@ -199,14 +199,14 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon pre cov
-    info[2] = np.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) /np.sum(seg_lens[seg_exon_pre])
+    info[1] = np.sum(counts_segments[seg_exon_pre] * seg_lens[seg_exon_pre]) /np.sum(seg_lens[seg_exon_pre])
     # exon aft cov
     info[3] = np.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) /np.sum(seg_lens[seg_exon_aft])
     # exon cov
-    info[1] = np.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /np.sum(seg_lens[seg_exon])
+    info[2] = np.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /np.sum(seg_lens[seg_exon])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
-    if info[1] >= options.exon_skip['min_skip_rel_cov'] * (info[2] + info[3]) / 2: 
+    if info[2] >= options.exon_skip['min_skip_rel_cov'] * (info[1] + info[3]) / 2: 
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -238,8 +238,8 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     # (1) both alternative introns are >= threshold 
 
     info = np.array([1, 0, 0, 0, 0, 0], dtype='float')
-    # (0) valid, (1) exon_diff_cov, (2) exon1_const_cov, (3) exon2_const_cov,
-    # 44) intron1_conf, (5) intron2_conf
+    # (0) valid, (1) exon1_const_cov (e1_cov), (2) exon_diff_cov (e2_cov), (3) exon2_const_cov (e3_cov),
+    # (4) e1e3_conf, (5) e2_conf
 
     ### check validity of exon coordinates (>=0)
     if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
@@ -300,13 +300,13 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon_diff_cov
-    info[1] = np.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / np.sum(seg_lens[seg_diff])
+    info[2] = np.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / np.sum(seg_lens[seg_diff])
     # exon1_const_cov
-    info[2] = np.sum(counts_segments[seg_const1] * seg_lens[seg_const1]) / np.sum(seg_lens[seg_const1])
+    info[1] = np.sum(counts_segments[seg_const1] * seg_lens[seg_const1]) / np.sum(seg_lens[seg_const1])
     # exon2_const_cov
     info[3] = np.sum(counts_segments[seg_const2] * seg_lens[seg_const2]) / np.sum(seg_lens[seg_const2])
 
-    if info[1] >= options.alt_prime['min_diff_rel_cov'] * ((info[2] * np.sum(seg_lens[seg_const1])) + (info[3] * np.sum(seg_lens[seg_const2]))) / np.sum(seg_lens[np.r_[seg_const1, seg_const2]]):
+    if info[2] >= options.alt_prime['min_diff_rel_cov'] * ((info[1] * np.sum(seg_lens[seg_const1])) + (info[3] * np.sum(seg_lens[seg_const2]))) / np.sum(seg_lens[np.r_[seg_const1, seg_const2]]):
         verified[0] = 1
 
     ### check intron confirmations as sum of valid intron scores
@@ -335,8 +335,8 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     # (3) both introns neighboring second alt exon are confirmed >= threshold
 
     info = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0], dtype='float')
-    # (0) valid, (1) exon_pre_cov, (2) exon1_cov, (3) exon2_cov, (4) exon_aft_cov, 
-    # (5) exon_pre_exon1_conf, (6) exon_pre_exon2_conf, (7) exon1_exon_aft_conf, (8) exon2_exon_aft_conf
+    # (0) valid, (1) exon_pre_cov (e1_cov), (2) exon1_cov (e2_cov), (3) exon2_cov (e3_cov), (4) exon_aft_cov (e4_cov), 
+    # (5) exon_pre_exon1_conf (e1e2_conf), (6) exon_pre_exon2_conf (e1e3_conf), (7) exon1_exon_aft_conf (e2e4_conf), (8) exon2_exon_aft_conf (e3e4_conf)
 
     ### check validity of exon coordinates (>=0)
     if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
@@ -525,6 +525,8 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
 
         IN.close()
         counts = np.dstack(counts)
+
+    # re-establish initial sort order
     ev = ev[old_idx]
     counts = counts[:, :, old_idx]
 

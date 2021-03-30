@@ -283,7 +283,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         event_idx = IN['filter_idx'][:].astype('int')
     else:
         event_idx = conf_idx.copy()
-    event_features = decodeUTF8(IN['event_features'][event_type][:])
+    event_features = decodeUTF8(IN['event_features'][:])
 
     ### arrays to collect exon coordinates for length normalization
     pos0e = []
@@ -291,25 +291,25 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
 
     ### get event features we need to include for counting
     if event_type == 'exon_skip':
-        fidx0i = [np.where(event_features == 'exon_pre_exon_aft_conf')[0]]
-        fidx1i = [np.where(event_features == 'exon_pre_exon_conf')[0], np.where(event_features == 'exon_exon_aft_conf')[0]] 
+        fidx0i = [np.where(event_features == 'e1e3_conf')[0]]
+        fidx1i = [np.where(event_features == 'e1e2_conf')[0], np.where(event_features == 'e2e3_conf')[0]] 
         if options.use_exon_counts:
             fidx0e = []
-            fidx1e = [np.where(event_features == 'exon_cov')[0]]
+            fidx1e = [np.where(event_features == 'e2_cov')[0]]
             pos1e = [IN['event_pos'][:, [2, 3]].astype('int')]
     elif event_type == 'intron_retention':
-        fidx0i = [np.where(event_features == 'intron_conf')[0]]
+        fidx0i = [np.where(event_features == 'e1e3_conf')[0]]
         fidx1i = []
         if options.use_exon_counts:
             fidx0e = []
-            fidx1e = [np.where(event_features == 'intron_cov')[0]]
+            fidx1e = [np.where(event_features == 'e2_cov')[0]]
             pos1e = [IN['event_pos'][:, [1, 2]].astype('int')]
     elif event_type in ['alt_3prime', 'alt_5prime']:
-        fidx0i = [np.where(event_features == 'intron1_conf')[0]]
-        fidx1i = [np.where(event_features == 'intron2_conf')[0]]
+        fidx0i = [np.where(event_features == 'e1e3_conf')[0]]
+        fidx1i = [np.where(event_features == 'e2_conf')[0]]
         if options.use_exon_counts:
             fidx0e = []
-            fidx1e = [np.where(event_features == 'exon_diff_cov')[0]]
+            fidx1e = [np.where(event_features == 'e2_cov')[0]]
             pos1e = [np.zeros((IN['event_pos'].shape[0], 2), dtype='int')]
             idx = np.where((IN['event_pos'][:, 4] == IN['event_pos'][:, 6]) & (IN['event_pos'][:, 1] < IN['event_pos'][:, 3]))[0]
             pos1e[0][idx, :] = IN['event_pos'][:, [1, 3]][idx, :].astype('int')
@@ -320,19 +320,19 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
             idx = np.where((IN['event_pos'][:, 1] == IN['event_pos'][:, 3]) & (IN['event_pos'][:, 4] > IN['event_pos'][:, 6]))[0]
             pos1e[0][idx, :] = IN['event_pos'][:, [4, 6]][idx, :].astype('int')[:, ::-1]
     elif event_type == 'mult_exon_skip':
-        fidx0i = [np.where(event_features == 'exon_pre_exon_aft_conf')[0]]
-        fidx1i = [np.where(event_features == 'exon_pre_exon_conf')[0], np.where(event_features == 'exon_exon_aft_conf')[0], np.where(event_features == 'sum_inner_exon_conf')[0]] 
-        tmp_idx = np.where(event_features == 'len_inner_exon')[0]
+        fidx0i = [np.where(event_features == 'e1e3_conf')[0]]
+        fidx1i = [np.where(event_features == 'e1e2_conf')[0], np.where(event_features == 'e2e3_conf')[0], np.where(event_features == 'sum_e2_conf')[0]] 
+        tmp_idx = np.where(event_features == 'len_e2')[0]
         if options.use_exon_counts:
             fidx0e = []
-            fidx1e = [np.where(event_features == 'exons_cov')[0]]
+            fidx1e = [np.where(event_features == 'e2_cov')[0]]
             pos1e = [np.c_[np.zeros((IN['event_counts'].shape[2],), dtype='int'), IN['event_counts'][0, tmp_idx, :].astype('int')]]
     elif event_type == 'mutex_exons':
-        fidx0i = [np.where(event_features == 'exon_pre_exon1_conf')[0], np.where(event_features == 'exon1_exon_aft_conf')[0]]
-        fidx1i = [np.where(event_features == 'exon_pre_exon2_conf')[0], np.where(event_features == 'exon2_exon_aft_conf')[0]] 
+        fidx0i = [np.where(event_features == 'e1e2_conf')[0], np.where(event_features == 'e2e4_conf')[0]]
+        fidx1i = [np.where(event_features == 'e1e3_conf')[0], np.where(event_features == 'e3e4_conf')[0]] 
         if options.use_exon_counts:
-            fidx0e = [np.where(event_features == 'exon1_cov')[0]]
-            fidx1e = [np.where(event_features == 'exon2_cov')[0]]
+            fidx0e = [np.where(event_features == 'e2_cov')[0]]
+            fidx1e = [np.where(event_features == 'e3_cov')[0]]
             pos0e = [IN['event_pos'][:, [2, 3]].astype('int')]
             pos1e = [IN['event_pos'][:, [4, 5]].astype('int')]
     else:
