@@ -129,10 +129,10 @@ def get_filename(which, options, sample_idx=None):
 
     ### init any tags
     prune_tag = ''
-    if options.do_prune:
+    if hasattr(options, 'do_prune') and options.do_prune:
         prune_tag = '_pruned'
     validate_tag = ''
-    if options.validate_sg:
+    if hasattr(options, 'validate_sg') and options.validate_sg:
         validate_tag = '.validated'
 
     ### iterate over return file types    
@@ -172,8 +172,8 @@ def compute_psi(counts, event_type, options):
         a = counts[:, 1] # intron cov
         b = counts[:, 4] # intron conf
     elif event_type in ['alt_3prime', 'alt_5prime']:
-        a = counts[:, 4] # intron2 conf
-        b = counts[:, 3] # intron1 conf
+        a = counts[:, 5] # intron2 conf
+        b = counts[:, 4] # intron1 conf
     elif event_type == 'mutex_exons':
         a = counts[:, 5] + counts[:, 7] # exon_pre_exon1_conf + exon1_exon_aft_conf
         b = counts[:, 6] + counts[:, 8] # exon_pre_exon2_conf + exon2_exon_aft_conf

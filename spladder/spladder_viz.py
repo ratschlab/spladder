@@ -173,6 +173,7 @@ def _load_size_factors(options):
     else:
         fname_gene_exp = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.gene_exp.hdf5' % options.confidence)
 
+
     if not os.path.exists(fname_gene_exp):
         fname_count = re.sub(r'.gene_exp.hdf5$', '.count.hdf5', fname_gene_exp) 
         fname_events = re.sub(r'.gene_exp.hdf5$', '.pickle', fname_gene_exp)

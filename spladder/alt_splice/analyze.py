@@ -80,8 +80,8 @@ def analyze_events(options, event_type, sample_idx=None):
                       'intron_retention': ['valid', 'intron_cov', 'exon1_cov', 'exon2_cov', 'intron_conf', 'intron_cov_region'],
                       'exon_skip': ['valid', 'exon_cov', 'exon_pre_cov', 'exon_aft_cov', 'exon_pre_exon_conf', 'exon_exon_aft_conf', 'exon_pre_exon_aft_conf'],
                       'mutex_exons': ['valid', 'exon_pre_cov', 'exon1_cov', 'exon2_cov', 'exon_aft_cov', 'exon_pre_exon1_conf', 'exon_pre_exon2_conf', 'exon1_exon_aft_conf', 'exon2_exon_aft_conf'],
-                      'alt_3prime': ['valid', 'exon_diff_cov', 'exon_const_cov', 'intron1_conf', 'intron2_conf'],
-                      'alt_5prime': ['valid', 'exon_diff_cov', 'exon_const_cov', 'intron1_conf', 'intron2_conf']}
+                      'alt_3prime': ['valid', 'exon_diff_cov', 'exon1_const_cov', 'exon2_const_cov', 'intron1_conf', 'intron2_conf'],
+                      'alt_5prime': ['valid', 'exon_diff_cov', 'exon1_const_cov', 'exon2_const_cov', 'intron1_conf', 'intron2_conf']}
 
     ### check, if confirmed version exists
     if not os.path.exists(fn_out_count):

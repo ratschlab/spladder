@@ -39,7 +39,7 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
     elif events[0].event_type in ['alt_3prime', 'alt_5prime']:
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon_const_start\texon_const_end\texon_alt1_start\texon_alt1_end\texon_alt2_start\texon_alt2_end' % gene_header)
         for i in range(len(strains)):
-            fd.write('\t%s:exon_diff_cov\t%s:exon_const_cov\t%s:intron1_conf\t%s:intron2_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i]))
+            fd.write('\t%s:exon_diff_cov\t%s:exon_const1_cov\t%s:exon_const2_cov\t%s:intron1_conf\t%s:intron2_conf\t%s:psi' % (strains[i], strains[i], strains[i], strains[i], strains[i], strains[i]))
     elif events[0].event_type == 'intron_retention':
         fd.write('contig\tstrand\tevent_id\tgene_name%s\texon1_start\texon1_end\tintron_start\tintron_end\texon2_start\texon2_end' % gene_header)
         for i in range(len(strains)):
@@ -92,7 +92,7 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
                 fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[1, 0] + 1, ev.exons1[1, 1], ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons2[0, 0] + 1, ev.exons2[0, 1]))
             for j in range(len(strains)):
                 if counts[j, 0]:
-                    fd.write('\t%1.1f\t%1.1f\t%i\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], psi[j]))
+                    fd.write('\t%1.1f\t%1.1f\t%1.1f\t%i\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 5], psi[j]))
                 else:
                     fd.write('\t-1\t-1\t-1\t-1\t-1')
         elif ev.event_type == 'mult_exon_skip':
@@ -243,10 +243,10 @@ def write_events_tcga(fn_out, strains, events, fn_counts, event_idx=None):
             if counts[j, 0] == 1:
                 if events[i].event_type in ['alt_3prime', 'alt_5prime']:
                     if (events[i].exons1[1, 0] - events[i].exons1[0, 1]) < (events[i].exons2[1, 0] - events[i].exons2[0, 1]):
-                        num = counts[j, 3]
-                    else:
                         num = counts[j, 4]
-                    denom = counts[j, 3] + counts[j, 4]
+                    else:
+                        num = counts[j, 5]
+                    denom = counts[j, 4] + counts[j, 5]
                     confirmation = denom
                 elif events[i].event_type == 'exon_skip':
                     num = counts[j, 4] + counts[j, 5]

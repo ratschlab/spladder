@@ -237,9 +237,9 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     # (0) coverage of diff region is at least FACTOR * coverage constant region
     # (1) both alternative introns are >= threshold 
 
-    info = np.array([1, 0, 0, 0, 0], dtype='float')
-    # (0) valid, (1) exon_diff_cov, (2) exon_const_cov
-    # (3) intron1_conf, (4) intron2_conf
+    info = np.array([1, 0, 0, 0, 0, 0], dtype='float')
+    # (0) valid, (1) exon_diff_cov, (2) exon1_const_cov, (3) exon2_const_cov,
+    # 44) intron1_conf, (5) intron2_conf
 
     ### check validity of exon coordinates (>=0)
     if np.any(event.exons1 < 0) or np.any(event.exons2 < 0):
@@ -282,30 +282,31 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     assert(segs_exon22.shape[0] > 0)
 
     if segs_exon11.shape == segs_exon21.shape and np.all(segs_exon11 == segs_exon21):
-        seg_exon_const = segs_exon11
+        seg_const1 = segs_exon11
         seg_diff = np.setdiff1d(segs_exon12, segs_exon22)
         if seg_diff.shape[0] == 0:
             seg_diff = np.setdiff1d(segs_exon22, segs_exon12)
-        seg_const = np.intersect1d(segs_exon12, segs_exon22)
+        seg_const2 = np.intersect1d(segs_exon12, segs_exon22)
     elif segs_exon12.shape == segs_exon22.shape and np.all(segs_exon12 == segs_exon22):
-        seg_exon_const = segs_exon12
+        seg_const2 = segs_exon12
         seg_diff = np.setdiff1d(segs_exon11, segs_exon21)
         if seg_diff.shape[0] == 0:
             seg_diff = np.setdiff1d(segs_exon21, segs_exon11)
-        seg_const = np.intersect1d(segs_exon21, segs_exon11)
+        seg_const1 = np.intersect1d(segs_exon21, segs_exon11)
     else:
         print("ERROR: both exons differ in alt prime event in verify_alt_prime", file=sys.stderr)
         sys.exit(1)
-    seg_const = np.r_[seg_exon_const, seg_const]
 
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon_diff_cov
     info[1] = np.sum(counts_segments[seg_diff] * seg_lens[seg_diff]) / np.sum(seg_lens[seg_diff])
-    # exon_const_cov
-    info[2] = np.sum(counts_segments[seg_const] * seg_lens[seg_const]) / np.sum(seg_lens[seg_const])
+    # exon1_const_cov
+    info[2] = np.sum(counts_segments[seg_const1] * seg_lens[seg_const1]) / np.sum(seg_lens[seg_const1])
+    # exon2_const_cov
+    info[3] = np.sum(counts_segments[seg_const2] * seg_lens[seg_const2]) / np.sum(seg_lens[seg_const2])
 
-    if info[1] >= options.alt_prime['min_diff_rel_cov'] * info[2]:
+    if info[1] >= options.alt_prime['min_diff_rel_cov'] * ((info[2] * np.sum(seg_lens[seg_const1])) + (info[3] * np.sum(seg_lens[seg_const2]))) / np.sum(seg_lens[np.r_[seg_const1, seg_const2]]):
         verified[0] = 1
 
     ### check intron confirmations as sum of valid intron scores
@@ -313,13 +314,13 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     # intron1_conf 
     idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], segs.seg_edges.shape))[0]
     assert(idx.shape[0] > 0)
-    info[3] = counts_edges[idx, 1]
+    info[4] = counts_edges[idx, 1]
     # intron2_conf 
     idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], segs.seg_edges.shape))[0]
     assert(idx.shape[0] > 0)
-    info[4] = counts_edges[idx, 1]
+    info[5] = counts_edges[idx, 1]
 
-    if min(info[3], info[4]) >= options.alt_prime['min_intron_count']:
+    if min(info[4], info[5]) >= options.alt_prime['min_intron_count']:
         verified[1] = 1
 
     return (verified, info)
