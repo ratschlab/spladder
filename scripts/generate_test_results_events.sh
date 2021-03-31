@@ -18,11 +18,13 @@ done
 python -m spladder.spladder build -v -o ${outdir} -a ${datadir}/testcase_${testname}_spladder.gtf -b ${bams#,} --event-types exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip --readlen 50 --output-conf-icgc --output-txt --output-txt-conf --output-gff3 --output-struc --output-struc-conf --output-bed --output-conf-bed --output-conf-tcga
 
 bamsA=bamlistA.txt
+rm -f $bamsA
 for i in $(seq 1 10)
 do
     echo "${datadir}/align/testcase_${testname}_1_sample${i}.bam" >> $bamsA
 done
 bamsB=bamlistB.txt
+rm -f $bamsB
 for i in $(seq 11 20)
 do
     echo "align/testcase_${testname}_1_sample${i}.bam" >> $bamsB

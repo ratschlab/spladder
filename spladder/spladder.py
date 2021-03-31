@@ -111,8 +111,6 @@ def parse_options(argv):
     inputs_test.add_argument('--event-types', dest='event_types', metavar='STRING', help='list of alternative splicing events to be tested [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
     inputs_test.add_argument('--validate-sg',  dest='validate_sg', action='store_true', help='splice graph is validated [off]', default=False)
     inputs_test.add_argument('--no-validate-sg', dest='validate_sg', action='store_false', default=False)
-    inputs_test.add_argument('--subset-samples', dest='subset_samples', action='store_true', help='gene expression counting will be only done on the tested subset of samples [off]', default=False)
-    inputs_test.add_argument('--no-subset-samples', dest='subset_samples', action='store_false', default=False)
     testing = parser_test.add_argument_group('TESTING OPTIONS')
     testing.add_argument('-C', '--correction', dest='correction', metavar='STR', help='method for multiple testing correction (BH, Bonferroni, Holm, Hochberg, BY, TSBH) [BH]', default='BH')
     testing.add_argument('-0', '--max-zero-frac', dest='max_0_frac', metavar='FLOAT', type=float, help='max fraction of 0 values per event isoform quantification over all tested samples [0.5]', default=0.5)

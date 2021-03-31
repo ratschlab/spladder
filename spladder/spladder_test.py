@@ -40,9 +40,9 @@ def _get_gene_expression(options, fname_exp_hdf5, strain_subset=None):
     if strain_subset is None:
         strain_idx = np.arange(strains.shape[0])
     else:
-        strain_idx = np.where(np.in1d(strains, strain_subset))[0]
+        strain_idx = np.where(strains == strain_subset[:, np.newaxis])[1]
 
-    return (gene_counts[:, strain_idx], strains, strains[strain_idx], gene_ids, gene_symbols)
+    return (gene_counts[:, strain_idx], strains[strain_idx], strain_idx, gene_ids, gene_symbols)
 
 
 def re_quantify_events(options):
@@ -542,25 +542,16 @@ def spladder_test(options):
     options.fname_count_in = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, options.merge, val_tag))
     options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.hdf5' % (options.confidence, options.merge, val_tag, non_alt_tag))
 
-    condition_strains = None
-    if options.subset_samples:
-        condition_strains = np.unique(np.r_[np.array(options.conditionA), np.array(options.conditionB)])
+    condition_strains = np.r_[np.array(options.conditionA), np.array(options.conditionB)]
     if options.verbose:
         print('Loading expression counts from %s' % options.fname_exp_hdf5)
-        gene_counts, gene_strains_all, gene_strains, gene_ids, gene_symbols = _get_gene_expression(options, options.fname_exp_hdf5, strain_subset=condition_strains)
+        gene_counts, gene_strains, gene_strain_idx, gene_ids, gene_symbols = _get_gene_expression(options, options.fname_exp_hdf5, strain_subset=condition_strains)
 
     gene_strains = np.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
-    gene_strains_all = np.array([x.split(':')[1] if ':' in x else x for x in gene_strains_all])
 
     ### get index of samples for difftest
-    idx1 = np.where(np.in1d(gene_strains, options.conditionA))[0]
-    idx2 = np.where(np.in1d(gene_strains, options.conditionB))[0]
-    idx1_all = np.where(np.in1d(gene_strains_all, options.conditionA))[0]
-    idx2_all = np.where(np.in1d(gene_strains_all, options.conditionB))[0]
-
-    ### subset expression counts to tested samples
-    gene_counts = gene_counts[:, np.r_[idx1, idx2]]
-    gene_strains = gene_strains[np.r_[idx1, idx2]]
+    idx1 = gene_strain_idx[:len(options.conditionA)]
+    idx2 = gene_strain_idx[len(options.conditionA):]
 
     ### estimate size factors for library size normalization
     sf_ge = get_size_factors(gene_counts, options)
@@ -598,7 +589,7 @@ def spladder_test(options):
                 continue
 
         ### quantify events
-        (cov, psi, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1_all, idx2_all, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
+        (cov, psi, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1, idx2, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
 
         if options.cap_outliers:
             log_counts = np.log2(cov[0] + 1)

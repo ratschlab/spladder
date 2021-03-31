@@ -22,12 +22,14 @@ done
 python -m spladder.spladder build -v -o ${outdir} -a ${datadir}/testcase_${testname}_spladder.gtf -b ${crams#,} --event-types exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip --readlen 50 --output-conf-icgc --output-txt --output-txt-conf --output-gff3 --output-struc --output-struc-conf --output-bed --output-conf-bed --output-conf-tcga --reference ${genome}
 
 cramsA=cramlistA.txt
-for i in $(seq 1 10)
+rm -f $cramsA
+for i in 10 8 2 1 7 6 5 3 9 4
 do
     echo "${datadir}/align/testcase_${testname}_1_sample${i}.cram" >> $cramsA
 done
 cramsB=cramlistB.txt
-for i in $(seq 11 20)
+rm -f $cramsB
+for i in 20 13 17 11 12 19 15 14 16 18
 do
     echo "align/testcase_${testname}_1_sample${i}.cram" >> $cramsB
 done

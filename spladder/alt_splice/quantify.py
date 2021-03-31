@@ -347,9 +347,12 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         assert(np.all((c[:, 1] - c[:, 0]) >= 0))
 
     ### tackle unsorted input
-    s_idx = np.argsort(decodeUTF8(IN['strains'][:]))
-    strain_idx1 = np.sort(s_idx[strain_idx1])
-    strain_idx2 = np.sort(s_idx[strain_idx2])
+    sidx1 = np.argsort(strain_idx1)
+    sidx2 = np.argsort(strain_idx2)
+    ridx1 = np.argsort(sidx1)
+    ridx2 = np.argsort(sidx2)
+    strain_idx1 = strain_idx1[sidx1]
+    strain_idx2 = strain_idx2[sidx2]
     idx1_len = strain_idx1.shape[0]
 
     ### get counts for exon segments
@@ -393,16 +396,18 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
 
     ### get strain list
     strains1 = decodeUTF8(IN['strains'][:][strain_idx1])
-    s_idx = np.argsort(strains1)
-    strains1 = strains1[s_idx]
-    cov[0][:, :idx1_len] = cov[0][:, :idx1_len][:, s_idx]
-    cov[1][:, :idx1_len] = cov[1][:, :idx1_len][:, s_idx]
+    cov[0][:, :idx1_len] = cov[0][:, :idx1_len]
+    cov[1][:, :idx1_len] = cov[1][:, :idx1_len]
     strains2 = decodeUTF8(IN['strains'][:][strain_idx2])
-    s_idx = np.argsort(strains2)
-    strains2 = strains2[s_idx]
-    cov[0][:, idx1_len:] = cov[0][:, idx1_len:][:, s_idx]
-    cov[1][:, idx1_len:] = cov[1][:, idx1_len:][:, s_idx]
-    strains = np.r_[strains1, strains2]
+    cov[0][:, idx1_len:] = cov[0][:, idx1_len:]
+    cov[1][:, idx1_len:] = cov[1][:, idx1_len:]
+    
+    ## re-establish the original sorting
+    strains = np.r_[strains1[ridx1], strains2[ridx2]]
+    cov[0][:, :idx1_len] = cov[0][:, :idx1_len][:, ridx1]
+    cov[0][:, idx1_len:] = cov[0][:, idx1_len:][:, ridx2]
+    cov[1][:, :idx1_len] = cov[1][:, :idx1_len][:, ridx1]
+    cov[1][:, idx1_len:] = cov[1][:, idx1_len:][:, ridx2]
 
     if strains[0].endswith('npz'):
         strains = np.array([re.sub(r'.[nN][pP][zZ]$', '', x) for x in strains])

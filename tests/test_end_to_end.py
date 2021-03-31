@@ -49,7 +49,8 @@ def _assert_files_equal_testing(e, a):
     de = de[1:, ]
 
     ### check text cols
-    assert np.all(da[:, [0, 1]] == de[:, [0, 1]])
+    assert np.all(da[:, [0, 1, 2]] == de[:, [0, 1, 2]])
+    ### check numerical cols
     da = da[:, 3:]
     de = de[:, 3:]
 
@@ -121,6 +122,7 @@ def _check_files_spladder(result_dir, out_dir, prefix):
             files.append('{}_{}_C3.confirmed.gff3'.format(prefix, event_type))
         if os.path.exists(os.path.join(result_dir, '{}_{}_C3.confirmed.txt.gz'.format(prefix, event_type))):
             files.append('{}_{}_C3.confirmed.txt.gz'.format(prefix, event_type))
+    files.append(os.path.join('spladder', 'genes_graph_conf3.{}.count.hdf5').format(prefix))
 
     for fname in files:
         _assert_files_equal(
@@ -332,9 +334,9 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
     bamsA = os.path.join(out_dir, 'cramlistA.txt')
     bamsB = os.path.join(out_dir, 'cramlistB.txt')
     with open(bamsA, 'w') as fh:
-        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+1)) for idx in range(10)]) + '\n')
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx)) for idx in [10, 8, 2, 1, 7, 6, 5, 3, 9, 4]]) + '\n')
     with open(bamsB, 'w') as fh:
-        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+11)) for idx in range(10)]) + '\n')
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx)) for idx in [20, 13, 17, 11, 12, 19, 15, 14, 16, 18]]) + '\n')
 
     my_args = ['spladder',
                'test',
