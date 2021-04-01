@@ -148,13 +148,17 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
     for i in range(5):
         _exon_multiple_skips.append(np.array(exon_multiple_skips[i][1:]))
     exon_multiple_skips = _exon_multiple_skips
-    idx_multiple_skips = np.array(idx_multiple_skips[1:])
 
     _exon_multiple_skips = []
     for i in range(len(exon_multiple_skips[0])):
         _bt = exon_multiple_skips[3][exon_multiple_skips[1][i]:exon_multiple_skips[2][i]]
         _exon_multiple_skips.append([exon_multiple_skips[0][i], _bt, exon_multiple_skips[4][i]])
     exon_multiple_skips = _exon_multiple_skips
+
+    if exon_multiple_skips == []:
+        idx_multiple_skips = []
+    else:
+        idx_multiple_skips = [_ for _ in idx_multiple_skips[1:]]
         
     if log:
         print('Number of multiple exon skips:\t\t\t\t\t%d' % len(idx_multiple_skips))
@@ -441,8 +445,6 @@ def detect_events(genes, event_type, idx, options):
 
         try:
             result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c, options.detect_edge_limit)) for c,cidx in enumerate(idx_chunks)]
-           # for c,cidx in enumerate(idx_chunks):
-           #     result = detect_wrapper(genes[idx[cidx]], event_type, idx[cidx], c, options.detect_edge_limit)
             res_cnt = 0
             while result:
                 tmp = result.pop(0).get()
@@ -463,8 +465,6 @@ def detect_events(genes, event_type, idx, options):
 
         ### integrate results in list into a coherent results list
         if len(result_list) > 0:
-            import pdb
-            pdb.set_trace()
             result_list = [reduce(operator.add, [x[i] for x in result_list]) for i in range(len(result_list[0]))]
         else:
             if event_type == 'alt_prime':
