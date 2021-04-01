@@ -1,5 +1,7 @@
 from scipy.sparse import lil_matrix
 import numpy as np
+from numba import jit
+from numba.typed import List
 import sys
 import operator
 
@@ -9,16 +11,128 @@ import signal as sig
 from ..helpers import log_progress
 from functools import reduce
 
+@jit(nopython=True)
+def _detect_multipleskips_fastcore(ix, gene_name, num_exons, edges, labels, edge_limit, idx_multiple_skips, exon_multiple_skips):
+
+    # adjecency matrix: upper half only
+    A = np.zeros((num_exons, num_exons))
+    for i in range(num_exons - 1):
+        for j in range(i + 1, num_exons):
+            A[i, j] = edges[i, j]
+    
+    # possible starting and ending exons of a multiple exon skip
+    #Pairs = lil_matrix((num_exons, num_exons))
+    edgeX = []
+    edgeY = []
+    Ai = np.dot(np.dot(A, A), A) #paths of length 3
+    while np.any(Ai.ravel() > 0):
+        coords = np.where((A > 0 ) & (Ai > 0)) # multiple skip
+        if len(coords[0]) > 0:
+            #Pairs[coords[0], coords[1]] = 1
+            edgeX.append(1) #coords[0][0])
+            edgeY.append(coords[1][0])
+        Ai = np.dot(Ai, A)  # paths of length ..+1
+    
+    #edge = np.where(Pairs.toarray() == 1)
+    
+    if len(edgeX) > edge_limit:
+        #print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, gene_name, len(edgeX), edge_limit))
+        return
+        #continue
+    
+    bt_start = len(exon_multiple_skips[3]) - 1 ### subtract 1 because the first element is just the type placeholder
+    for cnt in range(len(edgeX)):
+        exon_idx_first = edgeX[cnt]
+        exon_idx_last = edgeY[cnt]
+  
+        if edges[exon_idx_first, exon_idx_last] == 1:
+            
+            # find all pairs shortest path
+            exist_path = np.triu(edges).astype(np.double)
+            exist_path[exon_idx_first, exon_idx_last] = 0
+            for i1 in range(exist_path.shape[0]):
+                for i2 in range(exist_path.shape[1]):
+                    if not exist_path[i1, i2]:
+                        exist_path[i1, i2] = np.inf
+            # set diagonal to 0
+            for i1 in range(exist_path.shape[0]):
+                exist_path[i1, i1] = 0
+            
+            long_exist_path = -np.triu(edges).astype(np.double)
+            long_exist_path[exon_idx_first, exon_idx_last] = 0
+            long_exist_path[exon_idx_first, exon_idx_last] = 0
+            for i1 in range(long_exist_path.shape[0]):
+                for i2 in range(long_exist_path.shape[1]):
+                    if not long_exist_path[i1, i2]:
+                        long_exist_path[i1, i2] = np.inf
+            # set diagonal to 0
+            for i1 in range(long_exist_path.shape[0]):
+                long_exist_path[i1, i1] = 0
+            
+            path = np.isfinite(exist_path) * labels
+            long_path = np.isfinite(long_exist_path) * labels
+            
+            for k in range(num_exons):
+                for i in range(num_exons):
+                    idx = np.where((exist_path[i, k] + exist_path[k, :]) < exist_path[i, :])[0]
+                    for _idx in idx:
+                        exist_path[i, _idx] = exist_path[i, k] + exist_path[k, _idx]
+                        path[i, _idx] = path[k, _idx]
+                    
+                    idx = np.where((long_exist_path[i,k] + long_exist_path[k, :]) < long_exist_path[i, :])[0]
+                    for _idx in idx:
+                        long_exist_path[i, _idx] = long_exist_path[i, k] + long_exist_path[k, _idx]
+                        long_path[i, _idx] = long_path[k, _idx]
+            
+            _idx1, _idx2 = np.where(np.isfinite(long_exist_path))
+            for i1, i2 in zip(_idx1, _idx2):
+                long_exist_path[i1, i2] = -long_exist_path[i1, i2]
+            
+            if (exist_path[exon_idx_first, exon_idx_last] > 2) and np.isfinite(exist_path[exon_idx_first, exon_idx_last]):
+                backtrace = [path[exon_idx_first, exon_idx_last]]
+                while backtrace[-1] > exon_idx_first:
+                    backtrace.append(path[exon_idx_first, backtrace[-1]])
+                backtrace = backtrace[:-1]
+                backtrace = backtrace[::-1]
+                idx_multiple_skips.append(ix) 
+                #exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
+                exon_multiple_skips[0].append(exon_idx_first)
+                exon_multiple_skips[1].append(bt_start)
+                exon_multiple_skips[2].append(bt_start + len(backtrace))
+                bt_start = bt_start + len(backtrace)
+                exon_multiple_skips[3].extend(backtrace)
+                exon_multiple_skips[4].append(exon_idx_last)
+            elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and np.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
+                backtrace = [long_path[exon_idx_first, exon_idx_last]]
+                while backtrace[-1] > exon_idx_first:
+                    backtrace.append(long_path[exon_idx_first, backtrace[-1]])
+                backtrace = backtrace[:-1]
+                backtrace = backtrace[::-1]
+                idx_multiple_skips.append(ix) 
+                #exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
+                exon_multiple_skips[0].append(exon_idx_first)
+                exon_multiple_skips[1].append(bt_start)
+                exon_multiple_skips[2].append(bt_start + len(backtrace))
+                bt_start = bt_start + len(backtrace)
+                exon_multiple_skips[3].extend(backtrace)
+                exon_multiple_skips[4].append(exon_idx_last)
+
 def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
     # [idx_multiple_skips, exon_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
 
-    idx_multiple_skips = []
-    exon_multiple_skips = []
+    idx_multiple_skips = List() #[]
+    idx_multiple_skips.append(0)
+    exon_multiple_skips = List()
+    for i in range(5): # first bt_start bt_end bt last
+        tmp = List()
+        tmp.append(0)
+        exon_multiple_skips.append(tmp)
+
     for iix, ix in enumerate(gidx):
         if log:
             sys.stdout.write('.')
             if (iix + 1) % 50 == 0:
-                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_multiple_skips)))
+                sys.stdout.write(' - %i/%i, found %i\n' % (iix + 1, genes.shape[0] + 1, len(idx_multiple_skips) - 1))
             sys.stdout.flush()
 
         genes[iix].from_sparse()
@@ -26,80 +140,22 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
         edges = genes[iix].splicegraph.edges.copy()
         labels = np.hstack([np.arange(num_exons)[:, np.newaxis]] * num_exons)
         genes[iix].to_sparse()
-        
-        # adjecency matrix: upper half only
-        A = np.zeros((num_exons, num_exons))
-        for i in range(num_exons - 1):
-            for j in range(i + 1, num_exons):
-                A[i, j] = edges[i, j]
-        
-        # possible starting and ending exons of a multiple exon skip
-        Pairs = lil_matrix((num_exons, num_exons))
-        Ai = np.dot(np.dot(A, A), A) #paths of length 3
-        while np.any(Ai.ravel() > 0):
-            coords = np.where((A > 0 ) & (Ai > 0)) # multiple skip
-            Pairs[coords[0], coords[1]] = 1
-            Ai = np.dot(Ai, A)  # paths of length ..+1
-        
-        edge = np.where(Pairs.toarray() == 1)
-        
+     
+        _detect_multipleskips_fastcore(ix, genes[iix].name, num_exons, edges, labels, edge_limit, idx_multiple_skips, exon_multiple_skips)
 
-        if edge[0].shape[0] > edge_limit:
-            print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edge[0].shape[0], edge_limit))
-            continue
-        
-        for cnt in range(edge[0].shape[0]):
-            exon_idx_first = edge[0][cnt]
-            exon_idx_last = edge[1][cnt]
-      
-            if edges[exon_idx_first, exon_idx_last] == 1:
-                
-                # find all pairs shortest path
-                exist_path = np.triu(edges).astype('double')
-                exist_path[exon_idx_first, exon_idx_last] = 0
-                exist_path[exist_path == 0] = np.inf
-                # set diagonal to 0
-                exist_path[np.arange(exist_path.shape[0]), np.arange(exist_path.shape[0])] = 0
-                
-                long_exist_path = -np.triu(edges).astype('double')
-                long_exist_path[exon_idx_first, exon_idx_last] = 0
-                long_exist_path[long_exist_path == 0] = np.inf
-                # set diagonal to 0
-                long_exist_path[np.arange(long_exist_path.shape[0]), np.arange(long_exist_path.shape[0])] = 0
-                
-                path = np.isfinite(exist_path) * labels
-                long_path = np.isfinite(long_exist_path) * labels
-                
-                for k in range(num_exons):
-                    for i in range(num_exons):
-                        idx = np.where((exist_path[i, k] + exist_path[k, :]) < exist_path[i, :])[0]
-                        exist_path[i, idx] = exist_path[i, k] + exist_path[k, idx]
-                        path[i, idx] = path[k, idx]
-                        
-                        idx = np.where((long_exist_path[i,k] + long_exist_path[k, :]) < long_exist_path[i, :])[0]
-                        long_exist_path[i, idx] = long_exist_path[i, k] + long_exist_path[k, idx]
-                        long_path[i, idx] = long_path[k, idx]
-                
-                temp_ix = np.isfinite(long_exist_path)
-                long_exist_path[temp_ix] = -long_exist_path[temp_ix]
-                
-                if (exist_path[exon_idx_first, exon_idx_last] > 2) and np.isfinite(exist_path[exon_idx_first, exon_idx_last]):
-                    backtrace = np.array([path[exon_idx_first, exon_idx_last]])
-                    while backtrace[-1] > exon_idx_first:
-                        backtrace = np.r_[backtrace, path[exon_idx_first, backtrace[-1]]]
-                    backtrace = backtrace[:-1]
-                    backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(ix) 
-                    exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
-                elif (long_exist_path[exon_idx_first, exon_idx_last] > 2) and np.isfinite(long_exist_path[exon_idx_first, exon_idx_last]):
-                    backtrace = np.array([long_path[exon_idx_first, exon_idx_last]])
-                    while backtrace[-1] > exon_idx_first:
-                        backtrace = np.r_[backtrace, long_path[exon_idx_first, backtrace[-1]]]
-                    backtrace = backtrace[:-1]
-                    backtrace = backtrace[::-1]
-                    idx_multiple_skips.append(ix) 
-                    exon_multiple_skips.append([exon_idx_first, backtrace, exon_idx_last])
+    #### assemble outputs
+    _exon_multiple_skips = []
+    for i in range(5):
+        _exon_multiple_skips.append(np.array(exon_multiple_skips[i][1:]))
+    exon_multiple_skips = _exon_multiple_skips
+    idx_multiple_skips = np.array(idx_multiple_skips[1:])
 
+    _exon_multiple_skips = []
+    for i in range(len(exon_multiple_skips[0])):
+        _bt = exon_multiple_skips[3][exon_multiple_skips[1][i]:exon_multiple_skips[2][i]]
+        _exon_multiple_skips.append([exon_multiple_skips[0][i], _bt, exon_multiple_skips[4][i]])
+    exon_multiple_skips = _exon_multiple_skips
+        
     if log:
         print('Number of multiple exon skips:\t\t\t\t\t%d' % len(idx_multiple_skips))
 
@@ -385,6 +441,8 @@ def detect_events(genes, event_type, idx, options):
 
         try:
             result = [pool.apply_async(detect_wrapper, args=(genes[idx[cidx]], event_type, idx[cidx], c, options.detect_edge_limit)) for c,cidx in enumerate(idx_chunks)]
+           # for c,cidx in enumerate(idx_chunks):
+           #     result = detect_wrapper(genes[idx[cidx]], event_type, idx[cidx], c, options.detect_edge_limit)
             res_cnt = 0
             while result:
                 tmp = result.pop(0).get()
@@ -405,6 +463,8 @@ def detect_events(genes, event_type, idx, options):
 
         ### integrate results in list into a coherent results list
         if len(result_list) > 0:
+            import pdb
+            pdb.set_trace()
             result_list = [reduce(operator.add, [x[i] for x in result_list]) for i in range(len(result_list[0]))]
         else:
             if event_type == 'alt_prime':
