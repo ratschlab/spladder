@@ -31,12 +31,9 @@ def _detect_multipleskips_fastcore(ix, gene_name, num_exons, edges, labels, edge
             edge.add((coords[0][i], coords[1][i]))
         Ai = np.dot(Ai, A)  # paths of length ..+1
     
-    #edge = np.where(Pairs.toarray() == 1)
-    
     if len(edge) > edge_limit:
-        #print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, gene_name, len(edge), edge_limit))
+        print('\nWARNING: not processing gene ' + str(ix) + ' (' + gene_name + '); has ' + str(len(edge)) + ' edges; current limit is ' + str(edge_limit))
         return
-        #continue
     
     bt_start = len(exon_multiple_skips[3]) - 1 ### subtract 1 because the first element is just the type placeholder
     for _edge in sorted(edge):
@@ -118,7 +115,7 @@ def _detect_multipleskips_fastcore(ix, gene_name, num_exons, edges, labels, edge
 def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
     # [idx_multiple_skips, exon_multiple_skips] = detect_multipleskips(genes, idx_alt) ;
 
-    idx_multiple_skips = List() #[]
+    idx_multiple_skips = List()
     idx_multiple_skips.append(0)
     exon_multiple_skips = List()
     for i in range(5): # first bt_start bt_end bt last
@@ -378,12 +375,35 @@ def detect_altprime(genes, gidx, log=False, edge_limit=1000):
     return (idx_alt_5prime, exon_alt_5prime, idx_alt_3prime, exon_alt_3prime)
 
 
+@jit(nopython=True)
+def _detect_xorexons_fastcore(ix, gene_name, num_exons, edges, vertices, edge_limit, idx_xor_exons, exon_xor_exons):
+    for exon_idx1 in range(num_exons - 3):
+        for exon_idx2 in range(exon_idx1 + 1, num_exons - 2):
+            if edges[exon_idx1, exon_idx2] == 1:
+                for exon_idx3 in range(exon_idx2 + 1, num_exons - 1):
+                    if (edges[exon_idx1, exon_idx3] == 1) and (edges[exon_idx2, exon_idx3] == 0) and (vertices[0, exon_idx3] >= vertices[1, exon_idx2]):
+                        for exon_idx4 in range(exon_idx3 + 1, num_exons):
+                            if (edges[exon_idx2, exon_idx4] == 1) and (edges[exon_idx3, exon_idx4] == 1):
+                                idx_xor_exons.append(ix)
+                                #exon_xor_exons.append([exon_idx1, exon_idx2, exon_idx3, exon_idx4])
+                                exon_xor_exons[0].append(exon_idx1)
+                                exon_xor_exons[1].append(exon_idx2)
+                                exon_xor_exons[2].append(exon_idx3)
+                                exon_xor_exons[3].append(exon_idx4)
+
+
 def detect_xorexons(genes, gidx, log=False, edge_limit=1000):
     #[idx_xor_exons, exon_xor_exons] = detect_xorexons(genes);
 
-    idx_xor_exons = []
-    exon_xor_exons = [] ### 5primesite of first exon, the 2 skipped
-                        ### exons, 3primesite of last exon %%%
+    idx_xor_exons = List() 
+    idx_xor_exons.append(0)
+    exon_xor_exons = List() ### 5primesite of first exon, the 2 skipped
+                            ### exons, 3primesite of last exon %%%
+    for i in range(4):
+        tmp = List()
+        tmp.append(0)
+        exon_xor_exons.append(tmp)
+
     for iix, ix in enumerate(gidx):
 
         if log:
@@ -397,20 +417,19 @@ def detect_xorexons(genes, gidx, log=False, edge_limit=1000):
         edges = genes[iix].splicegraph.edges.copy()
         vertices = genes[iix].splicegraph.vertices
         genes[iix].to_sparse()
-
+        
         if edges.shape[0] > edge_limit:
             print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit))
             continue
         
-        for exon_idx1 in range(num_exons - 3):
-            for exon_idx2 in range(exon_idx1 + 1, num_exons - 2):
-                if edges[exon_idx1, exon_idx2] == 1:
-                    for exon_idx3 in range(exon_idx2 + 1, num_exons - 1):
-                        if (edges[exon_idx1, exon_idx3] == 1) and (edges[exon_idx2, exon_idx3] == 0) and (vertices[0, exon_idx3] >= vertices[1, exon_idx2]):
-                            for exon_idx4 in range(exon_idx3 + 1, num_exons):
-                                if (edges[exon_idx2, exon_idx4] == 1) and (edges[exon_idx3, exon_idx4] == 1):
-                                    idx_xor_exons.append(ix)
-                                    exon_xor_exons.append([exon_idx1, exon_idx2, exon_idx3, exon_idx4])
+        _detect_xorexons_fastcore(ix, genes[iix].name, num_exons, edges, vertices, edge_limit, idx_xor_exons, exon_xor_exons)
+
+    ### assemble outputs
+    exon_xor_exons = [[exon_xor_exons[0][i], exon_xor_exons[1][i], exon_xor_exons[2][i], exon_xor_exons[3][i]] for i in range(1, len(exon_xor_exons[0]))]
+    if exon_xor_exons == []:
+        idx_xor_exons = []
+    else:
+        idx_xor_exons = [_ for _ in idx_xor_exons[1:]]
 
     if log:
         print('\n\nNumber of XOR exons:\t\t\t\t\t\t%i\n' % len(idx_xor_exons))
