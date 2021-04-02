@@ -1,7 +1,10 @@
 from scipy.sparse import lil_matrix
 import numpy as np
 from numba import jit
+from numba.core import types
 from numba.typed import List
+from numba.typed import Dict
+
 import sys
 import operator
 
@@ -221,12 +224,29 @@ def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
 
     return (idx_intron_reten, intron_intron_reten)
 
+@jit(nopython=True)
+def _detect_exonskips_fast(ix, num_exons, edges, idx_exon_skips, exon_exon_skips):
+
+    for exon_idx in range(num_exons - 2): #first exon
+        for exon_idx1 in range(exon_idx + 1, num_exons - 1): # middle exon
+            for exon_idx2 in range(exon_idx1 + 1, num_exons): # last exon
+                if (edges[exon_idx, exon_idx1] == 1) and edges[exon_idx, exon_idx2] and edges[exon_idx1, exon_idx2]:
+                    idx_exon_skips.append(ix)
+                    exon_exon_skips[0].append(exon_idx)
+                    exon_exon_skips[1].append(exon_idx1)
+                    exon_exon_skips[2].append(exon_idx2)
 
 def detect_exonskips(genes, gidx, log=False, edge_limit=1000):
     # [idx_exon_skips, exon_exon_skips] = detect_exonskips(genes) ;
 
-    idx_exon_skips = []
-    exon_exon_skips = []
+    idx_exon_skips = List() 
+    idx_exon_skips.append(0)
+    exon_exon_skips = List()
+    for i in range(3):
+        tmp = List()
+        tmp.append(0)
+        exon_exon_skips.append(tmp)
+
     for iix, ix in enumerate(gidx):
         if log:
             sys.stdout.write('.')
@@ -242,18 +262,105 @@ def detect_exonskips(genes, gidx, log=False, edge_limit=1000):
         if edges.shape[0] > edge_limit:
             print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit))
             continue
-        
-        for exon_idx in range(num_exons - 2): #first exon
-            for exon_idx1 in range(exon_idx + 1, num_exons - 1): # middle exon
-                for exon_idx2 in range(exon_idx1 + 1, num_exons): # last exon
-                    if (edges[exon_idx, exon_idx1] == 1) and edges[exon_idx, exon_idx2] and edges[exon_idx1, exon_idx2]:
-                        idx_exon_skips.append(ix)
-                        exon_exon_skips.append([exon_idx, exon_idx1, exon_idx2])
+
+        _detect_exonskips_fast(ix, num_exons, edges, idx_exon_skips, exon_exon_skips)
+
+    ### assemble outputs
+    exon_exon_skips = [[exon_exon_skips[0][i], exon_exon_skips[1][i], exon_exon_skips[2][i]] for i in range(1, len(exon_exon_skips[0]))]
+    if exon_exon_skips == []:
+        idx_exon_skips = []
+    else:
+        idx_exon_skips = [_ for _ in idx_exon_skips[1:]]
+
     if log:
         print('\nNumber of single exon skips:\t\t\t\t\t%d' % len(idx_exon_skips))
 
     return (idx_exon_skips, exon_exon_skips)
 
+@jit(nopython=True)
+def _detect_altprime_fastcore(ix, num_exons, vertices, edges, strand, idx_alt_5prime, idx_alt_3prime, exon_alt_5prime, exon_alt_3prime):
+
+    MIN_OVERLAP = 11 # two exons that are alternative should overlap by at least the length
+
+    # Find alternative sites on the right of the intron,
+    # same site on the left of the intron.
+    for exon_idx in range(num_exons - 2):
+        rightsites = []
+        rightidx = []
+        nr_exons = np.sum(edges[exon_idx, exon_idx + 1:])
+        if nr_exons >= 2:
+            which_exons = np.where(edges[exon_idx, exon_idx + 1:])[0] + exon_idx + 1
+            exons = vertices[:, which_exons]
+            for i in range(nr_exons - 1):
+                for j in range(i + 1, nr_exons):
+                    # check that the left splice site of the exons are different
+                    # make sure exons overlap - either:
+                    # - left splice site of exon(i) is in exon(j)
+                    # - left splice site of exon(j) is in exon(i)
+                    # note that the 'overlap' relationship is not transitive
+                    if ((exons[0, i] != exons[0, j]) and 
+                      (((exons[0, i] > exons[0, j]) and (exons[0, i] < exons[1, j])) or ((exons[0, j] > exons[0, i]) and (exons[0, j] < exons[1, i]))) and
+                      (min(exons[1, i], exons[1, j]) - max(exons[0, i], exons[0, j]) >= MIN_OVERLAP)):
+
+                        assert(not ((exons[0, i] == exons[0, j]) and (exons[1, i] == exons[1, j])));
+                        assert(exons[0, i] != exons[0, j])
+
+                        ### add new events to the list
+                        if not exons[0, i] in rightsites:
+                            rightsites.append(exons[0, i])
+                            rightidx.append(which_exons[i])
+                        if not exons[0, j] in rightsites:
+                            rightsites.append(exons[0, j])
+                            rightidx.append(which_exons[j])
+       
+        # construct the output
+        if len(rightsites) >= 2:
+            if strand == '+':
+                exon_alt_3prime.append({'fiveprimesite':np.array([exon_idx]), 'threeprimesites':np.array(rightidx)})
+                idx_alt_3prime.append(ix)
+            if strand == '-':
+                exon_alt_5prime.append({'threeprimesite':np.array([exon_idx]), 'fiveprimesites':np.array(rightidx)})
+                idx_alt_5prime.append(ix)
+    
+    # Find alternative sites on the left of the intron,
+    # same site on the right of the intron.
+    for exon_idx in range(2, num_exons):
+        nr_exons = np.sum(edges[:exon_idx, exon_idx])
+        leftsites = []
+        leftidx = []
+        if nr_exons >= 2:
+            which_exons = np.where(edges[:exon_idx, exon_idx])[0]
+            exons = vertices[:, which_exons]
+            for i in range(nr_exons - 1):
+                for j in range(i + 1, nr_exons):
+                    # check that the 5prime sites are different
+                    # make sure exons overlap - either:
+                    # - right splice site of exon(i) is in exon(j)
+                    # - right splice site of exon(j) is in exon(i)
+                    # note that the 'overlap' relationship is not transitive
+                    if ((exons[1, i] != exons[1, j]) and
+                      (((exons[1, i] <= exons[1, j]) and (exons[1, i] >= exons[0,j])) or ((exons[1, j] <= exons[1, i]) and (exons[1, j] >= exons[0, i]))) and
+                      (min(exons[1, i], exons[1, j]) - max(exons[0, i], exons[0, j]) >= MIN_OVERLAP)):
+
+                        assert(not((exons[0, i] == exons[0, j]) and (exons[1, i] == exons[1, j])))
+                        assert(exons[1, i] != exons[1, j])
+                    
+                        # add new events to the list
+                        if not exons[1, i] in leftsites:
+                            leftsites.append(exons[1, i])
+                            leftidx.append(which_exons[i])
+                        if not exons[1, j] in leftsites:
+                            leftsites.append(exons[1, j])
+                            leftidx.append(which_exons[j])
+
+        # construct the output
+        if len(leftsites) >= 2:
+            if strand == '+':
+                exon_alt_5prime.append({'threeprimesite':np.array([exon_idx]), 'fiveprimesites':np.array(leftidx)})
+                idx_alt_5prime.append(ix) 
+            if strand == '-':
+                exon_alt_3prime.append({'fiveprimesite':np.array([exon_idx]), 'threeprimesites':np.array(leftidx)})
+                idx_alt_3prime.append(ix)
 
 
 def detect_altprime(genes, gidx, log=False, edge_limit=1000):
@@ -263,12 +370,18 @@ def detect_altprime(genes, gidx, log=False, edge_limit=1000):
     # detect the alternative 5 and 3 prime ends of the intron. Note that 5 prime refers to the left
     # and 3 prime to the right for a positive strand
 
-    MIN_OVERLAP = 11 # two exons that are alternative should overlap by at least the length
-
-    idx_alt_5prime = []
-    idx_alt_3prime = []
-    exon_alt_5prime = []
-    exon_alt_3prime = []
+    idx_alt_5prime = List()
+    idx_alt_5prime.append(0)
+    idx_alt_3prime = List()
+    idx_alt_3prime.append(0)
+    exon_alt_5prime = List()
+    d = Dict.empty(
+        key_type=types.unicode_type,
+        value_type=types.int64[:],
+    )
+    exon_alt_5prime.append(d) #{'fiveprimesite':0, 'threeprimesites':np.arange(2)})
+    exon_alt_3prime = List()
+    exon_alt_3prime.append(d) #{'threeprimesite':0, 'fiveprimesites':np.arange(2)})
 
     for iix, ix in enumerate(gidx):
         if log:
@@ -287,87 +400,21 @@ def detect_altprime(genes, gidx, log=False, edge_limit=1000):
         if edges.shape[0] > edge_limit:
             print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit))
             continue
-        
-        # Find alternative sites on the right of the intron,
-        # same site on the left of the intron.
-        for exon_idx in range(num_exons - 2):
-            rightsites = []
-            rightidx = []
-            nr_exons = np.sum(edges[exon_idx, exon_idx + 1:])
-            if nr_exons >= 2:
-                which_exons = np.where(edges[exon_idx, exon_idx + 1:])[0] + exon_idx + 1
-                exons = vertices[:, which_exons]
-                for i in range(nr_exons - 1):
-                    for j in range(i + 1, nr_exons):
-                        # check that the left splice site of the exons are different
-                        # make sure exons overlap - either:
-                        # - left splice site of exon(i) is in exon(j)
-                        # - left splice site of exon(j) is in exon(i)
-                        # note that the 'overlap' relationship is not transitive
-                        if ((exons[0, i] != exons[0, j]) and 
-                          (((exons[0, i] > exons[0, j]) and (exons[0, i] < exons[1, j])) or ((exons[0, j] > exons[0, i]) and (exons[0, j] < exons[1, i]))) and
-                          (min(exons[1, i], exons[1, j]) - max(exons[0, i], exons[0, j]) >= MIN_OVERLAP)):
 
-                            assert(not ((exons[0, i] == exons[0, j]) and (exons[1, i] == exons[1, j])));
-                            assert(exons[0, i] != exons[0, j])
+        _detect_altprime_fastcore(ix, num_exons, vertices, edges, strand, idx_alt_5prime, idx_alt_3prime, exon_alt_5prime, exon_alt_3prime)
 
-                            ### add new events to the list
-                            if not exons[0, i] in rightsites:
-                                rightsites.append(exons[0, i])
-                                rightidx.append(which_exons[i])
-                            if not exons[0, j] in rightsites:
-                                rightsites.append(exons[0, j])
-                                rightidx.append(which_exons[j])
-           
-            # construct the output
-            if len(rightsites) >= 2:
-                if strand == '+':
-                    exon_alt_3prime.append({'fiveprimesite':exon_idx, 'threeprimesites':rightidx})
-                    idx_alt_3prime.append(ix)
-                if strand == '-':
-                    exon_alt_5prime.append({'threeprimesite':exon_idx, 'fiveprimesites':rightidx})
-                    idx_alt_5prime.append(ix)
-        
-        # Find alternative sites on the left of the intron,
-        # same site on the right of the intron.
-        for exon_idx in range(2, num_exons):
-            nr_exons = np.sum(edges[:exon_idx, exon_idx])
-            leftsites = []
-            leftidx = []
-            if nr_exons >= 2:
-                which_exons = np.where(edges[:exon_idx, exon_idx])[0]
-                exons = vertices[:, which_exons]
-                for i in range(nr_exons - 1):
-                    for j in range(i + 1, nr_exons):
-                        # check that the 5prime sites are different
-                        # make sure exons overlap - either:
-                        # - right splice site of exon(i) is in exon(j)
-                        # - right splice site of exon(j) is in exon(i)
-                        # note that the 'overlap' relationship is not transitive
-                        if ((exons[1, i] != exons[1, j]) and
-                          (((exons[1, i] <= exons[1, j]) and (exons[1, i] >= exons[0,j])) or ((exons[1, j] <= exons[1, i]) and (exons[1, j] >= exons[0, i]))) and
-                          (min(exons[1, i], exons[1, j]) - max(exons[0, i], exons[0, j]) >= MIN_OVERLAP)):
-
-                            assert(not((exons[0, i] == exons[0, j]) and (exons[1, i] == exons[1, j])))
-                            assert(exons[1, i] != exons[1, j])
-                        
-                            # add new events to the list
-                            if not exons[1, i] in leftsites:
-                                leftsites.append(exons[1, i])
-                                leftidx.append(which_exons[i])
-                            if not exons[1, j] in leftsites:
-                                leftsites.append(exons[1, j])
-                                leftidx.append(which_exons[j])
-
-            # construct the output
-            if len(leftsites) >= 2:
-                if strand == '+':
-                    exon_alt_5prime.append({'threeprimesite':exon_idx, 'fiveprimesites':leftidx})
-                    idx_alt_5prime.append(ix) 
-                if strand == '-':
-                    exon_alt_3prime.append({'fiveprimesite':exon_idx, 'threeprimesites':leftidx})
-                    idx_alt_3prime.append(ix)
-
+    ### assemble outputs
+    exon_alt_5prime = [{'threeprimesite':_['threeprimesite'][0], 'fiveprimesites':_['fiveprimesites']} for _ in exon_alt_5prime[1:]]
+    exon_alt_3prime = [{'fiveprimesite':_['fiveprimesite'][0], 'threeprimesites':_['threeprimesites']} for _ in exon_alt_3prime[1:]]
+    if exon_alt_5prime == []:
+        idx_alt_5prime = []
+    else:
+        idx_alt_5prime = [_ for _ in idx_alt_5prime[1:]]
+    if exon_alt_3prime == []:
+        idx_alt_3prime = []
+    else:
+        idx_alt_3prime = [_ for _ in idx_alt_3prime[1:]]
+       
     if log:
         print('\nNumber of alternative 5 prime sites:\t\t\t\t%d' % len(idx_alt_5prime))
         print('Number of alternative 3 prime sites:\t\t\t\t%d' % len(idx_alt_3prime))
