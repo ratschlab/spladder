@@ -22,28 +22,26 @@ def _detect_multipleskips_fastcore(ix, gene_name, num_exons, edges, labels, edge
     
     # possible starting and ending exons of a multiple exon skip
     #Pairs = lil_matrix((num_exons, num_exons))
-    edgeX = []
-    edgeY = []
+    edge = set()
     Ai = np.dot(np.dot(A, A), A) #paths of length 3
     while np.any(Ai.ravel() > 0):
         coords = np.where((A > 0 ) & (Ai > 0)) # multiple skip
-        if len(coords[0]) > 0:
+        for i in range(len(coords[0])):
             #Pairs[coords[0], coords[1]] = 1
-            edgeX.append(1) #coords[0][0])
-            edgeY.append(coords[1][0])
+            edge.add((coords[0][i], coords[1][i]))
         Ai = np.dot(Ai, A)  # paths of length ..+1
     
     #edge = np.where(Pairs.toarray() == 1)
     
-    if len(edgeX) > edge_limit:
-        #print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, gene_name, len(edgeX), edge_limit))
+    if len(edge) > edge_limit:
+        #print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, gene_name, len(edge), edge_limit))
         return
         #continue
     
     bt_start = len(exon_multiple_skips[3]) - 1 ### subtract 1 because the first element is just the type placeholder
-    for cnt in range(len(edgeX)):
-        exon_idx_first = edgeX[cnt]
-        exon_idx_last = edgeY[cnt]
+    for _edge in sorted(edge):
+        exon_idx_first = _edge[0] #[cnt]
+        exon_idx_last = _edge[1] #Y[cnt]
   
         if edges[exon_idx_first, exon_idx_last] == 1:
             
@@ -52,7 +50,7 @@ def _detect_multipleskips_fastcore(ix, gene_name, num_exons, edges, labels, edge
             exist_path[exon_idx_first, exon_idx_last] = 0
             for i1 in range(exist_path.shape[0]):
                 for i2 in range(exist_path.shape[1]):
-                    if not exist_path[i1, i2]:
+                    if exist_path[i1, i2] == 0:
                         exist_path[i1, i2] = np.inf
             # set diagonal to 0
             for i1 in range(exist_path.shape[0]):
@@ -63,7 +61,7 @@ def _detect_multipleskips_fastcore(ix, gene_name, num_exons, edges, labels, edge
             long_exist_path[exon_idx_first, exon_idx_last] = 0
             for i1 in range(long_exist_path.shape[0]):
                 for i2 in range(long_exist_path.shape[1]):
-                    if not long_exist_path[i1, i2]:
+                    if long_exist_path[i1, i2] == 0:
                         long_exist_path[i1, i2] = np.inf
             # set diagonal to 0
             for i1 in range(long_exist_path.shape[0]):
