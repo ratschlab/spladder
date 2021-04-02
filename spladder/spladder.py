@@ -85,7 +85,7 @@ def parse_options(argv):
     splice.add_argument('--event-types', dest='event_types', metavar='STRING', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
     splice.add_argument('--extract-ase', dest='extract_as', action='store_true', help='extract alternative splicing events [on]', default=True)
     splice.add_argument('--no-extract-ase', dest='extract_as', action='store_false', default=True)
-    splice.add_argument('--ase-edge-limit', dest='detect_edge_limit', metavar='INT', help='max number of edges in the graph to still extract events for a gene [500]', default=500)
+    splice.add_argument('--ase-edge-limit', dest='detect_edge_limit', metavar='INT', type=int, help='max number of edges in the graph to still extract events for a gene [500]', default=500)
     splice.add_argument('--curate-alt-prime', dest='curate_alt_prime', action='store_true', help='curate alt prime events [on]', default=True)
     splice.add_argument('--no-curate-alt-prime', dest='curate_alt_prime', action='store_false', default=True)
     splice.add_argument('--quantify-graph', dest='quantify_graph', action='store_true', help='quantify graph (implicitly on when --extract-ase is used) [off]', default=False)
