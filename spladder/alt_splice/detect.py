@@ -163,12 +163,57 @@ def detect_multipleskips(genes, gidx, log=False, edge_limit=300):
 
     return (idx_multiple_skips, exon_multiple_skips)
 
+@jit(nopython=True)
+def _detect_intronreten_fastcore(ix, num_exons, vertices, edges, idx_intron_reten, intron_intron_reten):
+
+    introns = np.zeros((0, 2), dtype=np.int64)
+    for exon_idx in range(num_exons - 1):  # start of intron
+        idx = np.where(edges[exon_idx, exon_idx + 1 : num_exons] == 1)[0]
+        if idx.shape[0] == 0:
+            continue
+        idx += (exon_idx + 1)
+        for exon_idx2 in idx: # end of intron
+            #is_intron_reten = False
+            if np.sum((introns[:, 0] == vertices[1, exon_idx]) & (introns[:, 1] == vertices[0, exon_idx2])) > 0:
+                continue
+
+            ### find shortest fully overlapping exon
+            iidx = np.where((vertices[0, :] < vertices[1, exon_idx]) & (vertices[1, :] > vertices[0, exon_idx2]))[0]
+            if len(iidx) > 0:
+                iidx = iidx[np.argmin(vertices[1, :][iidx] - vertices[0, :][iidx])]
+                idx_intron_reten.append(ix)
+                #intron_intron_reten.append([exon_idx, exon_idx2, iidx])
+                intron_intron_reten[0].append(exon_idx)
+                intron_intron_reten[1].append(exon_idx2)
+                intron_intron_reten[2].append(iidx)
+                tmp = np.array([[vertices[1, exon_idx], vertices[0, exon_idx2]]])
+                introns = np.vstack((introns, tmp)) #[[vertices[1, exon_idx], vertices[0, exon_idx2]]]])
+
+            #for exon_idx1 in range(num_exons): # exon
+            #    # check that the exon covers the intron
+            #    if (vertices[1, exon_idx] > vertices[0, exon_idx1]) and (vertices[0, exon_idx2] < vertices[1, exon_idx1]):
+            #        is_intron_reten = True
+            #        long_exon = exon_idx1 
+            #        for l in range(len(introns)):
+            #            if (vertices[1, exon_idx] == introns[l][0]) and (vertices[0, exon_idx2] == introns[l][1]):
+            #                is_intron_reten = False
+            #if is_intron_reten:
+            #    idx_intron_reten.append(ix)
+            #    intron_intron_reten.append([exon_idx, exon_idx2, long_exon])
+            #    introns.append([vertices[1, exon_idx], vertices[0, exon_idx2]])
+
 
 def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
     # [idx_intron_reten,intron_intron_reten] = detect_intronreten(genes) ;
 
-    idx_intron_reten = []
-    intron_intron_reten = []
+    idx_intron_reten = List()
+    idx_intron_reten.append(0)
+    intron_intron_reten = List()
+    for i in range(3):
+        tmp = List()
+        tmp.append(0)
+        intron_intron_reten.append(tmp)
+
     for iix, ix in enumerate(gidx):
         if log:
             sys.stdout.write('.')
@@ -186,38 +231,14 @@ def detect_intronreten(genes, gidx, log=False, edge_limit=1000):
             print('\nWARNING: not processing gene %i (%s); has %i edges; current limit is %i; adjust edge_limit to include.' % (ix, genes[iix].name, edges.shape[0], edge_limit))
             continue
         
-        #introns  = []
-        introns = np.zeros((0, 2), dtype='int')
-        for exon_idx in range(num_exons - 1):  # start of intron
-            idx = np.where(edges[exon_idx, exon_idx + 1 : num_exons] == 1)[0]
-            if idx.shape[0] == 0:
-                continue
-            idx += (exon_idx + 1)
-            for exon_idx2 in idx: # end of intron
-                #is_intron_reten = False
-                if np.sum((introns[:, 0] == vertices[1, exon_idx]) & (introns[:, 1] == vertices[0, exon_idx2])) > 0:
-                    continue
+        _detect_intronreten_fastcore(ix, num_exons, vertices, edges, idx_intron_reten, intron_intron_reten)
 
-                ### find shortest fully overlapping exon
-                iidx = np.where((vertices[0, :] < vertices[1, exon_idx]) & (vertices[1, :] > vertices[0, exon_idx2]))[0]
-                if len(iidx) > 0:
-                    iidx = iidx[np.argmin(vertices[1, iidx] - vertices[0, iidx])]
-                    idx_intron_reten.append(ix)
-                    intron_intron_reten.append([exon_idx, exon_idx2, iidx])
-                    introns = np.r_[introns, [[vertices[1, exon_idx], vertices[0, exon_idx2]]]]
-
-                #for exon_idx1 in range(num_exons): # exon
-                #    # check that the exon covers the intron
-                #    if (vertices[1, exon_idx] > vertices[0, exon_idx1]) and (vertices[0, exon_idx2] < vertices[1, exon_idx1]):
-                #        is_intron_reten = True
-                #        long_exon = exon_idx1 
-                #        for l in range(len(introns)):
-                #            if (vertices[1, exon_idx] == introns[l][0]) and (vertices[0, exon_idx2] == introns[l][1]):
-                #                is_intron_reten = False
-                #if is_intron_reten:
-                #    idx_intron_reten.append(ix)
-                #    intron_intron_reten.append([exon_idx, exon_idx2, long_exon])
-                #    introns.append([vertices[1, exon_idx], vertices[0, exon_idx2]])
+    ### assemble outputs
+    intron_intron_reten = [[intron_intron_reten[0][i], intron_intron_reten[1][i], intron_intron_reten[2][i]] for i in range(1, len(intron_intron_reten[0]))]
+    if intron_intron_reten == []:
+        idx_intron_reten = []
+    else:
+        idx_intron_reten = [_ for _ in idx_intron_reten[1:]]
 
     if log:
         print('\nNumber of intron retentions:\t\t\t\t\t%d' % len(idx_intron_reten))
