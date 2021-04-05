@@ -97,12 +97,9 @@ def analyze_events(options, event_type, sample_idx=None):
         else:
             if not options.pyproc:
                 if options.merge == 'single':
-                    (events_all, counts) = verify_all_events(events_all, sample_idx, options.bam_fnames, event_type, options)
+                    (events_all, counts, verified) = verify_all_events(events_all, sample_idx, options.bam_fnames, event_type, options)
                 else:
-                    (events_all, counts) = verify_all_events(events_all, np.arange(len(options.strains)), options.bam_fnames, event_type, options)
-                verified = np.array([x.verified for x in events_all], dtype='bool')
-                for ev in events_all:
-                    ev.verified = []
+                    (events_all, counts, verified) = verify_all_events(events_all, np.arange(len(options.strains)), options.bam_fnames, event_type, options)
 
                 psi = np.empty((counts.shape[0], counts.shape[2]), dtype='float')
                 iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
@@ -138,7 +135,6 @@ def analyze_events(options, event_type, sample_idx=None):
                         else:
                             print('Submitting job %i, event chunk %i/%i, strain chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j))
                             jobinfo.append(rproc('verify_all_events', PAR, 10000, options.options_rproc, 60 * 12))
-                            #verify_all_events(PAR)
                 
                 rproc_wait(jobinfo, 20, 1.0, 1)
                 
@@ -157,17 +153,17 @@ def analyze_events(options, event_type, sample_idx=None):
                         if not os.path.exists(out_fn):
                             print('ERROR: not finished %s' % out_fn, file=sys.stderr)
                             sys.exit(1)
-                        ev_, counts_ = pickle.load(open(out_fn, 'rb'))
+                        ev_, counts_, verified_ = pickle.load(open(out_fn, 'rb'))
                         if j == 0:
                             ev = ev_
                             counts = counts_
-                            verified_ = [x.verified.astype('bool') for x in ev]
+                            verified = verified_
                             collect_ids_ = [x.id for x in ev]
                         else:
                             counts = np.r_[counts, counts_]
-                            for jj in range(len(ev_)):
-                                verified_[jj] = np.r_[verified_[jj], ev_[jj].verified]
+                            verified = np.r_[verified, verified_]
                             del counts_
+                            del verified_
                                 
                     psi = np.empty((counts.shape[0], counts.shape[2]), dtype='float')
                     iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
@@ -193,7 +189,6 @@ def analyze_events(options, event_type, sample_idx=None):
                         tmp = OUT['iso2'].shape
                         OUT['iso2'].resize((tmp[0], tmp[1] + len(ev)))
                         OUT['iso2'][:, tmp[1]:] = iso2
-                    verified.extend(verified_)
                     collect_ids.extend(collect_ids_)
                     gene_idx_ = np.r_[gene_idx_, [x.gene_idx for x in ev]]
                     del iso1, iso2, psi, counts, ev, ev_
@@ -221,15 +216,11 @@ def analyze_events(options, event_type, sample_idx=None):
 
             OUT.create_dataset(name='event_pos', data=event_pos)
 
-            num_verified = np.sum(verified, axis=1)
-            confirmed = num_verified.min(axis=1)
+            num_verified = np.sum(verified, axis=0)
+            confirmed = num_verified.min(axis=0)
             OUT.create_dataset(name='num_verified', data=num_verified)
             OUT.create_dataset(name='confirmed', data=confirmed)
 
-            #verified_count = []
-            #for min_verified = 1:length(options.strains),
-            #    verified_count(min_verified) = sum([events_all.confirmed] >= min_verified) ;
-            
             confirmed_idx = np.where(confirmed >= 1)[0]
             if confirmed_idx.shape[0] > 0:
                 OUT.create_dataset(name='conf_idx', data=confirmed_idx)
