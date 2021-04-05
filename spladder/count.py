@@ -315,7 +315,7 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
         strain_idx = np.arange(strains.shape[0])
     gene_counts = np.zeros((numgenes, len(strain_idx)), dtype='float')
     gene_ids = np.array([x.name for x in genes], dtype='str')
-    gene_symbols = np.array([x.symbol if not x is None else 'NA' for x in genes], dtype='str')
+    gene_symbols = np.array([x.symbol if (not x is None) and hasattr(x, 'symbol') else 'NA' for x in genes], dtype='str')
 
     seg_lens = IN['seg_len'][:]
     gene_ids_segs = IN['gene_ids_segs'][:].astype('int')
