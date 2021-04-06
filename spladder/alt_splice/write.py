@@ -60,6 +60,15 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
     ### load data from count hdf5
     IN = h5py.File(fn_counts, 'r')
 
+    ### get count and psi chunks
+    cs1 = IN['event_counts'].chunks[-1]
+    cs2 = IN['psi'].chunks[-1]
+    chunk_idx_event = np.array([0, cs1])
+    chunk_idx_psi = np.array([0, cs2])
+
+    event_counts_chunk = IN['event_counts'][:, :, :cs1]
+    psi_chunk = IN['psi'][:, :cs2]
+
     for ii,i in enumerate(event_idx):
         if verbose and ii > 0 and (ii+1) % 1000 == 0:
             print('%i/%i' % (ii+1, event_idx.shape[0]))
@@ -67,10 +76,19 @@ def write_events_txt(fn_out_txt, strains, events, fn_counts, event_idx=None, ann
         if anno_fn is not None:
             a_idx = anno_names.index(events[i].gene_name[0])
             fd.write('\t%i\t%i' % (anno[a_idx].start, anno[a_idx].stop))
+        
+        ### new count chunk needed?
+        if i >= chunk_idx_event[1]:
+            chunk_idx_event += cs1
+            event_counts_chunk = IN['event_counts'][:, :, chunk_idx_event[0]:chunk_idx_event[1]]
+        ### new psi chunk needed?
+        if i >= chunk_idx_psi[1]:
+            chunk_idx_psi += cs2
+            psi_chunk = IN['psi'][:, chunk_idx_psi[0]:chunk_idx_psi[1]]
 
         ev = events[i]
-        counts = IN['event_counts'][:, :, i]
-        psi = IN['psi'][:,i]
+        counts = event_counts_chunk[:, :, i - chunk_idx_event[0]]
+        psi = psi_chunk[:, i - chunk_idx_psi[0]]
         if ev.event_type == 'exon_skip':
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons2[0, 0] + 1, ev.exons2[0, 1], ev.exons2[1, 0] + 1, ev.exons2[1, 1], ev.exons2[2, 0] + 1, ev.exons2[2, 1]))
             for j in range(len(strains)):
