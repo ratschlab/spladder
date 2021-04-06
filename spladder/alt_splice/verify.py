@@ -4,10 +4,14 @@ import h5py
 import sys
 import os
 
+import multiprocessing as mp 
+import signal as sig
+
 if __package__ is None:
     __package__ = 'modules.alt_splice'
 
 from ..utils import *
+from ..helpers import log_progress
 from ..classes.segmentgraph import Segmentgraph
 
 def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
@@ -408,6 +412,76 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
 
     return (verified, info)
 
+def verify_wrapper(ev, genes, gidx_min, gene_ids_edges, gene_ids_segs, edge_idx, strain_idx, event_type, fn_count, options, idx):
+
+    IN = h5py.File(fn_count, 'r')
+    counts = []
+    verified = []
+    for i in range(ev.shape[0]):
+        
+        #sys.stdout.write('.')
+        #if i > 0 and i % 50 == 0:
+        #    sys.stdout.write('%i (%i)\n' % (i, ev.shape[0]))
+        #sys.stdout.flush()
+    
+        g_idx = ev[i].gene_idx
+        _g_idx = g_idx - gidx_min
+
+        if genes[_g_idx].segmentgraph is None or genes[_g_idx].segmentgraph.segments.shape[1] == 0:
+            genes[_g_idx].from_sparse()
+            genes[_g_idx].segmentgraph = Segmentgraph(genes[_g_idx])
+            genes[_g_idx].to_sparse()
+
+        ### there are no edges present in the event
+        if gene_ids_edges.shape[0] == 0:
+            ver, info = verify_empty(event_type)
+            counts.append(np.array([info]))
+            verified.append([ver for _ in strain_idx])
+            continue
+
+        gr_idx_segs = np.where(gene_ids_segs == g_idx)[0]
+        gr_idx_edges = np.where(gene_ids_edges == g_idx)[0]
+        if gr_idx_edges.shape[0] == 0:
+            ver, info = verify_empty(event_type)
+            counts.append(np.array([info]))
+            verified.append([ver for _ in strain_idx])
+            continue
+
+        if isinstance(strain_idx, int):
+            strain_idx = [strain_idx]
+
+        ### laod relevant count data from HDF5
+        segments = np.atleast_2d(IN['segments'][gr_idx_segs, :])[:, strain_idx]
+        seg_pos = np.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, strain_idx]
+        edges = np.atleast_2d(IN['edges'][gr_idx_edges, :])[:, strain_idx]
+        curr_edge_idx = edge_idx[gr_idx_edges]
+
+        verified.append([])
+        for s_idx in range(len(strain_idx)):
+           # ev_tmp.subset_strain(s_idx) ### TODO 
+
+            if event_type == 'exon_skip':
+                ver, info = verify_exon_skip(ev[i], genes[_g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
+            elif event_type in ['alt_3prime', 'alt_5prime']:
+                ver, info = verify_alt_prime(ev[i], genes[_g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
+            elif event_type == 'intron_retention':
+                ver, info = verify_intron_retention(ev[i], genes[_g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, options)
+            elif event_type == 'mult_exon_skip':
+                ver, info = verify_mult_exon_skip(ev[i], genes[_g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
+            elif event_type == 'mutex_exons':
+                ver, info = verify_mutex_exons(ev[i], genes[_g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
+
+            verified[-1].append(ver)
+            if s_idx == 0:
+                counts.append(info[np.newaxis, :])
+            else:
+                counts[-1] = np.append(counts[-1], info[np.newaxis, :], axis=0) 
+        verified[-1] = np.array(verified[-1], dtype='bool')
+
+    IN.close()
+
+    return (np.dstack(counts), np.dstack(verified), idx)
+
 
 def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, options=None, out_fn=None):
 
@@ -456,84 +530,62 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
         else:
             edge_idx = IN['edge_idx'][:]
             pickle.dump(edge_idx, open(fn_count + '.quick_edge_idx', 'wb'), -1)
+        IN.close()
 
         ### sort events by gene idx
-        s_idx = np.argsort([x.gene_idx for x in ev])
+        gene_idx_all = np.array([x.gene_idx for x in ev])
+        s_idx = np.argsort(gene_idx_all)
         ev = ev[s_idx]
+        gene_idx_all = gene_idx_all[s_idx]
         old_idx = np.argsort(s_idx)
 
-        counts = []
-        for i in range(ev.shape[0]):
-            
-            sys.stdout.write('.')
-            if i > 0 and i % 50 == 0:
-                sys.stdout.write('%i (%i)\n' % (i, ev.shape[0]))
-            sys.stdout.flush()
-        
-            g_idx = ev[i].gene_idx
-            ev[i].verified = [] ### TODO: maybe solve that differently
+        if options.parallel > 1:
+            pool = mp.Pool(processes=options.parallel, initializer=lambda: sig.signal(sig.SIGINT, sig.SIG_IGN))
+            binsize = 50
+            maxsize = ev.shape[0]
+            idx_chunks = [np.arange(x, min(x + binsize, maxsize)) for x in range(0, maxsize, binsize)]
+            counts = np.empty((len(idx_chunks), ), dtype='object')
+            verified = np.empty((len(idx_chunks), ), dtype='object')
+            gidx_min = [gene_idx_all[cidx][0] for cidx in idx_chunks]   
+            gidx_max = [gene_idx_all[cidx][-1] + 1 for cidx in idx_chunks]   
 
-            if genes[g_idx].segmentgraph is None or genes[g_idx].segmentgraph.segments.shape[1] == 0:
-                genes[g_idx].from_sparse()
-                genes[g_idx].segmentgraph = Segmentgraph(genes[g_idx])
-                genes[g_idx].to_sparse()
+            try:
+                result = [pool.apply_async(verify_wrapper, args=(ev[cidx], genes[gidx_min[c]:gidx_max[c]], gidx_min[c], gene_ids_edges, gene_ids_segs, edge_idx, strain_idx, event_type, fn_count, options, c)) for c,cidx in enumerate(idx_chunks)]
+                res_cnt = 0
+                while result:
+                    tmp = result.pop(0).get()
+                    counts[tmp[2]] = tmp[0]
+                    verified[tmp[2]] = tmp[1]
+                    if options.verbose:
+                        log_progress(res_cnt, len(idx_chunks))
+                        res_cnt += 1
+                if options.verbose:
+                    log_progress(len(idx_chunks), len(idx_chunks))
+                    print('')
+                pool.terminate()
+                pool.join()
+            except KeyboardInterrupt:
+                print('Keyboard Interrupt - exiting', file=sys.stderr)
+                pool.terminate()
+                pool.join()
+                sys.exit(1)
 
-            ### there are no edges present in the event
-            if gene_ids_edges.shape[0] == 0:
-                ver, info = verify_empty(event_type)
-                counts.append(np.array([info]))
-                ev[i].verified = np.array(ev[i].verified, dtype='bool')
-                continue
-
-            gr_idx_segs = np.where(gene_ids_segs == g_idx)[0]
-            gr_idx_edges = np.where(gene_ids_edges == g_idx)[0]
-            if gr_idx_edges.shape[0] == 0:
-                ver, info = verify_empty(event_type)
-                counts.append(np.array([info]))
-                ev[i].verified = np.array(ev[i].verified, dtype='bool')
-                continue
-
-            if isinstance(strain_idx, int):
-                strain_idx = [strain_idx]
-
-            ### laod relevant count data from HDF5
-            segments = np.atleast_2d(IN['segments'][gr_idx_segs, :])[:, strain_idx]
-            seg_pos = np.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, strain_idx]
-            edges = np.atleast_2d(IN['edges'][gr_idx_edges, :])[:, strain_idx]
-            curr_edge_idx = edge_idx[gr_idx_edges]
-
-            for s_idx in range(len(strain_idx)):
-               # ev_tmp.subset_strain(s_idx) ### TODO 
-
-                if event_type == 'exon_skip':
-                    ver, info = verify_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
-                elif event_type in ['alt_3prime', 'alt_5prime']:
-                    ver, info = verify_alt_prime(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
-                elif event_type == 'intron_retention':
-                    ver, info = verify_intron_retention(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], seg_pos[:, s_idx].T, options)
-                elif event_type == 'mult_exon_skip':
-                    ver, info = verify_mult_exon_skip(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
-                elif event_type == 'mutex_exons':
-                    ver, info = verify_mutex_exons(ev[i], genes[g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
-
-                ev[i].verified.append(ver)
-                if s_idx == 0:
-                    counts.append(info[np.newaxis, :])
-                else:
-                    counts[-1] = np.append(counts[-1], info[np.newaxis, :], axis=0) 
-            ev[i].verified = np.array(ev[i].verified, dtype='bool')
-
-        IN.close()
-        counts = np.dstack(counts)
+            ### integrate results in list into a coherent results list
+            if len(counts) > 0:
+                counts = np.dstack(counts)
+                verified = np.dstack(verified)
+        else:
+            counts, verified = verify_wrapper(ev, genes, 0, gene_ids_edges, gene_ids_segs, edge_idx, strain_idx, event_type, fn_count, options, 0)[:2]
 
     # re-establish initial sort order
     ev = ev[old_idx]
     counts = counts[:, :, old_idx]
+    verified = verified[:, :, old_idx]
 
     if out_fn is not None:
-        pickle.dump((ev, counts), open(out_fn, 'wb'), -1)
+        pickle.dump((ev, counts, verified), open(out_fn, 'wb'), -1)
 
-    return (ev, counts)
+    return (ev, counts, verified)
 
 def verify_empty(event_type):
     
@@ -542,7 +594,7 @@ def verify_empty(event_type):
         info = np.array([1, 0, 0, 0, 0, 0, 0], dtype='float')
     elif event_type in ['alt_3prime', 'alt_5prime']:
         verified = [0, 0]
-        info = np.array([1, 0, 0, 0, 0], dtype='float')
+        info = np.array([1, 0, 0, 0, 0, 0], dtype='float')
     elif event_type == 'intron_retention':
         verified = [0, 0]
         info = np.array([1, 0, 0, 0, 0, 0], dtype='float')
