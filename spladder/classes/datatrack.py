@@ -27,7 +27,7 @@ class DataTrack:
                     assert len(data_items.split(':')) < 3, 'ERROR: At most one label can be given per data group!\n'
                     label, data_items = data_items.split(':')
                 if data_items.endswith('.txt'):
-                    self.bam_fnames.extend([str(x) for x in np.atleast_1d(np.loadtxt(data_items, dtype='str'))])
+                    self.bam_fnames.append([str(x) for x in np.atleast_1d(np.loadtxt(data_items, dtype='str'))])
                 else:
                     self.bam_fnames.append(np.array(data_items.split(',')))
                 if track_type == 'coverage':
