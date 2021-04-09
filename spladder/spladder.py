@@ -8,6 +8,7 @@ if sys.version_info[0] < 3:
 from .spladder_build import spladder
 from .spladder_viz import spladder_viz
 from .spladder_test import spladder_test
+from .spladder_prep import spladder_prep
 from .rproc import spladder_pyproc 
 
 def parse_options(argv):
@@ -17,7 +18,7 @@ def parse_options(argv):
     from argparse import ArgumentParser
 
     parser = ArgumentParser(prog='spladder')
-    subparsers = parser.add_subparsers(help='Running modes', metavar='{build, test, viz}')
+    subparsers = parser.add_subparsers(help='Running modes', metavar='{prep, build, test, viz}')
 
     ### RUN MODE "BUILD"
     parser_build = subparsers.add_parser('build', help='run mode to build and construct graphs')
@@ -160,6 +161,34 @@ def parse_options(argv):
     optional_viz.add_argument('--testdir', dest='testdir', metavar='DIR', help='specify here in case testing results were written to different directory', default='-')
     parser_viz.set_defaults(func=spladder_viz)
 
+    ### RUN MODE "PREP"
+    parser_prep = subparsers.add_parser('prep', help='run mode to perform input preparations')
+
+    align = parser_prep.add_argument_group('ALIGNMENTS')
+    align.add_argument('-b', '--bams', dest='bams', metavar='FILE1,FILE2,...', help='alignment files in BAM format (comma separated list)', default='-', required=True)
+    align.add_argument('--sparse-bam', dest='sparse_bam', action='store_true', help='store BAM content as sparse representation for later use [off]', default=False)
+    align.add_argument('-n', '--readlen', dest='readlen', metavar='INT', type=int, help='read length (used for automatic confidence levele settings) [36]', default=50)
+    align.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)
+    align.add_argument('--primary-only', dest='primary_only', action='store_true', help='only use primary alignments [on]', default=True)
+    align.add_argument('--no-primary-only', dest='primary_only', action='store_false', default=True)
+    align.add_argument('--var-aware', dest='var_aware', action='store_true', help='alignment files are variation aware (presence of XM and XG tags) [off]', default=False)
+    align.add_argument('--no-var-aware', dest='var_aware', action='store_false', default=False)
+    align.add_argument('--set-mm-tag', dest='mm_tag', help='sets the sequence of the mismatch tag used in alignments [NM]', default='NM')
+    align.add_argument('--ignore-mismatches', dest='ignore_mismatches', action='store_true', help='does not filter by edit operations - does not require NM in BAM [off]', default=False)
+    align.add_argument('--reference', dest='ref_genome', metavar='FILE', help='reference genome (only needed for CRAM file de-compression or consensus filtering)', default='')
+
+    anno = parser_prep.add_argument_group('ANNOTATION')
+    anno.add_argument('-a', '--annotation', dest='annotation', metavar='FILE', help='file name for annotation in GTF/GFF3 or format', default='-', required=True)
+    anno.add_argument('--filter-overlap-genes', dest='filter_overlap_genes', action='store_true', help='remove genes from annotation that overlap each other [off]', default=False)
+    anno.add_argument('--filter-overlap-exons', dest='filter_overlap_exons', action='store_true', help='remove exons from annotation that overlap each other [off]', default=False)
+    anno.add_argument('--filter-overlap-transcripts', dest='filter_overlap_transcripts', action='store_true', help='remove transcripts from annotation that overlap each other [off]', default=False)
+    parser_prep.set_defaults(func=spladder_prep)
+
+    general_prep = parser_prep.add_argument_group('GENERAL')
+    general_prep.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='user verbose output mode [off]', default=False)
+    general_prep.add_argument('--parallel', dest='parallel', metavar='<INT>', type=int, help='use INT processors [1]', default=1)
+    general_prep.add_argument('--tmp-dir', dest='tmpdir', metavar='DIR', help='directory to store temporary data [./tmp]', default='tmp')
+
     ### RUN MODE "PYPROC"
     parser_pyproc = subparsers.add_parser('pyproc')
     required_pyproc = parser_pyproc.add_argument_group('MANDATORY')
@@ -177,6 +206,8 @@ def parse_options(argv):
             parser_test.print_help()
         elif argv[1] == 'viz':
             parser_viz.print_help()
+        elif argv[1] == 'prep':
+            parser_prep.print_help()
         else:
             parser.print_help()
         sys.exit(2)
@@ -186,20 +217,20 @@ def parse_options(argv):
 
 def check_options(options, mode):
     
-    if mode == 'build':
+    if mode in 'build':
         if len(options.filter_consensus) > 0:
             if len(options.ref_genome) == 0:
                 sys.stderr.write('\nERROR: using --filter-consensus requires setting a reference via --reference\n')
                 sys.exit(1)
             if not options.filter_consensus in ['strict', 'lenient']:
                 sys.stderr.write('\nERROR: --filter-consensus only allows the following choices: strict, lenient\n')
-                sys.exit(1)
+                sys. exit(1)
 
 
 def main(argv=sys.argv):
 
     ### get command line options
-    (mode, options) = parse_options(argv)
+    (mode, options)  = parse_options(argv)
     check_options(options, mode)
     options.func(options)
 

@@ -119,7 +119,7 @@ def parse_args(options, identity='main'):
     if hasattr(options, 'event_types'):
         options.event_types = options.event_types.strip(',').split(',')
 
-    if not os.path.exists(options.outdir):
+    if hasattr(options, 'outdir') and not os.path.exists(options.outdir):
         print('WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir, file=sys.stderr)
         try:
             os.makedirs(options.outdir)
@@ -131,13 +131,13 @@ def parse_args(options, identity='main'):
     if identity == 'main':
 
         ### open log file, if specified
-        if options.logfile != '-':
+        if hasattr(options, 'logfile') and options.logfile != '-':
             options.log_fname = options.logfile
         else:
             options.log_fname = 'stdout'
 
         ### set tmp directory default
-        if options.tmpdir == '':
+        if hasattr(options, 'tmpdir') and options.tmpdir == '':
             options.tmpdir = os.path.join(options.outdir, 'tmp')
 
         options.bam_fnames = options.bams.strip(',').split(',')
@@ -147,7 +147,7 @@ def parse_args(options, identity='main'):
             sys.exit(2)
         
         ### pyproc options
-        if options.pyproc:
+        if hasattr(options, 'pyproc') and options.pyproc:
             options.options_rproc = dict()
             options.options_rproc['mem_req_resubmit']  = [30000, 60000, 80000]
             options.options_rproc['time_req_resubmit'] = [60*60, 80*60, 90*60]
