@@ -57,10 +57,7 @@ def count_graph_coverage(genes, fn_bam=None, options=None, fn_out=None):
             bam_cache = dict()
             print('\ncounting %i genes on contig %s' % (contig_idx.shape[0], contig))
             for ii,i in enumerate(contig_idx):
-                sys.stdout.write('.')
-                if ii > 0 and ii % 50 == 0:
-                    sys.stdout.write('%i/%i\n' % (ii, contig_idx.shape[0]))
-                sys.stdout.flush()
+                log_progress(ii, contig_idx.shape[0], 50)
                 gg = genes[i]
                 if gg.segmentgraph.is_empty():
                     gg.segmentgraph = Segmentgraph(gg)
@@ -314,6 +311,7 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
     if strain_idx is None:
         strain_idx = np.arange(strains.shape[0])
     gene_counts = np.zeros((numgenes, len(strain_idx)), dtype='float')
+    gene_counts_non_alt = np.zeros((numgenes, len(strain_idx)), dtype='float')
     gene_ids = np.array([x.name for x in genes], dtype='str')
     gene_symbols = np.array([x.symbol if (not x is None) and hasattr(x, 'symbol') else 'NA' for x in genes], dtype='str')
 
@@ -350,16 +348,19 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
         assert(decodeUTF8(IN['gene_names'][:][gene_idx]) == genes[gidx].name)
         assert(genes[gidx].name == gene_ids[gidx])
 
-        ### compute gene expression as the read count over all non alternative segments
-        if hasattr(options, 'non_alt_norm') and options.non_alt_norm:
-            ### get idx of non alternative segments
-            non_alt_idx = genes[gidx].get_non_alt_seg_ids()
-            seg_idx = seg_idx[non_alt_idx]
-
         if seg_idx.shape[0] > 1:
             gene_counts[gidx, :] = np.squeeze(np.dot(seg_buffer[seg_idx - co, :][:, strain_idx].T, seg_lens[seg_idx])) / options.readlen
         else:
             gene_counts[gidx, :] = seg_buffer[seg_idx[0] - co, :][strain_idx] * seg_lens[seg_idx] / options.readlen
+
+        ### get idx of non alternative segments
+        non_alt_idx = genes[gidx].get_non_alt_seg_ids()
+        seg_idx = seg_idx[non_alt_idx]
+
+        if seg_idx.shape[0] > 1:
+            gene_counts_non_alt[gidx, :] = np.squeeze(np.dot(seg_buffer[seg_idx - co, :][:, strain_idx].T, seg_lens[seg_idx])) / options.readlen
+        else:
+            gene_counts_non_alt[gidx, :] = seg_buffer[seg_idx[0] - co, :][strain_idx] * seg_lens[seg_idx] / options.readlen
 
     IN.close()
 
@@ -368,6 +369,7 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
 
     ### compute size factors
     sf = get_size_factors(gene_counts, options)
+    sf_non_alt = get_size_factors(gene_counts_non_alt, options)
 
     ### write results to hdf5
     if fn_out is not None:
@@ -376,7 +378,9 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
         OUT.create_dataset(name='gene_ids', data=codeUTF8(gene_ids), compression='gzip')
         OUT.create_dataset(name='gene_symbols', data=codeUTF8(gene_symbols), compression='gzip')
         OUT.create_dataset(name='raw_count', data=gene_counts, compression='gzip', chunks=True)
+        OUT.create_dataset(name='raw_count_non_alt', data=gene_counts_non_alt, compression='gzip', chunks=True)
         OUT.create_dataset(name='size_factors', data=sf, compression='gzip')
+        OUT.create_dataset(name='size_factors_non_alt', data=sf_non_alt, compression='gzip')
         OUT.close()
 
 

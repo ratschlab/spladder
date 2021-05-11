@@ -175,8 +175,8 @@ def compute_psi(counts, event_type, options):
         a = counts[:, 5] # intron2 conf
         b = counts[:, 4] # intron1 conf
     elif event_type == 'mutex_exons':
-        a = counts[:, 5] + counts[:, 7] # exon_pre_exon1_conf + exon1_exon_aft_conf
-        b = counts[:, 6] + counts[:, 8] # exon_pre_exon2_conf + exon2_exon_aft_conf
+        a = counts[:, 6] + counts[:, 8] # exon_pre_exon2_conf + exon2_exon_aft_conf
+        b = counts[:, 5] + counts[:, 7] # exon_pre_exon1_conf + exon1_exon_aft_conf
     elif event_type == 'mult_exon_skip':
         a = counts[:, 4] + counts[:, 5] + counts[:, 7] # exon_pre_exon_conf + exon_exon_aft_conf + sum_inner_exon_conf
         b = (counts[:, 8] + 1) * counts[:, 6] # (num_inner_exon + 1) * exon_pre_exon_aft_conf

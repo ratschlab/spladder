@@ -31,7 +31,11 @@ TIME0 = time.time()
 def _get_gene_expression(options, fname_exp_hdf5, strain_subset=None):
 
     IN = h5py.File(fname_exp_hdf5, 'r')
-    gene_counts = IN['raw_count'][:]
+
+    if hasattr(options, 'non_alt_norm') and options.non_alt_norm:
+        gene_counts = IN['raw_count_non_alt'][:]
+    else:
+        gene_counts = IN['raw_count'][:]
     strains = decodeUTF8(IN['strains'][:])
     gene_ids = decodeUTF8(IN['gene_ids'][:])
     gene_symbols = decodeUTF8(IN['gene_symbols'][:])
@@ -54,7 +58,7 @@ def re_quantify_events(options):
     return cov
 
 
-def estimate_dispersion_chunk(gene_counts, matrix, sf, options, test_idx, idx, log=False):
+def estimate_dispersion_chunk(gene_counts, matrix, sf, options, idx, log=False):
 
     disp_raw = np.empty((idx.shape[0], 1), dtype='float')
     disp_raw.fill(np.nan)
@@ -69,7 +73,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, options, test_idx, idx, l
         disp = 0.1
         resp = gene_counts[i, :].astype('int')
 
-        if sum(resp / sf) < options.min_count or np.mean(resp == 0) > 0.6 or not test_idx[i]:
+        if sum(resp / sf) < options.min_count or np.mean(resp == 0) > 0.6:
             continue
 
         for j in range(10):
@@ -99,7 +103,7 @@ def estimate_dispersion_chunk(gene_counts, matrix, sf, options, test_idx, idx, l
     return (disp_raw, disp_raw_conv, idx)
 
 
-def estimate_dispersion(gene_counts, matrix, sf, options, test_idx, event_type):
+def estimate_dispersion(gene_counts, matrix, sf, options, event_type):
 
     if options.verbose:
         print('Estimating raw dispersions')
@@ -114,7 +118,7 @@ def estimate_dispersion(gene_counts, matrix, sf, options, test_idx, event_type):
         idx_chunks = [np.arange(x, min(x + binsize, gene_counts.shape[0])) for x in range(0, gene_counts.shape[0], binsize)]
 
         try:
-            result = [pool.apply_async(estimate_dispersion_chunk, args=(gene_counts[idx, :], matrix, sf, options, test_idx[idx], idx,)) for idx in idx_chunks]
+            result = [pool.apply_async(estimate_dispersion_chunk, args=(gene_counts[idx, :], matrix, sf, options, idx,)) for idx in idx_chunks]
             res_cnt = 0
             while result:
                 tmp = result.pop(0).get()
@@ -135,7 +139,7 @@ def estimate_dispersion(gene_counts, matrix, sf, options, test_idx, event_type):
             pool.join()
             sys.exit(1)
     else:
-        (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, options, test_idx, np.arange(gene_counts.shape[0]), log=options.verbose)
+        (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, options, np.arange(gene_counts.shape[0]), log=options.verbose)
 
     if np.sum(disp_raw_conv) == 0:
         print('\nERROR: None of the dispersion estimates converged. Exiting.', file=sys.stderr)
@@ -450,10 +454,10 @@ def calculate_varPrior(disp_raw, disp_fitted, idx, varLogDispSamp):
 def run_testing(cov, dmatrix0, dmatrix1, sf, options, event_type, test_idx, r_idx=None):
 
     ### estimate dispersion
-    (disp_raw, disp_raw_conv) = estimate_dispersion(cov, dmatrix1, sf, options, test_idx, event_type)
+    (disp_raw, disp_raw_conv) = estimate_dispersion(cov, dmatrix1, sf, options, event_type)
 
     ### fit dispersion
-    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, (disp_raw_conv[:, 0] & test_idx)[:, np.newaxis], sf, options, dmatrix1, event_type)
+    (disp_fitted, Lambda, disp_idx) = fit_dispersion(cov, disp_raw, disp_raw_conv[:, 0][:, np.newaxis], sf, options, dmatrix1, event_type)
 
     ### adjust dispersion estimates
     (disp_adj, disp_adj_conv) = adjust_dispersion(cov, dmatrix1, disp_raw, disp_fitted, disp_idx, sf, options, event_type)
@@ -540,7 +544,7 @@ def spladder_test(options):
 
     options.fname_genes = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, val_tag))
     options.fname_count_in = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, options.merge, val_tag))
-    options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp%s.hdf5' % (options.confidence, options.merge, val_tag, non_alt_tag))
+    options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (options.confidence, options.merge, val_tag))
 
     condition_strains = np.r_[np.array(options.conditionA), np.array(options.conditionB)]
     if options.verbose:
@@ -624,14 +628,13 @@ def spladder_test(options):
         k_idx2 = ((np.mean(cov[1][:, idx1.shape[0]:] <= 1, axis=1) <= options.max_0_frac) | \
                   (np.mean(cov[1][:, :idx1.shape[0]] <= 1, axis=1) <= options.max_0_frac))
 
-        ### filter for dPSI
+        ### compute delta PSI
         naidx = np.all(np.isnan(psi[:, :idx1.shape[0]]), axis=1) | \
                 np.all(np.isnan(psi[:, idx1.shape[0]:]), axis=1)
         psi[naidx, :] = 0
         delta_psi = np.nanmean(psi[:, :idx1.shape[0]], axis=1) - np.nanmean(psi[:, idx1.shape[0]:], axis=1)
-        k_idx3 = (np.absolute(delta_psi) >= options.min_dpsi)
     
-        k_idx = np.where((k_idx1 | k_idx2) & k_idx3)[0]
+        k_idx = np.where(k_idx1 | k_idx2)[0]
 
         if options.verbose:
             print('Exclude %i of %i %s events (%.2f percent) from testing due to low coverage' % (cov[0].shape[0] - k_idx.shape[0], cov[0].shape[0], event_type, (1 - float(k_idx.shape[0]) / cov[0].shape[0]) * 100))
@@ -650,8 +653,8 @@ def spladder_test(options):
         k_idx2 = k_idx2[k_idx]
         delta_psi = delta_psi[k_idx]
 
-        cov[0] = np.around(np.hstack([cov[0], curr_gene_counts]))
-        cov[1] = np.around(np.hstack([cov[1], curr_gene_counts]))
+        cov[0] = np.around(np.hstack([cov[0], curr_gene_counts + 0.5]))
+        cov[1] = np.around(np.hstack([cov[1], curr_gene_counts + 0.5]))
         cov = np.vstack(cov)
         if not event_ids is None:
             event_ids = np.hstack(event_ids)
@@ -686,6 +689,15 @@ def spladder_test(options):
                                  figtitle='Count Distributions',
                                  filename=os.path.join(options.plot_dir, 'count_distribution.%s.%s' % (event_type, options.plot_format)),
                                  options=options)
+
+        ### filter for dPSI
+        k_idx3 = (np.absolute(delta_psi) >= options.min_dpsi)
+        test_idx = test_idx & np.hstack((k_idx3, k_idx3))
+        if options.verbose:
+            old = np.sum(k_idx1 | k_idx2)
+            now = np.sum((k_idx1 | k_idx2) & k_idx3)
+            print('Excluding %i fof %i events from testing due to current delta PSI threshold of %.2f. Testing %i events.' % (old - now, old, options.min_dpsi,now))
+
         ### make event splice forms unique to prevent unnecessary tests
         if not event_ids is None:
             event_ids, u_idx, r_idx = np.unique(event_ids, return_index=True, return_inverse=True)
