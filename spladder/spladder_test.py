@@ -139,7 +139,7 @@ def estimate_dispersion(gene_counts, matrix, sf, options, event_type):
             pool.join()
             sys.exit(1)
     else:
-        (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, options, test_idx, np.arange(gene_counts.shape[0]), log=options.verbose)
+        (disp_raw, disp_raw_conv, _) = estimate_dispersion_chunk(gene_counts, matrix, sf, options, np.arange(gene_counts.shape[0]), log=options.verbose)
 
     if np.sum(disp_raw_conv) == 0:
         print('\nERROR: None of the dispersion estimates converged. Exiting.', file=sys.stderr)
