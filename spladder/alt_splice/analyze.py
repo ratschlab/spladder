@@ -75,7 +75,7 @@ def analyze_events(options, event_type, sample_idx=None):
         return
 
     event_features = {'mult_exon_skip': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e2_conf', 'e2e3_conf', 'e1e3_conf', 'sum_e2_conf', 'num_e2', 'len_e2'],
-                      'intron_retention': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e2_conf', 'e2_cov_region'],
+                      'intron_retention': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e3_conf', 'e2_cov_region'],
                       'exon_skip': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e2_conf', 'e2e3_conf', 'e1e3_conf'],
                       'mutex_exons': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e4_cov', 'e1e2_conf', 'e1e3_conf', 'e2e4_conf', 'e3e4_conf'],
                       'alt_3prime': ['valid', 'e1_cov', 'e2_cov', 'e3_cov', 'e1e3_conf', 'e2_conf'],
@@ -105,7 +105,7 @@ def analyze_events(options, event_type, sample_idx=None):
                 iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                 iso2 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                 for i in range(counts.shape[2]):
-                    (psi[:, i], iso1[:, i], iso2[:, i])  = compute_psi(counts[:, :, i], event_type, options)
+                    (psi[:, i], iso2[:, i], iso1[:, i])  = compute_psi(counts[:, :, i], event_type, options)
 
                 OUT = h5py.File(fn_out_count, 'w')
                 OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
@@ -169,7 +169,7 @@ def analyze_events(options, event_type, sample_idx=None):
                     iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                     iso2 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
                     for j in range(counts.shape[2]):
-                        (psi[:, j], iso1[:, j], iso2[:, j]) = compute_psi(counts[:, :, j], event_type, options) 
+                        (psi[:, j], iso2[:, j], iso1[:, j]) = compute_psi(counts[:, :, j], event_type, options) 
 
                     if i == 0:
                         OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(options.strains), len(event_features[event_type]), None), compression='gzip')
