@@ -175,7 +175,7 @@ def parse_args(options, identity='main'):
         options.conditionB = [os.path.basename(x) for x in options.conditionB]
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
-    if len(options.bam_fnames) > 0:
+    if len(options.bam_fnames) > 0 and options.bams != '-':
         if identity == 'main' and options.bam_fnames[0].split('.')[-1] == 'txt':
             options.bam_fnames = [str(x) for x in np.atleast_1d(np.loadtxt(options.bam_fnames[0], dtype='str'))]
 

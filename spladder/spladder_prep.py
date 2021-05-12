@@ -118,10 +118,11 @@ def spladder_prep(options):
     options = settings.parse_args(options)
 
     ### handle annotation prepping
-    options = prep_annotation(options)
+    if options.annotation != '-':
+        options = prep_annotation(options)
 
     ### convert input BAMs to sparse arrays - filtered case
-    if options.sparse_bam:
+    if options.sparse_bam and options.bams != '-':
         prep_sparse_bam_filtered(options)
         prep_sparse_bam_full(options)
 
