@@ -12,7 +12,7 @@ class DataTrack:
         if not self.type in DataTrack.TYPES:
             sys.stderr.write('ERROR: Track type %s was given. Allowed track types are: %s\n' % (self.type, ','.join(DataTrack.TYPES)))
             sys.exit(1)
-        self.strains = []
+        self.samples = []
         self.bam_fnames = []
         self.group_labels = []
         self.event_info = []
@@ -37,6 +37,6 @@ class DataTrack:
                                 print('ERROR: Input file %s can not be found\n\n' % fname, file=sys.stderr)
                                 sys.exit(2)
                     
-                self.strains.append(np.array([re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', os.path.basename(_)) for _ in self.bam_fnames[-1]]))
+                self.samples.append(np.array([re.sub(r'(.[bB][aA][mM]|.[hH][dD][fF]5)$', '', os.path.basename(_)) for _ in self.bam_fnames[-1]]))
                 self.group_labels.append(label)
                 

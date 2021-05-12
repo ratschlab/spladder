@@ -14,7 +14,7 @@ import math
 
 from .highlight import *
 
-def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verbose=False, collapsed=True, bins=0, size_factors=None, sf_strains=None):
+def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verbose=False, collapsed=True, bins=0, size_factors=None, sf_samples=None):
     """Internal function that queries the bam files and produces the counts"""
 
     ### PYSAM CIGAR ENCODING
@@ -104,8 +104,8 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
     sf = np.ones((len(files), ), dtype='float')
     if not size_factors is None:
         for f, fn in enumerate(files):
-            strain = re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[cC][rR][aA][mM]$', '', fn.split('/')[-1])
-            sf[f] = size_factors[np.where(sf_strains == strain)[0]]
+            sample = re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[cC][rR][aA][mM]$', '', fn.split('/')[-1])
+            sf[f] = size_factors[np.where(sf_samples == sample)[0]]
     counts /= sf[:, np.newaxis]
 
     if collapsed:
@@ -125,7 +125,7 @@ def _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt=False, verb
 def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
                      bins = None, log = False, ax = None, ymax = 0, outfile = None,
                      frm = 'pdf', xlim = None, title = None, xoff = None, yoff = None,
-                     intron_cov = False, cmap=None, col_idx=None, size_factors=None, sf_strains=None):
+                     intron_cov = False, cmap=None, col_idx=None, size_factors=None, sf_samples=None):
     """This function takes a list of bam files and a set of coordinates (chrm, start, stop), to 
        plot a coverage heatmap over all files in that region."""
 
@@ -139,7 +139,7 @@ def heatmap_from_bam(chrm, start, stop, files, subsample = 0, verbose = False,
     #chr_name = 'chr%s' % chrm
     chr_name = chrm
 
-    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, verbose=verbose, collapsed=False, size_factors=size_factors, sf_strains=sf_strains)
+    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, verbose=verbose, collapsed=False, size_factors=size_factors, sf_samples=sf_samples)
 
     if ax is None:
         fig = plt.figure(figsize = (10, 4))
@@ -236,7 +236,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
                  intron_cov=False, intron_cnt=False, marker_pos=None, col_idx=None,
                  color_cov='blue', color_intron_cov='red', color_intron_edge='green', 
                  grid=False, strand=None, highlight=None, highlight_color='magenta', highlight_label=None,
-                 min_intron_cnt=0, return_legend_handle=False, label=None, size_factors=None, sf_strains=None):
+                 min_intron_cnt=0, return_legend_handle=False, label=None, size_factors=None, sf_samples=None):
     """This function takes a list of bam files and a set of coordinates (chrm, start, stop), to 
        plot a coverage overview of that files in that region."""
 
@@ -250,7 +250,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
     #chr_name = 'chr%s' % chrm
     chr_name = chrm
 
-    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt, verbose, collapsed=True, size_factors=size_factors, sf_strains=sf_strains)
+    (counts, intron_counts, intron_list) = _get_counts(chr_name, start, stop, files, intron_cov, intron_cnt, verbose, collapsed=True, size_factors=size_factors, sf_samples=sf_samples)
 
     ### get mean counts over all bam files
     counts /= len(files)

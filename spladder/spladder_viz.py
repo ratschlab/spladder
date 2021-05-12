@@ -126,7 +126,7 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
                 break
             sl = line.strip().split('\t')
             data_tracks.append([])
-            data_tracks[-1].append(['segments', test_setup['labels'][0] + ':' + ','.join(test_setup['event_strains'][idxA]), test_setup['labels'][1] + ':' + ','.join(test_setup['event_strains'][idxB])])
+            data_tracks[-1].append(['segments', test_setup['labels'][0] + ':' + ','.join(test_setup['event_samples'][idxA]), test_setup['labels'][1] + ':' + ','.join(test_setup['event_samples'][idxB])])
             data_tracks[-1].append(['event', sl[0]])
             data_tracks[-1].append(['gene', sl[1]]) 
             test_tag.append('.difftest_%s' % sl[0])
@@ -181,10 +181,10 @@ def _load_size_factors(options):
 
     IN = h5py.File(fname_gene_exp, 'r')
     sf = IN['size_factors'][:]
-    strains = decodeUTF8(IN['strains'][:])
+    samples = decodeUTF8(IN['samples'][:])
     IN.close()
 
-    return sf, strains
+    return sf, samples
 
 def spladder_viz(options):
 
@@ -334,7 +334,7 @@ def spladder_viz(options):
             ### plot coverage tracks
             if data_track.type == 'coverage':
                 if size_factors is None:
-                    size_factors, sf_strains = _load_size_factors(options)
+                    size_factors, sf_samples = _load_size_factors(options)
                 ax = _add_ax(axes, fig, gs)
                 min_sample_size = 5 ### TODO make that an option
                 caxes = []
@@ -358,7 +358,7 @@ def spladder_viz(options):
                                               return_legend_handle=True, 
                                               label=label, 
                                               size_factors=size_factors,
-                                              sf_strains=sf_strains))
+                                              sf_samples=sf_samples))
                     labels.append(label)
                 ax.get_yaxis().set_label_coords(1.02,0.5)
                 if len(caxes) > 0:
@@ -366,16 +366,16 @@ def spladder_viz(options):
             ### plot segment counts
             if data_track.type == 'segments':
                 if size_factors is None:
-                    size_factors, sf_strains = _load_size_factors(options)
+                    size_factors, sf_samples = _load_size_factors(options)
                 ax = _add_ax(axes, fig, gs)
                 for g, gid in enumerate(gids):
-                    (segments, edges, edge_idx, strains) = get_seg_counts(gid, options.outdir, options.confidence, options.validate_sg)
-                    assert np.all(strains == sf_strains)
+                    (segments, edges, edge_idx, samples) = get_seg_counts(gid, options.outdir, options.confidence, options.validate_sg)
+                    assert np.all(samples == sf_samples)
                     seg_sample_idx = None
-                    if len(data_track.strains) > 0:
+                    if len(data_track.samples) > 0:
                         seg_sample_idx = []
-                        for track_strains in data_track.strains:
-                            seg_sample_idx.append(np.where(np.in1d(strains, track_strains))[0])
+                        for track_samples in data_track.samples:
+                            seg_sample_idx.append(np.where(np.in1d(samples, track_samples))[0])
                             cov_from_segments(genes[g], segments, edges, edge_idx, size_factors, ax, xlim=plotrange, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
                 ax.get_yaxis().set_label_coords(1.02,0.5)
                 ax.set_ylabel('segment counts')

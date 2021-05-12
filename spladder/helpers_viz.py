@@ -179,10 +179,10 @@ def get_seg_counts(gid, outdir, confidence, validate_sg):
     edge_idx = IN['edge_idx'][:][idx].astype('int')
     idx = sp.where(IN['gene_ids_segs'][:] == gid)[0]
     segments = IN['segments'][idx, :]
-    strains = hp.decodeUTF8(IN['strains'][:])
+    samples = hp.decodeUTF8(IN['samples'][:])
     IN.close()
 
-    return (segments, edges, edge_idx, strains)
+    return (segments, edges, edge_idx, samples)
 
 def stack_exons(exons1, exons2):
     

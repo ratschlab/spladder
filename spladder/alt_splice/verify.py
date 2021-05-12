@@ -412,7 +412,7 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
 
     return (verified, info)
 
-def verify_wrapper(ev, genes, gidx_min, gene_ids_edges, gene_ids_segs, edge_idx, strain_idx, event_type, fn_count, options, idx):
+def verify_wrapper(ev, genes, gidx_min, gene_ids_edges, gene_ids_segs, edge_idx, sample_idx, event_type, fn_count, options, idx):
 
     IN = h5py.File(fn_count, 'r')
     counts = []
@@ -436,7 +436,7 @@ def verify_wrapper(ev, genes, gidx_min, gene_ids_edges, gene_ids_segs, edge_idx,
         if gene_ids_edges.shape[0] == 0:
             ver, info = verify_empty(event_type)
             counts.append(np.array([info]))
-            verified.append([ver for _ in strain_idx])
+            verified.append([ver for _ in sample_idx])
             continue
 
         gr_idx_segs = np.where(gene_ids_segs == g_idx)[0]
@@ -444,22 +444,20 @@ def verify_wrapper(ev, genes, gidx_min, gene_ids_edges, gene_ids_segs, edge_idx,
         if gr_idx_edges.shape[0] == 0:
             ver, info = verify_empty(event_type)
             counts.append(np.array([info]))
-            verified.append([ver for _ in strain_idx])
+            verified.append([ver for _ in sample_idx])
             continue
 
-        if isinstance(strain_idx, int):
-            strain_idx = [strain_idx]
+        if isinstance(sample_idx, int):
+            sample_idx = [sample_idx]
 
         ### laod relevant count data from HDF5
-        segments = np.atleast_2d(IN['segments'][gr_idx_segs, :])[:, strain_idx]
-        seg_pos = np.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, strain_idx]
-        edges = np.atleast_2d(IN['edges'][gr_idx_edges, :])[:, strain_idx]
+        segments = np.atleast_2d(IN['segments'][gr_idx_segs, :])[:, sample_idx]
+        seg_pos = np.atleast_2d(IN['seg_pos'][gr_idx_segs, :])[:, sample_idx]
+        edges = np.atleast_2d(IN['edges'][gr_idx_edges, :])[:, sample_idx]
         curr_edge_idx = edge_idx[gr_idx_edges]
 
         verified.append([])
-        for s_idx in range(len(strain_idx)):
-           # ev_tmp.subset_strain(s_idx) ### TODO 
-
+        for s_idx in range(len(sample_idx)):
             if event_type == 'exon_skip':
                 ver, info = verify_exon_skip(ev[i], genes[_g_idx], segments[:, s_idx].T,  np.c_[curr_edge_idx, edges[:, s_idx]], options)
             elif event_type in ['alt_3prime', 'alt_5prime']:
@@ -483,13 +481,13 @@ def verify_wrapper(ev, genes, gidx_min, gene_ids_edges, gene_ids_segs, edge_idx,
     return (np.dstack(counts), np.dstack(verified), idx)
 
 
-def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, options=None, out_fn=None):
+def verify_all_events(ev, sample_idx=None, list_bam=None, event_type=None, options=None, out_fn=None):
 
     ### set parameters if called by rproc
-    if strain_idx is None:
+    if sample_idx is None:
         PAR = ev
         ev = PAR['ev']
-        strain_idx = PAR['strain_idx']
+        sample_idx = PAR['sample_idx']
         list_bam = PAR['list_bam']
         if 'out_fn' in PAR:
             out_fn = PAR['out_fn']
@@ -507,8 +505,8 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
             validate_tag = '.validated'
 
         if options.merge == 'single':
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.samples[strain_idx], validate_tag, prune_tag), 'rb'))
-            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (options.outdir, options.confidence, options.samples[strain_idx], validate_tag, prune_tag)
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag, prune_tag), 'rb'))
+            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag, prune_tag)
         else:
             (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag), 'rb'))
             fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag)
@@ -550,7 +548,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
             gidx_max = [gene_idx_all[cidx][-1] + 1 for cidx in idx_chunks]   
 
             try:
-                result = [pool.apply_async(verify_wrapper, args=(ev[cidx], genes[gidx_min[c]:gidx_max[c]], gidx_min[c], gene_ids_edges, gene_ids_segs, edge_idx, strain_idx, event_type, fn_count, options, c)) for c,cidx in enumerate(idx_chunks)]
+                result = [pool.apply_async(verify_wrapper, args=(ev[cidx], genes[gidx_min[c]:gidx_max[c]], gidx_min[c], gene_ids_edges, gene_ids_segs, edge_idx, sample_idx, event_type, fn_count, options, c)) for c,cidx in enumerate(idx_chunks)]
                 res_cnt = 0
                 while result:
                     tmp = result.pop(0).get()
@@ -575,7 +573,7 @@ def verify_all_events(ev, strain_idx=None, list_bam=None, event_type=None, optio
                 counts = np.dstack(counts)
                 verified = np.dstack(verified)
         else:
-            counts, verified = verify_wrapper(ev, genes, 0, gene_ids_edges, gene_ids_segs, edge_idx, strain_idx, event_type, fn_count, options, 0)[:2]
+            counts, verified = verify_wrapper(ev, genes, 0, gene_ids_edges, gene_ids_segs, edge_idx, sample_idx, event_type, fn_count, options, 0)[:2]
 
     # re-establish initial sort order
     ev = ev[old_idx]
