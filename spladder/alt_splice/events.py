@@ -38,7 +38,7 @@ def post_process_event_struct(events, options):
         return events
 
     ### filter out invalid coordinate projections
-    is_valid = np.array([np.all(_.get_coords(trafo=True) > 0) for _ in events], dtype='bool')
+    is_valid = np.array([np.all(_.get_coords() > 0) for _ in events], dtype='bool')
     events = events[is_valid]
 
     ### sort exons in events
@@ -54,10 +54,6 @@ def post_process_event_struct(events, options):
     ### sort events by all coordinates
     events = sort_events_full(events, options) 
     
-    ### make events unique by strain
-    print('\nMake %s events unique by strain' % events[0].event_type)
-    events = make_unique_by_strain(events)
-
     ### sort events by event coordinates
     events = sort_events_by_event(events, options) 
     
@@ -65,56 +61,11 @@ def post_process_event_struct(events, options):
     print('\nMake %s events unique by event' % events[0].event_type)
     events = make_unique_by_event(events)
 
-    ### count detected strains
+    ### create event_ids
     for i in range(events.shape[0]):
-        events[i].num_detected = len(events[i].strain)
         events[i].id = (i + 1)
 
     return events
-
-
-def make_unique_by_strain(event_list):
-    # event_list = make_unique_by_strain(event_list)
-
-    rm_idx = []
-    for i in range(1, event_list.shape[0]):
-        if i % 1000 == 0:
-            print('.', end=' ')
-            if i % 10000 == 0:
-                print('%i' % i)
-
-        old_coords = event_list[i-1].get_coords(trafo=True)
-        curr_coords = event_list[i].get_coords(trafo=True) 
-
-        if old_coords.shape[0] == curr_coords.shape[0] and np.all(old_coords == curr_coords):
-
-            ### assertion that we did everything right
-            if event_list[i - 1].chr == event_list[i].chr:
-                assert(event_list[i - 1].strand == event_list[i].strand)
-                assert(event_list[i].strain.shape[0] == 1)
-            else:
-                assert(event_list[i - 1].gene_name != event_list[i].gene_name)
-
-            idx = np.where(event_list[i-1].strain == event_list[i].strain[0])[0]
-            if idx.shape[0] > 0:
-                assert(idx.shape[0] == 1)
-                assert(np.all(event_list[i].get_coords(trafo=True) == event_list[i-1].get_coords(trafo=True)))
-                if not event_list[i].gene_name[0] in event_list[i-1].gene_name:
-                    event_list[i-1].gene_name = np.r_[event_list[i-1].gene_name, [event_list[i].gene_name[0]]]
-                event_list[i] = event_list[i-1]
-            else: 
-                event_list[i].strain = np.r_[[event_list[i-1].strain[0]], event_list[i].strain]
-                assert(np.all(np.sort(event_list[i].strain) == np.sort(np.unique(event_list[i].strain))))
-                ### TODO !!!!!!!!!!!!! make sure that we keep different coordinates if the strains differ ...
-                if not event_list[i].gene_name[0] in event_list[i-1].gene_name:
-                    event_list[i].gene_name = np.r_[event_list[i-1].gene_name, [event_list[i].gene_name[0]]]
-            rm_idx.append(i - 1)
-
-    print('events dropped: %i' % len(rm_idx))
-    keep_idx = np.where(~np.in1d(np.arange(event_list.shape[0]), rm_idx))[0]
-    event_list = event_list[keep_idx]
-
-    return event_list
 
 
 def make_unique_by_event(event_list):
@@ -131,8 +82,8 @@ def make_unique_by_event(event_list):
             if i % 10000 == 0:
                 print('%i' % i)
         
-        old_coords = event_list[last_kept].get_inner_coords(trafo=True)
-        curr_coords = event_list[i].get_inner_coords(trafo=True) 
+        old_coords = event_list[last_kept].get_inner_coords()
+        curr_coords = event_list[i].get_inner_coords()
 
         if old_coords.shape[0] == curr_coords.shape[0] and np.all(old_coords == curr_coords):
 
@@ -150,13 +101,6 @@ def make_unique_by_event(event_list):
             else:
                 keep_idx = i
                 not_keep_idx = last_kept
-
-            ### check if we would loose strains 
-            idx = np.where(~np.in1d(event_list[not_keep_idx].strain, event_list[keep_idx].strain))[0]
-            if idx.shape[0] > 0:
-                event_list[keep_idx].strain = np.r_[event_list[keep_idx].strain, event_list[not_keep_idx].strain[idx]]
-                ### TODO !!!!!!!!!!!!! make sure that we keep different coordinates if the strains differ ...
-                event_list[keep_idx].gene_name = np.union1d(event_list[keep_idx].gene_name, event_list[not_keep_idx].gene_name)
 
             rm_idx.append(not_keep_idx)
             last_kept = keep_idx

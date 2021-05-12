@@ -39,7 +39,7 @@ def collect_events(options):
         if i == 1:
             break
 
-        strain = options.strains[i]
+        sample = options.samples[i]
 
         if hasattr(options, 'spladderfile') and options.spladderfile != '-':
             genes_fnames = options.spladderfile
@@ -75,28 +75,12 @@ def collect_events(options):
                     idx_intron_reten, intron_intron_reten = detect_events(genes, 'intron_retention', np.where([x.is_alt for x in genes])[0], options)
                     for k in range(len(idx_intron_reten)):
                         gene = genes[idx_intron_reten[k]]
-
-                        ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not hasattr(options, 'reference_strain'):
-                            exons_col = exons
-                            exons_col_pos = exons
-                        else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                        if exons_col.shape != exons_col_pos.shape: 
-                            print('skipping non-mappable intron retention event')
-                            continue
 
                         ### build intron retention data structure
                         event = Event('intron_retention', gene.chr, gene.strand)
-                        event.strain = np.array([strain])
                         event.exons1 = np.c_[exons[:, intron_intron_reten[k][0]], exons[:, intron_intron_reten[k][1]]].T
                         event.exons2 = np.array([exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]])
-                        #event.exons2 = exons[:, intron_intron_reten[k][2]]
-                        event.exons1_col = np.c_[exons_col[:, intron_intron_reten[k][0]], exons_col[:, intron_intron_reten[k][1]]]
-                        event.exons2_col = np.array([exons_col[:, intron_intron_reten[k][0]][0], exons_col[:, intron_intron_reten[k][1]][1]])
-                        #event.exons2_col = exons_col[:, intron_intron_reten[k][2]]
                         event.gene_name = np.array([gene.name])
                         event.gene_idx = idx_intron_reten[k]
                         #event.transcript_type = np.array([gene.transcript_type])
@@ -110,26 +94,12 @@ def collect_events(options):
                     idx_exon_skip, exon_exon_skip = detect_events(genes, 'exon_skip', np.where([x.is_alt for x in genes])[0], options)
                     for k in range(len(idx_exon_skip)):
                         gene = genes[idx_exon_skip[k]]
-
-                        ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not hasattr(options, 'reference_strain'):
-                            exons_col = exons
-                            exons_col_pos = exons
-                        else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                        if exons_col.shape != exons_col_pos.shape: 
-                            print('skipping non-mappable exon_skip event')
-                            continue
 
                         ### build exon skip data structure
                         event = Event('exon_skip', gene.chr, gene.strand)
-                        event.strain = np.array([strain])
                         event.exons1 = np.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][2]]].T
                         event.exons2 = np.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][1]], exons[:, exon_exon_skip[k][2]]].T
-                        event.exons1_col = np.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][2]]].T
-                        event.exons2_col = np.c_[exons_col[:, exon_exon_skip[k][0]], exons_col[:, exon_exon_skip[k][1]], exons_col[:, exon_exon_skip[k][2]]].T
                         event.gene_name = np.array([gene.name])
                         event.gene_idx = idx_exon_skip[k]
                         #event.transcript_type = np.array([gene.transcript_type])
@@ -144,41 +114,25 @@ def collect_events(options):
                     ### handle 5 prime events
                     for k in range(len(idx_alt_end_5prime)):
                         gene = genes[idx_alt_end_5prime[k]]
-
-                        ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not hasattr(options, 'reference_strain'):
-                            exons_col = exons
-                            exons_col_pos = exons
-                        else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                        if exons_col.shape != exons_col_pos.shape: 
-                            print('skipping non-mappable alt 5-prime event')
-                            continue
-                        
+
                         for k1 in range(len(exon_alt_end_5prime[k]['fiveprimesites']) - 1):
                             for k2 in range(k1 + 1, len(exon_alt_end_5prime[k]['fiveprimesites'])):
 
-                                exon_alt1_col = exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]].T
-                                exon_alt2_col = exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]].T
+                                exon_alt1 = exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]].T
+                                exon_alt2 = exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]].T
 
                                 ### check if exons overlap
-                                if (exon_alt1_col[0] >= exon_alt2_col[1]) or (exon_alt1_col[1] <= exon_alt2_col[0]):
+                                if (exon_alt1[0] >= exon_alt2[1]) or (exon_alt1[1] <= exon_alt2[0]):
                                     continue
 
                                 event = Event('alt_5prime', gene.chr, gene.strand)
-                                event.strain = np.array([strain])
                                 if gene.strand == '+':
                                     event.exons1 = np.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
                                     event.exons2 = np.c_[exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]], exons[:, exon_alt_end_5prime[k]['threeprimesite']]].T
-                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]], exons_col[:, exon_alt_end_5prime[k]['threeprimesite']]].T
-                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]], exons_col[:, exon_alt_end_5prime[k]['threeprimesite']]].T
                                 else:
                                     event.exons1 = np.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite']], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
                                     event.exons2 = np.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite']], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
-                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k1]]].T
-                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_5prime[k]['threeprimesite']], exons_col[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
                                 event.gene_name = np.array([gene.name])
                                 event.gene_idx = idx_alt_end_5prime[k]
 
@@ -192,41 +146,25 @@ def collect_events(options):
                     ### handle 3 prime events
                     for k in range(len(idx_alt_end_3prime)):
                         gene = genes[idx_alt_end_3prime[k]]
-
-                        ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not hasattr(options, 'reference_strain'):
-                            exons_col = exons
-                            exons_col_pos = exons
-                        else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                        if exons_col.shape != exons_col_pos.shape: 
-                            print('skipping non-mappable alt 3-prime event')
-                            continue
 
                         for k1 in range(len(exon_alt_end_3prime[k]['threeprimesites']) - 1):
                             for k2 in range(k1 + 1, len(exon_alt_end_3prime[k]['threeprimesites'])):
 
-                                exon_alt1_col = exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]].T
-                                exon_alt2_col = exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]].T
+                                exon_alt1 = exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]].T
+                                exon_alt2 = exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]].T
 
                                 ### check if exons overlap
-                                if (exon_alt1_col[0] >= exon_alt2_col[1]) or (exon_alt1_col[1] <= exon_alt2_col[0]):
+                                if (exon_alt1[0] >= exon_alt2[1]) or (exon_alt1[1] <= exon_alt2[0]):
                                     continue
 
                                 event = Event('alt_3prime', gene.chr, gene.strand)
-                                event.strain = np.array([strain])
                                 if gene.strand == '+':
                                     event.exons1 = np.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
                                     event.exons2 = np.c_[exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]], exons[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
-                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]], exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
-                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]], exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']]].T
                                 else:
                                     event.exons1 = np.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite']], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
                                     event.exons2 = np.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite']], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
-                                    event.exons1_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k1]]].T
-                                    event.exons2_col = np.c_[exons_col[:, exon_alt_end_3prime[k]['fiveprimesite']], exons_col[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
                                 event.gene_name = np.array([gene.name])
                                 event.gene_idx = idx_alt_end_3prime[k]
 
@@ -245,26 +183,12 @@ def collect_events(options):
                     idx_mult_exon_skip, exon_mult_exon_skip = detect_events(genes, 'mult_exon_skip', np.where([x.is_alt for x in genes])[0], options)
                     for k, gidx in enumerate(idx_mult_exon_skip):
                         gene = genes[gidx] 
-
-                        ### perform liftover between strains if necessary
                         exons = gene.splicegraph.vertices
-                        if not hasattr(options, 'reference_strain'):
-                            exons_col = exons
-                            exons_col_pos = exons
-                        else:
-                            exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                            exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                        if exons_col.shape != exons_col_pos.shape: 
-                            print('skipping non-mappable multiple exon skip event')
-                            continue
 
                         ### build multiple exon skip data structure
                         event = Event('mult_exon_skip', gene.chr, gene.strand)
-                        event.strain = np.array([strain])
                         event.exons1 = np.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][2]]].T
                         event.exons2 = np.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][1]], exons[:, exon_mult_exon_skip[k][2]]].T
-                        event.exons1_col = np.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][2]]].T
-                        event.exons2_col = np.c_[exons_col[:, exon_mult_exon_skip[k][0]], exons_col[:, exon_mult_exon_skip[k][1]], exons_col[:, exon_mult_exon_skip[k][2]]].T
                         event.gene_name = np.array([gene.name])
                         event.gene_idx = gidx
                         #event.transcript_type = np.array([gene.transcript_type])
@@ -279,27 +203,12 @@ def collect_events(options):
                     if len(idx_mutex_exons) > 0:
                         for k in range(len(exon_mutex_exons)):
                             gene = genes[idx_mutex_exons[k]]
-
-                            ### perform liftover between strains if necessary
                             exons = gene.splicegraph.vertices
-                            if not hasattr(options, 'reference_strain'):
-                                exons_col = exons
-                                exons_col_pos = exons
-                            else:
-                                exons_col = convert_strain_pos_intervals(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-                                exons_col_pos = convert_strain_pos(gene.chr, gene.splicegraph.vertices.T, strain, options.reference_strain).T
-
-                            if exons_col.shape != exons_col_pos.shape: 
-                                print('skipping non-mappable mutex exons event')
-                                continue
 
                             ### build data structure for mutually exclusive exons
                             event = Event('mutex_exons', gene.chr, gene.strand)
-                            event.strain = np.array([strain])
                             event.exons1 = np.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][1]], exons[:, exon_mutex_exons[k][3]]].T
                             event.exons2 = np.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][2]], exons[:, exon_mutex_exons[k][3]]].T
-                            event.exons1_col = np.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][1]], exons_col[:, exon_mutex_exons[k][3]]].T
-                            event.exons2_col = np.c_[exons_col[:, exon_mutex_exons[k][0]], exons_col[:, exon_mutex_exons[k][2]], exons_col[:, exon_mutex_exons[k][3]]].T
                             event.gene_name = np.array([gene.name])
                             event.gene_idx = idx_mutex_exons[k]
 

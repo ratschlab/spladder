@@ -114,8 +114,6 @@ def parse_args(options, identity='main'):
     ### load all default settings
     options = default_settings(options)
 
-    ref_tag = ''
-    
     if hasattr(options, 'event_types'):
         options.event_types = options.event_types.strip(',').split(',')
 
@@ -196,14 +194,12 @@ def parse_args(options, identity='main'):
                 sys.exit(2)
 
 
-    ### assemble strain list
+    ### assemble sample list
     options.samples = []
-    options.strains = []
     if identity != 'viz':
         for i in range(len(options.bam_fnames)):
             options.samples.append(re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[cC][rR][aA][mM]$', '', options.bam_fnames[i].split('/')[-1]))
-            options.strains.append('%s%s' % (ref_tag, options.samples[-1]))
-        options.strains = np.array(options.strains)
+    options.samples = np.array(options.samples, dtype='str')
 
     ### adapt graph validation requirement to max number of samples
     if hasattr(options, 'sg_min_edge_count'):

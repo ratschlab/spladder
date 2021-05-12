@@ -28,7 +28,7 @@ from .helpers import log_progress, decodeUTF8, codeUTF8
 
 TIME0 = time.time()
 
-def _get_gene_expression(options, fname_exp_hdf5, strain_subset=None):
+def _get_gene_expression(options, fname_exp_hdf5, sample_subset=None):
 
     IN = h5py.File(fname_exp_hdf5, 'r')
 
@@ -36,17 +36,17 @@ def _get_gene_expression(options, fname_exp_hdf5, strain_subset=None):
         gene_counts = IN['raw_count_non_alt'][:]
     else:
         gene_counts = IN['raw_count'][:]
-    strains = decodeUTF8(IN['strains'][:])
+    samples = decodeUTF8(IN['samples'][:])
     gene_ids = decodeUTF8(IN['gene_ids'][:])
     gene_symbols = decodeUTF8(IN['gene_symbols'][:])
     IN.close()
 
-    if strain_subset is None:
-        strain_idx = np.arange(strains.shape[0])
+    if sample_subset is None:
+        sample_idx = np.arange(samples.shape[0])
     else:
-        strain_idx = np.where(strains == strain_subset[:, np.newaxis])[1]
+        sample_idx = np.where(samples == sample_subset[:, np.newaxis])[1]
 
-    return (gene_counts[:, strain_idx], strains[strain_idx], strain_idx, gene_ids, gene_symbols)
+    return (gene_counts[:, sample_idx], samples[sample_idx], sample_idx, gene_ids, gene_symbols)
 
 
 def re_quantify_events(options):
@@ -546,16 +546,16 @@ def spladder_test(options):
     options.fname_count_in = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, options.merge, val_tag))
     options.fname_exp_hdf5 = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.gene_exp.hdf5' % (options.confidence, options.merge, val_tag))
 
-    condition_strains = np.r_[np.array(options.conditionA), np.array(options.conditionB)]
+    condition_samples = np.r_[np.array(options.conditionA), np.array(options.conditionB)]
     if options.verbose:
         print('Loading expression counts from %s' % options.fname_exp_hdf5)
-        gene_counts, gene_strains, gene_strain_idx, gene_ids, gene_symbols = _get_gene_expression(options, options.fname_exp_hdf5, strain_subset=condition_strains)
+        gene_counts, gene_samples, gene_sample_idx, gene_ids, gene_symbols = _get_gene_expression(options, options.fname_exp_hdf5, sample_subset=condition_samples)
 
-    gene_strains = np.array([x.split(':')[1] if ':' in x else x for x in gene_strains])
+    gene_samples = np.array([x.split(':')[1] if ':' in x else x for x in gene_samples])
 
     ### get index of samples for difftest
-    idx1 = gene_strain_idx[:len(options.conditionA)]
-    idx2 = gene_strain_idx[len(options.conditionA):]
+    idx1 = gene_sample_idx[:len(options.conditionA)]
+    idx2 = gene_sample_idx[len(options.conditionA):]
 
     ### estimate size factors for library size normalization
     sf_ge = get_size_factors(gene_counts, options)
@@ -593,7 +593,7 @@ def spladder_test(options):
                 continue
 
         ### quantify events
-        (cov, psi, gene_idx, event_idx, event_ids, event_strains) = quantify.quantify_from_counted_events(options.fname_events, idx1, idx2, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
+        (cov, psi, gene_idx, event_idx, event_ids, event_samples) = quantify.quantify_from_counted_events(options.fname_events, idx1, idx2, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
 
         if options.cap_outliers:
             log_counts = np.log2(cov[0] + 1)
@@ -617,7 +617,7 @@ def spladder_test(options):
         sf = np.r_[sf_ev, sf_ge]
         #sf = np.r_[sf_ge, sf_ge]
 
-        assert(np.all(gene_strains == event_strains))
+        assert(np.all(gene_samples == event_samples))
 
         ### map gene expression to event order
         curr_gene_counts = gene_counts[gene_idx, :]
@@ -710,7 +710,7 @@ def spladder_test(options):
         pvals_adj = adj_pval(pvals, options)
 
         ### compute means and fold changes
-        s = event_strains.shape[0]
+        s = event_samples.shape[0]
         m_ev1 = np.nanmean(cov_used[:, :idx1.shape[0]] / sf_ev[:idx1.shape[0]], axis=1)
         m_ev2 = np.nanmean(cov_used[:, idx1.shape[0]:s] / sf_ev[idx1.shape[0]:], axis=1)
         m_ge1 = np.nanmean(cov_used[:, s:s+idx1.shape[0]] / sf_ge[:idx1.shape[0]], axis=1)
@@ -743,8 +743,8 @@ def spladder_test(options):
         ###
 
         ### write test summary (what has been tested, which bam files, etc. ...)
-        pickle.dump({'gene_strains':gene_strains,
-                     'event_strains':event_strains,
+        pickle.dump({'gene_samples':gene_samples,
+                     'event_samples':event_samples,
                      'dmatrix0':dmatrix0,
                      'dmatrix1':dmatrix1,
                      'event_type':event_type,
@@ -766,7 +766,7 @@ def spladder_test(options):
         out_fname = os.path.join(outdir, 'test_results_extended_C%i_%s.tsv' % (options.confidence, event_type))
         if options.verbose:
             print('Writing extended test results to %s' % out_fname)
-        header_long = np.r_[header, ['event_count:%s' % x for x in event_strains], ['gene_exp:%s' % x for x in event_strains], ['disp_raw', 'disp_adj']]
+        header_long = np.r_[header, ['event_count:%s' % x for x in event_samples], ['gene_exp:%s' % x for x in event_samples], ['disp_raw', 'disp_adj']]
 
         data_out = np.c_[data_out, (cov_used[s_idx, :] / sf).astype('str'), disp_raw_used[s_idx].astype('str'), disp_adj_used[s_idx].astype('str')]
         np.savetxt(out_fname, np.r_[header_long[np.newaxis, :], data_out], delimiter='\t', fmt='%s')

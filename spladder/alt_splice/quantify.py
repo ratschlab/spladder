@@ -258,14 +258,14 @@ def quantify_mutex_exons(event, gene, counts_segments, counts_edges):
     return cov
 
 
-def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, event_type=None, options=None, out_fn=None, gen_event_ids=False, high_mem=False):
+def quantify_from_counted_events(event_fn, sample_idx1=None, sample_idx2=None, event_type=None, options=None, out_fn=None, gen_event_ids=False, high_mem=False):
 
     ### set parameters if called by rproc
-    if strain_idx1 is None:
+    if sample_idx1 is None:
         PAR = event_fn
         event_fn = PAR['event_fn']
-        strain_idx1 = PAR['strain_idx1']
-        strain_idx2 = PAR['strain_idx2']
+        sample_idx1 = PAR['sample_idx1']
+        sample_idx2 = PAR['sample_idx2']
         if 'out_fn' in PAR:
             out_fn = PAR['out_fn']
         event_type = PAR['event_type']
@@ -339,7 +339,7 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         raise Error('Event type %s either not known or not implemented for testing yet' % event_type)
 
     ### init coverage matrix
-    cov = [np.zeros((conf_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float'), np.zeros((conf_idx.shape[0], strain_idx1.shape[0] + strain_idx2.shape[0]), dtype='float')]
+    cov = [np.zeros((conf_idx.shape[0], sample_idx1.shape[0] + sample_idx2.shape[0]), dtype='float'), np.zeros((conf_idx.shape[0], sample_idx1.shape[0] + sample_idx2.shape[0]), dtype='float')]
 
     for c in pos0e:
         assert(np.all((c[:, 1] - c[:, 0]) >= 0))
@@ -347,24 +347,24 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
         assert(np.all((c[:, 1] - c[:, 0]) >= 0))
 
     ### tackle unsorted input
-    sidx1 = np.argsort(strain_idx1)
-    sidx2 = np.argsort(strain_idx2)
+    sidx1 = np.argsort(sample_idx1)
+    sidx2 = np.argsort(sample_idx2)
     ridx1 = np.argsort(sidx1)
     ridx2 = np.argsort(sidx2)
-    strain_idx1 = strain_idx1[sidx1]
-    strain_idx2 = strain_idx2[sidx2]
-    idx1_len = strain_idx1.shape[0]
+    sample_idx1 = sample_idx1[sidx1]
+    sample_idx2 = sample_idx2[sidx2]
+    idx1_len = sample_idx1.shape[0]
 
     ### get counts for exon segments
     if options.use_exon_counts:
         if options.verbose:
             print('Collecting exon segment expression values')
         for f, ff in enumerate(fidx0e):
-            cov[0][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
-            cov[0][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
+            cov[0][:, :idx1_len] += (IN['event_counts'][sample_idx1, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
+            cov[0][:, idx1_len:] += (IN['event_counts'][sample_idx2, ff[0], :][:, conf_idx].T * (pos0e[f][conf_idx, 1].T - pos0e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
         for f, ff in enumerate(fidx1e):
-            cov[1][:, :idx1_len] += (IN['event_counts'][strain_idx1, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
-            cov[1][:, idx1_len:] += (IN['event_counts'][strain_idx2, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
+            cov[1][:, :idx1_len] += (IN['event_counts'][sample_idx1, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
+            cov[1][:, idx1_len:] += (IN['event_counts'][sample_idx2, ff[0], :][:, conf_idx].T * (pos1e[f][conf_idx, 1].T - pos1e[f][conf_idx, 0])[:, np.newaxis]) / options.readlen
 
     ### get counts for introns
     if options.verbose:
@@ -372,45 +372,45 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     cnt1 = []
     cnt2 = []
     for f in fidx0i:
-        cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
-        cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
-        #cov[0][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
-        #cov[0][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
+        cnt1.append(IN['event_counts'][sample_idx1, f[0], :][:, conf_idx].T)
+        cnt2.append(IN['event_counts'][sample_idx2, f[0], :][:, conf_idx].T)
+        #cov[0][:, :idx1_len] += IN['event_counts'][sample_idx1, f[0], :][:, conf_idx].T
+        #cov[0][:, idx1_len:] += IN['event_counts'][sample_idx2, f[0], :][:, conf_idx].T
     if len(fidx0i) > 0:
         cov[0][:, :idx1_len] += np.array(cnt1).min(axis=0)
         cov[0][:, idx1_len:] += np.array(cnt2).min(axis=0)
     cnt1 = []
     cnt2 = []
     for f in fidx1i:
-        #cov[1][:, :idx1_len] += IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T
-        #cov[1][:, idx1_len:] += IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T
-        cnt1.append(IN['event_counts'][strain_idx1, f[0], :][:, conf_idx].T)
-        cnt2.append(IN['event_counts'][strain_idx2, f[0], :][:, conf_idx].T)
+        #cov[1][:, :idx1_len] += IN['event_counts'][sample_idx1, f[0], :][:, conf_idx].T
+        #cov[1][:, idx1_len:] += IN['event_counts'][sample_idx2, f[0], :][:, conf_idx].T
+        cnt1.append(IN['event_counts'][sample_idx1, f[0], :][:, conf_idx].T)
+        cnt2.append(IN['event_counts'][sample_idx2, f[0], :][:, conf_idx].T)
     if len(fidx1i) > 0:
         cov[1][:, :idx1_len] += np.array(cnt1).min(axis=0)
         cov[1][:, idx1_len:] += np.array(cnt2).min(axis=0)
     del cnt1, cnt2
 
     ### get psi values
-    psi = np.c_[IN['psi'][:, conf_idx][strain_idx1, :].T, IN['psi'][:, conf_idx][strain_idx2, :].T]
+    psi = np.c_[IN['psi'][:, conf_idx][sample_idx1, :].T, IN['psi'][:, conf_idx][sample_idx2, :].T]
 
-    ### get strain list
-    strains1 = decodeUTF8(IN['strains'][:][strain_idx1])
+    ### get sample list
+    samples1 = decodeUTF8(IN['samples'][:][sample_idx1])
     cov[0][:, :idx1_len] = cov[0][:, :idx1_len]
     cov[1][:, :idx1_len] = cov[1][:, :idx1_len]
-    strains2 = decodeUTF8(IN['strains'][:][strain_idx2])
+    samples2 = decodeUTF8(IN['samples'][:][sample_idx2])
     cov[0][:, idx1_len:] = cov[0][:, idx1_len:]
     cov[1][:, idx1_len:] = cov[1][:, idx1_len:]
     
     ## re-establish the original sorting
-    strains = np.r_[strains1[ridx1], strains2[ridx2]]
+    samples = np.r_[samples1[ridx1], samples2[ridx2]]
     cov[0][:, :idx1_len] = cov[0][:, :idx1_len][:, ridx1]
     cov[0][:, idx1_len:] = cov[0][:, idx1_len:][:, ridx2]
     cov[1][:, :idx1_len] = cov[1][:, :idx1_len][:, ridx1]
     cov[1][:, idx1_len:] = cov[1][:, idx1_len:][:, ridx2]
 
-    if strains[0].endswith('npz'):
-        strains = np.array([re.sub(r'.[nN][pP][zZ]$', '', x) for x in strains])
+    if samples[0].endswith('npz'):
+        samples = np.array([re.sub(r'.[nN][pP][zZ]$', '', x) for x in samples])
 
     ### get list of event IDs - we will use these to make event forms unique
     event_ids = None
@@ -428,16 +428,16 @@ def quantify_from_counted_events(event_fn, strain_idx1=None, strain_idx2=None, e
     cov[0] = np.floor(cov[0])
     cov[1] = np.floor(cov[1])
 
-    return (cov, psi, gene_idx, event_idx, event_ids, strains)
+    return (cov, psi, gene_idx, event_idx, event_ids, samples)
 
 
-def quantify_from_graph(ev, strain_idx=None, event_type=None, options=None, out_fn=None, fn_merge=None):
+def quantify_from_graph(ev, sample_idx=None, event_type=None, options=None, out_fn=None, fn_merge=None):
 
     ### set parameters if called by rproc
-    if strain_idx is None:
+    if sample_idx is None:
         PAR = ev
         ev = PAR['ev']
-        strain_idx = PAR['strain_idx']
+        sample_idx = PAR['sample_idx']
         if 'out_fn' in PAR:
             out_fn = PAR['out_fn']
         event_type = PAR['event_type']
@@ -496,14 +496,12 @@ def quantify_from_graph(ev, strain_idx=None, event_type=None, options=None, out_
         assert(gene_ids_edges[genes_f_idx_edges[gr_idx_edges]] == g_idx)
 
         ### laod relevant count data from HDF5
-        segments = IN['segments'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
-        seg_pos = IN['seg_pos'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, strain_idx]
-        edges = IN['edges'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1, strain_idx]
+        segments = IN['segments'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, sample_idx]
+        seg_pos = IN['seg_pos'][genes_f_idx_segs[gr_idx_segs]:genes_l_idx_segs[gr_idx_segs]+1, sample_idx]
+        edges = IN['edges'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1, sample_idx]
         edge_idx = IN['edge_idx'][genes_f_idx_edges[gr_idx_edges]:genes_l_idx_edges[gr_idx_edges]+1]
 
-        for s_idx in range(len(strain_idx)):
-            #print '%i/%i' % (s_idx, len(strain_idx))
-
+        for s_idx in range(len(sample_idx)):
             if event_type == 'exon_skip':
                 cov = quantify_exon_skip(ev[i], genes[g_idx - offset], segments[:, s_idx].T,  np.c_[edge_idx, edges[:, s_idx]])
             elif event_type in ['alt_3prime', 'alt_5prime']:

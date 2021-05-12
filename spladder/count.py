@@ -147,8 +147,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
             print('\nquantifying merged graph in single mode (first file only) on %s' % options.samples[0])
             counts_tmp = count_graph_coverage(genes, options.bam_fnames[0], options)
         else:
-            for s_idx in range(options.strains.shape[0]):
-                print('\n%i/%i' % (s_idx + 1, options.strains.shape[0]))
+            for s_idx in range(options.samples.shape[0]):
+                print('\n%i/%i' % (s_idx + 1, options.samples.shape[0]))
                 if s_idx == 0:
                     counts_tmp = count_graph_coverage(genes, options.bam_fnames[s_idx], options)
                 else:
@@ -172,7 +172,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
         counts['edge_idx'] = counts['edges'][:, 0] if len(counts['edges']) > 0 else np.array([])
         counts['edges'] = counts['edges'][:, 1:] if len(counts['edges']) > 0 else np.array([])
         h5fid = h5py.File(fname_out, 'w')
-        h5fid.create_dataset(name='strains', data=codeUTF8(options.strains))
+        h5fid.create_dataset(name='samples', data=codeUTF8(options.samples))
+        h5fid['strains'] = h5py.SoftLink('/samples')
         for key in counts:
             if np.issubdtype(counts[key].dtype, np.str_):
                 h5fid.create_dataset(name=key, data=codeUTF8(counts[key]))
@@ -180,11 +181,11 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
                 h5fid.create_dataset(name=key, data=counts[key])
         h5fid.close()
     else:
-        ### have an adaptive chunk size, that takes into account the number of strains (take as many genes as it takes to have ~10K strains)
+        ### have an adaptive chunk size, that takes into account the number of samples (take as many genes as it takes to have ~10K samples)
         if options.sparse_bam:
-            chunksize = int(max(1, math.floor(1000000 / len(options.strains))))
+            chunksize = int(max(1, math.floor(1000000 / len(options.samples))))
         else:
-            chunksize = int(max(1, math.floor(100000 / len(options.strains))))
+            chunksize = int(max(1, math.floor(100000 / len(options.samples))))
 
         jobinfo = []
 
@@ -193,7 +194,6 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
         if options.merge == 'single':
             PAR['options'].bam_fnames = PAR['options'].bam_fnames[sample_idx]
             PAR['options'].samples = PAR['options'].samples[sample_idx]
-            PAR['options'].strains = PAR['options'].strains[sample_idx]
 
         #s_idx = np.argsort([x.chr for x in genes]) # TODO
         s_idx = np.arange(genes.shape[0])
@@ -224,7 +224,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
         h5fid = h5py.File(fname_out, 'w')
         h5fid.create_dataset(name='gene_names', data=codeUTF8(counts['gene_names']))
         h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
-        h5fid.create_dataset(name='strains', data=codeUTF8(options.strains))
+        h5fid.create_dataset(name='samples', data=codeUTF8(options.samples))
+        h5fid['strains'] = h5py.SoftLink('/samples')
         for c_idx in range(0, s_idx.shape[0], chunksize):
             cc_idx = min(s_idx.shape[0], c_idx + chunksize)
             if options.verbose:
@@ -241,8 +242,8 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
                         appendToHDF5(h5fid, np.hstack([np.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), 'seg_pos') 
                         appendToHDF5(h5fid, np.ones((np.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (s_idx[c_idx + c]), 'gene_ids_segs')
                     else:
-                        h5fid.create_dataset(name='segments', data=np.hstack([np.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.strains)))
-                        h5fid.create_dataset(name='seg_pos', data=np.hstack([np.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.strains)))
+                        h5fid.create_dataset(name='segments', data=np.hstack([np.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.samples)))
+                        h5fid.create_dataset(name='seg_pos', data=np.hstack([np.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.samples)))
                         h5fid.create_dataset(name='gene_ids_segs', data=np.ones((np.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
 
                     tmp = [np.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0]
@@ -287,15 +288,15 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
                 h5fid.create_dataset(name='edges', data=CIN['edges'][:], chunks=True, compression='gzip', maxshape=(CIN['edges'].shape[0], None))
                 h5fid.create_dataset(name='segments', data=CIN['segments'][:], chunks=True, compression='gzip', maxshape=(CIN['segments'].shape[0], None))
                 h5fid.create_dataset(name='seg_pos', data=CIN['seg_pos'][:], chunks=True, compression='gzip', maxshape=(CIN['seg_pos'].shape[0], None))
-                h5fid.create_dataset(name='strains', data=CIN['strains'][:], dtype='|S255', chunks=True, compression='gzip', maxshape=(None,))
+                h5fid.create_dataset(name='samples', data=CIN['samples'][:], dtype='|S255', chunks=True, compression='gzip', maxshape=(None,))
             else:
                 appendToHDF5(h5fid, CIN['edges'][:], 'edges', faxis=1, daxis=1)
                 appendToHDF5(h5fid, CIN['segments'][:], 'segments', faxis=1, daxis=1)
                 appendToHDF5(h5fid, CIN['seg_pos'][:], 'seg_pos', faxis=1, daxis=1)
-                appendToHDF5(h5fid, CIN['strains'][:], 'strains', faxis=0, daxis=0)
+                appendToHDF5(h5fid, CIN['samples'][:], 'samples', faxis=0, daxis=0)
         h5fid.close() 
 
-def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, strain_idx=None):
+def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, sample_idx=None):
 
     if options.verbose:
         sys.stdout.write('Quantifying gene expression ...\n')
@@ -306,12 +307,12 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
 
     ### open hdf5 file containing graph count information
     IN = h5py.File(fname_count_in, 'r')
-    strains = IN['strains'][:].astype('str')
-    ### sort by strain ID
-    if strain_idx is None:
-        strain_idx = np.arange(strains.shape[0])
-    gene_counts = np.zeros((numgenes, len(strain_idx)), dtype='float')
-    gene_counts_non_alt = np.zeros((numgenes, len(strain_idx)), dtype='float')
+    samples = IN['samples'][:].astype('str')
+    ### sort by sample ID
+    if sample_idx is None:
+        sample_idx = np.arange(samples.shape[0])
+    gene_counts = np.zeros((numgenes, len(sample_idx)), dtype='float')
+    gene_counts_non_alt = np.zeros((numgenes, len(sample_idx)), dtype='float')
     gene_ids = np.array([x.name for x in genes], dtype='str')
     gene_symbols = np.array([x.symbol if (not x is None) and hasattr(x, 'symbol') else 'NA' for x in genes], dtype='str')
 
@@ -349,18 +350,18 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
         assert(genes[gidx].name == gene_ids[gidx])
 
         if seg_idx.shape[0] > 1:
-            gene_counts[gidx, :] = np.squeeze(np.dot(seg_buffer[seg_idx - co, :][:, strain_idx].T, seg_lens[seg_idx])) / options.readlen
+            gene_counts[gidx, :] = np.squeeze(np.dot(seg_buffer[seg_idx - co, :][:, sample_idx].T, seg_lens[seg_idx])) / options.readlen
         else:
-            gene_counts[gidx, :] = seg_buffer[seg_idx[0] - co, :][strain_idx] * seg_lens[seg_idx] / options.readlen
+            gene_counts[gidx, :] = seg_buffer[seg_idx[0] - co, :][sample_idx] * seg_lens[seg_idx] / options.readlen
 
         ### get idx of non alternative segments
         non_alt_idx = genes[gidx].get_non_alt_seg_ids()
         seg_idx = seg_idx[non_alt_idx]
 
         if seg_idx.shape[0] > 1:
-            gene_counts_non_alt[gidx, :] = np.squeeze(np.dot(seg_buffer[seg_idx - co, :][:, strain_idx].T, seg_lens[seg_idx])) / options.readlen
+            gene_counts_non_alt[gidx, :] = np.squeeze(np.dot(seg_buffer[seg_idx - co, :][:, sample_idx].T, seg_lens[seg_idx])) / options.readlen
         else:
-            gene_counts_non_alt[gidx, :] = seg_buffer[seg_idx[0] - co, :][strain_idx] * seg_lens[seg_idx] / options.readlen
+            gene_counts_non_alt[gidx, :] = seg_buffer[seg_idx[0] - co, :][sample_idx] * seg_lens[seg_idx] / options.readlen
 
     IN.close()
 
@@ -374,7 +375,8 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
     ### write results to hdf5
     if fn_out is not None:
         OUT = h5py.File(fn_out, 'w')
-        OUT.create_dataset(name='strains', data=codeUTF8(strains[strain_idx]), compression='gzip')
+        OUT.create_dataset(name='samples', data=codeUTF8(samples[sample_idx]), compression='gzip')
+        OUT['strains'] = h5py.SoftLink('/samples')
         OUT.create_dataset(name='gene_ids', data=codeUTF8(gene_ids), compression='gzip')
         OUT.create_dataset(name='gene_symbols', data=codeUTF8(gene_symbols), compression='gzip')
         OUT.create_dataset(name='raw_count', data=gene_counts, compression='gzip', chunks=True)

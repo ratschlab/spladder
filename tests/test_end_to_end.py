@@ -94,23 +94,13 @@ def _codeUTF8(s):
     return s.view(np.chararray).encode('utf-8')
 
 def _compare_gene(a, b):
-    if np.issubdtype(a.strain.dtype, np.str_):
-        _astrain = _codeUTF8(a.strain)
-    else:
-        _astrain = a.strain
-    if np.issubdtype(b.strain.dtype, np.str_):
-        _bstrain = _codeUTF8(b.strain)
-    else:
-        _bstrain = b.strain
 
     return ((a.chr == b.chr) &
             (a.strand == b.strand) &
             (np.all(a.exons1 == b.exons1)) &
             (np.all(a.exons2 == b.exons2)) &
-            (np.all(_astrain == _bstrain)) &
             (a.event_type == b.event_type) &
-            (a.gene_idx == b.gene_idx) &
-            (a.num_detected == b.num_detected))
+            (a.gene_idx == b.gene_idx))
 
 def _check_files_spladder(result_dir, out_dir, prefix):
     files = []

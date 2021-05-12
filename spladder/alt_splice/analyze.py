@@ -30,8 +30,9 @@ def _prepare_count_hdf5(options, OUT, event_features, sample_idx=None):
         else:
             (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag), 'rb'))
 
-    ### write strain and gene indices to hdf5
-    OUT.create_dataset(name='strains', data=codeUTF8(options.strains))
+    ### write sample and gene indices to hdf5
+    OUT.create_dataset(name='samples', data=codeUTF8(options.samples))
+    OUT['strains'] = h5py.SoftLink('/samples')
     OUT.create_dataset(name='event_features', data=codeUTF8(np.array(event_features, dtype='str')))
     OUT.create_dataset(name='gene_names', data=codeUTF8(np.array([x.name for x in genes], dtype='str')))
     OUT.create_dataset(name='gene_chr', data=codeUTF8(np.array([x.chr for x in genes], dtype='str')))
@@ -85,7 +86,7 @@ def analyze_events(options, event_type, sample_idx=None):
     if not os.path.exists(fn_out_count):
 
         events_all = pickle.load(open(fn_out, 'rb'))
-        events_all_strains = options.strains
+        events_all_samples = options.samples
 
         ### handle case where we did not find any event of this type
         if np.sum([x.event_type == event_type for x in events_all]) == 0:
@@ -99,7 +100,7 @@ def analyze_events(options, event_type, sample_idx=None):
                 if options.merge == 'single':
                     (events_all, counts, verified) = verify_all_events(events_all, sample_idx, options.bam_fnames, event_type, options)
                 else:
-                    (events_all, counts, verified) = verify_all_events(events_all, np.arange(len(options.strains)), options.bam_fnames, event_type, options)
+                    (events_all, counts, verified) = verify_all_events(events_all, np.arange(len(options.samples)), options.bam_fnames, event_type, options)
 
                 psi = np.empty((counts.shape[0], counts.shape[2]), dtype='float')
                 iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
@@ -119,21 +120,21 @@ def analyze_events(options, event_type, sample_idx=None):
                 jobinfo = []
                 PAR = dict()
                 chunk_size_events = 5000
-                chunk_size_strains = 500
+                chunk_size_samples = 500
                 for i in range(0, events_all.shape[0], chunk_size_events):
                     idx_events = np.arange(i, min(i + chunk_size_events, events_all.shape[0]))
-                    for j in range(0, len(options.strains), chunk_size_strains):
-                        idx_strains = np.arange(j, min(j + chunk_size_strains, len(options.strains)))
+                    for j in range(0, len(options.samples), chunk_size_samples):
+                        idx_samples = np.arange(j, min(j + chunk_size_samples, len(options.samples)))
                         PAR['ev'] = events_all[idx_events].copy()
-                        PAR['strain_idx'] = idx_strains
+                        PAR['sample_idx'] = idx_samples
                         PAR['list_bam'] = options.bam_fnames
                         PAR['out_fn'] = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (options.outdir, event_type, i, j, options.confidence)
                         PAR['event_type'] = event_type
                         PAR['options'] = options
                         if os.path.exists(PAR['out_fn']):
-                            print('Chunk event %i, strain %i already completed' % (i, j))
+                            print('Chunk event %i, sample %i already completed' % (i, j))
                         else:
-                            print('Submitting job %i, event chunk %i/%i, strain chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j))
+                            print('Submitting job %i, event chunk %i/%i, sample chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j))
                             jobinfo.append(rproc('verify_all_events', PAR, 10000, options.options_rproc, 60 * 12))
                 
                 rproc_wait(jobinfo, 20, 1.0, 1)
@@ -146,9 +147,9 @@ def analyze_events(options, event_type, sample_idx=None):
                 OUT = h5py.File(fn_out_count, 'w')
                 for i in range(0, events_all.shape[0], chunk_size_events):
                     idx_events = np.arange(i, min(i + chunk_size_events, events_all.shape[0]))
-                    for j in range(0, len(options.strains), chunk_size_strains):
-                        idx_strains = np.arange(j, min(j + chunk_size_strains, len(options.strains)))
-                        print('\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(options.strains)))
+                    for j in range(0, len(options.samples), chunk_size_samples):
+                        idx_samples = np.arange(j, min(j + chunk_size_samples, len(options.samples)))
+                        print('\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(options.samples)))
                         out_fn = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (options.outdir, event_type, i, j, options.confidence)
                         if not os.path.exists(out_fn):
                             print('ERROR: not finished %s' % out_fn, file=sys.stderr)
@@ -172,7 +173,7 @@ def analyze_events(options, event_type, sample_idx=None):
                         (psi[:, j], iso2[:, j], iso1[:, j]) = compute_psi(counts[:, :, j], event_type, options) 
 
                     if i == 0:
-                        OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(options.strains), len(event_features[event_type]), None), compression='gzip')
+                        OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(options.samples), len(event_features[event_type]), None), compression='gzip')
                         OUT.create_dataset(name='psi', data=np.atleast_2d(psi), maxshape=(psi.shape[0], None), compression='gzip')
                         OUT.create_dataset(name='iso1', data=np.atleast_2d(iso1), maxshape=(iso1.shape[0], None), compression='gzip')
                         OUT.create_dataset(name='iso2', data=np.atleast_2d(iso2), maxshape=(iso2.shape[0], None), compression='gzip')
@@ -229,7 +230,6 @@ def analyze_events(options, event_type, sample_idx=None):
             OUT.close()
 
         ### save events
-        #cPickle.dump((events_all_info, events_all_strains), open(fn_out_info, 'w'), -1)
         pickle.dump(confirmed_idx, open(fn_out_conf, 'wb'), -1)
 
     else:
@@ -247,7 +247,7 @@ def analyze_events(options, event_type, sample_idx=None):
         if os.path.exists(fn_out_txt):
             print('%s already exists' % fn_out_txt)
         else:
-            write_events_txt(fn_out_txt, options.strains, events_all, fn_out_count)
+            write_events_txt(fn_out_txt, options.samples, events_all, fn_out_count)
 
     if options.output_struc:
         if os.path.exists(fn_out_struc):
@@ -264,7 +264,7 @@ def analyze_events(options, event_type, sample_idx=None):
     if isinstance(sample_idx, int):
         sample_idx = [sample_idx]
     elif sample_idx is None:
-        sample_idx = np.arange(options.strains.shape[0])
+        sample_idx = np.arange(options.samples.shape[0])
 
     if options.output_gff3:
         if os.path.exists(fn_out_gff3):
@@ -282,7 +282,7 @@ def analyze_events(options, event_type, sample_idx=None):
         if os.path.exists(fn_out_conf_txt):
             print('%s already exists' % fn_out_conf_txt)
         else:
-            write_events_txt(fn_out_conf_txt, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
+            write_events_txt(fn_out_conf_txt, options.samples[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
     if options.output_confirmed_bed:
         if os.path.exists(fn_out_conf_bed):
@@ -306,13 +306,13 @@ def analyze_events(options, event_type, sample_idx=None):
         if os.path.exists(fn_out_conf_tcga):
             print('%s already exists' % fn_out_conf_tcga)
         else:
-            write_events_tcga(fn_out_conf_tcga, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
+            write_events_tcga(fn_out_conf_tcga, options.samples[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
     if options.output_confirmed_icgc:
         if os.path.exists(fn_out_conf_icgc):
             print('%s already exists' % fn_out_conf_icgc)
         else:
-            write_events_icgc(fn_out_conf_icgc, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
+            write_events_icgc(fn_out_conf_icgc, options.samples[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx)
 
     if options.output_filtered_txt:
         fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.05.txt')
@@ -320,13 +320,13 @@ def analyze_events(options, event_type, sample_idx=None):
             print('%s already exists' % fn_out_conf_txt)
         else:
             print('\nWriting filtered events (sample freq 0.05):')
-            cf_idx = np.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * options.strains.shape[0]))[0]
-            write_events_txt(fn_out_conf_txt, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+            cf_idx = np.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.05 * options.samples.shape[0]))[0]
+            write_events_txt(fn_out_conf_txt, options.samples[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
 
         fn_out_conf_txt = fn_out_conf.replace('.pickle', '.filt0.1.txt')
         if os.path.exists(fn_out_conf_txt):
             print('%s already exists' %  fn_out_conf_txt)
         else:
             print('\nWriting filtered events (sample freq 0.01):')
-            cf_idx = np.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * options.strains.shape[0]))[0]
-            write_events_txt(fn_out_conf_txt, options.strains[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
+            cf_idx = np.where([x.confirmed for x in events_all[confirmed_idx]] >= (0.01 * options.samples.shape[0]))[0]
+            write_events_txt(fn_out_conf_txt, options.samples[sample_idx], events_all, fn_out_count, event_idx=confirmed_idx[cf_idx])
