@@ -165,7 +165,7 @@ def parse_options(argv):
     parser_prep = subparsers.add_parser('prep', help='run mode to perform input preparations')
 
     align = parser_prep.add_argument_group('ALIGNMENTS')
-    align.add_argument('-b', '--bams', dest='bams', metavar='FILE1,FILE2,...', help='alignment files in BAM format (comma separated list)', default='-', required=True)
+    align.add_argument('-b', '--bams', dest='bams', metavar='FILE1,FILE2,...', help='alignment files in BAM format (comma separated list)', default='-', required=False)
     align.add_argument('--sparse-bam', dest='sparse_bam', action='store_true', help='store BAM content as sparse representation for later use [off]', default=False)
     align.add_argument('-n', '--readlen', dest='readlen', metavar='INT', type=int, help='read length (used for automatic confidence levele settings) [36]', default=50)
     align.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)
@@ -178,7 +178,7 @@ def parse_options(argv):
     align.add_argument('--reference', dest='ref_genome', metavar='FILE', help='reference genome (only needed for CRAM file de-compression or consensus filtering)', default='')
 
     anno = parser_prep.add_argument_group('ANNOTATION')
-    anno.add_argument('-a', '--annotation', dest='annotation', metavar='FILE', help='file name for annotation in GTF/GFF3 or format', default='-', required=True)
+    anno.add_argument('-a', '--annotation', dest='annotation', metavar='FILE', help='file name for annotation in GTF/GFF3 or format', default='-', required=False)
     anno.add_argument('--filter-overlap-genes', dest='filter_overlap_genes', action='store_true', help='remove genes from annotation that overlap each other [off]', default=False)
     anno.add_argument('--filter-overlap-exons', dest='filter_overlap_exons', action='store_true', help='remove exons from annotation that overlap each other [off]', default=False)
     anno.add_argument('--filter-overlap-transcripts', dest='filter_overlap_transcripts', action='store_true', help='remove transcripts from annotation that overlap each other [off]', default=False)
