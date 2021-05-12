@@ -147,7 +147,7 @@ def spladder(options):
         fn_out_gene_count = re.sub(r'.count.hdf5$', '', fn_out_count) + '.gene_exp.hdf5'
 
         ### count segment graph
-        if options.extract_as and options.quantify_graph:
+        if options.quantify_graph:
             if not os.path.exists(fn_out_count):
                 ### collect graph counts
                 if options.merge == 'single':
