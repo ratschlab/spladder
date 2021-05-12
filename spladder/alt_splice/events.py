@@ -85,12 +85,11 @@ def make_unique_by_event(event_list):
         old_coords = event_list[last_kept].get_inner_coords()
         curr_coords = event_list[i].get_inner_coords()
 
-        if old_coords.shape[0] == curr_coords.shape[0] and np.all(old_coords == curr_coords):
+        if old_coords.shape[0] == curr_coords.shape[0] and \
+           np.all(old_coords == curr_coords) and \
+           event_list[last_kept].chr == event_list[i].chr and \
+           event_list[last_kept].strand == event_list[i].strand:
 
-            ### assertion that we did everything right
-            assert(event_list[last_kept].chr == event_list[i].chr)
-            assert(event_list[last_kept].strand == event_list[i].strand)
-            
             ### check, which event is longer -> keep shorter event
             len1 = event_list[last_kept].get_len()
             len2 = event_list[i].get_len()
