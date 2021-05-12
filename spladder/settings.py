@@ -199,6 +199,7 @@ def parse_args(options, identity='main'):
     if identity != 'viz':
         for i in range(len(options.bam_fnames)):
             options.samples.append(re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[cC][rR][aA][mM]$', '', options.bam_fnames[i].split('/')[-1]))
+    options.samples = np.array(options.samples, dtype='str')
 
     ### adapt graph validation requirement to max number of samples
     if hasattr(options, 'sg_min_edge_count'):

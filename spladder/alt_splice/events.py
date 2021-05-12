@@ -38,7 +38,7 @@ def post_process_event_struct(events, options):
         return events
 
     ### filter out invalid coordinate projections
-    is_valid = np.array([np.all(_.get_coords(trafo=True) > 0) for _ in events], dtype='bool')
+    is_valid = np.array([np.all(_.get_coords() > 0) for _ in events], dtype='bool')
     events = events[is_valid]
 
     ### sort exons in events
@@ -82,8 +82,8 @@ def make_unique_by_event(event_list):
             if i % 10000 == 0:
                 print('%i' % i)
         
-        old_coords = event_list[last_kept].get_inner_coords(trafo=True)
-        curr_coords = event_list[i].get_inner_coords(trafo=True) 
+        old_coords = event_list[last_kept].get_inner_coords()
+        curr_coords = event_list[i].get_inner_coords()
 
         if old_coords.shape[0] == curr_coords.shape[0] and np.all(old_coords == curr_coords):
 
