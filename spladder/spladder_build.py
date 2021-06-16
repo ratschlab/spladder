@@ -90,7 +90,7 @@ def spladder(options):
         ### convert input BAMs to sparse arrays - filtered case
         if options.sparse_bam:
             for bfn in options.bam_fnames:
-                if bfn.endswith('.bam') and not os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.conf_%i' % options.confidence + '.filt.hdf5'):
+                if bfn.lower().split('.')[-1] in ['bam', 'cram'] and not os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.conf_%i' % options.confidence + '.filt.hdf5'):
 
                     if not hasattr(options, 'chrm_lookup'):
                         IN = pysam.Samfile(bfn, 'rb')
@@ -171,7 +171,7 @@ def spladder(options):
     ### convert input BAMs to sparse arrays - unfiltered case
     if options.sparse_bam:
         for bfn in options.bam_fnames:
-            if bfn.endswith('.bam') and not os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.hdf5'):
+            if bfn.lower().split('.')[-1] in ['bam', 'cram'] and not os.path.exists(re.sub(r'\.[bB][aA][mM]|\.[cC][rR][aA][mM]$', '', bfn) + '.hdf5'):
                 #cnts = dict()
 
                 if not hasattr(options, 'chrm_lookup'):
