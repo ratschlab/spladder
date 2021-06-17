@@ -537,6 +537,7 @@ def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=No
         infile = pysam.AlignmentFile(fname, 'rc', reference_filename=options.cram_ref, ignore_truncation=True)
     else:
         sys.stderr.write('Error: Unknown input alignment format for: %s\n' % fname)
+        sys.exit(1)
 
     introns_p = dict()
     introns_m = dict()
