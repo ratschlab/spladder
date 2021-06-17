@@ -531,7 +531,13 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
 
 def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=None, mapped=True, spliced=True, unstranded=True):
 
-    infile = pysam.Samfile(fname, 'rb')
+    if not re.search(r'\.[bB][aA][mM]$', fname) is None:
+        infile = pysam.AlignmentFile(fname, 'rb')
+    elif not re.search(r'\.[cC][rR][aA][mM]$', fname) is None:
+        infile = pysam.AlignmentFile(fname, 'rc', reference_filename=options.cram_ref, ignore_truncation=True)
+    else:
+        sys.stderr.write('Error: Unknown input alignment format for: %s\n' % fname)
+
     introns_p = dict()
     introns_m = dict()
 

@@ -315,7 +315,13 @@ def init_regions(fn_bams, conf, options=None, sparse_bam=False):
         else:
             if sparse_bam:
                 ### load bamfile
-                IN = h5py.File(re.sub(r'.bam$', '', fn_bams[i]) + '.conf_%i' % conf + '.filt.hdf5', 'r')
+                if fn_bams[i].lower().endswith('.bam'):
+                    IN = h5py.File(re.sub(r'.[bB][aA][mM]$', '', fn_bams[i]) + '.conf_%i' % conf + '.filt.hdf5', 'r')
+                elif fn_bams[i].lower().endswith('.cram'):
+                    IN = h5py.File(re.sub(r'.[cC][rR][aA][mM]$', '', fn_bams[i]) + '.conf_%i' % conf + '.filt.hdf5', 'r')
+                else:
+                    sys.stderr.write('Error: Unknown input alignment format for: %s\n' % fn_bams[i])
+                    sys.exit(1)
                 
                 strands = ['+', '-']
                 for k in IN:
