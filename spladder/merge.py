@@ -355,9 +355,6 @@ def run_merge(options):
     if options.do_prune:
         prune_tag = '_pruned'
 
-    chunksize = 10
-    assert chunksize > 0
-
     fn_out = '%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir , options.confidence, options.merge, prune_tag)
     if options.validate_sg:
         fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.validated.count.hdf5' % (options.outdir, options.confidence, options.merge, prune_tag)
@@ -369,7 +366,7 @@ def run_merge(options):
             jobinfo = []
             PAR = dict()
             PAR['options'] = options
-            levels = int(math.ceil(math.log(len(options.samples), chunksize)))
+            levels = int(math.ceil(math.log(len(options.samples), options.chunksize)))
             for level in range(1, levels + 1):
                 print('merging files on level %i' % level)
                 if level == 1:
@@ -377,17 +374,17 @@ def run_merge(options):
                 else:
                     merge_list = np.array(level_files)
                 level_files = []
-                for c_idx in range(0, len(merge_list), chunksize):
+                for c_idx in range(0, len(merge_list), options.chunksize):
                     if level == levels:
-                        assert(len(merge_list) <= chunksize)
+                        assert len(merge_list) <= options.chunksize, 'chunksize is %i but merge_list has length %i with: %s' % (options.chunksize, len(merge_list), str(merge_list))
                         fn = fn_out
                     else:
-                        fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, level, c_idx, min(len(merge_list), c_idx + chunksize))
+                        fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, level, c_idx, min(len(merge_list), c_idx + options.chunksize))
                     level_files.append(fn)
                     if os.path.exists(fn):
                         continue
-                    print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + chunksize)))
-                    chunk_idx = np.arange(c_idx, min(len(merge_list), c_idx + chunksize))
+                    print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + options.chunksize)))
+                    chunk_idx = np.arange(c_idx, min(len(merge_list), c_idx + options.chunksize))
                     PAR['merge_list'] = merge_list[chunk_idx]
                     PAR['fn_out'] = fn
                     jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, options.options_rproc, 40*60))
@@ -401,7 +398,7 @@ def run_merge(options):
             chunk_end = min(len(merge_list), chunk_end)
 
             if curr_level == max_level:
-                assert(len(merge_list) <= chunksize)
+                assert len(merge_list) <= options.chunksize, 'chunksize is %i but merge_list has length %i with: %s' % (options.chunksize, len(merge_list), str(merge_list))
                 fn = fn_out
             else:
                 fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, curr_level, chunk_start, chunk_end)
