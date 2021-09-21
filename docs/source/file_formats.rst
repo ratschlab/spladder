@@ -1,7 +1,7 @@
 File formats
 ============
 
-Input Formats -- ``build`` mode
+Input Files -- ``build`` mode
 -------------------------------
 
 Annotation Files
@@ -26,7 +26,7 @@ have successfully tested SplAdder with the following aligners:
 - `PALMapper`_
 - `TopHat`_
 
-Output Formats -- ``build`` mode
+Output Files -- ``build`` mode
 --------------------------------
 SplAdder produces a variety of different output files. Here we will mainly discuss files that are
 aimed at the user and omit intermediate files that mainly necessary for internal processes of
@@ -71,13 +71,7 @@ You can easily peek into the content of a hdf5 file::
     /                        Group
     /conf_idx                Dataset {1}
     /event_counts            Dataset {4, 7, 2}
-    /event_features          Group
-    /event_features/alt_3prime Dataset {5}
-    /event_features/alt_5prime Dataset {5}
-    /event_features/exon_skip Dataset {7}
-    /event_features/intron_retention Dataset {6}
-    /event_features/mult_exon_skip Dataset {10}
-    /event_features/mutex_exons Dataset {9}
+    /event_features          Dataset {7}
     /event_pos               Dataset {2, 6}
     /gene_chr                Dataset {1}
     /gene_idx                Dataset {2}
@@ -96,50 +90,7 @@ The event hdf5 is structured as follows:
 
 - **conf_idx**: 0-based index set, containing the index of the events that are confirmed in the provided samples
 - **event_counts**: 3-dimensional matrix (S x F x E) containing counts for each of the E events, F features and S samples
-- **event_features**: group that contains the description of the counted features per event type
-
-    * **features alt3_prime / alt_5prime**: 
-        + **valid**: contains a 1 if the event is valid and 0 otherwise
-        + **exon_diff_cov**: mean coverage of the exonic segment that between the two alternative splice sites 
-        + **exon_const_cov**: mean coverage of the remaining exonic segments in the event
-        + **intron1_conf**: number of spliced alignments spanning the longer intron
-        + **intron2_conf**: number of spliced alignments spanning the shorter intron
-    * **features exon_skip**:
-        + **valid**: contains a 1 if the event is valid and 0 otherwise
-        + **exon_cov**: mean coverage of the cassette exon
-        + **exon_pre_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
-        + **exon_aft_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
-        + **exon_pre_exon_conf**: number of spliced alignments spanning from left flanking to cassette exon
-        + **exon_exon_aft_conf**: number of spliced alignments spanning from cassette to right flanking exon
-        + **exon_pre_exon_aft_conf**: number of spliced alignments spanning from left flanking to right flanking exon
-    * **features intron_retention**:
-        + **valid**: contains a 1 if the event is valid and 0 otherwise
-        + **intron_cov**: mean coverage of the retained intron
-        + **exon1_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
-        + **exon2_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
-        + **intron_conf**: number of spliced alignments spanning the intron
-        + **intron_cov_region**: fraction of positions in the intron that have a coverage > 0
-    * **features mult_exon_skip**:
-        + **valid**: contains a 1 if the event is valid and 0 otherwise
-        + **exon_pre_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
-        + **exons_cov**: mean coverage over all skipped exons
-        + **exon_aft_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
-        + **exon_pre_exon_conf**: number of spliced alignments spanning from left flanking to cassette exon
-        + **exon_exon_aft_conf**: number of spliced alignments spanning from cassette to right flanking exon
-        + **exon_pre_exon_aft_conf**: number of spliced alignments spanning from left flanking to right flanking exon
-        + **sum_inner_exon_conf**: number of spliced alignments spanning any of the introns between neighboring skipped exons
-        + **num_inner_exon**: number of skipped exons
-        + **len_inner_exon**: cumulative length of skipped exons
-    * **features mutex_exons**:
-        + **valid**: contains a 1 if the event is valid and 0 otherwise
-        + **exon_pre_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
-        + **exon1_cov**: mean coverage of the first skipped exon (first defined by genomic coordinates)
-        + **exon2_cov**: mean coverage of the second skipped exon (second defined by genomic coordinates)
-        + **exon_aft_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
-        + **exon_pre_exon1_conf**: number of spliced alignments spanning from left flanking to first exon
-        + **exon_pre_exon2_conf**: number of spliced alignments spanning from left flanking to second exon
-        + **exon1_exon_aft_conf**: number of spliced alignments spanning from first to right flanking exon
-        + **exon2_exon_aft_conf**: number of spliced alignments spanning from second to right flanking exon
+- **event_features**: list containing the description of the counted features per event type
 - **event_pos**: position of all event exons encoded as start,stop pairs for each event (events are rows, coordinates are columns)
 - **gene_chr**: chromosome for each gene in the gene list
 - **gene_idx**: index that maps each event to a gene in the gene list (0-based)
@@ -149,9 +100,61 @@ The event hdf5 is structured as follows:
 - **strains**: names of the samples counted
 - **verified**: bool matrix over events X samples that is 1 if an event was verified in a sample and 0 otherwise
 
-The naming of all these fields could be much more systematic but is currently kept the way it is to
-not break compatibility with existing analysis pipelines. On a long term we plan to describe the
-events and their counts in a more systematic way.
+The naming of features follows a simple logic utilizing the numbering of exon segments as shown in the below
+image. The numbering follows genomic coordinates. That is the below image shows the positive strand.
+For the negative strand the numbering would need to be reversed. For instance to count the number of
+spliced alignments that confirm the connection of exon segments `e1` and `e3` in an exon skip, the
+corresponding feature name would be `e1e3_conf`.
+
+.. image:: img/splice_events.png
+  :width: 800
+  :alt: Alternative event types and exon segment numbering
+
+The below list details the event features for each of the supported event types:
+
+- **features alt3_prime / alt_5prime**: 
+    * **valid**: contains a 1 if the event is valid and 0 otherwise
+    * **e1_cov**: mean coverage of the first constant exon segment in the event
+    * **e2_cov**: mean coverage of the exoni segment between the two alternative splice sites 
+    * **e3_cov**: mean coverage of the second constant exon segment in the event
+    * **e1e3_conf**: number of spliced alignments spanning the longer intron
+    * **e2_conf**: number of spliced alignments spanning the shorter intron
+- **features exon_skip**:
+    * **valid**: contains a 1 if the event is valid and 0 otherwise
+    * **e1_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
+    * **e2_cov**: mean coverage of the cassette exon
+    * **e3_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
+    * **e1e2_conf**: number of spliced alignments spanning from left flanking to cassette exon
+    * **e2e3_conf**: number of spliced alignments spanning from cassette to right flanking exon
+    * **e1e3_conf**: number of spliced alignments spanning from left flanking to right flanking exon
+- **features intron_retention**:
+    * **valid**: contains a 1 if the event is valid and 0 otherwise
+    * **e1_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
+    * **e2_cov**: mean coverage of the retained intron
+    * **e3_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
+    * **e1e3_conf**: number of spliced alignments spanning the intron
+    * **e2_cov_region**: fraction of positions in the intron that have a coverage > 0
+- **features mult_exon_skip**:
+    * **valid**: contains a 1 if the event is valid and 0 otherwise
+    * **e1_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
+    * **e2_cov**: mean coverage over all skipped exons
+    * **e3_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
+    * **e1e2_conf**: number of spliced alignments spanning from left flanking to cassette exon
+    * **e2e3_conf**: number of spliced alignments spanning from cassette to right flanking exon
+    * **e1e3_conf**: number of spliced alignments spanning from left flanking to right flanking exon
+    * **sum_e2_conf**: number of spliced alignments spanning any of the introns between neighboring skipped exons
+    * **num_e2**: number of skipped exons
+    * **len_e2**: cumulative length of skipped exons
+- **features mutex_exons**:
+    * **valid**: contains a 1 if the event is valid and 0 otherwise
+    * **e1_cov**: mean coverage of the left flanking exon (in genomic coordinates, ignoring strand)
+    * **e2_cov**: mean coverage of the first skipped exon (first defined by genomic coordinates)
+    * **e3_cov**: mean coverage of the second skipped exon (second defined by genomic coordinates)
+    * **e4_cov**: mean coverage of the right flanking exon (in genomic coordinates, ignoring strand)
+    * **e1e2_conf**: number of spliced alignments spanning from left flanking to first exon
+    * **e2e4_conf**: number of spliced alignments spanning from left flanking to second exon
+    * **e1e3_conf**: number of spliced alignments spanning from first to right flanking exon
+    * **e3e4_conf**: number of spliced alignments spanning from second to right flanking exon
 
 Event Files in TXT Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -171,6 +174,9 @@ delimited column format with one line per event and the following entries per li
         ...
         <sample2>:<feature1>
         ...
+
+The features defined per sample are the same as in the HDF5 files defined above. The number of
+features thereby depends on the event type.
 
 Files in PICKLE Format
 ^^^^^^^^^^^^^^^^^^^^^^
