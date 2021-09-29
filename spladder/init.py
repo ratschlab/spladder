@@ -90,9 +90,6 @@ def init_genes_gtf(options):
             continue
         sl = line.strip().split('\t')
         
-        trans_id = tags['transcript_id']
-        gene_id = tags['gene_id']
-
         ### get start and end
         try:
             start = int(sl[3]) - 1
@@ -109,6 +106,9 @@ def init_genes_gtf(options):
         ### only use exon lines
         if sl[2].lower() != 'exon':
             continue
+
+        trans_id = tags['transcript_id']
+        gene_id = tags['gene_id']
 
         ### infer transcript ID
         try:
