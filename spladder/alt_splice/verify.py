@@ -48,6 +48,14 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
         tmp = np.where((sg.vertices[0, :] == event.exons2[i, 0]) & (sg.vertices[1, :] == event.exons2[i, 1]))[0]
         seg_exons.append(np.where(segs.seg_match[tmp, :])[1])
     
+    ### find introns corresponding to event
+    intron_pre = (event.exons2[0, 1], event.exons2[1, 0])
+    intron_aft = (event.exons2[-2, 1], event.exons2[-1, 0])
+    intron_skip = (event.exons2[0, 1], event.exons2[-1, 0])
+    introns_inner = set()
+    for i in range(1, event.exons2.shape[0] - 2):
+        introns_inner.add((event.exons2[i, 1], event.exons2[i + 1, 0]))
+
     ### find segments corresponding to exons
     seg_exon_pre = np.sort(np.where(segs.seg_match[idx_exon_pre, :])[1])
     seg_exon_aft = np.sort(np.where(segs.seg_match[idx_exon_aft, :])[1])
@@ -63,7 +71,8 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
     info[2] = np.sum(counts_segments[seg_exons_u] * seg_lens[seg_exons_u]) / np.sum(seg_lens[seg_exons_u])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
-    if info[2] >= options.mult_exon_skip['min_skip_rel_cov'] * (info[1] + info[3]) / 2:
+    if (info[2] >= options.mult_exon_skip['min_skip_rel_cov'] * (info[1] + info[3]) / 2) or \
+       (options.use_anno_support and intron_pre in gene.introns_anno and intron_aft in gene.introns_anno): 
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -89,13 +98,21 @@ def verify_mult_exon_skip(event, gene, counts_segments, counts_edges, options):
     # num_inner_exon
     info[8] = event.exons2.shape[0] - 2
     info[9] = np.sum(event.exons2[1:-1, 1] - event.exons2[1:-1, 0])
-    if info[4] >= options.mult_exon_skip['min_non_skip_count']:
+    # exon_pre_exon_conf
+    if (info[4] >= options.mult_exon_skip['min_non_skip_count']) or \
+       (options.use_anno_support and intron_pre in gene.introns_anno):
         verified[1] = 1
-    if info[5] >= options.mult_exon_skip['min_non_skip_count']:
+    # exon_exon_aft_conf
+    if (info[5] >= options.mult_exon_skip['min_non_skip_count']) or \
+       (options.use_anno_support and intron_aft in gene.introns_anno):
         verified[2] = 1
-    if (info[7] / info[8]) >= options.mult_exon_skip['min_non_skip_count']:
+    # sum_inner_exon_conf
+    if ((info[7] / info[8]) >= options.mult_exon_skip['min_non_skip_count']) or \
+       (options.use_anno_support and len(introns_inner.intersection(gene.introns_anno)) == len(introns_inner)):
         verified[3] = 1 
-    if info[6] >= options.mult_exon_skip['min_skip_count']:
+    # exon_pre_exon_aft_conf
+    if (info[6] >= options.mult_exon_skip['min_skip_count']) or \
+       (options.use_anno_support and intron_skip in gene.introns_anno):
         verified[4] = 1 
 
     return (verified, info)
@@ -127,6 +144,10 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     idx_exon1  = np.where((sg.vertices[0, :] == event.exons1[0, 0]) & (sg.vertices[1, :] == event.exons1[0, 1]))[0]
     idx_exon2  = np.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
 
+    ### find intron and exon corresponding to event
+    intron = (event.exons1[0, 1], event.exons1[1, 0])
+    exon_long =  (event.exons1[0, 0], event.exons1[1, 1])
+
     ### find segments corresponding to exons
     seg_exon1 = np.sort(np.where(segs.seg_match[idx_exon1, :])[1])
     seg_exon2 = np.sort(np.where(segs.seg_match[idx_exon2, :])[1])
@@ -149,9 +170,10 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     info[5] = np.sum(counts_seg_pos[seg_intron]) / np.sum(seg_lens[seg_intron])
 
     ### check if counts match verification criteria
-    if info[2] > options.intron_retention['min_retention_cov'] and \
-       info[5] > options.intron_retention['min_retention_region'] and \
-       info[2] >= options.intron_retention['min_retention_rel_cov'] * (info[1] + info[3]) / 2:
+    if (info[2] > options.intron_retention['min_retention_cov'] and \
+        info[5] > options.intron_retention['min_retention_region'] and \
+        info[2] >= options.intron_retention['min_retention_rel_cov'] * (info[1] + info[3]) / 2) or \
+       (options.use_anno_support and exon_long in set([(_[0], _[1]) for _ in np.hstack(gene.exons)])):
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -160,7 +182,8 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon1[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
 
-    if info[4] >= options.intron_retention['min_non_retention_count']:
+    if (info[4] >= options.intron_retention['min_non_retention_count']) or \
+       (options.use_anno_support and intron in gene.introns_anno):
         verified[1] = 1
 
     return (verified, info)
@@ -195,6 +218,11 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     idx_exon = np.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
     idx_exon_aft = np.where((sg.vertices[0, :] == event.exons2[2, 0]) & (sg.vertices[1, :] == event.exons2[2, 1]))[0]
 
+    ### find introns corresponding to event
+    intron_pre = (event.exons2[0, 1], event.exons2[1, 0])
+    intron_aft = (event.exons2[1, 1], event.exons2[2, 0])
+    intron_skip = (event.exons2[0, 1], event.exons2[2, 0])
+
     ### find segments corresponding to exons
     seg_exon_pre = np.sort(np.where(segs.seg_match[idx_exon_pre, :])[1])
     seg_exon_aft = np.sort(np.where(segs.seg_match[idx_exon_aft, :])[1])
@@ -210,7 +238,8 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     info[2] = np.sum(counts_segments[seg_exon] * seg_lens[seg_exon]) /np.sum(seg_lens[seg_exon])
 
     ### check if coverage of skipped exon is >= than FACTOR times average of pre and after
-    if info[2] >= options.exon_skip['min_skip_rel_cov'] * (info[1] + info[3]) / 2: 
+    if (info[2] >= options.exon_skip['min_skip_rel_cov'] * (info[1] + info[3]) / 2) or \
+       (options.use_anno_support and intron_pre in gene.introns_anno and intron_aft in gene.introns_anno): 
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -218,17 +247,20 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     # exon_pre_exon_conf
     idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0]
     info[4] = counts_edges[idx, 1]
-    if info[4] >= options.exon_skip['min_non_skip_count']:
+    if (info[4] >= options.exon_skip['min_non_skip_count']) or \
+       (options.use_anno_support and intron_pre in gene.introns_anno):
         verified[1] = 1
     # exon_exon_aft_conf
     idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[5] = counts_edges[idx, 1]
-    if info[5] >= options.exon_skip['min_non_skip_count']:
+    if (info[5] >= options.exon_skip['min_non_skip_count']) or \
+       (options.use_anno_support and intron_aft in gene.introns_anno):
         verified[2] = 1
     # exon_pre_exon_aft_conf
     idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
     info[6] = counts_edges[idx, 1]
-    if info[6] >= options.exon_skip['min_skip_count']:
+    if (info[6] >= options.exon_skip['min_skip_count']) or \
+       (options.use_anno_support and intron_skip in gene.introns_anno):
         verified[3] = 1
 
     return (verified, info)
@@ -301,6 +333,10 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
         print("ERROR: both exons differ in alt prime event in verify_alt_prime", file=sys.stderr)
         sys.exit(1)
 
+    ### find introns corresponding to event
+    intron1 = (event.exons1[0, 1], event.exons1[1, 0])
+    intron2 = (event.exons2[0, 1], event.exons2[1, 0])
+
     seg_lens = segs.segments[1, :] - segs.segments[0, :]
 
     # exon_diff_cov
@@ -310,7 +346,8 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     # exon2_const_cov
     info[3] = np.sum(counts_segments[seg_const2] * seg_lens[seg_const2]) / np.sum(seg_lens[seg_const2])
 
-    if info[2] >= options.alt_prime['min_diff_rel_cov'] * ((info[1] * np.sum(seg_lens[seg_const1])) + (info[3] * np.sum(seg_lens[seg_const2]))) / np.sum(seg_lens[np.r_[seg_const1, seg_const2]]):
+    if (info[2] >= options.alt_prime['min_diff_rel_cov'] * ((info[1] * np.sum(seg_lens[seg_const1])) + (info[3] * np.sum(seg_lens[seg_const2]))) / np.sum(seg_lens[np.r_[seg_const1, seg_const2]])) or \
+       (options.use_anno_support and intron1 in gene.introns_anno and intron2 in gene.introns_anno):
         verified[0] = 1
 
     ### check intron confirmations as sum of valid intron scores
@@ -324,7 +361,8 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     assert(idx.shape[0] > 0)
     info[5] = counts_edges[idx, 1]
 
-    if min(info[4], info[5]) >= options.alt_prime['min_intron_count']:
+    if (min(info[4], info[5]) >= options.alt_prime['min_intron_count']) or \
+       (options.use_anno_support and intron1 in gene.introns_anno and intron2 in gene.introns_anno):
         verified[1] = 1
 
     return (verified, info)
@@ -362,6 +400,14 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     idx_exon1  = np.where((sg.vertices[0, :] == event.exons1[1, 0]) & (sg.vertices[1, :] == event.exons1[1, 1]))[0]
     idx_exon2  = np.where((sg.vertices[0, :] == event.exons2[1, 0]) & (sg.vertices[1, :] == event.exons2[1, 1]))[0]
     
+    ### find introns and exons corresponding to event
+    intron_pre_ex1 = (event.exons1[0, 1], event.exons1[1, 0])
+    intron_pre_ex2 = (event.exons2[0, 1], event.exons2[1, 0])
+    intron_ex1_aft = (event.exons1[1, 1], event.exons1[2, 0])
+    intron_ex2_aft = (event.exons2[1, 1], event.exons2[2, 0])
+    exon1 = (event.exons1[1, 0], event.exons1[1, 1])
+    exon2 = (event.exons2[1, 0], event.exons2[1, 1])
+
     ### find segments corresponding to exons
     seg_exon_pre = np.sort(np.where(segs.seg_match[idx_exon_pre, :])[1])
     seg_exon_aft = np.sort(np.where(segs.seg_match[idx_exon_aft, :])[1])
@@ -380,9 +426,11 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
     info[4] = np.sum(counts_segments[seg_exon_aft] * seg_lens[seg_exon_aft]) / np.sum(seg_lens[seg_exon_aft])
 
     ### check if coverage of first exon is >= than FACTOR times average of pre and after
-    if info[2] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2:
+    if (info[2] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2) or \
+       (options.use_anno_support and exon1 in set([(_[0], _[1]) for _ in np.hstack(gene.exons)])):
         verified[0] = 1
-    if info[3] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2:
+    if (info[3] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2) or \
+       (options.use_anno_support and exon2 in set([(_[0], _[1]) for _ in np.hstack(gene.exons)])):
         verified[1] = 1
 
     ### check intron confirmation as sum of valid intron scores
@@ -405,9 +453,11 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
         info[8] = counts_edges[idx[0], 1]
 
     # set verification flags for intron confirmation
-    if min(info[5], info[6]) >= options.mutex_exons['min_conf_count']:
+    if (min(info[5], info[7]) >= options.mutex_exons['min_conf_count']) or \
+       (options.use_anno_support and intron_pre_ex1 in gene.introns_anno and intron_ex1_aft in gene.introns_anno):
         verified[2] = 1
-    if min(info[7], info[8]) >= options.mutex_exons['min_conf_count']:
+    if (min(info[6], info[8]) >= options.mutex_exons['min_conf_count']) or \
+       (options.use_anno_support and intron_pre_ex2 in gene.introns_anno and intron_ex2_aft in gene.introns_anno):
         verified[3] = 1
 
     return (verified, info)

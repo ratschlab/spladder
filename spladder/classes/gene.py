@@ -16,6 +16,7 @@ class Gene:
         self.start = start
         self.stop = stop
         self.exons = []
+        self.introns_anno = set([])
         self.chr = chr
         if strand in ['+', '-']:
             self.strand = strand
@@ -212,3 +213,11 @@ class Gene:
             del self.edge_count_row
             del self.edge_count_col
 
+
+    def populate_annotated_introns(self):
+        self.introns_anno = set()
+        for tx in self.exons:
+            sidx = np.argsort([_[0] for _ in tx])
+            for e in range(1, len(sidx)):
+                self.introns_anno.add((tx[sidx[e - 1]][1], tx[sidx[e]][0]))
+                

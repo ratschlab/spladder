@@ -18,6 +18,11 @@ def spladder_core(options):
         else:
             genes = options.genes
 
+        ### mark which introns have been annotated
+        for gene in genes:
+            gene.populate_annotated_introns()
+
+        ### augment
         genes = gen_graphs(genes, options)
 
         print('Saving genes to %s' % (options.out_fname))
