@@ -319,27 +319,107 @@ entirely (for instance to carry it out at a later point in time). This is done v
 
     spladder build ... --no-extract-ase ...
 
-SplAdder can currently extract 6 different types of alternative splicing events:
+**Event extraction**
+    SplAdder can currently extract 6 different types of alternative splicing events:
 
-- exon skips (`exon_skip`)
-- intron retentions (`intron_retention`)
-- alternative 3' splice sites (`alt_3prime`)
-- alternative 5' splice sites (`alt_5prime`)
-- mutually exclusive exons (`mutex_exons`)
-- multiple (coordinated) exons skips (`mult_exon_skip`)
+    - exon skips (`exon_skip`)
+    - intron retentions (`intron_retention`)
+    - alternative 3' splice sites (`alt_3prime`)
+    - alternative 5' splice sites (`alt_5prime`)
+    - mutually exclusive exons (`mutex_exons`)
+    - multiple (coordinated) exons skips (`mult_exon_skip`)
 
-Per default all events of all types are extracted from the graph. To specify a single type or a
-subset of types (e.g., exon skips and mutually exclusive exons only), the user can specify the short
-names of the event types (as shown in parentheses above) as follows::
+    Per default all events of all types are extracted from the graph. To specify a single type or a
+    subset of types (e.g., exon skips and mutually exclusive exons only), the user can specify the short
+    names of the event types (as shown in parentheses above) as follows::
 
-    spladder build ... --event-types exon_skip,mutex_exons ...
+        spladder build ... --event-types exon_skip,mutex_exons ...
 
-In some cases (for instance when integrating hundreds of alignment samples), the splicing graphs can
-grow very complex. To limit the running time, an upper bound for the maximum number of edges in the
-splicing graph of a gene to be used for event extraction is set. This threshold is 500 per default.
-To adapt this threshold, e.g., to 250, the user can specify::
-    
-    spladder build ... --ase-edge-limit 250 ...
+    In some cases (for instance when integrating hundreds of alignment samples), the splicing graphs can
+    grow very complex. To limit the running time, an upper bound for the maximum number of edges in the
+    splicing graph of a gene to be used for event extraction is set. This threshold is 500 per default.
+    To adapt this threshold, e.g., to 250, the user can specify::
+        
+        spladder build ... --ase-edge-limit 250 ...
+
+**Event verification**
+    Similar to graph validation, SplAdder also performs a step of splice event verification. Only
+    verified events are reported as confident to the user. There two possibilities how the validity of
+    a confident event is established.
+
+    The classical way for event verification is to use heuristic criteria based on the RNA-Seq
+    evidence provided to SplAdder. Depending on the alternative event type, as different set of
+    criteria is used. The tables below summarize the criteria currently in use for the different
+    event types. The order and numbering of criteria is the same as used in the output files of
+    SplAdder.
+
+    +----------------------------------------------------------------------------------------+
+    | Multiple Exon Skip                                                                     |
+    +====+===================================================================================+
+    | 0  | exon coordinates are valid (>= 0 && start < stop && non-overlapping) &            | 
+    |    | skipped exon coverage >= FACTOR * mean(pre, after)                                |
+    +----+-----------------------------------------------------------------------------------+
+    | 1  | inclusion count first intron >= threshold                                         |
+    +----+-----------------------------------------------------------------------------------+
+    | 2  | inclusion count last intron >= threshold                                          |
+    +----+-----------------------------------------------------------------------------------+
+    | 3  | avg inclusion count inner exons >= threshold                                      |
+    +----+-----------------------------------------------------------------------------------+
+    | 4  | skip count >= threshold                                                           |
+    +----+-----------------------------------------------------------------------------------+ 
+
+    +----+-----------------------------------------------------------------------------------+ 
+    | Intron Retention                                                                       |
+    +====+===================================================================================+
+    | 0  | counts meet criteria for min_retention_cov, min_retention_region and              |
+    |    | min_retetion_rel_cov                                                              |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 1  | min_non_retention_count >= threshold                                              |
+    +----+-----------------------------------------------------------------------------------+ 
+
+    +----+-----------------------------------------------------------------------------------+ 
+    | Exon Skip                                                                              |
+    +====+===================================================================================+
+    | 0  | coverage of skipped exon is >= than FACTOR * mean(pre, after)                     |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 1  | inclusion count of first intron >= threshold                                      |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 2  | inclusion count of second intron >= threshold                                     |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 3  | skip count of exon >= threshold                                                   |
+    +----+-----------------------------------------------------------------------------------+ 
+
+    +----+-----------------------------------------------------------------------------------+ 
+    | Alternative 3/5 Prime                                                                  |
+    +====+===================================================================================+
+    | 0  | coverage of diff region is at least FACTOR * coverage constant region             |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 1  | both alternative introns are >= threshold                                         |
+    +----+-----------------------------------------------------------------------------------+ 
+
+    +----+-----------------------------------------------------------------------------------+ 
+    | Mutually Exclusive Exons                                                               |
+    +====+===================================================================================+
+    | 0  | coverage of first alt exon is >= than FACTOR times average of pre and after       |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 1  | coverage of second alt exon is >= than FACTOR times average of pre and after      |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 2  | both introns neighboring first alt exon are confirmed >= threshold                |
+    +----+-----------------------------------------------------------------------------------+ 
+    | 3  | both introns neighboring second alt exon are confirmed >= threshold               |
+    +----+-----------------------------------------------------------------------------------+ 
+
+    In addition to the classical, RNA-Seq evidence based mode, since version 2.5 it is also allowed
+    to use the provided annotation to verify an existing event. In this mode each one of the
+    criteria listed above is replaced with a lookup in the provided annotation. That is, if an
+    intron is already annotated, it will be used for event verification irrespective of any RNA-Seq
+    expression support. This mode is especially useful for single sample analysis, where a complete
+    isoform switch might have occurred and only the alternative event path is supported by reads but
+    not the annotated one. In this case, the event is still reported. This mode is switched off by
+    default and can be activated via::
+
+        spladder build ... -use-anno-support ...
+
 
 The ``test`` mode
 -----------------
