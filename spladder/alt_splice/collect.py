@@ -83,6 +83,7 @@ def collect_events(options):
                         event.exons2 = np.array([exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]])
                         event.gene_name = np.array([gene.name])
                         event.gene_idx = idx_intron_reten[k]
+                        event.set_annotation_flag(gene.introns_anno)
                         #event.transcript_type = np.array([gene.transcript_type])
                         intron_reten_pos.append(event)
                 else:
@@ -102,6 +103,7 @@ def collect_events(options):
                         event.exons2 = np.c_[exons[:, exon_exon_skip[k][0]], exons[:, exon_exon_skip[k][1]], exons[:, exon_exon_skip[k][2]]].T
                         event.gene_name = np.array([gene.name])
                         event.gene_idx = idx_exon_skip[k]
+                        event.set_annotation_flag(gene.introns_anno)
                         #event.transcript_type = np.array([gene.transcript_type])
                         exon_skip_pos.append(event)
                 else:
@@ -135,6 +137,7 @@ def collect_events(options):
                                     event.exons2 = np.c_[exons[:, exon_alt_end_5prime[k]['threeprimesite']], exons[:, exon_alt_end_5prime[k]['fiveprimesites'][k2]]].T
                                 event.gene_name = np.array([gene.name])
                                 event.gene_idx = idx_alt_end_5prime[k]
+                                event.set_annotation_flag(gene.introns_anno)
 
                                 ### assert that first isoform is always the shorter one
                                 if np.sum(event.exons1[:, 1] - event.exons1[:, 0]) > np.sum(event.exons2[:, 1] - event.exons2[:, 0]):
@@ -167,6 +170,7 @@ def collect_events(options):
                                     event.exons2 = np.c_[exons[:, exon_alt_end_3prime[k]['fiveprimesite']], exons[:, exon_alt_end_3prime[k]['threeprimesites'][k2]]].T
                                 event.gene_name = np.array([gene.name])
                                 event.gene_idx = idx_alt_end_3prime[k]
+                                event.set_annotation_flag(gene.introns_anno)
 
                                 ### assert that first isoform is always the shorter one
                                 if np.sum(event.exons1[:, 1] - event.exons1[:, 0]) > np.sum(event.exons2[:, 1] - event.exons2[:, 0]):
@@ -191,6 +195,7 @@ def collect_events(options):
                         event.exons2 = np.c_[exons[:, exon_mult_exon_skip[k][0]], exons[:, exon_mult_exon_skip[k][1]], exons[:, exon_mult_exon_skip[k][2]]].T
                         event.gene_name = np.array([gene.name])
                         event.gene_idx = gidx
+                        event.set_annotation_flag(gene.introns_anno)
                         #event.transcript_type = np.array([gene.transcript_type])
                         mult_exon_skip_pos.append(event)
                 else:
@@ -211,6 +216,7 @@ def collect_events(options):
                             event.exons2 = np.c_[exons[:, exon_mutex_exons[k][0]], exons[:, exon_mutex_exons[k][2]], exons[:, exon_mutex_exons[k][3]]].T
                             event.gene_name = np.array([gene.name])
                             event.gene_idx = idx_mutex_exons[k]
+                            event.set_annotation_flag(gene.introns_anno)
 
                             ### assert that first isoform is always the shorter one
                             if np.sum(event.exons1[:, 1] - event.exons1[:, 0]) > np.sum(event.exons2[:, 1] - event.exons2[:, 0]):

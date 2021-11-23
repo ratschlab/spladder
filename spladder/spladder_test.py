@@ -52,7 +52,7 @@ def _get_gene_expression(options, fname_exp_hdf5, sample_subset=None):
 def re_quantify_events(options):
     """This is a legacy function for testing that requantifies events on a given graph"""
 
-    ev = pickle.load(open(options.fname_events, 'rb'))[0]
+    ev = pickle.load(open(options.fname_event_counts, 'rb'))[0]
     cov = quantify.quantify_from_graph(ev, np.arange(1000), 'exon_skip', options, fn_merge=sys.argv[1])
 
     return cov
@@ -584,16 +584,22 @@ def spladder_test(options):
         if options.verbose:
             print('Testing %s events' % event_type)
 
-        options.fname_events = os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence))
+        options.fname_event_counts = os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence))
+        options.fname_events = os.path.join(options.outdir, 'merge_graphs_%s_C%i.pickle' % (event_type, options.confidence))
 
         ### check whether we have any events at all
-        with h5py.File(options.fname_events, 'r') as IN:
+        with h5py.File(options.fname_event_counts, 'r') as IN:
             if not 'conf_idx' in IN:
-                print('SKIPPING: no events of type %s available for testing in file %s\n' % (event_type, options.fname_events), file=sys.stderr)
+                print('SKIPPING: no events of type %s available for testing in file %s\n' % (event_type, options.fname_event_counts), file=sys.stderr)
                 continue
 
         ### quantify events
-        (cov, psi, gene_idx, event_idx, event_ids, event_samples) = quantify.quantify_from_counted_events(options.fname_events, idx1, idx2, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
+        (cov, psi, gene_idx, event_idx, event_ids, event_samples) = quantify.quantify_from_counted_events(options.fname_event_counts, idx1, idx2, event_type, options, gen_event_ids=False, high_mem=options.high_memory)
+
+        ### load confident events (for coordinate use later)
+        events = None
+        if len(event_idx) > 0:
+            events = pickle.load(open(options.fname_events, 'rb'))[event_idx]
 
         if options.cap_outliers:
             log_counts = np.log2(cov[0] + 1)
@@ -753,13 +759,16 @@ def spladder_test(options):
 
         ### write test results
         s_idx = np.argsort(pvals)
-        header = np.array(['event_id', 'gene_id', 'gene_name', 'p_val', 'p_val_adj', 'dPSI', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'])
-        event_ids = np.array(['%s_%i' % (event_type, i + 1) for i in event_idx], dtype='str')
+        header = np.array(['event_id', 'chrm', 'exon_pos', 'alt_usage', 'gene_id', 'gene_name', 'p_val', 'p_val_adj', 'dPSI', 'mean_event_count_A', 'mean_event_count_B', 'log2FC_event_count', 'mean_gene_exp_A', 'mean_gene_exp_B', 'log2FC_gene_exp'])
+        event_ids = np.array(['%s.%i' % (event_type, i + 1) for i in event_idx], dtype='str')
+
+        event_pos = np.array([_.get_exon_coordinate_strings() for _ in events])
+        event_chrm = np.array([_.chr for _ in events])
 
         out_fname = os.path.join(outdir, 'test_results_C%i_%s.tsv' % (options.confidence, event_type))
         if options.verbose:
             print('Writing test results to %s' % out_fname)
-        data_out = np.c_[event_ids[s_idx], gene_ids[gene_idx[s_idx]], gene_symbols[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), delta_psi[s_idx].astype('str'), m_all[s_idx, :]]
+        data_out = np.c_[event_ids[s_idx], event_chrm[s_idx], event_pos[s_idx, 0], event_pos[s_idx, 1], gene_ids[gene_idx[s_idx]], gene_symbols[gene_idx[s_idx]], pvals[s_idx].astype('str'), pvals_adj[s_idx].astype('str'), delta_psi[s_idx].astype('str'), m_all[s_idx, :]]
         np.savetxt(out_fname, np.r_[header[np.newaxis, :], data_out], delimiter='\t', fmt='%s')
 
         ### write extended output
@@ -785,7 +794,7 @@ def spladder_test(options):
             taken.add(gid)
         ks_idx = np.array(ks_idx)
 
-        data_out = np.c_[event_ids[ks_idx], gene_ids[gene_idx[ks_idx]], gene_symbols[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), delta_psi[ks_idx].astype('str'), m_all[ks_idx, :]]
+        data_out = np.c_[event_ids[ks_idx], event_chrm[ks_idx], event_pos[ks_idx, 0], event_pos[ks_idx, 1], gene_ids[gene_idx[ks_idx]], gene_symbols[gene_idx[ks_idx]], pvals[ks_idx].astype('str'), pvals_adj[ks_idx].astype('str'), delta_psi[ks_idx].astype('str'), m_all[ks_idx, :]]
         data_out = np.r_[header[np.newaxis, :], data_out]
         np.savetxt(out_fname, data_out, delimiter='\t', fmt='%s')
 

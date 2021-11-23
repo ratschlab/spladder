@@ -49,10 +49,10 @@ def _assert_files_equal_testing(e, a):
     de = de[1:, ]
 
     ### check text cols
-    assert np.all(da[:, [0, 1, 2]] == de[:, [0, 1, 2]])
+    assert np.all(da[:, [0, 1, 2, 3, 4, 5]] == de[:, [0, 1, 2, 3, 4, 5]])
     ### check numerical cols
-    da = da[:, 3:]
-    de = de[:, 3:]
+    da = da[:, 6:]
+    de = de[:, 6:]
 
     ### check p-values (up to certain precision)
     da = np.around(da.astype('float'), decimals=6)
