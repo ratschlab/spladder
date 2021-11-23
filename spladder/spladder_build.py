@@ -5,9 +5,10 @@
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 #
-# Written (W) 2009-2014 Andre Kahles, Jonas Behr, Gunnar Raetsch
+# Written (W) 2009-2021 Andre Kahles, Jonas Behr, Gunnar Raetsch
 # Copyright (C) 2009-2011 Max Planck Society
-# Copyright (C) 2012-2014 Memorial Sloan-Kettering Cancer Center
+# Copyright (C) 2012-2016 Memorial Sloan-Kettering Cancer Center
+# Copyright (C) 2016-2021 ETH Zurich
 #
 # SplAdder wrapper script to start the interpreter with the correct list of arguments
 
@@ -23,7 +24,6 @@ from .alt_splice.collect import collect_events
 from .alt_splice.analyze import analyze_events
 from .count import count_graph_coverage_wrapper, collect_single_quantification_results, compute_gene_expression
 from .editgraph import filter_by_edgecount
-from . import rproc as rp
 from .merge import run_merge
 from .helpers import *
 
@@ -31,6 +31,21 @@ from .spladder_prep import prep_annotation, prep_sparse_bam_filtered, prep_spars
 
 from .classes.gene import Gene
 sys.modules['modules.classes.gene'] = Gene
+
+def _prep_workdir(options):
+
+    ### create out-directory
+    if not os.path.exists(options.outdir):
+        os.makedirs(options.outdir)
+
+    ### create spladder sub-directory
+    if not os.path.exists(os.path.join(options.outdir, 'spladder')):
+        os.makedirs(os.path.join(options.outdir, 'spladder'))
+
+    ### create tmp sub-directory
+    if not os.path.exists(options.tmpdir):
+        os.makedirs(os.path.join(options.tmpdir))
+
 
 def spladder(options):
 
@@ -52,22 +67,8 @@ def spladder(options):
         else:
             idxs = [0]
         
-        ### set parallelization
-        if options.pyproc:
-            jobinfo = []
-
-        ### create out-directory
-        if not os.path.exists(options.outdir):
-            os.makedirs(options.outdir)
-
-        ### create spladder sub-directory
-        if not os.path.exists(os.path.join(options.outdir, 'spladder')):
-            os.makedirs(os.path.join(options.outdir, 'spladder'))
-
-        ### create tmp sub-directory
-        if not os.path.exists(options.tmpdir):
-            os.makedirs(os.path.join(options.tmpdir))
-
+        ### preparatory work
+        _prep_workdir(options)
         options = prep_annotation(options)
 
         ### convert input BAMs to sparse arrays - filtered case
@@ -86,7 +87,7 @@ def spladder(options):
             else:
                 options.out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.merge)
 
-            ### assemble out filename to check if we are already done
+            ### assemble output filename to check if we are already done
             fn_out = options.out_fname
             if options.do_prune:
                 fn_out = re.sub('.pickle$', '_pruned.pickle', fn_out)
@@ -96,17 +97,10 @@ def spladder(options):
             if os.path.exists(fn_out):
                 print('%s - All result files already exist.' % fn_out, file=sys.stdout)
             else:
-                if options.pyproc:
-                    jobinfo.append(rp.rproc('spladder_core', options, 15000, options.options_rproc, 60*60))
-                else:
-                    spladder_core(options)
+                spladder_core(options)
 
             for key in CFG_:
                 setattr(options, key, CFG_[key].copy())
-
-        ### collect results after parallelization
-        if options.pyproc:
-            rp.rproc_wait(jobinfo, 30, 1.0, -1)
 
         ### merge parts if necessary
         if options.merge == 'merge_graphs':

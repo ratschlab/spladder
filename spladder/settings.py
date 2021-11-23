@@ -144,17 +144,6 @@ def parse_args(options, identity='main'):
             print('ERROR: Annotation file %s can not be found\n\n' % options.annotation, file=sys.stderr)
             sys.exit(2)
         
-        ### pyproc options
-        if hasattr(options, 'pyproc') and options.pyproc:
-            options.options_rproc = dict()
-            options.options_rproc['mem_req_resubmit']  = [30000, 60000, 80000]
-            options.options_rproc['time_req_resubmit'] = [60*60, 80*60, 90*60]
-            options.options_rproc['resubmit'] = 3
-            options.options_rproc['priority'] = 100
-            options.options_rproc['addpaths'] = options.paths
-            if options.environment:
-                options.options_rproc['environment'] = options.environment
-
     if identity == 'test':
         if options.conditionA == '-':
             print('ERROR: At least one sample for condition A required', file=sys.stderr)

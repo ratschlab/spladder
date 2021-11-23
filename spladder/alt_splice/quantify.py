@@ -260,17 +260,6 @@ def quantify_mutex_exons(event, gene, counts_segments, counts_edges):
 
 def quantify_from_counted_events(event_fn, sample_idx1=None, sample_idx2=None, event_type=None, options=None, out_fn=None, gen_event_ids=False, high_mem=False):
 
-    ### set parameters if called by rproc
-    if sample_idx1 is None:
-        PAR = event_fn
-        event_fn = PAR['event_fn']
-        sample_idx1 = PAR['sample_idx1']
-        sample_idx2 = PAR['sample_idx2']
-        if 'out_fn' in PAR:
-            out_fn = PAR['out_fn']
-        event_type = PAR['event_type']
-        options = PAR['options']
-
     ### read count_data from event HDF5
     if high_mem:
         IN = h5py.File(event_fn, 'r', driver='core', backing_store=False)
@@ -432,16 +421,6 @@ def quantify_from_counted_events(event_fn, sample_idx1=None, sample_idx2=None, e
 
 
 def quantify_from_graph(ev, sample_idx=None, event_type=None, options=None, out_fn=None, fn_merge=None):
-
-    ### set parameters if called by rproc
-    if sample_idx is None:
-        PAR = ev
-        ev = PAR['ev']
-        sample_idx = PAR['sample_idx']
-        if 'out_fn' in PAR:
-            out_fn = PAR['out_fn']
-        event_type = PAR['event_type']
-        options = PAR['options']
 
     if fn_merge is None:
         if options.validate_sg:

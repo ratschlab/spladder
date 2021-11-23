@@ -9,7 +9,6 @@ from .spladder_build import spladder
 from .spladder_viz import spladder_viz
 from .spladder_test import spladder_test
 from .spladder_prep import spladder_prep
-from .rproc import spladder_pyproc 
 
 def parse_options(argv):
 
@@ -93,11 +92,7 @@ def parse_options(argv):
     splice.add_argument('--use-anno-support', dest='use_anno_support', action='store_true', help='use annotation for validating event introns [off]', default=False)
     splice.add_argument('--no-use-anno-support', dest='use_anno_support', action='store_false', default=None)
     splice.add_argument('--psi-min-reads', dest='psi_min_reads', metavar='INT', help='minimum number of spliced reads covering either isoform to compute PSI [10]', default=10)
-    experimental = parser_build.add_argument_group('EXPERIMENTAL - BETA STATE')
-    experimental.add_argument('--pyproc', dest='pyproc', action='store_true', help='use parallel implementation [off]', default=False)
-    experimental.add_argument('--environment', dest='environment', metavar='STRING', help='conda environment to by used for pyproc', default=None)
-    #experimental.add_argument('-R', '--replicates', dest='replicates', metavar='1,1,2,2,...', help='replicate structure of files (same number as alignment files) [all 1 - no replicated]', default='-')
-    experimental.add_argument('--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, collect, all [all]', default='all')
+    splice.add_argument('--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, collect, all [all]', default='all')
     parser_build.set_defaults(func=spladder)
 
     ### RUN MODE "TEST"
@@ -189,13 +184,6 @@ def parse_options(argv):
     general_prep.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='user verbose output mode [off]', default=False)
     general_prep.add_argument('--parallel', dest='parallel', metavar='<INT>', type=int, help='use INT processors [1]', default=1)
     general_prep.add_argument('--tmp-dir', dest='tmpdir', metavar='DIR', help='directory to store temporary data [./tmp]', default='tmp')
-
-    ### RUN MODE "PYPROC"
-    parser_pyproc = subparsers.add_parser('pyproc')
-    required_pyproc = parser_pyproc.add_argument_group('MANDATORY')
-    required_pyproc.add_argument('proc', metavar='PROC_FILE', help='pyproc pickle file', default='-')
-    required_pyproc.add_argument('data', metavar='DATA_FILE', help='pyproc data file', default='-')
-    parser_pyproc.set_defaults(func=spladder_pyproc)
 
     if len(argv) < 2:
         parser.print_help()

@@ -12,7 +12,6 @@ if __package__ is None:
 from .utils import *
 from .classes.segmentgraph import Segmentgraph
 from .count import count_graph_coverage_wrapper
-from . import rproc as rp
 
 
 def merge_duplicate_exons(genes, options):
@@ -362,34 +361,7 @@ def run_merge(options):
         fn_out_count = '%s/spladder/genes_graph_conf%i.%s%s.count.hdf5' % (options.outdir, options.confidence, options.merge , prune_tag)
 
     if not os.path.exists(fn_out):
-        if options.pyproc:
-            jobinfo = []
-            PAR = dict()
-            PAR['options'] = options
-            levels = int(math.ceil(math.log(len(options.samples), options.chunksize)))
-            for level in range(1, levels + 1):
-                print('merging files on level %i' % level)
-                if level == 1:
-                    merge_list = np.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
-                else:
-                    merge_list = np.array(level_files)
-                level_files = []
-                for c_idx in range(0, len(merge_list), options.chunksize):
-                    if level == levels:
-                        assert len(merge_list) <= options.chunksize, 'chunksize is %i but merge_list has length %i with: %s' % (options.chunksize, len(merge_list), str(merge_list))
-                        fn = fn_out
-                    else:
-                        fn = '%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk%i_%i.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, level, c_idx, min(len(merge_list), c_idx + options.chunksize))
-                    level_files.append(fn)
-                    if os.path.exists(fn):
-                        continue
-                    print('submitting level %i chunk %i to %i' % (level, c_idx, min(len(merge_list), c_idx + options.chunksize)))
-                    chunk_idx = np.arange(c_idx, min(len(merge_list), c_idx + options.chunksize))
-                    PAR['merge_list'] = merge_list[chunk_idx]
-                    PAR['fn_out'] = fn
-                    jobinfo.append(rp.rproc('merge_genes_by_splicegraph', PAR, 20000*level, options.options_rproc, 40*60))
-                rp.rproc_wait(jobinfo, 30, 1.0, -1)
-        elif len(options.chunked_merge) > 0:
+        if len(options.chunked_merge) > 0:
             curr_level, max_level, chunk_start, chunk_end = [int(_) for _ in options.chunked_merge[0]]
             if curr_level == 1:
                 merge_list = np.array(sorted(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples]))
@@ -417,10 +389,6 @@ def run_merge(options):
     if options.do_gen_isoforms:
         fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.pickle' % (options.outdir, options.confidence, options.merge, prune_tag)
         if not os.path.exists(fn_out):
-            if not options.pyproc:
-                merge_genes_by_isoform(options.outdir, options.confidence, merge_all, experiment)
-            else:
-                jobinfo = [rp.rproc('merge_genes_by_isoform', PAR, 10000, options.options_rproc, 40*60)]
-                rp.rproc_wait(jobinfo, 30, 1.0, 1)
+            merge_genes_by_isoform(options.outdir, options.confidence, merge_all, experiment)
         else:
             print('File %s already exists!' % fn_out)

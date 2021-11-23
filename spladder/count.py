@@ -12,7 +12,6 @@ from .classes.counts import Counts
 from .helpers import log_progress, decodeUTF8, codeUTF8
 from .reads import *
 from .hdf5 import appendToHDF5
-from . import rproc as rp
 
 ### intermediate fix to load pickle files stored under previous version
 from .classes import gene as cgene
@@ -139,129 +138,46 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
     counts['seg_len'] = np.hstack([x.segmentgraph.segments[1, :] - x.segmentgraph.segments[0, :] for x in genes]).T
     counts['gene_names'] = np.array([x.name for x in genes], dtype='str')
 
-    if not options.pyproc:
-        if options.merge == 'single':
-            print('\nprocessing %s' % (options.samples[sample_idx]))
-            counts_tmp = count_graph_coverage(genes, options.bam_fnames[sample_idx], options)
-        elif options.merge == 'merge_graphs' and qmode == 'single':
-            print('\nquantifying merged graph in single mode (first file only) on %s' % options.samples[0])
-            counts_tmp = count_graph_coverage(genes, options.bam_fnames[0], options)
-        else:
-            for s_idx in range(options.samples.shape[0]):
-                print('\n%i/%i' % (s_idx + 1, options.samples.shape[0]))
-                if s_idx == 0:
-                    counts_tmp = count_graph_coverage(genes, options.bam_fnames[s_idx], options)
-                else:
-                    counts_tmp = np.r_[np.atleast_2d(counts_tmp), count_graph_coverage(genes, options.bam_fnames[s_idx], options)]
-
-        for c in range(counts_tmp.shape[1]):
-            counts['segments'].append(np.hstack([np.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
-            counts['seg_pos'].append(np.hstack([np.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]))
-            counts['gene_ids_segs'].append(np.ones((np.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * c)
-            tmp = [np.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0]
-            if len(tmp) == 0:
-                continue
-            tmp = np.hstack(tmp)
-            if tmp.shape[0] > 0:
-                counts['edges'].append(np.c_[tmp[:, 0], tmp[:, np.arange(1, tmp.shape[1], 2)]])
-                counts['gene_ids_edges'].append(np.ones((tmp.shape[0], 1), dtype='int') * c)
-
-        ### write result data to hdf5
-        for key in counts:
-            counts[key] = np.vstack(counts[key]) if len(counts[key]) > 0 else counts[key]
-        counts['edge_idx'] = counts['edges'][:, 0] if len(counts['edges']) > 0 else np.array([])
-        counts['edges'] = counts['edges'][:, 1:] if len(counts['edges']) > 0 else np.array([])
-        h5fid = h5py.File(fname_out, 'w')
-        h5fid.create_dataset(name='samples', data=codeUTF8(options.samples))
-        h5fid['strains'] = h5py.SoftLink('/samples')
-        for key in counts:
-            if np.issubdtype(counts[key].dtype, np.str_):
-                h5fid.create_dataset(name=key, data=codeUTF8(counts[key]))
-            else:
-                h5fid.create_dataset(name=key, data=counts[key])
-        h5fid.close()
+    if options.merge == 'single':
+        print('\nprocessing %s' % (options.samples[sample_idx]))
+        counts_tmp = count_graph_coverage(genes, options.bam_fnames[sample_idx], options)
+    elif options.merge == 'merge_graphs' and qmode == 'single':
+        print('\nquantifying merged graph in single mode (first file only) on %s' % options.samples[0])
+        counts_tmp = count_graph_coverage(genes, options.bam_fnames[0], options)
     else:
-        ### have an adaptive chunk size, that takes into account the number of samples (take as many genes as it takes to have ~10K samples)
-        if options.sparse_bam:
-            chunksize = int(max(1, math.floor(1000000 / len(options.samples))))
+        for s_idx in range(options.samples.shape[0]):
+            print('\n%i/%i' % (s_idx + 1, options.samples.shape[0]))
+            if s_idx == 0:
+                counts_tmp = count_graph_coverage(genes, options.bam_fnames[s_idx], options)
+            else:
+                counts_tmp = np.r_[np.atleast_2d(counts_tmp), count_graph_coverage(genes, options.bam_fnames[s_idx], options)]
+
+    for c in range(counts_tmp.shape[1]):
+        counts['segments'].append(np.hstack([np.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
+        counts['seg_pos'].append(np.hstack([np.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]))
+        counts['gene_ids_segs'].append(np.ones((np.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * c)
+        tmp = [np.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0]
+        if len(tmp) == 0:
+            continue
+        tmp = np.hstack(tmp)
+        if tmp.shape[0] > 0:
+            counts['edges'].append(np.c_[tmp[:, 0], tmp[:, np.arange(1, tmp.shape[1], 2)]])
+            counts['gene_ids_edges'].append(np.ones((tmp.shape[0], 1), dtype='int') * c)
+
+    ### write result data to hdf5
+    for key in counts:
+        counts[key] = np.vstack(counts[key]) if len(counts[key]) > 0 else counts[key]
+    counts['edge_idx'] = counts['edges'][:, 0] if len(counts['edges']) > 0 else np.array([])
+    counts['edges'] = counts['edges'][:, 1:] if len(counts['edges']) > 0 else np.array([])
+    h5fid = h5py.File(fname_out, 'w')
+    h5fid.create_dataset(name='samples', data=codeUTF8(options.samples))
+    h5fid['strains'] = h5py.SoftLink('/samples')
+    for key in counts:
+        if np.issubdtype(counts[key].dtype, np.str_):
+            h5fid.create_dataset(name=key, data=codeUTF8(counts[key]))
         else:
-            chunksize = int(max(1, math.floor(100000 / len(options.samples))))
-
-        jobinfo = []
-
-        PAR = dict()
-        PAR['options'] = options
-        if options.merge == 'single':
-            PAR['options'].bam_fnames = PAR['options'].bam_fnames[sample_idx]
-            PAR['options'].samples = PAR['options'].samples[sample_idx]
-
-        #s_idx = np.argsort([x.chr for x in genes]) # TODO
-        s_idx = np.arange(genes.shape[0])
-        for c_idx in range(0, s_idx.shape[0], chunksize):
-            cc_idx = min(s_idx.shape[0], c_idx + chunksize)
-            fn = re.sub(r'.hdf5$', '', fname_out) + '.chunk_%i_%i.pickle' % (c_idx, cc_idx)
-            if os.path.exists(fn):
-                continue
-            else:
-                print('submitting chunk %i to %i (%i)' % (c_idx, cc_idx, s_idx.shape[0]))
-                PAR['genes'] = genes[s_idx][c_idx:cc_idx]
-                for gg in PAR['genes']:
-                    gg.to_sparse()
-                PAR['fn_bam'] = options.bam_fnames
-                PAR['fn_out'] = fn
-                PAR['options'] = options
-                jobinfo.append(rp.rproc('count_graph_coverage', PAR, 15000, options.options_rproc, 60*48))
-
-        rp.rproc_wait(jobinfo, 30, 1.0, -1)
-        del genes
-
-        ### merge results from count chunks
-        if options.verbose:
-            print('\nCollecting count data from chunks ...\n')
-            print('writing data to %s' % fname_out)
-
-        ### write data to hdf5 continuously
-        h5fid = h5py.File(fname_out, 'w')
-        h5fid.create_dataset(name='gene_names', data=codeUTF8(counts['gene_names']))
-        h5fid.create_dataset(name='seg_len', data=counts['seg_len'])
-        h5fid.create_dataset(name='samples', data=codeUTF8(options.samples))
-        h5fid['strains'] = h5py.SoftLink('/samples')
-        for c_idx in range(0, s_idx.shape[0], chunksize):
-            cc_idx = min(s_idx.shape[0], c_idx + chunksize)
-            if options.verbose:
-                print('collecting chunk %i-%i (%i)' % (c_idx, cc_idx, s_idx.shape[0]))
-            fn = re.sub(r'.hdf5$', '', fname_out) + '.chunk_%i_%i.pickle' % (c_idx, cc_idx)
-            if not os.path.exists(fn):
-                print('ERROR: Not all chunks in counting graph coverage completed!', file=sys.stderr)
-                sys.exit(1)
-            else:
-                counts_tmp = pickle.load(open(fn, 'rb'))
-                for c in range(counts_tmp.shape[1]):
-                    if 'segments' in h5fid:
-                        appendToHDF5(h5fid, np.hstack([np.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), 'segments')
-                        appendToHDF5(h5fid, np.hstack([np.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), 'seg_pos') 
-                        appendToHDF5(h5fid, np.ones((np.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (s_idx[c_idx + c]), 'gene_ids_segs')
-                    else:
-                        h5fid.create_dataset(name='segments', data=np.hstack([np.atleast_2d(x.segments).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.samples)))
-                        h5fid.create_dataset(name='seg_pos', data=np.hstack([np.atleast_2d(x.seg_pos).T for x in counts_tmp[:, c]]), chunks=True, compression='gzip', maxshape=(None, len(options.samples)))
-                        h5fid.create_dataset(name='gene_ids_segs', data=np.ones((np.atleast_2d(counts_tmp[0, c].seg_pos).shape[1], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
-
-                    tmp = [np.atleast_2d(x.edges) for x in counts_tmp[:, c] if x.edges.shape[0] > 0]
-                    if len(tmp) == 0:
-                        continue
-                    tmp = np.hstack(tmp)
-                    if tmp.shape[0] > 0:
-                        if 'edges' in h5fid:
-                            appendToHDF5(h5fid, tmp[:, np.arange(1, tmp.shape[1], 2)], 'edges')
-                            appendToHDF5(h5fid, tmp[:, 0], 'edge_idx')
-                            appendToHDF5(h5fid, np.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), 'gene_ids_edges')
-                        else:
-                            h5fid.create_dataset(name='edges', data=tmp[:, np.arange(1, tmp.shape[1], 2)], chunks=True, compression='gzip', maxshape=(None, tmp.shape[1] / 2))
-                            h5fid.create_dataset(name='edge_idx', data=tmp[:, 0], chunks=True, compression='gzip', maxshape=(None,))
-                            h5fid.create_dataset(name='gene_ids_edges', data=np.ones((tmp.shape[0], 1), dtype='int') * (s_idx[c_idx + c]), chunks=True, compression='gzip', maxshape=(None, 1))
-                del tmp, counts_tmp
-        h5fid.close()
-
+            h5fid.create_dataset(name=key, data=counts[key])
+    h5fid.close()
 
 def collect_single_quantification_results(fname_out, sample_idxs, options):
 

@@ -533,17 +533,6 @@ def verify_wrapper(ev, genes, gidx_min, gene_ids_edges, gene_ids_segs, edge_idx,
 
 def verify_all_events(ev, sample_idx=None, list_bam=None, event_type=None, options=None, out_fn=None):
 
-    ### set parameters if called by rproc
-    if sample_idx is None:
-        PAR = ev
-        ev = PAR['ev']
-        sample_idx = PAR['sample_idx']
-        list_bam = PAR['list_bam']
-        if 'out_fn' in PAR:
-            out_fn = PAR['out_fn']
-        event_type = PAR['event_type']
-        options = PAR['options']
-
     ### verify the events if demanded
     if options.verify_alt_events:
 

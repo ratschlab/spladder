@@ -10,7 +10,6 @@ if __name__ == "__main__":
 ### local imports
 from .verify import *
 from .write import *
-from ..rproc import rproc, rproc_wait
 from ..helpers import compute_psi, codeUTF8
 
 def _prepare_count_hdf5(options, OUT, event_features, sample_idx=None):
@@ -41,9 +40,6 @@ def _prepare_count_hdf5(options, OUT, event_features, sample_idx=None):
 
 
 def analyze_events(options, event_type, sample_idx=None):
-
-    if options.pyproc and not os.path.exists('%s/event_count_chunks' % options.outdir):
-        os.makedirs('%s/event_count_chunks' % options.outdir)
 
     print('analyzing events with confidence %i' % options.confidence)
 
@@ -96,113 +92,26 @@ def analyze_events(options, event_type, sample_idx=None):
             OUT.close()
             confirmed_idx = np.array([], dtype='int')
         else:
-            if not options.pyproc:
-                if options.merge == 'single':
-                    (events_all, counts, verified) = verify_all_events(events_all, sample_idx, options.bam_fnames, event_type, options)
-                else:
-                    (events_all, counts, verified) = verify_all_events(events_all, np.arange(len(options.samples)), options.bam_fnames, event_type, options)
-
-                psi = np.empty((counts.shape[0], counts.shape[2]), dtype='float')
-                iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
-                iso2 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
-                for i in range(counts.shape[2]):
-                    (psi[:, i], iso2[:, i], iso1[:, i])  = compute_psi(counts[:, :, i], event_type, options)
-
-                OUT = h5py.File(fn_out_count, 'w')
-                OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
-                OUT.create_dataset(name='psi', data=psi, compression='gzip')
-                OUT.create_dataset(name='iso1', data=iso1, compression='gzip')
-                OUT.create_dataset(name='iso2', data=iso2, compression='gzip')
-                OUT.create_dataset(name='gene_idx', data=np.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
-                OUT.create_dataset(name='verified', data=verified, compression='gzip')
-                _prepare_count_hdf5(options, OUT, event_features[event_type], sample_idx=sample_idx)
+            if options.merge == 'single':
+                (events_all, counts, verified) = verify_all_events(events_all, sample_idx, options.bam_fnames, event_type, options)
             else:
-                jobinfo = []
-                PAR = dict()
-                chunk_size_events = 5000
-                chunk_size_samples = 500
-                for i in range(0, events_all.shape[0], chunk_size_events):
-                    idx_events = np.arange(i, min(i + chunk_size_events, events_all.shape[0]))
-                    for j in range(0, len(options.samples), chunk_size_samples):
-                        idx_samples = np.arange(j, min(j + chunk_size_samples, len(options.samples)))
-                        PAR['ev'] = events_all[idx_events].copy()
-                        PAR['sample_idx'] = idx_samples
-                        PAR['list_bam'] = options.bam_fnames
-                        PAR['out_fn'] = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (options.outdir, event_type, i, j, options.confidence)
-                        PAR['event_type'] = event_type
-                        PAR['options'] = options
-                        if os.path.exists(PAR['out_fn']):
-                            print('Chunk event %i, sample %i already completed' % (i, j))
-                        else:
-                            print('Submitting job %i, event chunk %i/%i, sample chunk %i' % (len(jobinfo) + 1, i, events_all.shape[0], j))
-                            jobinfo.append(rproc('verify_all_events', PAR, 10000, options.options_rproc, 60 * 12))
-                
-                rproc_wait(jobinfo, 20, 1.0, 1)
-                
-                gene_idx_ = []
-                verified = []
-                collect_ids = []
+                (events_all, counts, verified) = verify_all_events(events_all, np.arange(len(options.samples)), options.bam_fnames, event_type, options)
 
-                print('Collecting results from chunks ...')
-                OUT = h5py.File(fn_out_count, 'w')
-                for i in range(0, events_all.shape[0], chunk_size_events):
-                    idx_events = np.arange(i, min(i + chunk_size_events, events_all.shape[0]))
-                    for j in range(0, len(options.samples), chunk_size_samples):
-                        idx_samples = np.arange(j, min(j + chunk_size_samples, len(options.samples)))
-                        print('\r%i (%i), %i (%i)' % (i, events_all.shape[0], j, len(options.samples)))
-                        out_fn = '%s/event_count_chunks/%s_%i_%i_C%i.pickle' % (options.outdir, event_type, i, j, options.confidence)
-                        if not os.path.exists(out_fn):
-                            print('ERROR: not finished %s' % out_fn, file=sys.stderr)
-                            sys.exit(1)
-                        ev_, counts_, verified_ = pickle.load(open(out_fn, 'rb'))
-                        if j == 0:
-                            ev = ev_
-                            counts = counts_
-                            verified = verified_
-                            collect_ids_ = [x.id for x in ev]
-                        else:
-                            counts = np.r_[counts, counts_]
-                            verified = np.r_[verified, verified_]
-                            del counts_
-                            del verified_
-                                
-                    psi = np.empty((counts.shape[0], counts.shape[2]), dtype='float')
-                    iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
-                    iso2 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
-                    for j in range(counts.shape[2]):
-                        (psi[:, j], iso2[:, j], iso1[:, j]) = compute_psi(counts[:, :, j], event_type, options) 
+            psi = np.empty((counts.shape[0], counts.shape[2]), dtype='float')
+            iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
+            iso2 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')
+            for i in range(counts.shape[2]):
+                (psi[:, i], iso2[:, i], iso1[:, i])  = compute_psi(counts[:, :, i], event_type, options)
 
-                    if i == 0:
-                        OUT.create_dataset(name='event_counts', data=counts, maxshape=(len(options.samples), len(event_features[event_type]), None), compression='gzip')
-                        OUT.create_dataset(name='psi', data=np.atleast_2d(psi), maxshape=(psi.shape[0], None), compression='gzip')
-                        OUT.create_dataset(name='iso1', data=np.atleast_2d(iso1), maxshape=(iso1.shape[0], None), compression='gzip')
-                        OUT.create_dataset(name='iso2', data=np.atleast_2d(iso2), maxshape=(iso2.shape[0], None), compression='gzip')
-                    else:
-                        tmp = OUT['event_counts'].shape
-                        OUT['event_counts'].resize((tmp[0], tmp[1], tmp[2] + len(ev)))
-                        OUT['event_counts'][:, :, tmp[2]:] = counts
-                        tmp = OUT['psi'].shape
-                        OUT['psi'].resize((tmp[0], tmp[1] + len(ev)))
-                        OUT['psi'][:, tmp[1]:] = psi
-                        tmp = OUT['iso1'].shape
-                        OUT['iso1'].resize((tmp[0], tmp[1] + len(ev)))
-                        OUT['iso1'][:, tmp[1]:] = iso1
-                        tmp = OUT['iso2'].shape
-                        OUT['iso2'].resize((tmp[0], tmp[1] + len(ev)))
-                        OUT['iso2'][:, tmp[1]:] = iso2
-                    collect_ids.extend(collect_ids_)
-                    gene_idx_ = np.r_[gene_idx_, [x.gene_idx for x in ev]]
-                    del iso1, iso2, psi, counts, ev, ev_
-
-                verified = np.array(verified, dtype='bool')
-
-                assert(events_all.shape[0] == verified.shape[0])
-                assert(np.all([events_all[e].id for e in range(events_all.shape[0])] == collect_ids))
-
-                OUT.create_dataset(name='verified', data=verified, dtype='bool', compression='gzip')
-                OUT.create_dataset(name='gene_idx', data=gene_idx_)
-                _prepare_count_hdf5(options, OUT, event_features[event_type], sample_idx=sample_idx)
-            
+            OUT = h5py.File(fn_out_count, 'w')
+            OUT.create_dataset(name='event_counts', data=counts, compression='gzip')
+            OUT.create_dataset(name='psi', data=psi, compression='gzip')
+            OUT.create_dataset(name='iso1', data=iso1, compression='gzip')
+            OUT.create_dataset(name='iso2', data=iso2, compression='gzip')
+            OUT.create_dataset(name='gene_idx', data=np.array([x.gene_idx for x in events_all], dtype='int'), compression='gzip')
+            OUT.create_dataset(name='verified', data=verified, compression='gzip')
+            _prepare_count_hdf5(options, OUT, event_features[event_type], sample_idx=sample_idx)
+           
             ### write more event infos to hdf5
             if event_type == 'exon_skip':
                 event_pos = np.array([x.exons2.ravel() for x in events_all])
