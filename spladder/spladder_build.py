@@ -77,14 +77,11 @@ def spladder(options):
 
         ### build individual graphs
         for idx in idxs:
-            CFG_ = dict()
             if options.merge != 'merge_bams':
-                CFG_['bam_fnames'] = options.bam_fnames
-                CFG_['samples'] = options.samples
-                options.bam_fnames = options.bam_fnames[idx]
-                options.samples = options.samples[idx]
-                options.out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.samples)
+                bam_fnames = options.bam_fnames[idx]
+                options.out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.samples[idx])
             else:
+                bam_fnames = options.bam_fnames
                 options.out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.merge)
 
             ### assemble output filename to check if we are already done
@@ -97,14 +94,11 @@ def spladder(options):
             if os.path.exists(fn_out):
                 print('%s - All result files already exist.' % fn_out, file=sys.stdout)
             else:
-                spladder_core(options)
-
-            for key in CFG_:
-                setattr(options, key, CFG_[key].copy())
+                spladder_core(bam_fnames, options)
 
         ### merge parts if necessary
         if options.merge == 'merge_graphs':
-            run_merge(options)
+            run_merge(options.samples, options)
 
     ### generate validated version of splice graph
     if options.merge == 'merge_graphs' and options.validate_sg and not os.path.exists(fn_out_merge_val):
@@ -130,11 +124,11 @@ def spladder(options):
 
         ### get count output file
         if options.merge == 'single':
-            fn_in_count = get_filename('fn_count_in', options, sample_idx=idx)
-            fn_out_count = get_filename('fn_count_out', options, sample_idx=idx)
+            fn_in_count = get_filename('fn_count_in', options, options.samples[idx])
+            fn_out_count = get_filename('fn_count_out', options, options.samples[idx])
         elif options.merge == 'merge_graphs' and options.qmode == 'single':
             fn_in_count = get_filename('fn_count_in', options)
-            fn_out_count = get_filename('fn_count_out', options, sample_idx=0)
+            fn_out_count = get_filename('fn_count_out', options, options.samples[0])
         else:
             fn_in_count = get_filename('fn_count_in', options)
             fn_out_count = get_filename('fn_count_out', options)
@@ -145,13 +139,13 @@ def spladder(options):
             if not os.path.exists(fn_out_count):
                 ### collect graph counts
                 if options.merge == 'single':
-                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, options, sample_idx=idx)
+                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, options.bam_fnames, options, sample_idx=idx)
                 elif options.merge == 'merge_graphs' and options.qmode == 'single':
-                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, options, qmode='single')
+                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, options.bam_fnames, options, qmode='single')
                 elif options.merge == 'merge_graphs' and options.qmode == 'collect':
                     collect_single_quantification_results(fn_out_count, idxs, options)
                 else:
-                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, options)
+                    count_graph_coverage_wrapper(fn_in_count, fn_out_count, options.bam_fnames, options)
                 
             ### collect gene expression counts from graph
             if not os.path.exists(fn_out_gene_count):
@@ -166,10 +160,10 @@ def spladder(options):
 
         if options.quantify_graph:
             for idx in idxs:
-                for e_idx in range(len(options.event_types)):
+                for event_type in options.event_types:
                     if options.merge == 'single':
-                        analyze_events(options, options.event_types[e_idx], sample_idx=idx)
+                        analyze_events(event_type, options.bam_fnames, options, sample_idx=idx)
                     else:
-                        analyze_events(options, options.event_types[e_idx])
+                        analyze_events(event_type, options.bam_fnames, options)
 
 

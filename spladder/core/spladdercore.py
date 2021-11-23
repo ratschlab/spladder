@@ -5,7 +5,7 @@ import pickle
 
 from .gen_graphs import gen_graphs 
 
-def spladder_core(options):
+def spladder_core(bam_fnames, options):
 
     genes_loaded = False
 
@@ -23,7 +23,7 @@ def spladder_core(options):
             gene.populate_annotated_introns()
 
         ### augment
-        genes = gen_graphs(genes, options)
+        genes = gen_graphs(genes, bam_fnames, options)
 
         print('Saving genes to %s' % (options.out_fname))
         pickle.dump(genes, open(options.out_fname, 'wb'), -1)

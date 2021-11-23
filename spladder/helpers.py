@@ -7,7 +7,7 @@ if __package__ is None:
 
 from .reads import *
 
-def make_introns_feasible(introns, genes, options):
+def make_introns_feasible(introns, genes, bam_fnames, options):
 
     tmp1 = np.array([x.shape[0] for x in introns[:, 0]])
     tmp2 = np.array([x.shape[0] for x in introns[:, 1]])
@@ -27,7 +27,7 @@ def make_introns_feasible(introns, genes, options):
         options.read_filter['mismatch'] = max(options.read_filter['mismatch'] - 1, 0)
 
         ### get new intron counts
-        tmp_introns = get_intron_list(genes[unfeas], options)
+        tmp_introns = get_intron_list(genes[unfeas], bam_fnames, options)
         introns[unfeas, :] = tmp_introns
 
         ### still unfeasible?
@@ -124,7 +124,7 @@ def filter_introns(introns, genes, options):
 
 
 ### determine count output file
-def get_filename(which, options, sample_idx=None):
+def get_filename(which, options, sample=None):
     """This function returns a filename generated from the current configuration"""
 
     ### init any tags
@@ -139,19 +139,19 @@ def get_filename(which, options, sample_idx=None):
     if which in ['fn_count_in', 'fn_count_out']:
         if options.merge == 'single':
             if which == 'fn_count_in':
-                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, sample, prune_tag))
             else:
-                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, options.samples[sample_idx], prune_tag))
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, sample, prune_tag))
         else:
             if which == 'fn_count_out':
                 if options.qmode == 'single':
-                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
+                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, sample, prune_tag, validate_tag))
                 else:
                     return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.count.hdf5' % (options.confidence, options.merge, prune_tag, validate_tag))
             else:
                 return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, prune_tag, validate_tag))
     elif which == 'fn_collect_in':
-        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
+        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, sample, prune_tag, validate_tag))
     elif which == 'fn_out_merge':
         if options.merge == 'merge_graphs':
             return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, prune_tag))

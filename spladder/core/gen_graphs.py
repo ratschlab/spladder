@@ -10,12 +10,7 @@ from ..helpers import *
 from ..editgraph import *
 from ..merge import *
 
-def gen_graphs(genes, options=None):
-
-    if options is None and isinstance(genes, dict):
-        PAR = genes
-        genes  = PAR['genes']
-        options = PAR['options']
+def gen_graphs(genes, bam_fnames, options=None):
 
     if options.logfile == '-':
         fd_log = sys.stdout
@@ -77,7 +72,7 @@ def gen_graphs(genes, options=None):
     ##############################################################################
     if (options.insert_es or options.insert_ir or options.insert_ni): 
         print('Loading introns from file ...', file=fd_log)
-        introns = get_intron_list(genes, options)
+        introns = get_intron_list(genes, bam_fnames, options)
         print('...done.\n', file=fd_log)
 
         ### clean intron list
@@ -95,7 +90,7 @@ def gen_graphs(genes, options=None):
         ### check feasibility
         ### TODO when working exclusively with sparse bam, we need to skip this ...
         print('Testing for infeasible genes ...', file=fd_log)
-        introns = make_introns_feasible(introns, genes, options)
+        introns = make_introns_feasible(introns, genes, bam_fnames, options)
         print('...done.\n', file=fd_log)
 
         for i in range(genes.shape[0]):
@@ -108,7 +103,7 @@ def gen_graphs(genes, options=None):
         if hasattr(options, 'cassette_exon') and 'read_filter' in options.cassette_exon:
             CFG_['read_filter'] = options.read_filter.copy()
             options.read_filter = options.cassette_exon['read_filter']
-        genes, inserted_ = insert_cassette_exons(genes, options)
+        genes, inserted_ = insert_cassette_exons(genes, bam_fnames, options)
         inserted['cassette_exon'] = inserted_
         for key in CFG_:
             setattr(options, key, CFG_[key].copy())
@@ -120,7 +115,7 @@ def gen_graphs(genes, options=None):
         if 'read_filter' in options.intron_retention:
             CFG_['read_filter'] = options.read_filter.copy()
             options.read_filter = options.intron_retention['read_filter']
-        genes, inserted_ = insert_intron_retentions(genes, options)
+        genes, inserted_ = insert_intron_retentions(genes, bam_fnames, options)
         inserted['intron_retention'] = inserted_
         for key in CFG_:
             setattr(options, key, CFG_[key].copy())
@@ -166,7 +161,7 @@ def gen_graphs(genes, options=None):
             for iter in range(1, options.insert_intron_iterations + 1):
                 print('... chr %s - iteration %i/%i\n' % (chr_idx, iter, options.insert_intron_iterations), file=fd_log)
 
-                genes_mod, inserted_ = insert_intron_edges(tmp_genes, options)
+                genes_mod, inserted_ = insert_intron_edges(tmp_genes, bam_fnames, options)
 
                 inserted['intron_in_exon'] += inserted_['intron_in_exon']
                 inserted['alt_53_prime'] += inserted_['alt_53_prime']

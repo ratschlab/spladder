@@ -268,14 +268,14 @@ def filter_by_edgecount(genes, options):
     return genes[keep_genes]
 
 
-def insert_intron_retentions(genes, options):
+def insert_intron_retentions(genes, bam_fnames, options):
     # written by Georg Zeller & Gunnar Raetsch, Mpi Tuebingen, Germany, 2009, Andre Kahles, MSKCC, 2013
 
     inserted = 0
     strands = ['+', '-']
 
     ### form all possible combinations of contigs and strands --> regions
-    (regions, options) = init_regions(options.bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
+    (regions, options) = init_regions(bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
 
     ### ignore contigs not present in bam files 
     # TODO
@@ -303,11 +303,11 @@ def insert_intron_retentions(genes, options):
                 assert(gg.chr == contig)
 
                 if options.sparse_bam:
-                    if isinstance(options.bam_fnames, str):
-                        [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
+                    if isinstance(bam_fnames, str):
+                        [tracks] = add_reads_from_sparse_bam(gg, bam_fnames, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
-                        for fname in options.bam_fnames:
+                        for fname in bam_fnames:
                             [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
@@ -315,7 +315,7 @@ def insert_intron_retentions(genes, options):
                                 tracks += tmp_
                     tracks = np.asarray(tracks)
                 else:
-                    tracks = add_reads_from_bam(np.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
+                    tracks = add_reads_from_bam(np.array([gg], dtype='object'), bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
 
                 exon_coverage = np.zeros((gg.splicegraph.vertices.shape[1],), dtype='float')
                 for k in range(gg.splicegraph.vertices.shape[1]):
@@ -404,7 +404,7 @@ def insert_intron_retentions(genes, options):
     return (genes, inserted)
 
 
-def insert_intron_edges(genes, options):
+def insert_intron_edges(genes, bam_fnames, options):
 
     if not hasattr(options, 'debug'):
         options.debug = False
@@ -564,11 +564,11 @@ def insert_intron_edges(genes, options):
                         gg.stop = genes[i].introns[s][j, 0]  ### end of presumable exon
 
                         if options.sparse_bam:
-                            if isinstance(options.bam_fnames, str):
-                                [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
+                            if isinstance(bam_fnames, str):
+                                [tracks] = add_reads_from_sparse_bam(gg, bam_fnames, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
-                                for fname in options.bam_fnames:
+                                for fname in bam_fnames:
                                     [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
@@ -576,7 +576,7 @@ def insert_intron_edges(genes, options):
                                         tracks += tmp_
                             tracks = np.asarray(tracks)
                         else:
-                            tracks = add_reads_from_bam(np.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
+                            tracks = add_reads_from_bam(np.array([gg], dtype='object'), bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
 
                         ### TODO: make the following a configurable
                         if np.mean(np.sum(tracks, axis=0) > 10) < 0.9:
@@ -660,11 +660,11 @@ def insert_intron_edges(genes, options):
                         gg.stop = genes[i].splicegraph.vertices[1, idx2__][0]  ### stop of next exon
 
                         if options.sparse_bam:
-                            if isinstance(options.bam_fnames, str):
-                                [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
+                            if isinstance(bam_fnames, str):
+                                [tracks] = add_reads_from_sparse_bam(gg, bam_fnames, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             else:
                                 tracks = None
-                                for fname in options.bam_fnames:
+                                for fname in bam_fnames:
                                     [tmp_] = add_reads_from_sparse_bam(gg, fname, gg.chr, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                                     if tracks is None:
                                         tracks = tmp_
@@ -672,7 +672,7 @@ def insert_intron_edges(genes, options):
                                         tracks += tmp_
                             tracks = np.asarray(tracks)
                         else:
-                            tracks = add_reads_from_bam(np.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
+                            tracks = add_reads_from_bam(np.array([gg], dtype='object'), bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
 
                         ### TODO: make configurable
                         if np.mean(np.sum(tracks, axis=0) > 10) < 0.9:
@@ -823,7 +823,7 @@ def insert_intron_edges(genes, options):
     return (genes, inserted)
 
 
-def insert_cassette_exons(genes, options):
+def insert_cassette_exons(genes, bam_fnames, options):
     # written by Andre Kahles, Mpi Tuebingen, Germany, 2012
 
     inserted = 0
@@ -831,7 +831,7 @@ def insert_cassette_exons(genes, options):
     strands = ['+', '-']
 
     ### form all possible combinations of contigs and strands --> regions
-    (regions, options) = init_regions(options.bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
+    (regions, options) = init_regions(bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
 
     ### ignore contigs not present in bam files 
     # TODO TODO
@@ -858,11 +858,11 @@ def insert_cassette_exons(genes, options):
                 assert(gg.chr == contig)
 
                 if options.sparse_bam:
-                    if isinstance(options.bam_fnames, str):
-                        [tracks] = add_reads_from_sparse_bam(gg, options.bam_fnames, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
+                    if isinstance(bam_fnames, str):
+                        [tracks] = add_reads_from_sparse_bam(gg, bam_fnames, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                     else:
                         tracks = None
-                        for fname in options.bam_fnames:
+                        for fname in bam_fnames:
                             [tmp_] = add_reads_from_sparse_bam(gg, fname, contig, options.confidence, types=['exon_track'], filter=options.read_filter, cache=bam_cache, unstranded=True)
                             if tracks is None:
                                 tracks = tmp_
@@ -870,7 +870,7 @@ def insert_cassette_exons(genes, options):
                                 tracks += tmp_
                     tracks = np.asarray(tracks)
                 else:
-                    tracks = add_reads_from_bam(np.array([gg], dtype='object'), options.bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
+                    tracks = add_reads_from_bam(np.array([gg], dtype='object'), bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
 
                 ### add introns implied by splicegraph to the list
                 all_introns = gg.introns[si][:, :2]

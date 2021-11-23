@@ -39,7 +39,7 @@ def _prepare_count_hdf5(options, OUT, event_features, sample_idx=None):
     OUT.create_dataset(name='gene_pos', data=np.array([[x.start, x.stop] for x in genes], dtype='int'))
 
 
-def analyze_events(options, event_type, sample_idx=None):
+def analyze_events(event_type, bam_fnames, options, sample_idx=None):
 
     print('analyzing events with confidence %i' % options.confidence)
 
@@ -93,9 +93,9 @@ def analyze_events(options, event_type, sample_idx=None):
             confirmed_idx = np.array([], dtype='int')
         else:
             if options.merge == 'single':
-                (events_all, counts, verified) = verify_all_events(events_all, sample_idx, options.bam_fnames, event_type, options)
+                (events_all, counts, verified) = verify_all_events(events_all, sample_idx, bam_fnames, event_type, options)
             else:
-                (events_all, counts, verified) = verify_all_events(events_all, np.arange(len(options.samples)), options.bam_fnames, event_type, options)
+                (events_all, counts, verified) = verify_all_events(events_all, np.arange(len(options.samples)), bam_fnames, event_type, options)
 
             psi = np.empty((counts.shape[0], counts.shape[2]), dtype='float')
             iso1 = np.empty((counts.shape[0], counts.shape[2]), dtype='int32')

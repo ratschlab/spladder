@@ -115,7 +115,7 @@ def count_graph_coverage(genes, fn_bam=None, options=None, fn_out=None):
         return counts
 
 
-def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, qmode='all'):
+def count_graph_coverage_wrapper(fname_in, fname_out, bam_fnames, options, sample_idx=None, qmode='all'):
 
     (genes, inserted) = pickle.load(open(fname_in, 'rb')) 
     for g in genes:
@@ -140,17 +140,17 @@ def count_graph_coverage_wrapper(fname_in, fname_out, options, sample_idx=None, 
 
     if options.merge == 'single':
         print('\nprocessing %s' % (options.samples[sample_idx]))
-        counts_tmp = count_graph_coverage(genes, options.bam_fnames[sample_idx], options)
+        counts_tmp = count_graph_coverage(genes, bam_fnames[sample_idx], options)
     elif options.merge == 'merge_graphs' and qmode == 'single':
         print('\nquantifying merged graph in single mode (first file only) on %s' % options.samples[0])
-        counts_tmp = count_graph_coverage(genes, options.bam_fnames[0], options)
+        counts_tmp = count_graph_coverage(genes, bam_fnames[0], options)
     else:
         for s_idx in range(options.samples.shape[0]):
             print('\n%i/%i' % (s_idx + 1, options.samples.shape[0]))
             if s_idx == 0:
-                counts_tmp = count_graph_coverage(genes, options.bam_fnames[s_idx], options)
+                counts_tmp = count_graph_coverage(genes, bam_fnames[s_idx], options)
             else:
-                counts_tmp = np.r_[np.atleast_2d(counts_tmp), count_graph_coverage(genes, options.bam_fnames[s_idx], options)]
+                counts_tmp = np.r_[np.atleast_2d(counts_tmp), count_graph_coverage(genes, bam_fnames[s_idx], options)]
 
     for c in range(counts_tmp.shape[1]):
         counts['segments'].append(np.hstack([np.atleast_2d(x.segments).T for x in counts_tmp[:, c]]))
@@ -190,7 +190,7 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
         h5fid = h5py.File(fname_out, 'w')
         for i, idx in enumerate(sample_idxs):
 
-            fname = get_filename('fn_collect_in', options, sample_idx=idx)
+            fname = get_filename('fn_collect_in', options, options.samples[idx])
             if options.verbose:
                 print('collecting counts from %s (%i/%i)' % (fname, i+1, len(sample_idxs)))
             if not os.path.exists(fname):

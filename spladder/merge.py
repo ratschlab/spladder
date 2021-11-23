@@ -11,7 +11,6 @@ if __package__ is None:
 
 from .utils import *
 from .classes.segmentgraph import Segmentgraph
-from .count import count_graph_coverage_wrapper
 
 
 def merge_duplicate_exons(genes, options):
@@ -65,7 +64,7 @@ def merge_duplicate_exons(genes, options):
     return genes
 
 
-def merge_genes_by_isoform(options):
+def merge_genes_by_isoform(samples, options):
     ### This script takes several gene structures and merges them into one. If the number of isoforms of an annotated transcript should 
     ### exceed max_num_isoforms, max_num_isoforms many are subsampled
     
@@ -80,8 +79,8 @@ def merge_genes_by_isoform(options):
         prune_tag = ''
 
     ### add all single bam file isoforms
-    for i in range(len(options.samples)):
-        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, options.samples[i], prune_tag))
+    for sample in samples:
+        merge_list.append('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, sample, prune_tag))
 
     ### add also isoforms of all bam files combined
     fn_bam_merged = '%s/spladder/genes_graph_conf%i.merge_bams%s.pickle' % (options.outdir, options.confidence, prune_tag)
@@ -343,7 +342,7 @@ def merge_genes_by_splicegraph(options, merge_list=None, fn_out=None):
     pickle.dump((genes, inserted), open(fn_out, 'wb'), -1)
 
 
-def run_merge(options):
+def run_merge(samples, options):
 
     merge_all = (options.merge == 'merge_all')
     merge_all_tag = ''
@@ -364,7 +363,7 @@ def run_merge(options):
         if len(options.chunked_merge) > 0:
             curr_level, max_level, chunk_start, chunk_end = [int(_) for _ in options.chunked_merge[0]]
             if curr_level == 1:
-                merge_list = np.array(sorted(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples]))
+                merge_list = np.array(sorted(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in samples]))
             else:
                 merge_list = np.array(sorted(glob.glob('%s/spladder/genes_graph_conf%i.%s%s_level%i_chunk*.pickle' % (options.outdir, options.confidence, options.merge, prune_tag, curr_level - 1))))
             chunk_end = min(len(merge_list), chunk_end)
@@ -381,7 +380,7 @@ def run_merge(options):
             print('merging level %i chunk %i to %i' % (curr_level, chunk_start, chunk_end))
             merge_genes_by_splicegraph(options, merge_list=merge_list[chunk_start:chunk_end], fn_out=fn)
         else:
-            merge_list = np.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in options.samples])
+            merge_list = np.array(['%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, x, prune_tag) for x in samples])
             merge_genes_by_splicegraph(options, merge_list=merge_list, fn_out=fn_out)
     else:
         print('File %s already exists!' % fn_out)
@@ -389,6 +388,6 @@ def run_merge(options):
     if options.do_gen_isoforms:
         fn_out = '%s/spladder/genes_graph_conf%i.%s%s_isoforms.pickle' % (options.outdir, options.confidence, options.merge, prune_tag)
         if not os.path.exists(fn_out):
-            merge_genes_by_isoform(options.outdir, options.confidence, merge_all, experiment)
+            merge_genes_by_isoform(samples, options) #options.outdir, options.confidence, merge_all, experiment)
         else:
             print('File %s already exists!' % fn_out)
