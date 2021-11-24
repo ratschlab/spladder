@@ -18,16 +18,13 @@ def _prepare_count_hdf5(options, OUT, event_features, sample_idx=None):
     if hasattr(options, 'spladderfile') and os.path.exists(options.spladderfile):
         (genes, inserted) = pickle.load(open(options.spladderfile), 'rb')
     else:
-        prune_tag = ''
-        if options.do_prune:
-            prune_tag = '_pruned'
         validate_tag = ''
         if options.validate_sg:
             validate_tag = '.validated'
         if not sample_idx is None:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag, prune_tag), 'rb'))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag), 'rb'))
         else:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag), 'rb'))
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag), 'rb'))
 
     ### write sample and gene indices to hdf5
     OUT.create_dataset(name='samples', data=codeUTF8(options.samples))

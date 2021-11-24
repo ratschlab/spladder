@@ -9,8 +9,6 @@
 # Copyright (C) 2009-2011 Max Planck Society
 # Copyright (C) 2012-2016 Memorial Sloan-Kettering Cancer Center
 # Copyright (C) 2016-2021 ETH Zurich
-#
-# SplAdder wrapper script to start the interpreter with the correct list of arguments
 
 import sys
 import os
@@ -85,14 +83,8 @@ def spladder(options):
                 options.out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.merge)
 
             ### assemble output filename to check if we are already done
-            fn_out = options.out_fname
-            if options.do_prune:
-                fn_out = re.sub('.pickle$', '_pruned.pickle', fn_out)
-            if options.do_gen_isoforms:
-                fn_out = re.sub('.pickle$', '_with_isoforms.pickle', fn_out)
-    
-            if os.path.exists(fn_out):
-                print('%s - All result files already exist.' % fn_out, file=sys.stdout)
+            if os.path.exists(options.out_fname):
+                print('%s - All result files already exist.' % options.out_fname, file=sys.stdout)
             else:
                 spladder_core(bam_fnames, options)
 

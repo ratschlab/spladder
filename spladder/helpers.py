@@ -128,9 +128,6 @@ def get_filename(which, options, sample=None):
     """This function returns a filename generated from the current configuration"""
 
     ### init any tags
-    prune_tag = ''
-    if hasattr(options, 'do_prune') and options.do_prune:
-        prune_tag = '_pruned'
     validate_tag = ''
     if hasattr(options, 'validate_sg') and options.validate_sg:
         validate_tag = '.validated'
@@ -139,26 +136,26 @@ def get_filename(which, options, sample=None):
     if which in ['fn_count_in', 'fn_count_out']:
         if options.merge == 'single':
             if which == 'fn_count_in':
-                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, sample, prune_tag))
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.pickle' % (options.confidence, sample))
             else:
-                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, sample, prune_tag))
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.count.hdf5' % (options.confidence, sample))
         else:
             if which == 'fn_count_out':
                 if options.qmode == 'single':
-                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, sample, prune_tag, validate_tag))
+                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s.count.hdf5' % (options.confidence, options.merge, sample, validate_tag))
                 else:
-                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.count.hdf5' % (options.confidence, options.merge, prune_tag, validate_tag))
+                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, options.merge, validate_tag))
             else:
-                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, prune_tag, validate_tag))
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, validate_tag))
     elif which == 'fn_collect_in':
-        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.count.hdf5' % (options.confidence, options.merge, sample, prune_tag, validate_tag))
+        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s.count.hdf5' % (options.confidence, options.merge, sample, validate_tag))
     elif which == 'fn_out_merge':
         if options.merge == 'merge_graphs':
-            return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, prune_tag))
+            return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.pickle' % (options.confidence, options.merge))
         else:
             return ''
     elif which == 'fn_out_merge_val':
-        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, validate_tag, prune_tag))
+        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, validate_tag))
 
 def compute_psi(counts, event_type, options):
     

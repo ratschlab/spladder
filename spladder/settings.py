@@ -92,8 +92,6 @@ def default_settings(options):
 
     options.no_reset_conf = False
 
-    options.do_prune = False
-    options.do_gen_isoforms = False
     options.do_merge_all = False
 
     ### define which output files are written
@@ -232,29 +230,29 @@ def set_confidence_level(options):
     if not hasattr(options, 'intron_retention'):
         options.intron_retention = dict()
     if options.confidence == 0:
-      options.intron_retention['min_retention_cov'] = 1
-      options.intron_retention['min_retention_region'] = 0.75 
-      options.intron_retention['min_retention_rel_cov'] = 0.1
-      options.intron_retention['max_retention_rel_cov'] = 2 
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4
+        options.intron_retention['min_retention_cov'] = 1
+        options.intron_retention['min_retention_region'] = 0.75 
+        options.intron_retention['min_retention_rel_cov'] = 0.1
+        options.intron_retention['max_retention_rel_cov'] = 2 
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4
     elif options.confidence == 1:
-      options.intron_retention['min_retention_cov'] = 2
-      options.intron_retention['min_retention_region'] = 0.75
-      options.intron_retention['min_retention_rel_cov'] = 0.1
-      options.intron_retention['max_retention_rel_cov'] = 1.2
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
+        options.intron_retention['min_retention_cov'] = 2
+        options.intron_retention['min_retention_region'] = 0.75
+        options.intron_retention['min_retention_rel_cov'] = 0.1
+        options.intron_retention['max_retention_rel_cov'] = 1.2
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
     elif options.confidence == 2:
-      options.intron_retention['min_retention_cov'] = 5 
-      options.intron_retention['min_retention_region'] = 0.9 
-      options.intron_retention['min_retention_rel_cov'] = 0.2 
-      options.intron_retention['max_retention_rel_cov'] = 1.2 
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
+        options.intron_retention['min_retention_cov'] = 5 
+        options.intron_retention['min_retention_region'] = 0.9 
+        options.intron_retention['min_retention_rel_cov'] = 0.2 
+        options.intron_retention['max_retention_rel_cov'] = 1.2 
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
     elif options.confidence == 3:
-      options.intron_retention['min_retention_cov'] = 10 
-      options.intron_retention['min_retention_region'] = 0.9  
-      options.intron_retention['min_retention_rel_cov'] = 0.2 
-      options.intron_retention['max_retention_rel_cov'] = 1.2 
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
+        options.intron_retention['min_retention_cov'] = 10 
+        options.intron_retention['min_retention_region'] = 0.9  
+        options.intron_retention['min_retention_rel_cov'] = 0.2 
+        options.intron_retention['max_retention_rel_cov'] = 1.2 
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
 
     options.intron_retention['read_filter'] = options.read_filter
 

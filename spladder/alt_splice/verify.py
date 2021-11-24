@@ -536,19 +536,16 @@ def verify_all_events(ev, sample_idx=None, list_bam=None, event_type=None, optio
     ### verify the events if demanded
     if options.verify_alt_events:
 
-        prune_tag = ''
-        if options.do_prune:
-            prune_tag = '_pruned'
         validate_tag = ''
         if options.validate_sg:
             validate_tag = '.validated'
 
         if options.merge == 'single':
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag, prune_tag), 'rb'))
-            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag, prune_tag)
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag), 'rb'))
+            fn_count = '%s/spladder/genes_graph_conf%i.%s%s.count.hdf5' % (options.outdir, options.confidence, options.samples[sample_idx], validate_tag)
         else:
-            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag), 'rb'))
-            fn_count = '%s/spladder/genes_graph_conf%i.%s%s%s.count.hdf5' % (options.outdir, options.confidence, options.merge, validate_tag, prune_tag)
+            (genes, inserted) = pickle.load(open('%s/spladder/genes_graph_conf%i.%s%s.pickle' % (options.outdir, options.confidence, options.merge, validate_tag), 'rb'))
+            fn_count = '%s/spladder/genes_graph_conf%i.%s%s.count.hdf5' % (options.outdir, options.confidence, options.merge, validate_tag)
 
         ### load count index data from hdf5
         IN = h5py.File(fn_count, 'r')

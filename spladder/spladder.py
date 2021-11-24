@@ -25,10 +25,12 @@ def parse_options(argv):
     required.add_argument('-b', '--bams', dest='bams', metavar='FILE1,FILE2,...', help='alignment files in BAM format (comma separated list)', default='-', required=True)
     required.add_argument('-o', '--outdir', dest='outdir', metavar='DIR', help='output directory', default='-', required=True)
     required.add_argument('-a', '--annotation', dest='annotation', metavar='FILE', help='file name for annotation in GTF/GFF3 or format', default='-', required=True)
+
     general = parser_build.add_argument_group('GENERAL')
     general.add_argument('--parallel', dest='parallel', metavar='<INT>', type=int, help='use INT processors [1]', default=1)
     general.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='use verbose output mode [off]', default=False)
     general.add_argument('-d', '--debug', dest='debug', action='store_true', help='use debug output mode [off]', default=False)
+
     inputs = parser_build.add_argument_group('INPUT OPTIONS')
     inputs.add_argument('-n', '--readlen', dest='readlen', metavar='INT', type=int, help='read length (used for automatic confidence levele settings) [36]', default=50)
     inputs.add_argument('--primary-only', dest='primary_only', action='store_true', help='only use primary alignments [on]', default=True)
@@ -43,6 +45,7 @@ def parse_options(argv):
     inputs.add_argument('--filter-consensus', dest='filter_consensus', metavar='STRING', help='require new junctions to have consensus (needs ref genome) [off]; choices: strict (GT/AG), lenient (G[TC]/AG)', default='')
     inputs.add_argument('--ignore-mismatches', dest='ignore_mismatches', action='store_true', help='does not filter by edit operations - does not require NM in BAM [off]', default=False)
     inputs.add_argument('--reference', dest='ref_genome', metavar='FILE', help='reference genome (only needed for CRAM file de-compression or consensus filtering)', default='')
+
     outputs = parser_build.add_argument_group('OUTPUT OPTIONS')
     outputs.add_argument('-l', '--logfile', dest='logfile', metavar='FILE', help='log file name [stdout]', default='-')
     outputs.add_argument('--output-txt', dest='output_txt', action='store_true', help='outputs all events in txt format (can be big) [off]', default=False)
@@ -61,7 +64,8 @@ def parse_options(argv):
     outputs.add_argument('--compress-text', dest='compress_text', action='store_true', help='compress text output [on]', default=True)
     outputs.add_argument('--no-compress-text', dest='compress_text', action='store_false', default=True)
     outputs.add_argument('--tmp-dir', dest='tmpdir', metavar='DIR', help='directory to store temporary data [<outdir>/tmp]', default='')
-    graph = parser_build.add_argument_group('GRAPH OPTIONS')
+
+    graph = parser_build.add_argument_group('GRAPH GENERATION')
     graph.add_argument('-c', '--confidence', dest='confidence', metavar='INT', type=int, help='confidence level (0 lowest to 3 highest) [3]', default=3)
     graph.add_argument('-I', '--iterations', dest='insert_intron_iterations', metavar='INT', type=int, help='number of iterations to insert new introns into the graph [5]', default=5)
     graph.add_argument('-M', '--merge-strat', dest='merge', metavar='<STRAT>', help='merge strategy, where <STRAT> is one of: single, merge_bams, merge_graphs, merge_all [merge_graphs]', default='merge_graphs')
@@ -80,7 +84,8 @@ def parse_options(argv):
     graph.add_argument('--re-infer-sg', dest='infer_sg', action='store_true', help='re-infer splice graph [off] (advanced)', default=False)
     graph.add_argument('--no-re-infer-sg', dest='infer_sg', action='store_false', default=False)
     graph.add_argument('--validate-sg-count', dest='sg_min_edge_count', metavar='INT', type=int, help='number of samples supporting an edge for it to be kept [min(10, #samples)]', default=10)
-    splice = parser_build.add_argument_group('SPLICE OPTIONS')
+
+    splice = parser_build.add_argument_group('AS EVENT EXTRACTION')
     splice.add_argument('--event-types', dest='event_types', metavar='STRING', help='list of alternative splicing events to extract [exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons]', default='exon_skip,intron_retention,alt_3prime,alt_5prime,mult_exon_skip,mutex_exons')
     splice.add_argument('--extract-ase', dest='extract_as', action='store_true', help='extract alternative splicing events [on]', default=True)
     splice.add_argument('--no-extract-ase', dest='extract_as', action='store_false', default=None)
@@ -215,7 +220,7 @@ def check_options(options, mode):
                 sys.stderr.write('\nERROR: --filter-consensus only allows the following choices: strict, lenient\n')
                 sys. exit(1)
 
-
+   
 def main(argv=sys.argv):
 
     ### get command line options
