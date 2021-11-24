@@ -58,38 +58,29 @@ def spladder(options):
     fn_out_merge = get_filename('fn_out_merge', options)
     fn_out_merge_val = get_filename('fn_out_merge_val', options)
 
+    ### preparatory work
+    _prep_workdir(options)
+    options = prep_annotation(options)
+
     if not os.path.exists(fn_out_merge):
-        ### iterate over files, if merge strategy is single
-        if options.merge in ['single', 'merge_graphs']:
-            idxs = list(range(len(options.samples)))
-        else:
-            idxs = [0]
-        
-        ### preparatory work
-        _prep_workdir(options)
-        options = prep_annotation(options)
 
         ### convert input BAMs to sparse arrays - filtered case
         if options.sparse_bam:
             prep_sparse_bam_filtered(options)
 
-        ### build individual graphs
-        for idx in idxs:
-            if options.merge != 'merge_bams':
-                bam_fnames = options.bam_fnames[idx]
-                options.out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.samples[idx])
-            else:
-                bam_fnames = options.bam_fnames
-                options.out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.merge)
-
-            ### assemble output filename to check if we are already done
-            if os.path.exists(options.out_fname):
-                print('%s - All result files already exist.' % options.out_fname, file=sys.stdout)
-            else:
-                spladder_core(bam_fnames, options)
-
-        ### merge parts if necessary
-        if options.merge == 'merge_graphs':
+        ### handle single graphs
+        if options.merge in ['single', 'merge_graphs', 'merge_all']:
+            for idx in range(len(options.samples)):
+                out_fname = '%s/spladder/genes_graph_conf%i.%s.pickle' % (options.outdir, options.confidence, options.samples[idx])
+                if not os.path.exists(out_fname):
+                    spladder_core(options.bam_fnames[idx], out_fname, options)
+        ### handle merged bams
+        if options.merge in ['merge_bams', 'merge_all']:
+            out_fname = '%s/spladder/genes_graph_conf%i.merge_bams.pickle' % (options.outdir, options.confidence)
+            if not os.path.exists(out_fname):
+                spladder_core(options.bam_fnames, out_fname, options)
+        ### handle merged graphs
+        if options.merge in ['merge_graphs', 'merge_all']:
             run_merge(options.samples, options)
 
     ### generate validated version of splice graph
