@@ -69,6 +69,10 @@ def collect_events(options):
             if not hasattr(options, 'chrm_lookup'):
                 options = append_chrms(np.unique(np.array([x.chr for x in genes], dtype='str')), options)
 
+            for gene in genes:
+                if not hasattr(gene, 'introns_anno'):
+                    gene.populate_annotated_introns()
+
             ### detect intron retentions from splicegraph
             if do_intron_retention:
                 if not os.path.exists(fn_out_ir):

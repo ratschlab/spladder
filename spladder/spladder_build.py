@@ -62,6 +62,10 @@ def spladder(options):
     _prep_workdir(options)
     options = prep_annotation(options)
 
+    ###########################################################################
+    ### GRAPH GENERATION
+    ###########################################################################
+
     if not os.path.exists(fn_out_merge):
 
         ### convert input BAMs to sparse arrays - filtered case
@@ -90,9 +94,14 @@ def spladder(options):
         pickle.dump((genes, inserted), open(fn_out_merge_val, 'wb'), -1)
         del genes
 
+    ###########################################################################
+    ### GRAPH QUANTIFICATION
+    ###########################################################################
+
     ### convert input BAMs to sparse arrays - unfiltered case
     if options.sparse_bam:
         prep_sparse_bam_full(options)
+
     if options.merge == 'single' or options.qmode == 'collect':
         idxs = list(range(len(options.samples)))
     else:
@@ -136,6 +145,10 @@ def spladder(options):
                     compute_gene_expression(options, fn_in_count, fn_out_count, fn_out_gene_count, sample_idx=[0])
                 else:
                     compute_gene_expression(options, fn_in_count, fn_out_count, fn_out_gene_count)
+
+    ###########################################################################
+    ### ALT EVENT COLLECTION
+    ###########################################################################
 
     ### handle alternative splicing part
     if options.extract_as:

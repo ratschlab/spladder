@@ -157,6 +157,10 @@ def init_genes_gtf(options):
     ### check for consistency and validity of genes
     genes = check_annotation(options, genes)
 
+    ### mark which introns have been annotated
+    for gene in genes:
+        gene.populate_annotated_introns()
+
     if options.verbose:
         print("... done", file=sys.stderr)
 
@@ -274,6 +278,10 @@ def init_genes_gff3(options):
 
     ### check for consistency and validity of genes
     genes = check_annotation(options, genes)
+
+    ### mark which introns have been annotated
+    for gene in genes:
+        gene.populate_annotated_introns()
 
     if options.verbose:
         print("... done", file=sys.stderr)

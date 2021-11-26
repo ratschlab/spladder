@@ -16,7 +16,8 @@ def spladder_core(bam_fnames, out_fname, options):
 
     ### mark which introns have been annotated
     for gene in genes:
-        gene.populate_annotated_introns()
+        if not hasattr(gene, 'introns_anno'):
+            gene.populate_annotated_introns()
 
     ### augment
     genes = gen_graphs(genes, bam_fnames, options)

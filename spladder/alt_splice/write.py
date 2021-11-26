@@ -329,8 +329,8 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
 
         name = '%s.%i' % (ev.event_type, ev.id)
         
-        anno_iso1 = ev.annotated % 1 > 0
-        anno_iso2 = ev.annotated % 2 > 0
+        anno_iso1 = ev.annotated & 1 > 0
+        anno_iso2 = ev.annotated & 2 > 0
 
         if as_gtf:
             print('%s\t%s\tgene\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s"; gene_name "%s"; has_novel_junction "%s";' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, gene_name, 'N' if anno_iso1 and anno_iso2 else 'Y'), file=fd_out)
