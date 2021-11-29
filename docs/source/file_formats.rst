@@ -70,6 +70,7 @@ You can easily peek into the content of a hdf5 file::
 
     /                        Group
     /conf_idx                Dataset {1}
+    /confirmed               Dataset {2}
     /event_counts            Dataset {4, 7, 2}
     /event_features          Dataset {7}
     /event_pos               Dataset {2, 6}
@@ -78,10 +79,16 @@ You can easily peek into the content of a hdf5 file::
     /gene_names              Dataset {1}
     /gene_pos                Dataset {1, 2}
     /gene_strand             Dataset {1}
-    /strains                 Dataset {4}
-    /verified                Dataset {2, 4}
+    /num_verified            Dataset {4, 2}
+    /iso1                    Dataset {4, 2}
+    /iso2                    Dataset {4, 2}
+    /psi                     Dataset {4, 2}
+    /samples                 Dataset {4}
+    /strains                 Soft Link {/samples}
+    /verified                Dataset {4, 4, 2}
 
-This example is taken from the tutorial and lists the contents of the exon_skip event hdf5 file. The
+This example lists the contents of a hypothetical exon_skip event hdf5 file, containing the
+information over 2 exon skips found in a cohort of 4 samples. The
 tree that is shown looks a little bit like a file system tree and this is also the best analogy to
 how the file is organized. Directories in the file system would correspond to groups in hdf5 and
 files in file system to datasets in hdf5. Each group can contain more groups or datasets. 
@@ -89,6 +96,7 @@ files in file system to datasets in hdf5. Each group can contain more groups or 
 The event hdf5 is structured as follows:
 
 - **conf_idx**: 0-based index set, containing the index of the events that are confirmed in the provided samples
+- **confirmed**: binary array indicating for each event whether it is confirmed or not
 - **event_counts**: 3-dimensional matrix (S x F x E) containing counts for each of the E events, F features and S samples
 - **event_features**: list containing the description of the counted features per event type
 - **event_pos**: position of all event exons encoded as start,stop pairs for each event (events are rows, coordinates are columns)
@@ -97,8 +105,20 @@ The event hdf5 is structured as follows:
 - **gene_names**: gene name for each gene in the gene list
 - **gene_pos**: position of each gene in the gene list encoded as start,stop pair
 - **gene_strand**: strand for each gene in the gene list
-- **strains**: names of the samples counted
-- **verified**: bool matrix over events X samples that is 1 if an event was verified in a sample and 0 otherwise
+- **num_verified**: 2-dimensional count matrix (V x E) containing the number of samples where
+  validation criterion V was met for event E
+- **iso1**: 2-dimensional matrix (S x E) containing the number of spliced reads in sample S
+  supporting isoform 1 in event E
+- **iso2**: 2-dimensional matrix (S x E) containing the number of spliced reads in sample S
+  supporting isoform 2 in event E:
+- **psi**: 2-dimensional matrix (S x E) containing the percent spliced in (PSI) value for event E
+  in sample S. PSI is computed as iso1 / (iso1 + iso2) 
+- **samples**: names of the samples counted
+- **strains**: names of the samples counted (kept for legacy)
+- **verified**: 3-dimensional bool matrix (S x V x E) indicating whether validation criterion V for
+  event E was met in sample S
+
+**Naming of Features**
 
 The naming of features follows a simple logic utilizing the numbering of exon segments as shown in the below
 image. The numbering follows genomic coordinates. That is the below image shows the positive strand.
@@ -155,6 +175,45 @@ The below list details the event features for each of the supported event types:
     * **e2e4_conf**: number of spliced alignments spanning from left flanking to second exon
     * **e1e3_conf**: number of spliced alignments spanning from first to right flanking exon
     * **e3e4_conf**: number of spliced alignments spanning from second to right flanking exon
+
+**Validation Criteria**
+
+For each event type, SplAdder uses different empirical validation criteria to determine, whether the
+called event is valid in a given sample. The overview of that information is provided in the
+**verified** and **num_verified** fields in the HDF5 count file for each event type. This data also
+forms the basis for deciding on the list of **confirmed** events. An event is kept as confirmed, if
+each of the validation criteria is fulfilled in at least one sample. (This does not necessarily mean
+it is the same sample for different criteria, as the aggregated counts from **num_verified** are
+used for this decision.) The indices of all confirmed events are indicated in the **conf_idx** array
+of the HDF5 count file for each event type.
+
+Following, we provide a list of the validation criteria per event type:
+
+- **Multiple Exon Skip**
+    #. exon coordinates are valid (>= 0 && start < stop && non-overlapping) & skipped exon coverage >= FACTOR * mean(pre, after)
+    #. inclusion count first intron >= threshold
+    #. inclusion count last intron >= threshold
+    #. avg inclusion count inner exons >= threshold
+    #. skip count >= threshold
+- **Intron Retention**
+    #. counts meet criteria for min_retention_cov, min_retention_region and min_retetion_rel_cov 
+    #. min_non_retention_count >= threshold
+
+- **Exon Skip**
+    #. coverage of skipped exon is >= than FACTOR * mean(pre, after)
+    #. inclusion count of first intron >= threshold 
+    #. inclusion count of second intron >= threshold
+    #. skip count of exon >= threshold
+
+- **Alt 3/5 Prime**
+    #. coverage of diff region is at least FACTOR * coverage constant region
+    #. both alternative introns are >= threshold 
+
+- **Mutex Exons**
+    #. coverage of first alt exon is >= than FACTOR times average of pre and after 
+    #. coverage of second alt exon is >= than FACTOR times average of pre and after 
+    #. both introns neighboring first alt exon are confirmed >= threshold
+    #. both introns neighboring second alt exon are confirmed >= threshold
 
 Event Files in TXT Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^
