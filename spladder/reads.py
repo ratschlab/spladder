@@ -401,13 +401,13 @@ def get_all_data_uncollapsed(block,filenames, mapped=True, spliced=True, filter=
 
     return (None, coverage)
 
-def get_intron_list(genes, options):
+def get_intron_list(genes, bam_fnames, options):
 
     introns = np.zeros((genes.shape[0], 2), dtype = 'object')
     introns[:] = None
 
     ### collect all possible combinations of contigs and strands
-    (regions, options) = init_regions(options.bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
+    (regions, options) = init_regions(bam_fnames, options.confidence, options, sparse_bam=options.sparse_bam)
 
     ### form chunks for quick sorting
     strands = ['+', '-']
@@ -441,11 +441,11 @@ def get_intron_list(genes, options):
                 assert(gg[0].chr == contig)
 
                 if options.sparse_bam:
-                    if isinstance(options.bam_fnames, str):
-                        [intron_list_tmp] = add_reads_from_sparse_bam(gg[0], options.bam_fnames, contig, options.confidence, types=['intron_list'], filter=options.read_filter, cache=bam_cache, unstranded=options.introns_unstranded)
+                    if isinstance(bam_fnames, str):
+                        [intron_list_tmp] = add_reads_from_sparse_bam(gg[0], bam_fnames, contig, options.confidence, types=['intron_list'], filter=options.read_filter, cache=bam_cache, unstranded=options.introns_unstranded)
                     else:
                         intron_list_tmp = None
-                        for fname in options.bam_fnames:
+                        for fname in bam_fnames:
                             [tmp_] = add_reads_from_sparse_bam(gg[0], fname, contig, options.confidence, types=['intron_list'], filter=options.read_filter, cache=bam_cache, unstranded=options.introns_unstranded)
                             if intron_list_tmp is None:
                                 intron_list_tmp = tmp_
@@ -453,7 +453,7 @@ def get_intron_list(genes, options):
                                 intron_list_tmp = np.r_[intron_list_tmp, tmp_]
 
                         ### some merging in case of multiple bam files
-                        if len(options.bam_fnames) > 1:
+                        if len(bam_fnames) > 1:
                             intron_list_tmp = sort_rows(intron_list_tmp)
                             rm_idx = []
                             for i in range(1, intron_list_tmp.shape[0]):
@@ -464,7 +464,7 @@ def get_intron_list(genes, options):
                                 k_idx = np.setdiff1d(np.arange(intron_list_tmp.shape[0]), rm_idx)
                                 intron_list_tmp = intron_list_tmp[k_idx, :]
                 else:
-                    [intron_list_tmp] = add_reads_from_bam(gg, options.bam_fnames, ['intron_list'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, unstranded=options.introns_unstranded, mm_tag=options.mm_tag, cram_ref=options.cram_ref)
+                    [intron_list_tmp] = add_reads_from_bam(gg, bam_fnames, ['intron_list'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, unstranded=options.introns_unstranded, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
                 num_introns_filtered += intron_list_tmp.shape[0]
                 introns[i, si] = sort_rows(intron_list_tmp)
 

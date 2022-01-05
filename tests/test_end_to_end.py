@@ -24,16 +24,16 @@ def _compare_hdf5(expected, actual):
             else:
                 assert np.all(expected[k][:] == actual[k][:])
 
-def _compare_ps(expected, actual):
+def _compare_pdf(expected, actual):
 
     e_str = []
     for line in expected:
-        if line.startswith('%'):
+        if line.startswith('<< /CreationDate'):
             continue
         e_str.append(line)
     a_str = []
     for line in actual:
-        if line.startswith('%'):
+        if line.startswith('<< /CreationDate'):
             continue
         a_str.append(line)
     assert ''.join(e_str) == ''.join(a_str)
@@ -49,9 +49,10 @@ def _assert_files_equal_testing(e, a):
     de = de[1:, ]
 
     ### check text cols
-    assert np.all(da[:, [0, 1]] == de[:, [0, 1]])
-    da = da[:, 2:]
-    de = de[:, 2:]
+    assert np.all(da[:, [0, 1, 2, 3, 4, 5]] == de[:, [0, 1, 2, 3, 4, 5]])
+    ### check numerical cols
+    da = da[:, 6:]
+    de = de[:, 6:]
 
     ### check p-values (up to certain precision)
     da = np.around(da.astype('float'), decimals=6)
@@ -64,7 +65,7 @@ def _assert_files_equal(expected_path, actual_path):
             return gzip.open(f, 'rb')
         elif f.endswith('.hdf5'):
             return h5py.File(f, 'r')
-        elif f.endswith('.ps'):
+        elif f.endswith('.pdf'):
             return open(f, 'r')
         elif f.endswith('.pickle'):
             return open(f, 'rb')
@@ -75,8 +76,8 @@ def _assert_files_equal(expected_path, actual_path):
         with o(actual_path) as a:
             if expected_path.endswith('.hdf5'):
                 _compare_hdf5(e, a)
-            elif expected_path.endswith('.ps'):
-                _compare_ps(e, a)
+            elif expected_path.endswith('.pdf'):
+                _compare_pdf(e, a)
             elif expected_path.endswith('.pickle'):
                 ta = pickle.load(a, encoding='latin1')
                 te = pickle.load(e, encoding='latin1')
@@ -93,23 +94,13 @@ def _codeUTF8(s):
     return s.view(np.chararray).encode('utf-8')
 
 def _compare_gene(a, b):
-    if np.issubdtype(a.strain.dtype, np.str_):
-        _astrain = _codeUTF8(a.strain)
-    else:
-        _astrain = a.strain
-    if np.issubdtype(b.strain.dtype, np.str_):
-        _bstrain = _codeUTF8(b.strain)
-    else:
-        _bstrain = b.strain
 
     return ((a.chr == b.chr) &
             (a.strand == b.strand) &
             (np.all(a.exons1 == b.exons1)) &
             (np.all(a.exons2 == b.exons2)) &
-            (np.all(_astrain == _bstrain)) &
             (a.event_type == b.event_type) &
-            (a.gene_idx == b.gene_idx) &
-            (a.num_detected == b.num_detected))
+            (a.gene_idx == b.gene_idx))
 
 def _check_files_spladder(result_dir, out_dir, prefix):
     files = []
@@ -121,6 +112,7 @@ def _check_files_spladder(result_dir, out_dir, prefix):
             files.append('{}_{}_C3.confirmed.gff3'.format(prefix, event_type))
         if os.path.exists(os.path.join(result_dir, '{}_{}_C3.confirmed.txt.gz'.format(prefix, event_type))):
             files.append('{}_{}_C3.confirmed.txt.gz'.format(prefix, event_type))
+    files.append(os.path.join('spladder', 'genes_graph_conf3.{}.count.hdf5').format(prefix))
 
     for fname in files:
         _assert_files_equal(
@@ -278,10 +270,11 @@ def test_end_to_end_testing(test_id, tmpdir):
                '-o', out_dir,
                '-v',
                '--diagnose-plots',
-               '-f', 'ps',
+               '-f', 'pdf',
                '--readlen', '50',
                '--merge-strat', 'merge_graphs',
                '--event-types', 'exon_skip',
+               '--dpsi', '0.0',
                '-a', bamsA,
                '-b', bamsB]
 
@@ -289,7 +282,7 @@ def test_end_to_end_testing(test_id, tmpdir):
 
     ### check that files are identical
     _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv'])
-    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps'])
+    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.pdf'])
 
 
 @pytest.mark.parametrize("test_id", [
@@ -306,7 +299,7 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
                '-a', os.path.join(data_dir, 'testcase_{}_spladder.gtf'.format(test_id)),
                '-o', out_dir,
                '-b', ','.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+1)) for idx in range(20)]),
-               '--cram-reference', os.path.join(data_dir, 'genome.fa'),
+               '--reference', os.path.join(data_dir, 'genome.fa'),
                '--event-types', 'exon_skip,intron_retention,alt_3prime,alt_5prime,mutex_exons,mult_exon_skip',
                '--merge-strat', 'merge_graphs',
                '--extract-ase',
@@ -331,19 +324,20 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
     bamsA = os.path.join(out_dir, 'cramlistA.txt')
     bamsB = os.path.join(out_dir, 'cramlistB.txt')
     with open(bamsA, 'w') as fh:
-        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+1)) for idx in range(10)]) + '\n')
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx)) for idx in [10, 8, 2, 1, 7, 6, 5, 3, 9, 4]]) + '\n')
     with open(bamsB, 'w') as fh:
-        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx+11)) for idx in range(10)]) + '\n')
+        fh.write('\n'.join([os.path.join(data_dir, 'align', 'testcase_{}_1_sample{}.cram'.format(test_id, idx)) for idx in [20, 13, 17, 11, 12, 19, 15, 14, 16, 18]]) + '\n')
 
     my_args = ['spladder',
                'test',
                '-o', out_dir,
                '-v',
                '--diagnose-plots',
-               '-f', 'ps',
+               '-f', 'pdf',
                '--readlen', '50',
                '--merge-strat', 'merge_graphs',
                '--event-types', 'exon_skip',
+               '--dpsi', '0',
                '-a', bamsA,
                '-b', bamsB]
 
@@ -351,6 +345,6 @@ def test_end_to_end_testing_cram(test_id, tmpdir):
 
     ### check that files are identical
     _check_files_testing(os.path.join(result_dir, 'testing'), os.path.join(out_dir, 'testing'), suffixes=['*.tsv'])
-    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.ps'])
+    #_check_files_testing(os.path.join(result_dir, 'testing', 'plots'), os.path.join(out_dir, 'testing', 'plots'), suffixes=['*.pdf'])
 
 

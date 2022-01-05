@@ -6,6 +6,7 @@ import os
 import h5py
 import scipy as sp
 import re
+import sys
 
 from . import helpers as hp
 
@@ -88,6 +89,20 @@ def load_events(event_info, outdir, confidence, verbose):
             if verbose:
                 print('Indexing event files for faster future access')
             events = pickle.load(open(os.path.join(outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, confidence)),'rb'), encoding='latin1')
+            out_db = open(event_db_file, 'wb')
+            out_idx = open(event_idx_file, 'wb')
+            offsets = []
+            for o, obj in enumerate(events):
+                if o > 0 and o % 1000 == 0:
+                    sys.stdout.write('.')
+                    if o % 10000 == 0:
+                        sys.stdout.write('%i\n' % o)
+                    sys.stdout.flush()
+                offsets.append(out_db.tell())
+                pickle.dump(obj, out_db, -1)
+            pickle.dump(offsets, out_idx, -1)
+            out_db.close()
+            out_idx.close()
             for e in s_idx:
                 event_list.append(events[int(event_info[e, 1])])
         else:
@@ -164,10 +179,10 @@ def get_seg_counts(gid, outdir, confidence, validate_sg):
     edge_idx = IN['edge_idx'][:][idx].astype('int')
     idx = sp.where(IN['gene_ids_segs'][:] == gid)[0]
     segments = IN['segments'][idx, :]
-    strains = hp.decodeUTF8(IN['strains'][:])
+    samples = hp.decodeUTF8(IN['samples'][:])
     IN.close()
 
-    return (segments, edges, edge_idx, strains)
+    return (segments, edges, edge_idx, samples)
 
 def stack_exons(exons1, exons2):
     

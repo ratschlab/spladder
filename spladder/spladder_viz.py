@@ -18,6 +18,7 @@ from .viz.graph import *
 from .viz.coverage import *
 from .viz.genelets import *
 from .viz import axes as vax
+from .helpers import decodeUTF8
 from .helpers_viz import *
 
 ### intermediate fix to load pickle files stored under previous version
@@ -71,9 +72,9 @@ def _parse_event_info(id_array, gids, event_info, events, outdir, confidence, ve
 
 def _parse_gene_info(track_info, genes, gene_names, gids, all_gene_names, outdir, confidence, validate_sg, verbose):
     for g in track_info:
-        gid = np.where(all_gene_names == g)[0]
+        gid = np.where(all_gene_names == g.split('.')[0])[0]
         if gid.shape[0] == 0:
-            sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g)
+            sys.stderr.write('ERROR: provided gene ID "%s" could not be found, please check for correctness\n' % g.split('.')[0])
             sys.exit(1)
         assert gid.shape[0] == 1
         gids.append(gid[0])
@@ -114,9 +115,9 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
 
         ### load test setup
         test_setup = pickle.load(open(os.path.join(testdir, 'test_setup_C%i_%s.pickle' % (confidence, event_type)), 'rb'), encoding='latin1')
-        halfsize = test_setup[3].shape[0] // 2
-        idxA = np.where(test_setup[3][:halfsize, 2] == 0)[0]
-        idxB = np.where(test_setup[3][:halfsize, 2] == 1)[0]
+        halfsize = test_setup['dmatrix1'].shape[0] // 2
+        idxA = np.where(test_setup['dmatrix1'][:halfsize, 2] == 1)[0]
+        idxB = np.where(test_setup['dmatrix1'][:halfsize, 2] == 0)[0]
         ### iterate over top k test results
         for k, line in enumerate(open(os.path.join(testdir, 'test_results_C%i_%s.tsv' % (confidence, event_type)), 'r')):
             if k == 0:
@@ -125,7 +126,7 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
                 break
             sl = line.strip().split('\t')
             data_tracks.append([])
-            data_tracks[-1].append(['segments', ','.join(test_setup[1][idxA]), ','.join(test_setup[1][idxB])])
+            data_tracks[-1].append(['segments', test_setup['labels'][0] + ':' + ','.join(test_setup['event_samples'][idxA]), test_setup['labels'][1] + ':' + ','.join(test_setup['event_samples'][idxB])])
             data_tracks[-1].append(['event', sl[0]])
             data_tracks[-1].append(['gene', sl[1]]) 
             test_tag.append('.difftest_%s' % sl[0])
@@ -165,6 +166,25 @@ def _set_plotting_range(genes, events, coords):
 
     return plotrange, plotrange_orig
 
+def _load_size_factors(options):
+    
+    if options.validate_sg:
+        fname_gene_exp = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.validated.gene_exp.hdf5' % options.confidence)
+    else:
+        fname_gene_exp = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.gene_exp.hdf5' % options.confidence)
+
+
+    if not os.path.exists(fname_gene_exp):
+        fname_count = re.sub(r'.gene_exp.hdf5$', '.count.hdf5', fname_gene_exp) 
+        fname_events = re.sub(r'.gene_exp.hdf5$', '.pickle', fname_gene_exp)
+        compute_gene_expression(options, fname_events, fname_count, fname_gene_exp) 
+
+    IN = h5py.File(fname_gene_exp, 'r')
+    sf = IN['size_factors'][:]
+    samples = decodeUTF8(IN['samples'][:])
+    IN.close()
+
+    return sf, samples
 
 def spladder_viz(options):
 
@@ -190,8 +210,8 @@ def spladder_viz(options):
     all_gene_names = get_gene_names(options.outdir, options.confidence, options.validate_sg, options.verbose)
 
     ### set color maps
-    cmap_cov = plt.get_cmap('jet')
-    cmap_edg = plt.get_cmap('jet')
+    cmap_cov = plt.get_cmap('tab10')
+    cmap_edg = plt.get_cmap('tab10')
 
     ### Data Range
     RangeData = namedtuple('RangeData', ['chr', 'start', 'stop'])
@@ -240,7 +260,6 @@ def spladder_viz(options):
                 ### gene (this is only needed internally for --test mode)
                 elif range_info[0] == 'gene':
                     _parse_gene_info(range_info[1:], genes, gene_names, gids, all_gene_names, options.outdir, options.confidence, options.validate_sg, options.verbose)
-                    
 
         ### check that everything is on the same chromosome
         plotchrm = np.unique([_.chr for _ in events + genes + coords])
@@ -263,6 +282,7 @@ def spladder_viz(options):
         fig = plt.figure(figsize = (15, 3 * len(data_tracks)), dpi=200)
 
         axes = []
+        size_factors = None
         for i,data_track in enumerate(data_tracks):
 
             ### plot splicing graph
@@ -313,6 +333,8 @@ def spladder_viz(options):
                 ax.get_yaxis().set_label_coords(1.02,0.5)
             ### plot coverage tracks
             if data_track.type == 'coverage':
+                if size_factors is None:
+                    size_factors, sf_samples = _load_size_factors(options)
                 ax = _add_ax(axes, fig, gs)
                 min_sample_size = 5 ### TODO make that an option
                 caxes = []
@@ -334,22 +356,27 @@ def spladder_viz(options):
                                               grid=True, 
                                               min_intron_cnt=options.mincount, 
                                               return_legend_handle=True, 
-                                              label=label))
+                                              label=label, 
+                                              size_factors=size_factors,
+                                              sf_samples=sf_samples))
                     labels.append(label)
                 ax.get_yaxis().set_label_coords(1.02,0.5)
                 if len(caxes) > 0:
                     ax.legend(caxes, labels)
             ### plot segment counts
             if data_track.type == 'segments':
+                if size_factors is None:
+                    size_factors, sf_samples = _load_size_factors(options)
                 ax = _add_ax(axes, fig, gs)
                 for g, gid in enumerate(gids):
-                    (segments, edges, edge_idx, strains) = get_seg_counts(gid, options.outdir, options.confidence, options.validate_sg)
+                    (segments, edges, edge_idx, samples) = get_seg_counts(gid, options.outdir, options.confidence, options.validate_sg)
+                    assert np.all(samples == sf_samples)
                     seg_sample_idx = None
-                    if len(data_track.strains) > 0:
+                    if len(data_track.samples) > 0:
                         seg_sample_idx = []
-                        for track_strains in data_track.strains:
-                            seg_sample_idx.append(np.where(np.in1d(strains, track_strains))[0])
-                            cov_from_segments(genes[g], segments, edges, edge_idx, ax, xlim=plotrange, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
+                        for track_samples in data_track.samples:
+                            seg_sample_idx.append(np.where(np.in1d(samples, track_samples))[0])
+                            cov_from_segments(genes[g], segments, edges, edge_idx, size_factors, ax, xlim=plotrange, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
                 ax.get_yaxis().set_label_coords(1.02,0.5)
                 ax.set_ylabel('segment counts')
 

@@ -69,7 +69,8 @@ def init_genes_gtf(options):
                 gene_type = tags['gene_biotype']
             else:
                 gene_type = None
-            genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
+            gene_symbol = tags['gene_name'] if 'gene_name' in tags else None
+            genes[tags['gene_id']] = Gene(name=tags['gene_id'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type, gene_symbol=gene_symbol)
             chrms.append(sl[0])
 
     options = append_chrms(np.sort(np.unique(chrms)), options)
@@ -102,34 +103,39 @@ def init_genes_gtf(options):
         ### get tags
         tags = get_tags_gtf(sl[8])
 
-        ### add exons
-        if sl[2] in ['exon', 'Exon']:
-            trans_id = tags['transcript_id']
-            gene_id = tags['gene_id']
-            try:
-                t_idx = genes[gene_id].transcripts.index(trans_id)
-            except ValueError:
-                t_idx = len(genes[gene_id].transcripts)
-                genes[gene_id].transcripts.append(trans_id)
-            except KeyError:
-                if 'gene_type' in tags:
-                    gene_type = tags['gene_type']
-                elif 'gene_biotype' in tags:
-                    gene_type = tags['gene_biotype']
-                else:
-                    gene_type = None
+        ### only use exon lines
+        if sl[2].lower() != 'exon':
+            continue
 
-                warn_infer_count += 1
-                if warn_infer_count < 5:
-                    print('WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (options.annotation, trans_id), file=sys.stderr)
-                elif warn_infer_count == 5:
-                    print('WARNING: too many warnings for inferred tags', file=sys.stderr)
-                    
-                genes[gene_id] = Gene(name=gene_id, start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
-                t_idx = len(genes[gene_id].transcripts)
-                genes[gene_id].transcripts.append(trans_id)
-                inferred_genes = True
-            genes[gene_id].add_exon(np.array([int(sl[3]) - 1, int(sl[4])], dtype='int'), idx=t_idx)
+        trans_id = tags['transcript_id']
+        gene_id = tags['gene_id']
+
+        ### infer transcript ID
+        try:
+            t_idx = genes[gene_id].transcripts.index(trans_id)
+        except ValueError:
+            t_idx = len(genes[gene_id].transcripts)
+            genes[gene_id].transcripts.append(trans_id)
+        except KeyError:
+            if 'gene_type' in tags:
+                gene_type = tags['gene_type']
+            elif 'gene_biotype' in tags:
+                gene_type = tags['gene_biotype']
+            else:
+                gene_type = None
+
+            warn_infer_count += 1
+            if warn_infer_count < 5:
+                print('WARNING: %s does not have gene level information for transcript %s - information has been inferred from tags'  % (options.annotation, trans_id), file=sys.stderr)
+            elif warn_infer_count == 5:
+                print('WARNING: too many warnings for inferred tags', file=sys.stderr)
+                
+            genes[gene_id] = Gene(name=gene_id, start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=gene_type)
+            t_idx = len(genes[gene_id].transcripts)
+            genes[gene_id].transcripts.append(trans_id)
+            inferred_genes = True
+
+        genes[gene_id].add_exon(np.array([start, stop], dtype='int'), idx=t_idx)
 
     ### post-process in case we have inferred genes
     if warn_infer_count >= 5:
@@ -150,6 +156,10 @@ def init_genes_gtf(options):
 
     ### check for consistency and validity of genes
     genes = check_annotation(options, genes)
+
+    ### mark which introns have been annotated
+    for gene in genes:
+        gene.populate_annotated_introns()
 
     if options.verbose:
         print("... done", file=sys.stderr)
@@ -215,7 +225,8 @@ def init_genes_gff3(options):
                 stop = int(sl[4])
             except ValueError:
                 stop = -1
-            genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2])
+            gene_symbol = tags['gene_name'] if 'gene_name' in tags else None
+            genes[tags['ID']] = Gene(name=tags['ID'], start=start, stop=stop, chr=sl[0], strand=sl[6], source=sl[1], gene_type=sl[2], gene_symbol=gene_symbol)
             chrms.append(sl[0])
 
     options = append_chrms(np.sort(np.unique(chrms)), options)
@@ -267,6 +278,10 @@ def init_genes_gff3(options):
 
     ### check for consistency and validity of genes
     genes = check_annotation(options, genes)
+
+    ### mark which introns have been annotated
+    for gene in genes:
+        gene.populate_annotated_introns()
 
     if options.verbose:
         print("... done", file=sys.stderr)

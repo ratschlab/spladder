@@ -24,7 +24,7 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         "Programming Language :: Python :: 3",
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.8'
     ],
     description="Tool for the detection and quantification of alternative splicing events from RNA-Seq data.",
     entry_points = {
@@ -45,6 +45,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ratschlab/spladder',
-    version='2.4.4',
+    version='2.5.0',
     zip_safe=False,
 )

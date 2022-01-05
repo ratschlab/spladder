@@ -7,7 +7,7 @@ if __package__ is None:
 
 from .reads import *
 
-def make_introns_feasible(introns, genes, options):
+def make_introns_feasible(introns, genes, bam_fnames, options):
 
     tmp1 = np.array([x.shape[0] for x in introns[:, 0]])
     tmp2 = np.array([x.shape[0] for x in introns[:, 1]])
@@ -27,7 +27,7 @@ def make_introns_feasible(introns, genes, options):
         options.read_filter['mismatch'] = max(options.read_filter['mismatch'] - 1, 0)
 
         ### get new intron counts
-        tmp_introns = get_intron_list(genes[unfeas], options)
+        tmp_introns = get_intron_list(genes[unfeas], bam_fnames, options)
         introns[unfeas, :] = tmp_introns
 
         ### still unfeasible?
@@ -46,6 +46,45 @@ def make_introns_feasible(introns, genes, options):
 
     return introns
 
+### remove introns that do not conform to the splice site consensus sequences
+def filter_introns_consensus(introns, genes, options):
+
+    ### defined based on https://academic.oup.com/nar/article/28/21/4364/2376280
+    ACC_CONSENSUS = ['AG']
+    DON_CONSENSUS = ['GT']
+    if options.filter_consensus == 'lenient':
+        DON_CONSENSUS.append('GC')
+
+    ### check that genome file is indexed and create index if not present
+    if not os.path.exists(options.ref_genome + '.fai'):
+        pysam.faidx(options.ref_genome)
+
+    ### get reference genome handle
+    with pysam.FastaFile(options.ref_genome) as REF:
+        cnt_tot = 0
+        cnt_rem = 0
+        strand_list = ['+', '-']
+        for si, s in enumerate(strand_list):
+            for i in range(introns.shape[0]):
+                if introns[i, si].shape[0] == 0:
+                    continue
+                k_idx = []
+                cnt_tot += introns[i, si].shape[0]
+                for j in range(introns[i, si].shape[0]):
+                    if s == '+':
+                        don = REF.fetch(genes[i].chr, introns[i, si][j, 0], introns[i, si][j, 0] + 2)
+                        acc = REF.fetch(genes[i].chr, introns[i, si][j, 1] - 2, introns[i, si][j, 1])
+                    else:
+                        don = rev_comp(REF.fetch(genes[i].chr, introns[i, si][j, 1] - 2, introns[i, si][j, 1]))
+                        acc = rev_comp(REF.fetch(genes[i].chr, introns[i, si][j, 0], introns[i, si][j, 0] + 2))
+                    if acc in ACC_CONSENSUS and don in DON_CONSENSUS:
+                        k_idx.append(j)
+                if len(k_idx) < introns[i, si].shape[0]:
+                    cnt_rem += (introns[i, si].shape[0] - len(k_idx))
+                    introns[i, si] = introns[i, si][k_idx, :]
+    print('removed %i of %i (%.2f percent) introns not adhering to the %s splicing consensus' % (cnt_rem, cnt_tot, cnt_rem / float(max(cnt_tot, 1)) * 100, options.filter_consensus))
+
+    return introns
 
 ### remove introns overlapping to more than one gene
 def filter_introns(introns, genes, options):
@@ -85,44 +124,38 @@ def filter_introns(introns, genes, options):
 
 
 ### determine count output file
-def get_filename(which, options, sample_idx=None):
+def get_filename(which, options, sample=None):
     """This function returns a filename generated from the current configuration"""
 
     ### init any tags
-    prune_tag = ''
-    if options.do_prune:
-        prune_tag = '_pruned'
     validate_tag = ''
-    if options.validate_sg:
+    if hasattr(options, 'validate_sg') and options.validate_sg:
         validate_tag = '.validated'
 
     ### iterate over return file types    
     if which in ['fn_count_in', 'fn_count_out']:
-        if options.spladderfile == '-':
-            if options.merge == 'single':
-                fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.samples[sample_idx], prune_tag))
+        if options.merge == 'single':
+            if which == 'fn_count_in':
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.pickle' % (options.confidence, sample))
             else:
-                if (options.qmode == 'single' and which != 'fn_count_in') or (options.qmode == 'collect' and which == 'fn_count_in'):
-                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s%s.pickle' % (options.confidence, options.merge, options.samples[sample_idx], prune_tag, validate_tag))
-                else:
-                    fname = os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, prune_tag, validate_tag))
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.count.hdf5' % (options.confidence, sample))
         else:
-            fname = options.spladderfile
-        
-        if which == 'fn_count_in':
-            if options.qmode == 'collect':
-                return fname.replace('.pickle', '') + '.count.hdf5'
+            if which == 'fn_count_out':
+                if options.qmode == 'single':
+                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s.count.hdf5' % (options.confidence, options.merge, sample, validate_tag))
+                else:
+                    return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.count.hdf5' % (options.confidence, options.merge, validate_tag))
             else:
-                return fname
-        elif which == 'fn_count_out':
-            return fname.replace('.pickle', '') + '.count.hdf5'
+                return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, validate_tag))
+    elif which == 'fn_collect_in':
+        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.%s%s.count.hdf5' % (options.confidence, options.merge, sample, validate_tag))
     elif which == 'fn_out_merge':
         if options.merge == 'merge_graphs':
-            return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, prune_tag))
+            return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s.pickle' % (options.confidence, options.merge))
         else:
             return ''
     elif which == 'fn_out_merge_val':
-        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s%s.pickle' % (options.confidence, options.merge, validate_tag, prune_tag))
+        return os.path.join(options.outdir, 'spladder', 'genes_graph_conf%i.%s%s.pickle' % (options.confidence, options.merge, validate_tag))
 
 def compute_psi(counts, event_type, options):
     
@@ -133,14 +166,14 @@ def compute_psi(counts, event_type, options):
         a = np.c_[counts[:, 4], counts[:, 5]].min(axis=1)
         b = counts[:, 6]
     elif event_type == 'intron_retention':
-        a = counts[:, 1] # intron cov
+        a = counts[:, 2] # intron cov
         b = counts[:, 4] # intron conf
     elif event_type in ['alt_3prime', 'alt_5prime']:
-        a = counts[:, 4] # intron2 conf
-        b = counts[:, 3] # intron1 conf
+        a = counts[:, 5] # intron2 conf
+        b = counts[:, 4] # intron1 conf
     elif event_type == 'mutex_exons':
-        a = counts[:, 5] + counts[:, 7] # exon_pre_exon1_conf + exon1_exon_aft_conf
-        b = counts[:, 6] + counts[:, 8] # exon_pre_exon2_conf + exon2_exon_aft_conf
+        a = counts[:, 6] + counts[:, 8] # exon_pre_exon2_conf + exon2_exon_aft_conf
+        b = counts[:, 5] + counts[:, 7] # exon_pre_exon1_conf + exon1_exon_aft_conf
     elif event_type == 'mult_exon_skip':
         a = counts[:, 4] + counts[:, 5] + counts[:, 7] # exon_pre_exon_conf + exon_exon_aft_conf + sum_inner_exon_conf
         b = (counts[:, 8] + 1) * counts[:, 6] # (num_inner_exon + 1) * exon_pre_exon_aft_conf
@@ -180,3 +213,10 @@ def decodeUTF8(s):
 
 def isUTF8(s):
     return hasattr(s.view(np.chararray), 'decode')
+
+def rev_comp(s):
+    R = {'A':'T', 'T':'A', 'a':'t', 't':'a',
+         'G':'C', 'C':'G', 'g':'c', 'c':'g',
+         'N':'N', 'n':'n'}
+
+    return ''.join([R[_] for _ in s][::-1])

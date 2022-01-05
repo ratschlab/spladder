@@ -90,11 +90,8 @@ def default_settings(options):
    #options.intron_retention['max_retention_rel_cov'] = 1.5
     options.intron_retention['min_retention_max_exon_fold_diff']  = 4
 
-    options.sg_min_edge_count = 10
     options.no_reset_conf = False
 
-    options.do_prune = False
-    options.do_gen_isoforms = False
     options.do_merge_all = False
 
     ### define which output files are written
@@ -103,9 +100,6 @@ def default_settings(options):
     ### settings for truncation detection mode
     options.detect_trunc = False
     options.min_truncation_cov = 5
-
-    ### min number of reads to compute PSI
-    options.psi_min_reads = 10
 
     ### treat introns as unstranded
     options.introns_unstranded = False
@@ -118,12 +112,10 @@ def parse_args(options, identity='main'):
     ### load all default settings
     options = default_settings(options)
 
-    ref_tag = ''
-    
     if hasattr(options, 'event_types'):
         options.event_types = options.event_types.strip(',').split(',')
 
-    if not os.path.exists(options.outdir):
+    if hasattr(options, 'outdir') and not os.path.exists(options.outdir):
         print('WARNING: Output directory %s does not exist - will be created\n\n' % options.outdir, file=sys.stderr)
         try:
             os.makedirs(options.outdir)
@@ -135,13 +127,13 @@ def parse_args(options, identity='main'):
     if identity == 'main':
 
         ### open log file, if specified
-        if options.logfile != '-':
+        if hasattr(options, 'logfile') and options.logfile != '-':
             options.log_fname = options.logfile
         else:
             options.log_fname = 'stdout'
 
         ### set tmp directory default
-        if options.tmpdir == '':
+        if hasattr(options, 'tmpdir') and options.tmpdir == '':
             options.tmpdir = os.path.join(options.outdir, 'tmp')
 
         options.bam_fnames = options.bams.strip(',').split(',')
@@ -150,17 +142,6 @@ def parse_args(options, identity='main'):
             print('ERROR: Annotation file %s can not be found\n\n' % options.annotation, file=sys.stderr)
             sys.exit(2)
         
-        ### pyproc options
-        if options.pyproc:
-            options.options_rproc = dict()
-            options.options_rproc['mem_req_resubmit']  = [30000, 60000, 80000]
-            options.options_rproc['time_req_resubmit'] = [60*60, 80*60, 90*60]
-            options.options_rproc['resubmit'] = 3
-            options.options_rproc['priority'] = 100
-            options.options_rproc['addpaths'] = options.paths
-            if options.environment:
-                options.options_rproc['environment'] = options.environment
-
     if identity == 'test':
         if options.conditionA == '-':
             print('ERROR: At least one sample for condition A required', file=sys.stderr)
@@ -181,7 +162,7 @@ def parse_args(options, identity='main'):
         options.conditionB = [os.path.basename(x) for x in options.conditionB]
 
     ### check if we got a list of bam files in a text file instead of a comma separated list
-    if len(options.bam_fnames) > 0:
+    if len(options.bam_fnames) > 0 and options.bams != '-':
         if identity == 'main' and options.bam_fnames[0].split('.')[-1] == 'txt':
             options.bam_fnames = [str(x) for x in np.atleast_1d(np.loadtxt(options.bam_fnames[0], dtype='str'))]
 
@@ -200,17 +181,16 @@ def parse_args(options, identity='main'):
                 sys.exit(2)
 
 
-    ### assemble strain list
+    ### assemble sample list
     options.samples = []
-    options.strains = []
     if identity != 'viz':
         for i in range(len(options.bam_fnames)):
             options.samples.append(re.sub(r'(\.[bB][aA][mM]|\.[hH][dD][fF]5)|\.[cC][rR][aA][mM]$', '', options.bam_fnames[i].split('/')[-1]))
-            options.strains.append('%s%s' % (ref_tag, options.samples[-1]))
-        options.strains = np.array(options.strains)
+    options.samples = np.array(options.samples, dtype='str')
 
     ### adapt graph validation requirement to max number of samples
-    options.sg_min_edge_count = min(options.sg_min_edge_count, len(options.samples))
+    if hasattr(options, 'sg_min_edge_count'):
+        options.sg_min_edge_count = min(options.sg_min_edge_count, len(options.samples))
 
     return options
 
@@ -250,29 +230,29 @@ def set_confidence_level(options):
     if not hasattr(options, 'intron_retention'):
         options.intron_retention = dict()
     if options.confidence == 0:
-      options.intron_retention['min_retention_cov'] = 1
-      options.intron_retention['min_retention_region'] = 0.75 
-      options.intron_retention['min_retention_rel_cov'] = 0.1
-      options.intron_retention['max_retention_rel_cov'] = 2 
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4
+        options.intron_retention['min_retention_cov'] = 1
+        options.intron_retention['min_retention_region'] = 0.75 
+        options.intron_retention['min_retention_rel_cov'] = 0.1
+        options.intron_retention['max_retention_rel_cov'] = 2 
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4
     elif options.confidence == 1:
-      options.intron_retention['min_retention_cov'] = 2
-      options.intron_retention['min_retention_region'] = 0.75
-      options.intron_retention['min_retention_rel_cov'] = 0.1
-      options.intron_retention['max_retention_rel_cov'] = 1.2
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
+        options.intron_retention['min_retention_cov'] = 2
+        options.intron_retention['min_retention_region'] = 0.75
+        options.intron_retention['min_retention_rel_cov'] = 0.1
+        options.intron_retention['max_retention_rel_cov'] = 1.2
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
     elif options.confidence == 2:
-      options.intron_retention['min_retention_cov'] = 5 
-      options.intron_retention['min_retention_region'] = 0.9 
-      options.intron_retention['min_retention_rel_cov'] = 0.2 
-      options.intron_retention['max_retention_rel_cov'] = 1.2 
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
+        options.intron_retention['min_retention_cov'] = 5 
+        options.intron_retention['min_retention_region'] = 0.9 
+        options.intron_retention['min_retention_rel_cov'] = 0.2 
+        options.intron_retention['max_retention_rel_cov'] = 1.2 
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
     elif options.confidence == 3:
-      options.intron_retention['min_retention_cov'] = 10 
-      options.intron_retention['min_retention_region'] = 0.9  
-      options.intron_retention['min_retention_rel_cov'] = 0.2 
-      options.intron_retention['max_retention_rel_cov'] = 1.2 
-      options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
+        options.intron_retention['min_retention_cov'] = 10 
+        options.intron_retention['min_retention_region'] = 0.9  
+        options.intron_retention['min_retention_rel_cov'] = 0.2 
+        options.intron_retention['max_retention_rel_cov'] = 1.2 
+        options.intron_retention['min_retention_max_exon_fold_diff'] = 4 
 
     options.intron_retention['read_filter'] = options.read_filter
 
