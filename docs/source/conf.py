@@ -24,9 +24,9 @@ copyright = u'2019, Andre Kahles'
 author = u'Andre Kahles'
 
 # The short X.Y version
-version = u'2.5'
+version = u'3.0'
 # The full version, including alpha/beta/rc tags
-release = u'2.5.0'
+release = u'3.0.0'
 
 
 # -- General configuration ---------------------------------------------------
