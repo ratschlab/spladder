@@ -344,7 +344,7 @@ entirely (for instance to carry it out at a later point in time). This is done v
 
 **Event verification**
     Similar to graph validation, SplAdder also performs a step of splice event verification. Only
-    verified events are reported as confident to the user. There two possibilities how the validity of
+    verified events are reported as confident to the user. There are two possibilities how the validity of
     a confident event is established.
 
     The classical way for event verification is to use heuristic criteria based on the RNA-Seq

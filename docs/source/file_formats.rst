@@ -241,7 +241,96 @@ Files in PICKLE Format
 ^^^^^^^^^^^^^^^^^^^^^^
 
 These files are for internal usage only and can be ignored. 
-        
+ 
+Output Files -- ``test`` mode
+--------------------------------
+In the testing mode, SplAdder generates both tabulated output as well as some images for diagnosing
+properties of the data. The latter is still in beta mode. Please report an issue on the `tracker
+<https://github.com/ratschlab/spladder/issues>`_ in case you should encounter any problems.
+
+Files in TXT Format
+^^^^^^^^^^^^^^^^^^^
+The results of the ``test`` mode can be generally found in the ``testing`` subdirectory of the
+SplAdder output folder. For each event type {ET} and confidence level {C}, several different
+output files in text format are generated:
+
+- ``test_results_C{C}_{ET}.tsv``
+- ``test_results_C{C}_{ET}.gene_unique.tsv``
+- ``test_results_extended_C{C}_{ET}.tsv``
+
+In the following, we will provide more description for each of the files.
+
+**Basic test output per event**
+
+The basic outputs of testing are stored in the file ``test_results_C{C}_{ET}.tsv``. In addition to
+the header, the file contains one line per tested event. It contains 15 columns carrying the
+following information:
+
+#. *event_id* -- ID of the event
+#. *chrm* -- event location: chromosome/contig
+#. *exon_pos* -- event location: exon position (start-stop:start-stop:...)
+#. *alt_usage* -- list of binary values, indicating alternative usage of each exon (same order as in exon_pos)
+#. *gene_id* -- ID of gene
+#. *gene_name* -- Name of gene
+#. *p_val* -- raw p-value from differential test
+#. *p_val_adj* -- adjusted p-value from differential test
+#. *dPSI* -- delta PSI (absolute difference between mean-PSI of group A and mean-PSI of group B)
+#. *mean_event_count_A* -- mean support for tested splice path in group A
+#. *mean_event_count_B* -- mean support for tested splice path in group B
+#. *log2FC_event_count* -- log2 fold-change of mean support group A vs group B
+#. *mean_gene_exp_A* -- mean gene expression of gene in group A
+#. *mean_gene_exp_B* -- mean gene expression of gene in group B
+#. *log2FC_gene_exp* -- log2 fold-change of gene expression group A vs group B
+
+**Basic test output per gene**
+The file ``test_results_C{C}_{ET}.gene_unique.tsv`` contains essentially the same information as the
+basic test output per event, just made unique per gene. That is, if a gene contains multiple events
+of the same type, here only the most significant one is reported. The columns are the same.
+
+**Extended test output per event**
+The file ``test_results_extended_C{C}_{ET}.tsv`` contains additional output for each tested event
+and can be used for debugging purposes. The number of columns is variable and depends on the size of
+the input groups used for testing. For the following explanation, we assume that input group A has
+size 2 and input group B has size 3. The first 15 columns are identical to the basic event
+output file. The additional columns are as follows:
+
+16. *event_count:group_A_sample1* -- support for tested splice path in group A sample 1
+#. *event_count:group_A_sample2* -- support for tested splice path in group A sample 2
+#. *event_count:group_B_sample1* -- support for tested splice path in group B sample 1
+#. *event_count:group_B_sample2* -- support for tested splice path in group B sample 2
+#. *event_count:group_B_sample3* -- support for tested splice path in group B sample 3
+#. *disp_raw* -- raw dispersion estimate for the tested event
+#. *disp_adj* -- corrected dispersion estimate for the tested event
+
+Diagnose Plots
+^^^^^^^^^^^^^^
+
+The testing mode can generate some diagnose plots (via ``--diagnose-plots``) that can help you
+assess the data you are looking at. These plots are still in beta mode and might change in future
+versions of SplAdder.
+
+The plots reside in the SplAdder output directory in the folder ``testing/plots``. Currently, the
+following plots are available:
+
+Count distribution
+  A plot showing the distribution of supporting counts and the gene expression over events per
+  tested group / condition. The plot is available over raw counts and over log10 transformed counts.
+
+MA plot
+  A plot showing the log2 fold-change of each event over the mean normalized counts.
+
+Dispersion
+  Three plots showing the raw dispersion estimate, the dispersion fit and the adjusted dispersion..
+
+QQ plot
+  Quantile-quantile plots showing the distribution of p-values after testing over a uniform
+  distribution to check for over-inflation. Available for raw and adjusted p-values.
+
+
+Files in PICKLE Format
+^^^^^^^^^^^^^^^^^^^^^^
+
+Similar to ``build`` mode, these files are for internal usage only and can be ignored. 
 
 .. _ensembl: http://www.ensembl.org/info/website/upload/gff.html
 .. _broad: http://www.broadinstitute.org/annotation/argo/help/gff3.html
