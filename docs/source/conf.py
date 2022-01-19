@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = u'SplAdder'
-copyright = u'2019, Andre Kahles'
+copyright = u'2013-2022, Andre Kahles'
 author = u'Andre Kahles'
 
 # The short X.Y version
 version = u'3.0'
 # The full version, including alpha/beta/rc tags
-release = u'3.0.0'
+release = u'3.0.1'
 
 
 # -- General configuration ---------------------------------------------------
