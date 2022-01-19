@@ -142,6 +142,9 @@ def curate_alt_prime(event_list, options):
             elif event_list[i].exons1[1, 1] < event_list[i].exons2[1, 1]:
                 event_list[i].exons2[1, 1] = event_list[i].exons1[1, 1]
                 corr_count += 1
+            ### check whether our isoform convention is still met - if not, correct
+            if np.sum(event_list[i].exons1[:, 1] - event_list[i].exons1[:, 0]) > np.sum(event_list[i].exons2[:, 1] - event_list[i].exons2[:, 0]):
+                event_list[i].exons1, event_list[i].exons2 = event_list[i].exons2, event_list[i].exons1
         elif np.all(event_list[i].exons1[1, :] == event_list[i].exons2[1, :]):
             if event_list[i].exons1[0, 0] > event_list[i].exons2[0, 0]:
                 event_list[i].exons2[0, 0] = event_list[i].exons1[0, 0]
@@ -149,6 +152,9 @@ def curate_alt_prime(event_list, options):
             elif event_list[i].exons1[0, 0] < event_list[i].exons2[0, 0]:
                 event_list[i].exons1[0, 0] = event_list[i].exons2[0, 0]
                 corr_count += 1
+            ### check whether our isoform convention is still met - if not, correct
+            if np.sum(event_list[i].exons1[:, 1] - event_list[i].exons1[:, 0]) > np.sum(event_list[i].exons2[:, 1] - event_list[i].exons2[:, 0]):
+                event_list[i].exons1, event_list[i].exons2 = event_list[i].exons2, event_list[i].exons1
 
     ### remove events with non-overlapping alt_exons
     if len(rm_idx) > 0:
