@@ -9,7 +9,7 @@ import re
 
 from .classes.segmentgraph import Segmentgraph
 from .classes.counts import Counts
-from .helpers import log_progress, decodeUTF8, codeUTF8
+from .helpers import log_progress, decodeUTF8, codeUTF8, get_filename
 from .reads import *
 from .hdf5 import appendToHDF5
 
