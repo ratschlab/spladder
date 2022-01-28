@@ -322,10 +322,7 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
         stop_pos = ev.exons1[-1, -1]
 
         ### assert that first isoform is always the shorter one
-        if ev.event_type == 'intron_retention':
-            assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) <= np.sum(ev.exons2[1] - ev.exons2[0]))
-        else:
-            assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) <= np.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+        assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) <= np.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
 
         name = '%s.%i' % (ev.event_type, ev.id)
         
@@ -339,24 +336,17 @@ def write_events_gff3(fn_out_gff3, events, idx=None, as_gtf=False):
                 print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso1"; exon_id "%s_iso1_exon%i"' % (ev.chr, ev.event_type, ev.exons1[i, 0] + 1, ev.exons1[i, 1], ev.strand, name, name, name, i+1), file=fd_out)
             print('%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; gene_name "%s"; has_novel_junction "%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, gene_name, 'N' if anno_iso2 else 'Y'), file=fd_out)
             ex_cnt = 1
-            if ev.event_type == 'intron_retention':
-                print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; exon_id "%s_iso2_exon1";' % (ev.chr, ev.event_type, ev.exons2[0] + 1, ev.exons2[1], ev.strand, name, name, name), file=fd_out)
+            for i in range(ev.exons2.shape[0]):
+                print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; exon_id "%s_iso2_exon%i";' % (ev.chr, ev.event_type, ev.exons2[i, 0] + 1, ev.exons2[i, 1], ev.strand, name, name, name, ex_cnt), file=fd_out)
                 ex_cnt += 1
-            else:
-                for i in range(ev.exons2.shape[0]):
-                    print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tgene_id "%s"; transcript_id "%s_iso2"; exon_id "%s_iso2_exon%i";' % (ev.chr, ev.event_type, ev.exons2[i, 0] + 1, ev.exons2[i, 1], ev.strand, name, name, name, ex_cnt), file=fd_out)
-                    ex_cnt += 1
         else:
             print('%s\t%s\tgene\t%i\t%i\t.\t%c\t.\tID=%s;GeneName="%s";HasNovelJunction="%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, ev.gene_name[0], 'N' if anno_iso1 and anno_iso2 else 'Y'), file=fd_out)
             print('%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso1;Parent=%s;GeneName="%s";HasNovelJunction="%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, ev.gene_name[0], 'N' if anno_iso1 else 'Y'), file=fd_out) 
             for i in range(ev.exons1.shape[0]):
                 print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso1' % (ev.chr, ev.event_type, ev.exons1[i, 0] + 1, ev.exons1[i, 1], ev.strand, name), file=fd_out)
             print('%s\t%s\tmRNA\t%i\t%i\t.\t%c\t.\tID=%s_iso2;Parent=%s;GeneName="%s";HasNovelJunction="%s"' % (ev.chr, ev.event_type, start_pos + 1, stop_pos, ev.strand, name, name, ev.gene_name[0], 'N' if anno_iso2 else 'Y'), file=fd_out)
-            if ev.event_type == 'intron_retention':
-                print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[0] + 1, ev.exons2[1], ev.strand, name), file=fd_out)
-            else:
-                for i in range(ev.exons2.shape[0]):
-                    print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[i, 0] + 1, ev.exons2[i, 1], ev.strand, name), file=fd_out)
+            for i in range(ev.exons2.shape[0]):
+                print('%s\t%s\texon\t%i\t%i\t.\t%c\t.\tParent=%s_iso2' % (ev.chr, ev.event_type, ev.exons2[i, 0] + 1, ev.exons2[i, 1], ev.strand, name), file=fd_out)
     fd_out.close()
 
 
@@ -413,7 +403,7 @@ def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
                     raise Exception("Misconfigured alt-prime event detected")
             elif ev.event_type == 'intron_retention':
                 struc = '0,1^2-'
-                flanks = '%i-,%i^' % (ev.exons2[0] + 1, ev.exons2[1])
+                flanks = '%i-,%i^' % (ev.exons2[0, 1] + 1, ev.exons2[0, 1])
                 schain = ',%i^%i-' % (ev.exons1[0, 1], ev.exons1[1, 0] + 1)
             elif ev.event_type == 'mutex_exons':
                 struc = '1-2^,3-4^'
@@ -445,7 +435,7 @@ def write_events_structured(fn_out_struc, events, fn_counts, idx=None):
                     raise Exception("Misconfigured alt-prime event detected")
             elif ev.event_type == 'intron_retention':
                 struc = '0,1^2-'
-                flanks = '%i-,%i^' % (ev.exons2[1], ev.exons2[0] + 1)
+                flanks = '%i-,%i^' % (ev.exons2[0, 1], ev.exons2[0, 0] + 1)
                 schain = ',%i^%i-' % (ev.exons1[1, 0] + 1, ev.exons1[0, 1])
             elif ev.event_type == 'mutex_exons':
                 struc = '1-2^,3-4^'
@@ -487,10 +477,7 @@ def write_events_bed(fn_out_bed, events, idx=None):
         stop_pos = ev.exons1[-1, -1]
 
         ### assert that first isoform is always the shorter one
-        if ev.event_type == 'intron_retention':
-            assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) <= np.sum(ev.exons2[1] - ev.exons2[0]))
-        else:
-            assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) <= np.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
+        assert(np.sum(ev.exons1[:, 1] - ev.exons1[:, 0]) <= np.sum(ev.exons2[:, 1] - ev.exons2[:, 0]))
 
         name = '%s.%i' % (ev.event_type, ev.id)
 

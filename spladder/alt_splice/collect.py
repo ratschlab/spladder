@@ -84,7 +84,7 @@ def collect_events(options):
                         ### build intron retention data structure
                         event = Event('intron_retention', gene.chr, gene.strand)
                         event.exons1 = np.c_[exons[:, intron_intron_reten[k][0]], exons[:, intron_intron_reten[k][1]]].T
-                        event.exons2 = np.array([exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]])
+                        event.exons2 = np.array([[exons[:, intron_intron_reten[k][0]][0], exons[:, intron_intron_reten[k][1]][1]]])
                         event.gene_name = np.array([gene.name])
                         event.gene_idx = idx_intron_reten[k]
                         event.set_annotation_flag(gene.introns_anno)

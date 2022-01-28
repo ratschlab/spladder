@@ -56,7 +56,7 @@ class Event:
     def get_introns(self):
         
         _introns = np.reshape(self.exons1.ravel()[1:-1], (self.exons1.shape[0] - 1, 2))
-        if len(self.exons2.shape) > 1:
+        if self.exons2.shape[0] > 1:
             _introns = np.r_[_introns, np.reshape(self.exons2.ravel()[1:-1], (self.exons2.shape[0] - 1, 2))]
 
         return _introns
@@ -77,7 +77,7 @@ class Event:
                 break
 
         ### check annotation status of isoform 2
-        if len(self.exons2.shape) < 2:
+        if self.exons2.shape[0] < 2:
             return
         for i in range(self.exons2.shape[0] - 1):
             if not (self.exons2[i, 1], self.exons2[i + 1, 0]) in anno_introns:

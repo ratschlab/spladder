@@ -133,7 +133,7 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
         info[0] = 0
         return (verified, info)
     ### check validity of exon coordinates (start < stop && non-overlapping)
-    elif np.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or np.any((event.exons2[1] - event.exons2[0]) < 1):
+    elif np.any(event.exons1[:, 1] - event.exons1[:, 0] < 1) or np.any(event.exons2[:, 1] - event.exons2[:, 0] < 1):
         info[0] = 0
         return (verified, info)
 
