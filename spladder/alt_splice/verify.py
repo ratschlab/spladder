@@ -173,7 +173,7 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     if (info[2] > options.intron_retention['min_retention_cov'] and \
         info[5] > options.intron_retention['min_retention_region'] and \
         info[2] >= options.intron_retention['min_retention_rel_cov'] * (info[1] + info[3]) / 2) or \
-       (options.use_anno_support and exon_long in set([(_[0], _[1]) for _ in np.hstack(gene.exons)])):
+       (options.use_anno_support and exon_long in set([(_[0], _[1]) for _ in np.vstack(gene.exons)])):
         verified[0] = 1
 
     ### check intron confirmation as sum of valid intron scores
