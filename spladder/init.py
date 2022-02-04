@@ -17,7 +17,7 @@ def get_tags_gff3(tagline):
     tags = dict()
     for t in tagline.strip(';').split(';'):
         tt = t.split('=')
-        tags[tt[0]] = tt[1]
+        tags[tt[0].strip()] = tt[1].strip()
     return tags
 
 
@@ -107,9 +107,17 @@ def init_genes_gtf(options):
         if sl[2].lower() != 'exon':
             continue
 
-        trans_id = tags['transcript_id']
-        gene_id = tags['gene_id']
-
+        try:
+            trans_id = tags['transcript_id']
+        except KeyError:
+            sys.stderr.write('ERROR: all "exon" elements in the given gtf files are expected to carry a "transcript_id" tag\noffending line:\n %s' % line)
+            sys.exit(1)
+        try:
+            gene_id = tags['gene_id']
+        except KeyError:
+            sys.stderr.write('ERROR: all "exon" elements in the given gtf files are expected to carry a "gene_id" tag\noffending line:\n %s' % line)
+            sys.exit(1)
+            
         ### infer transcript ID
         try:
             t_idx = genes[gene_id].transcripts.index(trans_id)
@@ -206,6 +214,9 @@ def init_genes_gff3(options):
     chrms = []
 
     for line in open(options.annotation, 'r'):
+        if line.lower().startswith('##fasta'):
+            sys.stderr.write('WARNING: the given annotation file contains a FASTA section. Ignoring any further input!\n')
+            break
         if line[0] == '#':
             continue
         sl = line.strip().split('\t')
@@ -233,7 +244,8 @@ def init_genes_gff3(options):
 
     counter = 1
     for line in open(options.annotation, 'r'):
-
+        if line.lower().startswith('##fasta'):
+            break
         if options.verbose and counter % 10000 == 0:
             sys.stdout.write('.')
             if counter % 100000 == 0:
