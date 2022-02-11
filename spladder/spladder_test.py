@@ -549,7 +549,7 @@ def spladder_test(options):
     condition_samples = np.r_[np.array(options.conditionA), np.array(options.conditionB)]
     if options.verbose:
         print('Loading expression counts from %s' % options.fname_exp_hdf5)
-        gene_counts, gene_samples, gene_sample_idx, gene_ids, gene_symbols = _get_gene_expression(options, options.fname_exp_hdf5, sample_subset=condition_samples)
+    gene_counts, gene_samples, gene_sample_idx, gene_ids, gene_symbols = _get_gene_expression(options, options.fname_exp_hdf5, sample_subset=condition_samples)
 
     gene_samples = np.array([x.split(':')[1] if ':' in x else x for x in gene_samples])
 
