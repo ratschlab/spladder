@@ -1,5 +1,7 @@
 import numpy as np
 
+from ..utils import sort_rows
+
 class Event:
 
     def __init__(self, event_type, chr=None, strand=None):
@@ -68,6 +70,8 @@ class Event:
         return _introns[:, 1] - _introns[:, 0]
 
     def set_annotation_flag(self, anno_introns):
+
+        self.sort_exons()
         
         ### check annotation status of isoform 1
         self.annotated = 3
@@ -83,3 +87,8 @@ class Event:
             if not (self.exons2[i, 1], self.exons2[i + 1, 0]) in anno_introns:
                 self.annotated -= 2
                 break
+
+    def sort_exons(self):
+        
+        self.exons1 = sort_rows(self.exons1)
+        self.exons2 = sort_rows(self.exons2)
