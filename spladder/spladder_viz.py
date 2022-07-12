@@ -128,7 +128,7 @@ def _parse_test_info(test_info, outdir, confidence, data_tracks, test_tag):
             data_tracks.append([])
             data_tracks[-1].append(['segments', test_setup['labels'][0] + ':' + ','.join(test_setup['event_samples'][idxA]), test_setup['labels'][1] + ':' + ','.join(test_setup['event_samples'][idxB])])
             data_tracks[-1].append(['event', sl[0]])
-            data_tracks[-1].append(['gene', sl[1]]) 
+            data_tracks[-1].append(['gene', sl[4]]) 
             test_tag.append('.difftest_%s' % sl[0])
 
 
