@@ -652,6 +652,7 @@ def spladder_test(options):
         cov[1] = cov[1][k_idx, :]
         curr_gene_counts = curr_gene_counts[k_idx, :]
         event_idx = event_idx[k_idx]
+        events = events[k_idx]
         gene_idx = gene_idx[k_idx]
         if not event_ids is None:
             event_ids = [x[k_idx] for x in event_ids]
