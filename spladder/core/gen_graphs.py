@@ -186,7 +186,7 @@ def gen_graphs(genes, bam_fnames, options=None):
             genes[np.where(chrms == chr_idx)[0]] = copy.deepcopy(genes_mod)
         print('... done.\n', file=fd_log)
 
-    print('Re-labeleling new alternative genes ...', file=fd_log)
+    print('Re-labeling new alternative genes ...', file=fd_log)
     for ix in range(genes.shape[0]):
         genes[ix].start = genes[ix].splicegraph.vertices.min()
         genes[ix].stop = genes[ix].splicegraph.vertices.max()
