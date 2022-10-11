@@ -608,7 +608,7 @@ def insert_intron_edges(genes, bam_fnames, options):
                                 inserted['alt_53_prime'] += 1
                                 if options.debug:
                                     for idx2_ in idx2:
-                                        print('%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph,vertices[1, idx1_], 
+                                        print('%s\talternative_53_prime1\t%c\t%i\t%i\t%i\n' % (genes[i].chr, genes[i].strand, genes[i].splicegraph.vertices[1, idx1_], 
                                                                                                                  genes[i].splicegraph.vertices[1, -1], genes[i].splicegraph.vertices[0, idx2_]), file=fd_log)
                                 intron_used = True
 
