@@ -559,7 +559,7 @@ def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=No
     chr_len = [int(x['LN']) for x in parse_header(infile.text)['SQ'] if x['SN'] == chr_name]
     if len(chr_len) == 0:
         print('No information found for contig %s' % (chr_name), file=sys.stdout)
-        read_matrix = scipy.sparse.coo_matrix(np.zeros((0, 1))
+        read_matrix = scipy.sparse.coo_matrix(np.zeros((0, 1)))
         introns_m = np.zeros((0, 3), dtype='uint32')
         introns_p = np.zeros((0, 3), dtype='uint32')
         if usetmp:
