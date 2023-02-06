@@ -531,6 +531,17 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
 
 def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=None, mapped=True, spliced=True, unstranded=True):
 
+    def _store_hdf5(fname, read_matrix, introns_m, introns_p):
+
+        OUT = h5py.File(fname, 'w')
+        OUT.create_dataset(name=(chr_name + '_reads_row'), data=read_matrix.row.astype('uint8'), compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_reads_col'), data=read_matrix.col, compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_reads_dat'), data=read_matrix.data, compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_reads_shp'), data=read_matrix.shape)
+        OUT.create_dataset(name=(chr_name + '_introns_m'), data=introns_m, compression='gzip')
+        OUT.create_dataset(name=(chr_name + '_introns_p'), data=introns_p, compression='gzip')
+        OUT.close()
+
     if not re.search(r'\.[bB][aA][mM]$', fname) is None:
         infile = pysam.AlignmentFile(fname, 'rb')
     elif not re.search(r'\.[cC][rR][aA][mM]$', fname) is None:
@@ -548,7 +559,15 @@ def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=No
     chr_len = [int(x['LN']) for x in parse_header(infile.text)['SQ'] if x['SN'] == chr_name]
     if len(chr_len) == 0:
         print('No information found for contig %s' % (chr_name), file=sys.stdout)
-        return (chr_name, scipy.sparse.coo_matrix(np.zeros((0, 1)), dtype='uint32'), np.zeros((0, 3), dtype='uint32'), np.zeros((0, 3), dtype='uint32'))
+        read_matrix = scipy.sparse.coo_matrix(np.zeros((0, 1))
+        introns_m = np.zeros((0, 3), dtype='uint32')
+        introns_p = np.zeros((0, 3), dtype='uint32')
+        if usetmp:
+            tmp_fname = os.path.join(options.tmpdir, chr_name + str(uuid.uuid4()) + '.hdf5') 
+            _store_hdf5(tmp_fname, read_matrix, introns_m, introns_p)
+            return (chr_name, tmp_fname)
+        else:
+            return (chr_name, read_matrix, introns_m, introns_p)
     chr_len = chr_len[0]
 
     ### read matrix has three rows: 0 - no strand info, 1 - plus strand info, 2 - minus strand info
@@ -607,14 +626,7 @@ def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=No
 
     if usetmp:
         tmp_fname = os.path.join(options.tmpdir, chr_name + str(uuid.uuid4()) + '.hdf5') 
-        OUT = h5py.File(tmp_fname, 'w')
-        OUT.create_dataset(name=(chr_name + '_reads_row'), data=read_matrix.row.astype('uint8'), compression='gzip')
-        OUT.create_dataset(name=(chr_name + '_reads_col'), data=read_matrix.col, compression='gzip')
-        OUT.create_dataset(name=(chr_name + '_reads_dat'), data=read_matrix.data, compression='gzip')
-        OUT.create_dataset(name=(chr_name + '_reads_shp'), data=read_matrix.shape)
-        OUT.create_dataset(name=(chr_name + '_introns_m'), data=introns_m, compression='gzip')
-        OUT.create_dataset(name=(chr_name + '_introns_p'), data=introns_p, compression='gzip')
-        OUT.close()
+        _store_hdf5(tmp_fname, read_matrix, introns_m, introns_p)
         return (chr_name, tmp_fname)
     else:
         return (chr_name, read_matrix, introns_m, introns_p)
