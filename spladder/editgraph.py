@@ -31,11 +31,11 @@ def remove_short_exons(genes, options):
       
         ### extend terminal exons to terminal_short_extend if they are shorter than terminal_short_len
         if genes[i].splicegraph.vertices[1, 0] - genes[i].splicegraph.vertices[0, 0] < options.remove_exons['terminal_short_len']:
-            genes[i].splicegraph.vertices[0, 0] = genes[i].splicegraph.vertices[1, 0] - options.remove_exons['terminal_short_extend']
+            genes[i].splicegraph.vertices[0, 0] -= options.remove_exons['terminal_short_extend']
             genes[i].start = min(genes[i].start, genes[i].splicegraph.vertices[0, 0])
       
         if genes[i].splicegraph.vertices[1, -1] - genes[i].splicegraph.vertices[0, -1] < options.remove_exons['terminal_short_len']:
-            genes[i].splicegraph.vertices[1, -1] = genes[i].splicegraph.vertices[1, -1] + options.remove_exons['terminal_short_extend']
+            genes[i].splicegraph.vertices[1, -1] += options.remove_exons['terminal_short_extend']
             genes[i].stop = max(genes[i].stop, genes[i].splicegraph.vertices[1, -1]) 
       
         ### check for very short exons and insert an edge that allows skipping them
@@ -67,7 +67,7 @@ def remove_short_exons(genes, options):
         keep_idx = np.where(~np.in1d(np.array(np.arange(genes[i].splicegraph.vertices.shape[1])), exons_remove_idx))[0]
         genes[i].splicegraph.subset(keep_idx)
     
-    keep_idx = np.where(~np.in1d(np.arange(len(genes[i])), rm_idx))[0]
+    keep_idx = np.where(~np.in1d(np.arange(len(genes)), rm_idx))[0]
     genes = genes[keep_idx]
 
     if options.verbose:

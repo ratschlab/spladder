@@ -125,7 +125,7 @@ def gen_graphs(genes, bam_fnames, options=None):
         print('Removing short exons ...', file=fd_log)
         genes = remove_short_exons(genes, options)
         for i in range(genes.shape[0]):
-            if np.any(genes[i].splicegraph.vertices[:, 1] - genes[i].splicegraph.vertices[:, 0] < options.remove_exons['min_exon_len_remove']):
+            if np.any(genes[i].splicegraph.vertices[1, :] - genes[i].splicegraph.vertices[0, :] < options.remove_exons['min_exon_len_remove']):
                 print('WARNING: could not remove all short exons', file=sys.stderr)
         print('... done.\n', file=fd_log)
 
