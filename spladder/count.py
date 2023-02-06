@@ -215,7 +215,7 @@ def collect_single_quantification_results(fname_out, sample_idxs, options):
 def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, sample_idx=None):
 
     if options.verbose:
-        sys.stdout.write('Quantifying gene expression ...\n')
+        sys.stdout.write('\nQuantifying gene expression ...\n')
 
     ### load gene information
     genes = pickle.load(open(fname_genes, 'rb'), encoding='latin1')[0]
@@ -250,7 +250,7 @@ def compute_gene_expression(options, fname_genes, fname_count_in, fn_out=None, s
     for gidx, iidx in enumerate(s_idx):
 
         if options.verbose:
-            log_progress(gidx, numgenes, 100)
+            log_progress(gidx, numgenes)
 
         seg_idx = np.arange(iidx, iidx + genes[gidx].segmentgraph.seg_edges.shape[0])
         ### do we need a new chunk?
