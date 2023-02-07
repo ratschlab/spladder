@@ -30,7 +30,7 @@ will hold all results will be ``spladder_out``.
 
 We will use simple ``bash`` commands to emulate the distribution of individual tasks. Please note
 that the code as stated here, would just sequentially compute all single tasks and not generate any
-parallelization benefit. For this to materialize, you would need to submit the individual tasks to a
+parallelization benefit. For this to happen, you would need to submit the individual tasks to a
 compute cluster or similar. (If you have a machine with many cores available, you could also
 trivially parallelize by running several tasks in the background simultaneously.)
 
@@ -50,14 +50,15 @@ For each of the given input samples `Si`, we invoke the splicing graph generatio
                        -a annotation.gtf \
                        -b S${i}.bam \
                        --merge-strat single \
-                       --no-extract-ase
+                       --no-extract-ase \
+                       --no-quantify-graph
     done
 
 This will create an individual splicing graph in ``spladder_out/spladder`` for each sample. Please
-note that we added the ``--no-extract-ase`` option here. This is to prevent SplAdder from
-automatically proceeding as is done by default in the smaller cohort analyses. With this option
-present, we gain a more fine-grained controlled over the graph building process. This option will
-also be present in the subsequent steps.
+note that we added the ``--no-extract-ase`` and ``--no-quantify-graph`` options here. This is to prevent 
+SplAdder from quantifying the per-sample graphs and from automatically proceeding as is done by default 
+in the smaller cohort analyses. With this option present, we gain a more fine-grained controlled over 
+the graph building process. This option will also be present in the subsequent steps.
 
 2. Merged graph
 ^^^^^^^^^^^^^^^
@@ -70,7 +71,8 @@ a different merging strategy::
                    -a annotation.gtf \
                    -b S1.bam,S2.bam,S3.bam,S4.bam,S5.bam,S6.bam,S7.bam,S8.bam,S9.bam,S10.bam \
                    --merge-strat merge_graphs \
-                   --no-extract-ase
+                   --no-extract-ase \
+                   --no-quantify-graph
 
 Please note that now all alignment files of the cohort need to be provided. For larger cohorts it is
 useful to collect all alignment files in a separate files, e.g. ``alignments.txt``. Then the merging
@@ -80,7 +82,50 @@ step could also be invoked as follows::
                    -a annotation.gtf \
                    -b alignments.txt \
                    --merge-strat merge_graphs \
-                   --no-extract-ase
+                   --no-extract-ase \
+                   --no-quantify-graph
+
+Also not, that again we have provided the ``--no-extract-ase`` and ``--no-quantify-graph`` options,
+as we are only interested in merging the sample-graphs, but not quantify per sample, yet, as this
+can later be done in parallel.
+
+As a last point, the merging of single sample-graphs is done progressively over samples and takes
+some time. This is also hard to parallelize over genes, as there is the option to mere neighboring
+genes, if they become too overlapping. If you really have many samples to merge (like hundreds or
+thousands), SplAdder offers the possibility to parallelize the merge over chunks of samples, using
+the option ``--chunked-merge LEVEL MAX_LEVEL START END``, where ``LEVEL`` is the current level of
+the merging tree, ``MAX_LEVEL`` is the height of the merging tree, and ``START`` and ``END``
+describe the node range at the current merge level. It is easiest to describe this using a small
+example. Assume we have 100 single sample graphs to be merged. Instead of merging all 100 samples
+progressively in one go, we could always merge 10 samples at a time in parallel. This will give us
+10 ten-sample graphs. These 10 graphs can now again be merged, resulting in the 100-sample graph.
+The total number of levels (``MAX_LEVEL``) can be computed as the ceiling of the chunksize-base
+logarithm of the total number of samples. For our example this would be log_10 100 = 2.
+
+Applying this to our 100 sample example::
+    
+    ### first level, merging samples in groups of 10
+    for i in $(seq 0 10 90)
+    do
+        spladder build -o spladder_out \
+                   -a annotation.gtf \
+                   -b alignments.txt \
+                   --merge-strat merge_graphs \
+                   --no-extract-ase \
+                   --no-quantify-graph \
+                   --chunked-merge 0 1 ${i} $((${i} + 10))
+    done
+
+    ### second level, merging the 10 ten-sample graphs
+    spladder build -o spladder_out \
+               -a annotation.gtf \
+               -b alignments.txt \
+               --merge-strat merge_graphs \
+               --no-extract-ase \
+               --no-quantify-graph \
+               --chunked-merge 1 1 0 10
+
+Per default, the chunk size is 10, but can be adapted via the ``--chunksize`` option.
 
 3. Quantification
 ^^^^^^^^^^^^^^^^^
