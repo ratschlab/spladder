@@ -96,7 +96,7 @@ def parse_options(argv):
     splice.add_argument('--no-quantify-graph', dest='quantify_graph', action='store_false', default=None)
     splice.add_argument('--use-anno-support', dest='use_anno_support', action='store_true', help='use annotation for validating event introns [off]', default=False)
     splice.add_argument('--no-use-anno-support', dest='use_anno_support', action='store_false', default=None)
-    splice.add_argument('--psi-min-reads', dest='psi_min_reads', metavar='INT', help='minimum number of spliced reads covering either isoform to compute PSI [10]', default=10)
+    splice.add_argument('--psi-min-reads', dest='psi_min_reads', metavar='INT', type=int, help='minimum number of spliced reads covering either isoform to compute PSI [10]', default=10)
     splice.add_argument('--qmode', dest='qmode', metavar='STRING', help='quantification mode: single, collect, all [all]', default='all')
     parser_build.set_defaults(func=spladder)
 
