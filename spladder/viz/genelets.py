@@ -10,7 +10,7 @@ def single(exon_set, ax=None, x_range=None, count=1, color='blue', grid=False, l
     
     ### draw grid
     if grid:
-        ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
+        ax.grid(visible=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
         ax.yaxis.grid(False)
 
     min_ex = None

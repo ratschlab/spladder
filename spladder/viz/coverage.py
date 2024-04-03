@@ -225,7 +225,7 @@ def cov_from_segments(gene, seg_counts, edge_counts, edge_idx, size_factors, ax,
 
     ### draw grid
     if grid:
-        ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
+        ax.grid(visible=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
         ax.xaxis.grid(False)
 
     ax.set_ylim([0, int(seg_counts.max() * 1.1)])
@@ -320,7 +320,7 @@ def cov_from_bam(chrm, start, stop, files, subsample=0, verbose=False,
 
     ### draw grid
     if grid:
-        ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
+        ax.grid(visible=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
         ax.xaxis.grid(False)
 
     if marker_pos is not None:

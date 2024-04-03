@@ -16,7 +16,7 @@ def plot_graph(vertices, edges, ax, xlim=None, highlight=None, highlight_color='
     stop = vertices.ravel().max()
 
     ### draw grid
-    ax.grid(b=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
+    ax.grid(visible=True, which='major', linestyle='--', linewidth=0.2, color='#222222')
     ax.yaxis.grid(False)
 
     ### nodes

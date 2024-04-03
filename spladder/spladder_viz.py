@@ -5,7 +5,7 @@ import re
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.style.use('seaborn')
+plt.style.use('seaborn-v0_8-whitegrid')
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import numpy as np

@@ -179,7 +179,7 @@ def verify_intron_retention(event, gene, counts_segments, counts_edges, counts_s
     ### check intron confirmation as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # intron conf
-    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon1[-1], seg_exon2[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon1[-1], seg_exon2[0]], segs.seg_edges.shape))[0].item()
     info[4] = counts_edges[idx, 1]
 
     if (info[4] >= options.intron_retention['min_non_retention_count']) or \
@@ -245,19 +245,19 @@ def verify_exon_skip(event, gene, counts_segments, counts_edges, options):
     ### check intron confirmation as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # exon_pre_exon_conf
-    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon[0]], segs.seg_edges.shape))[0].item()
     info[4] = counts_edges[idx, 1]
     if (info[4] >= options.exon_skip['min_non_skip_count']) or \
        (options.use_anno_support and intron_pre in gene.introns_anno):
         verified[1] = 1
     # exon_exon_aft_conf
-    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0].item()
     info[5] = counts_edges[idx, 1]
     if (info[5] >= options.exon_skip['min_non_skip_count']) or \
        (options.use_anno_support and intron_aft in gene.introns_anno):
         verified[2] = 1
     # exon_pre_exon_aft_conf
-    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0]
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([seg_exon_pre[-1], seg_exon_aft[0]], segs.seg_edges.shape))[0].item()
     info[6] = counts_edges[idx, 1]
     if (info[6] >= options.exon_skip['min_skip_count']) or \
        (options.use_anno_support and intron_skip in gene.introns_anno):
@@ -353,12 +353,10 @@ def verify_alt_prime(event, gene, counts_segments, counts_edges, options):
     ### check intron confirmations as sum of valid intron scores
     ### intron score is the number of reads confirming this intron
     # intron1_conf 
-    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], segs.seg_edges.shape))[0]
-    assert(idx.shape[0] > 0)
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon11[-1], segs_exon12[0]], segs.seg_edges.shape))[0].item()
     info[4] = counts_edges[idx, 1]
     # intron2_conf 
-    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], segs.seg_edges.shape))[0]
-    assert(idx.shape[0] > 0)
+    idx = np.where(counts_edges[:, 0] == np.ravel_multi_index([segs_exon21[-1], segs_exon22[0]], segs.seg_edges.shape))[0].item()
     info[5] = counts_edges[idx, 1]
 
     if (min(info[4], info[5]) >= options.alt_prime['min_intron_count']) or \
