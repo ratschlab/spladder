@@ -78,11 +78,11 @@ def write_events_txt(fn_out_txt, samples, events, fn_counts, event_idx=None, ann
         
         ### new count chunk needed?
         if i >= chunk_idx_event[1]:
-            chunk_idx_event += cs1
+            chunk_idx_event += cs1 * (1 + (i - chunk_idx_event[1]) // cs1)
             event_counts_chunk = IN['event_counts'][:, :, chunk_idx_event[0]:chunk_idx_event[1]]
         ### new psi chunk needed?
         if i >= chunk_idx_psi[1]:
-            chunk_idx_psi += cs2
+            chunk_idx_psi += cs2 * (1 + (i - chunk_idx_psi[1]) // cs2)
             psi_chunk = IN['psi'][:, chunk_idx_psi[0]:chunk_idx_psi[1]]
 
         ev = events[i]
