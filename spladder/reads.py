@@ -57,6 +57,16 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
                 is_minus = (tags['XS'] == '-')
  
             ### get introns and covergae
+            # cigar operations: 
+            #   0 / M - alignment match
+            #   1 / I - insertion
+            #   2 / D - deletion
+            #   3 / N - reference skip (intron)
+            #   4 / S - soft clip
+            #   5 / H - hard clip
+            #   6 / P - padding
+            #   7 / = - sequence match
+            #   8 / X - sequence mismatch
             p = read.pos 
             for o in read.cigar:
                 if o[0] == 3:
@@ -70,11 +80,11 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
                             introns_p[(p, p + o[1])] += 1
                         except KeyError:
                             introns_p[(p, p + o[1])] = 1
-                if o[0] in [0, 2]:
+                if o[0] in [0, 2, 7, 8]:
                     _start = int(max(p-start, 0))
                     _stop = int(min(p + o[1] - start, stop - start))
                     if _stop < 0 or _start > length:
-                        if o[0] in [0, 2, 3]:
+                        if o[0] in [0, 2, 3, 7, 8]:
                             p += o[1]
                         continue
                     if collapse:
@@ -87,7 +97,7 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
                         #    if pp - start >= 0 and pp < stop:
                         #        i.append(read_cnt)
                         #        j.append(pp - start)
-                if o[0] in [0, 2, 3]:
+                if o[0] in [0, 2, 3, 7, 8]:
                     p += o[1]
 
             ### the follwoing is new behavior and gonne come in the next version --> deletions are not counted towards coverage
@@ -482,6 +492,7 @@ def get_intron_list(genes, bam_fnames, options):
 
 def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, no_mm=False, mm_tag='NM'):
 
+
     if read.is_unmapped:
         return True
     if primary_only and read.is_secondary:
@@ -515,7 +526,7 @@ def filter_read(read, filter, spliced, mapped, strand, primary_only, var_aware, 
             ### contribute to the segments (hard- and softclips and insertions)
             cig = re.sub(r'[0-9]*[HSI]', '', read.cigarstring)
             ### split the string at the introns and sum the remaining segment elements, compare to filter
-            if min([sum([int(y) for y in re.split('[MD]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) <= filter['exon_len']:
+            if min([sum([int(y) for y in re.split('[MD=X]', x)[:-1]]) for x in re.split('[0-9]*N', cig)]) <= filter['exon_len']:
                 return True
     
     ### check strand information
@@ -601,9 +612,9 @@ def summarize_chr(fname, chr_name, options, usetmp=False, filter=None, strand=No
                             introns_p[(p, p + o[1])] += 1
                         except KeyError:
                             introns_p[(p, p + o[1])] = 1
-                if o[0] in [0, 2]:
-                    read_matrix[0 + int(curr_read_stranded) + int(is_minus), p:(p + o[1])] += 1
-                if o[0] in [0, 2, 3]:
+                if o[0] in [0, 2, 3, 7, 8]:
+                    if o[0] != 3:
+                        read_matrix[0 + int(curr_read_stranded) + int(is_minus), p:(p + o[1])] += 1  
                     p += o[1]
 
     ### convert introns into scipy array
