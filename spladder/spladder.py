@@ -5,6 +5,7 @@ if sys.version_info[0] < 3:
     sys.stderr.write('\nERROR: SplAdder requires Python 3 to run. You are currently running Python %i.%i.%i\n' % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
     sys.exit(1)
 
+from . import __version__
 from .spladder_build import spladder
 from .spladder_viz import spladder_viz
 from .spladder_test import spladder_test
@@ -16,7 +17,8 @@ def parse_options(argv):
 
     from argparse import ArgumentParser
 
-    parser = ArgumentParser(prog='spladder')
+    parser = ArgumentParser(prog='spladder',
+                            description=f'SplAdder - Graph-based splice event analysis; version: {__version__}')
     subparsers = parser.add_subparsers(help='Running modes', metavar='{prep, build, test, viz}')
 
     ### RUN MODE "BUILD"
@@ -218,9 +220,8 @@ def check_options(options, mode):
                 sys.exit(1)
             if not options.filter_consensus in ['strict', 'lenient']:
                 sys.stderr.write('\nERROR: --filter-consensus only allows the following choices: strict, lenient\n')
-                sys. exit(1)
+                sys.exit(1)
 
-   
 def main(argv=sys.argv):
 
     ### get command line options
