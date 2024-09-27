@@ -425,10 +425,10 @@ def verify_mutex_exons(event, gene, counts_segments, counts_edges, options):
 
     ### check if coverage of first exon is >= than FACTOR times average of pre and after
     if (info[2] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2) or \
-       (options.use_anno_support and exon1 in set([(_[0], _[1]) for _ in np.hstack(gene.exons)])):
+       (options.use_anno_support and exon1 in set([(_[0], _[1]) for _ in np.vstack(gene.exons)])):
         verified[0] = 1
     if (info[3] >= options.mutex_exons['min_skip_rel_cov'] * (info[1] + info[4])/2) or \
-       (options.use_anno_support and exon2 in set([(_[0], _[1]) for _ in np.hstack(gene.exons)])):
+       (options.use_anno_support and exon2 in set([(_[0], _[1]) for _ in np.vstack(gene.exons)])):
         verified[1] = 1
 
     ### check intron confirmation as sum of valid intron scores
