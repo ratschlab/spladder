@@ -42,7 +42,7 @@ def write_events_txt(fn_out_txt, samples, events, fn_counts, event_idx=None, ann
     elif events[0].event_type == 'intron_retention':
         fd.write('chrm\tstrand\tevent_id\tis_annotated\tgene_name%s\te1_start\te1_end\te2_start\te2_end\te3_start\te3_end' % gene_header)
         for i in range(len(samples)):
-            fd.write('\t%s:e1_cov\t%s:e2_cov\t%s:e3_cov\t%s:e1e3_conf\t%s:psi' % (samples[i], samples[i], samples[i], samples[i], samples[i]))
+            fd.write('\t%s:e1_cov\t%s:e2_cov\t%s:e3_cov\t%s:e1e3_conf\t%s:e2_cov_region\t%s:psi' % (samples[i], samples[i], samples[i], samples[i], samples[i], samples[i]))
     elif events[0].event_type == 'mult_exon_skip':
         fd.write('chrm\tstrand\tevent_id\tis_annotated\tgene_name%s\te1_start\te1_end\te2_starts\te2_ends\te3_start\te3_end' % gene_header)
         for i in range(len(samples)):
@@ -99,7 +99,7 @@ def write_events_txt(fn_out_txt, samples, events, fn_counts, event_idx=None, ann
             fd.write('\t%i\t%i\t%i\t%i\t%i\t%i' % (ev.exons1[0, 0] + 1, ev.exons1[0, 1], ev.exons1[0, 1] + 1, ev.exons1[1, 0], ev.exons1[1, 0] + 1, ev.exons1[1, 1,]))
             for j in range(len(samples)):
                 if counts[j, 0] == 1:
-                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], psi[j]))
+                    fd.write('\t%.1f\t%.1f\t%.1f\t%i\t%.2f\t%.2f' % (counts[j, 1], counts[j, 2], counts[j, 3], counts[j, 4], counts[j, 5], psi[j]))
                 else:
                     fd.write('\t-1\t-1\t-1\t-1')
         elif ev.event_type in ['alt_3prime', 'alt_5prime']:
