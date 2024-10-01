@@ -15,7 +15,7 @@ def issubset(A, B):
     #
     # returns true if A is a subset of B, where 
     # both A and B are vectors with 1 where elements exists and 0 otherwise.
-    return np.all(np.where(A)[0] == np.in1d(np.where(A)[0], np.where(B)[0]))
+    return np.all(np.where(A)[0] == np.isin(np.where(A)[0], np.where(B)[0]))
 
 
 #def intersect_rows(array1, array2, index = None):
@@ -37,8 +37,8 @@ def issubset(A, B):
 #    array_i = np.intersect1d(array1_v, array2_v)
 #
 #    if index == True:
-#        a1_i = np.where(np.in1d(array1_v, array_i))[0]
-#        a2_i = np.where(np.in1d(array2_v, array_i))[0]
+#        a1_i = np.where(np.isin(array1_v, array_i))[0]
+#        a2_i = np.where(np.isin(array2_v, array_i))[0]
 #        return (array_i.view(array1.dtype).reshape(array_i.shape[0], array1.shape[1]), a1_i, a2_i)
 #    else:
 #        return array_i.view(array1.dtype).reshape(array_i.shape[0], array1.shape[1])
@@ -76,9 +76,9 @@ def intersect_rows(array1, array2, index=False):
     tmp1 = np.array(['-'.join(array1[i, :].astype('str')) for i in range(array1.shape[0])])
     tmp2 = np.array(['-'.join(array2[i, :].astype('str')) for i in range(array2.shape[0])])
     
-    idx = np.where(np.in1d(tmp1, tmp2))[0]
+    idx = np.where(np.isin(tmp1, tmp2))[0]
     if index:
-        idx2 = np.where(np.in1d(tmp2, tmp1))[0]
+        idx2 = np.where(np.isin(tmp2, tmp1))[0]
 
     if index:
         return (array1[idx, :], idx, idx2)

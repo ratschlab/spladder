@@ -36,7 +36,7 @@ def merge_duplicate_exons(genes, options):
             if remove[j]:
                 continue
             idx = np.where((exons[0, j] == exons[0, :]) & (exons[1, j] == exons[1, :]))[0]
-            idx = idx[np.where(~np.in1d(idx, j))[0]]
+            idx = idx[np.where(~np.isin(idx, j))[0]]
             if idx.shape[0] > 0:
                 remove[idx] = True
                 for k in idx:

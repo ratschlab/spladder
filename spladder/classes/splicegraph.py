@@ -284,7 +284,7 @@ class Splicegraph:
                 self.edges[j, :] = self.edges[j-1, :] | self.edges[j, :]
                 rm_idx.append(j - 1)
 
-        keep_idx = np.where(~np.in1d(np.array(np.arange(self.vertices.shape[1])), rm_idx))[0]
+        keep_idx = np.where(~np.isin(np.array(np.arange(self.vertices.shape[1])), rm_idx))[0]
         self.vertices = self.vertices[:, keep_idx]
         self.edges = self.edges[keep_idx, :][:, keep_idx]
         self.terminals = self.terminals[:, keep_idx]

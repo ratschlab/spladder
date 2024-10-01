@@ -107,7 +107,7 @@ def make_unique_by_event(event_list):
             last_kept = i
 
     print('events dropped: %i' % len(rm_idx))
-    keep_idx = np.where(~np.in1d(np.arange(event_list.shape[0]), rm_idx))[0]
+    keep_idx = np.where(~np.isin(np.arange(event_list.shape[0]), rm_idx))[0]
     event_list = event_list[keep_idx]
 
     return event_list
@@ -158,7 +158,7 @@ def curate_alt_prime(event_list, options):
 
     ### remove events with non-overlapping alt_exons
     if len(rm_idx) > 0:
-        keep_idx = np.where(~np.in1d(np.arange(event_list.shape[0]), rm_idx))[0]
+        keep_idx = np.where(~np.isin(np.arange(event_list.shape[0]), rm_idx))[0]
         event_list = event_list[keep_idx]
 
     print('Corrected %i events' % corr_count)

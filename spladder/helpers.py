@@ -35,7 +35,7 @@ def make_introns_feasible(introns, genes, bam_fnames, options):
         tmp2 = np.array([x.shape[0] for x in introns[:, 1]])
 
         still_unfeas = np.where((tmp1 > 200) | (tmp2 > 200))[0]
-        idx = np.where(~np.in1d(unfeas, still_unfeas))[0]
+        idx = np.where(~np.isin(unfeas, still_unfeas))[0]
 
         for i in unfeas[idx]:
             print('[feasibility] set criteria for gene %s to: min_ex %i, min_conf %i, max_mism %i' % (genes[i].name, options.read_filter['exon_len'], options.read_filter['mincount'], options.read_filter['mismatch']), file=fd_log)
@@ -113,7 +113,7 @@ def filter_introns(introns, genes, options):
             k_idx = []
             cnt_tot += introns[i, si].shape[0]
             for j in range(introns[i, si].shape[0]):
-                if len(gene_trees[(s, genes[i].chr)].overlap(introns[i, si][j, 0] - offset, introns[i, si][j, 1] + offset)) == 1:
+                if len(gene_trees[(s, genes[i].chr)].overlap(int(introns[i, si][j, 0]) - offset, int(introns[i, si][j, 1]) + offset)) == 1:
                     k_idx.append(j)
             if len(k_idx) < introns[i, si].shape[0]:
                 cnt_rem += (introns[i, si].shape[0] - len(k_idx))
@@ -206,13 +206,10 @@ def log_progress(idx, total, bins=50):
     sys.stdout.flush()
 
 def codeUTF8(s):
-    return s.view(np.chararray).encode('utf-8')
+    return s.astype('bytes')
 
 def decodeUTF8(s):
-    return s.view(np.chararray).decode('utf-8')
-
-def isUTF8(s):
-    return hasattr(s.view(np.chararray), 'decode')
+    return s.astype('str')
 
 def rev_comp(s):
     R = {'A':'T', 'T':'A', 'a':'t', 't':'a',

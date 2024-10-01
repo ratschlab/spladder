@@ -84,7 +84,7 @@ class Gene:
             ### handle start terminal exons -> no incoming edges
             if not np.any(edges[:i, i]):
                 ### find other exons with same end
-                idx = np.where(~np.in1d(np.where(vertices[1, i] == vertices[1, :])[0], i))[0]
+                idx = np.where(~np.isin(np.where(vertices[1, i] == vertices[1, :])[0], i))[0]
                 if idx.shape[0] > 0:
                     is_simple = True
                     for j in idx:
@@ -105,7 +105,7 @@ class Gene:
             ### handle end terminal exons -> no outgoing edges
             if not np.any(edges[i, i+1:]):
                 ### find other exons with the same start
-                idx = np.where(~np.in1d(np.where(vertices[0, i] == vertices[0, :])[0], i))[0]
+                idx = np.where(~np.isin(np.where(vertices[0, i] == vertices[0, :])[0], i))[0]
                 if idx.shape[0] > 0: 
                     is_simple = True
                     for j in idx:
@@ -125,7 +125,7 @@ class Gene:
                     term_alt_idx.append(i)
       
         ### further only consider exons that are neither init_alt nor term_alt
-        take_idx = np.where(~np.in1d(np.arange(num_exons), [init_alt_idx + term_alt_idx]))[0]
+        take_idx = np.where(~np.isin(np.arange(num_exons), [init_alt_idx + term_alt_idx]))[0]
         if take_idx.shape[0] > 0:
             vertices = self.splicegraph.vertices[:, take_idx]
             edges = self.splicegraph.edges[take_idx, :][:, take_idx]

@@ -160,7 +160,7 @@ def get_conf_events(options, gid):
         IN = h5py.File(os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence)), 'r')
         if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
             conf_idx = IN['conf_idx'][:]
-            k_idx = sp.where(sp.in1d(IN['gene_idx'][:][conf_idx], gid))[0]
+            k_idx = sp.where(sp.isin(IN['gene_idx'][:][conf_idx], gid))[0]
             if k_idx.shape[0] > 0:
                 event_info.extend([[event_type, x] for x in conf_idx[k_idx]])
         IN.close()

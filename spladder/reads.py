@@ -7,6 +7,8 @@ import time
 import h5py
 import uuid
 
+from collections import defaultdict
+
 if __package__ is None:
     __package__ = 'modules'
 
@@ -27,8 +29,8 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
     j = []
 
     read_cnt = 0
-    introns_p = dict()
-    introns_m = dict()
+    introns_p = defaultdict(int)
+    introns_m = defaultdict(int)
 
     if collapse:
         read_matrix = np.zeros((1, stop - start), dtype='int')
@@ -67,25 +69,26 @@ def get_reads(fname, chr_name, start, stop, strand=None, filter=None, mapped=Tru
             #   6 / P - padding
             #   7 / = - sequence match
             #   8 / X - sequence mismatch
-            p = read.pos 
+            p = int(read.pos)
             for o in read.cigar:
                 if o[0] == 3:
                     if is_minus:
-                        try:
-                            introns_m[(p, p + o[1])] += 1
-                        except KeyError:
-                            introns_m[(p, p + o[1])] = 1
+                        introns_m[(p, p + o[1])] += 1
                     else:
-                        try:
-                            introns_p[(p, p + o[1])] += 1
-                        except KeyError:
-                            introns_p[(p, p + o[1])] = 1
+                        introns_p[(p, p + o[1])] += 1
                 if o[0] in [0, 2, 7, 8]:
-                    _start = int(max(p-start, 0))
-                    _stop = int(min(p + o[1] - start, stop - start))
+                    if p + o[1] <= start:
+                        p += o[1]
+                        continue
+                    if p < start:
+                        _start = 0
+                        _len = int(o[1]) - int(start) + p
+                    else:
+                        _start = p - int(start)
+                        _len = int(o[1])
+                    _stop = min(_start + _len, int(stop))
                     if _stop < 0 or _start > length:
-                        if o[0] in [0, 2, 3, 7, 8]:
-                            p += o[1]
+                        p += o[1]
                         continue
                     if collapse:
                         read_matrix[0, _start:_stop] += 1
@@ -423,7 +426,7 @@ def get_intron_list(genes, bam_fnames, options):
     strands = ['+', '-']
 
     ### ignore contigs not present in bam files 
-    keepidx = np.where(np.in1d(np.array([options.chrm_lookup[x.chr] for x in genes]), np.array([x.chr_num for x in regions])))[0]
+    keepidx = np.where(np.isin(np.array([options.chrm_lookup[x.chr] for x in genes]), np.array([x.chr_num for x in regions])))[0]
     genes = genes[keepidx]
 
     c = 0
@@ -446,6 +449,7 @@ def get_intron_list(genes, bam_fnames, options):
 
                 gg = np.array([copy.copy(genes[i])], dtype='object')
                 assert(gg[0].strand == s)
+                # TODO intron window is hard coded --> make configurable
                 gg[0].start = max(gg[0].start - 5000, 1)
                 gg[0].stop = gg[0].stop + 5000
                 assert(gg[0].chr == contig)

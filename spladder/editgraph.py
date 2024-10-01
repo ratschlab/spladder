@@ -64,10 +64,10 @@ def remove_short_exons(genes, options):
                         short_exon_skipped += 1
             j += 1
       
-        keep_idx = np.where(~np.in1d(np.array(np.arange(genes[i].splicegraph.vertices.shape[1])), exons_remove_idx))[0]
+        keep_idx = np.where(~np.isin(np.array(np.arange(genes[i].splicegraph.vertices.shape[1])), exons_remove_idx))[0]
         genes[i].splicegraph.subset(keep_idx)
     
-    keep_idx = np.where(~np.in1d(np.arange(len(genes)), rm_idx))[0]
+    keep_idx = np.where(~np.isin(np.arange(len(genes)), rm_idx))[0]
     genes = genes[keep_idx]
 
     if options.verbose:
@@ -165,7 +165,7 @@ def reduce_splice_graph(genes):
                             ###              <--- test_exon ---->           <---- test_exon ---->>>>>>>>>>>>
                             if ((vertices[1, exon_idx] >= vertices[0, test_exon_idx]) and (vertices[0, exon_idx] <= vertices[0, test_exon_idx])) or \
                                ((vertices[1, test_exon_idx] >= vertices[0, exon_idx]) and (vertices[0, test_exon_idx] <= vertices[0, exon_idx])) and \
-                               (np.sum(np.in1d(np.arange(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
+                               (np.sum(np.isin(np.arange(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
       
                                 ### merge exons if they overlap and they do not span any intronic position
                                 vertices[0, exon_idx] = min(vertices[0, exon_idx], vertices[0, test_exon_idx])
@@ -184,7 +184,7 @@ def reduce_splice_graph(genes):
                             ###   ----- exon -----<
                             ###   --- test_exon --<
                             if (vertices[1, exon_idx] == vertices[1, test_exon_idx]) and \
-                               (np.sum(np.in1d(np.arange(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), vertices[1, exon_idx]), intron_loc)) == 0):
+                               (np.sum(np.isin(np.arange(min(vertices[0, exon_idx], vertices[0, test_exon_idx]), vertices[1, exon_idx]), intron_loc)) == 0):
                                 
                                 ### merge exons if they share the same right boundary and do not span intronic positions
                                 vertices[0, exon_idx] = min(vertices[0, exon_idx], vertices[0, test_exon_idx])
@@ -204,7 +204,7 @@ def reduce_splice_graph(genes):
                             ###   >---- exon ------
                             ###   >-- test_exon ---
                             if (vertices[0, exon_idx] == vertices[0, test_exon_idx]) and \
-                               (np.sum(np.in1d(np.arange(vertices[0, exon_idx], max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
+                               (np.sum(np.isin(np.arange(vertices[0, exon_idx], max(vertices[1, exon_idx], vertices[1, test_exon_idx])), intron_loc)) == 0):
                                 
                                 ### merge exons if they share the same left boundary and do not span intronic positions
                                 vertices[1, exon_idx] = max(vertices[1, exon_idx], vertices[1, test_exon_idx])
@@ -257,8 +257,8 @@ def filter_by_edgecount(genes, options):
         genes[i].splicegraph.edges = (genes[i].edge_count >= options.sg_min_edge_count).astype('int')
         ### remove all exons that have no incoming or outgoing edges (caused by validation, keep single exon transcripts that occured before)
         k_idx2 = np.where(genes[i].splicegraph.edges.sum(axis = 1) > 0)[0]
-        #rm_idx = np.where(~np.in1d(k_idx2, k_idx))[0]
-        #keep_idx = np.where(~np.in1d(np.arange(genes[i].splicegraph.edges.shape[0]), rm_idx))[0]
+        #rm_idx = np.where(~np.isin(k_idx2, k_idx))[0]
+        #keep_idx = np.where(~np.isin(np.arange(genes[i].splicegraph.edges.shape[0]), rm_idx))[0]
         keep_idx = np.union1d(k_idx, k_idx2).astype('int')
         if keep_idx.shape[0] > 0:
             genes[i].splicegraph.subset(keep_idx)
@@ -279,7 +279,7 @@ def insert_intron_retentions(genes, bam_fnames, options):
 
     ### ignore contigs not present in bam files 
     # TODO
-    #keepidx = np.where(np.in1d(np.array([options.chrm_lookup[x.chr] for x in genes[chunk_idx]]), np.array([x.chr_num for x in regions])))[0]
+    #keepidx = np.where(np.isin(np.array([options.chrm_lookup[x.chr] for x in genes[chunk_idx]]), np.array([x.chr_num for x in regions])))[0]
     #genes = genes[keepidx]
 
     c = 0 
@@ -509,7 +509,6 @@ def insert_intron_edges(genes, bam_fnames, options):
                                                                                                          genes[i].splicegraph.vertices[1, -2], genes[i].splicegraph.vertices[0, -1], 
                                                                                                          genes[i].splicegraph.vertices[1, -1]), file=fd_log)
                         intron_used = True
-
                 if not intron_used:
                     unused_introns.append(j)
                 continue # with next intron
@@ -672,6 +671,9 @@ def insert_intron_edges(genes, bam_fnames, options):
                                         tracks += tmp_
                             tracks = np.asarray(tracks)
                         else:
+                            #if i == 11:
+                            #    import pdb
+                            #    pdb.set_trace()
                             tracks = add_reads_from_bam(np.array([gg], dtype='object'), bam_fnames, ['exon_track'], options.read_filter, options.var_aware, options.primary_only, options.ignore_mismatches, mm_tag=options.mm_tag, cram_ref=options.ref_genome)
 
                         ### TODO: make configurable
@@ -835,7 +837,7 @@ def insert_cassette_exons(genes, bam_fnames, options):
 
     ### ignore contigs not present in bam files 
     # TODO TODO
-    #keepidx = np.where(np.in1d(np.array([CFG['chrm_lookup'][x.chr] for x in genes]), np.array([x.chr_num for x in regions])))[0]
+    #keepidx = np.where(np.isin(np.array([CFG['chrm_lookup'][x.chr] for x in genes]), np.array([x.chr_num for x in regions])))[0]
     #genes = genes[keepidx]
 
     c = 0

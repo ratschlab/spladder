@@ -375,7 +375,7 @@ def spladder_viz(options):
                     if len(data_track.samples) > 0:
                         seg_sample_idx = []
                         for track_samples in data_track.samples:
-                            seg_sample_idx.append(np.where(np.in1d(samples, track_samples))[0])
+                            seg_sample_idx.append(np.where(np.isin(samples, track_samples))[0])
                             cov_from_segments(genes[g], segments, edges, edge_idx, size_factors, ax, xlim=plotrange, log=options.log, grid=True, order='C', sample_idx=seg_sample_idx)
                 ax.get_yaxis().set_label_coords(1.02,0.5)
                 ax.set_ylabel('segment counts')

@@ -51,7 +51,7 @@ class Event:
         sidx = np.argsort([int(_.split('-')[0]) for _ in _iso_both])
         _iso_both = _iso_both[sidx]
 
-        _usage = (~(np.in1d(_iso_both, _iso1) & np.in1d(_iso_both, _iso2))).astype('int')
+        _usage = (~(np.isin(_iso_both, _iso1) & np.isin(_iso_both, _iso2))).astype('int')
 
         return ':'.join(_iso_both), ':'.join(_usage.astype('str'))
             
