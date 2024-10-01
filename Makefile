@@ -84,7 +84,7 @@ servedocs: docs ## compile the docs watching for changes
 release: clean ## package and upload a release
 	python setup.py sdist
 	python setup.py bdist_wheel
-	twine upload dist/*
+	twine upload --repository spladder dist/*
 
 dist: clean ## builds source and wheel package
 	python setup.py sdist
