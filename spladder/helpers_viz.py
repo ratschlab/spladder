@@ -4,7 +4,7 @@ import copy
 import pickle
 import os
 import h5py
-import scipy as sp
+import numpy as np
 import re
 import sys
 
@@ -34,7 +34,7 @@ def get_gene_names(outdir, confidence, validate_sg, verbose):
         if verbose:
             print('Generating list of gene names for easy access')
         tmp_genes = load_genes(outdir, confidence, validate_sg, verbose)
-        gene_names = sp.array([x.name.split('.')[0] for x in tmp_genes])
+        gene_names = np.array([x.name.split('.')[0] for x in tmp_genes])
         pickle.dump(gene_names, open(gene_name_file, 'wb'), -1)
     else:
         gene_names = pickle.load(open(gene_name_file, 'rb'), encoding='latin1')
@@ -68,7 +68,7 @@ def load_genes(outdir, confidence, validate_sg, verbose, idx=None, genes=None):
                 for e in idx:
                     gene_handle.seek(offsets[e], 0)
                     genes.append(pickle.load(gene_handle), encoding='latin1')
-                genes = sp.array(genes)
+                genes = np.array(genes)
             else:
                 (genes, events) = pickle.load(open(gene_file, 'rb'), encoding='latin1')
                 genes = genes[idx]
@@ -80,11 +80,11 @@ def load_genes(outdir, confidence, validate_sg, verbose, idx=None, genes=None):
 def load_events(event_info, outdir, confidence, verbose):
 
     event_list = [] 
-    for event_type in sp.unique(event_info[:, 0]):
+    for event_type in np.unique(event_info[:, 0]):
         event_file = os.path.join(outdir, 'merge_graphs_%s_C%s.pickle' % (event_type, confidence))
         event_db_file = re.sub(r'.pickle$', '', event_file) + '.db.pickle'
         event_idx_file = re.sub(r'.pickle$', '', event_file) + '.idx.pickle'
-        s_idx = sp.where(event_info[:, 0] == event_type)[0]
+        s_idx = np.where(event_info[:, 0] == event_type)[0]
         if not os.path.exists(event_db_file):
             if verbose:
                 print('Indexing event files for faster future access')
@@ -120,8 +120,8 @@ def get_event_ids_from_gene(gene_id, event_type, outdir, confidence):
     IN = h5py.File(os.path.join(outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, confidence)), 'r')
     if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
         cidx = IN['conf_idx'][:]
-        gidx = sp.where(IN['gene_idx'][:] == gene_id)[0]
-        eids.extend(sp.intersect1d(cidx, gidx))
+        gidx = np.where(IN['gene_idx'][:] == gene_id)[0]
+        eids.extend(np.intersect1d(cidx, gidx))
     IN.close()
 
     return eids
@@ -135,7 +135,7 @@ def get_gene_ids(options, gene_names=None):
         for g in gene_names:
             event_type = re.sub(r'_[0-9]*$', '', g[1])
             IN = h5py.File(os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence)), 'r')
-            gids.append([sp.where(IN['gene_names'][:] == g[0])[0][0], g[1]])
+            gids.append([np.where(IN['gene_names'][:] == g[0])[0][0], g[1]])
             IN.close()
     elif options.event_id is None:
         for event_type in options.event_types:
@@ -160,12 +160,12 @@ def get_conf_events(options, gid):
         IN = h5py.File(os.path.join(options.outdir, 'merge_graphs_%s_C%i.counts.hdf5' % (event_type, options.confidence)), 'r')
         if 'conf_idx' in IN and IN['conf_idx'].shape[0] > 0:
             conf_idx = IN['conf_idx'][:]
-            k_idx = sp.where(sp.isin(IN['gene_idx'][:][conf_idx], gid))[0]
+            k_idx = np.where(np.isin(IN['gene_idx'][:][conf_idx], gid))[0]
             if k_idx.shape[0] > 0:
                 event_info.extend([[event_type, x] for x in conf_idx[k_idx]])
         IN.close()
 
-    return sp.array(event_info, dtype='str')
+    return np.array(event_info, dtype='str')
 
 
 def get_seg_counts(gid, outdir, confidence, validate_sg):
@@ -174,10 +174,10 @@ def get_seg_counts(gid, outdir, confidence, validate_sg):
         IN = h5py.File(os.path.join(outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.validated.count.hdf5' % confidence), 'r')
     else:
         IN = h5py.File(os.path.join(outdir, 'spladder', 'genes_graph_conf%i.merge_graphs.count.hdf5' % confidence), 'r')
-    idx = sp.where(IN['gene_ids_edges'][:] == gid)[0]
+    idx = np.where(IN['gene_ids_edges'][:] == gid)[0]
     edges = IN['edges'][idx, :]
     edge_idx = IN['edge_idx'][:][idx].astype('int')
-    idx = sp.where(IN['gene_ids_segs'][:] == gid)[0]
+    idx = np.where(IN['gene_ids_segs'][:] == gid)[0]
     segments = IN['segments'][idx, :]
     samples = hp.decodeUTF8(IN['samples'][:])
     IN.close()
@@ -186,4 +186,4 @@ def get_seg_counts(gid, outdir, confidence, validate_sg):
 
 def stack_exons(exons1, exons2):
     
-    return sp.r_[exons1, exons2]
+    return np.r_[exons1, exons2]
