@@ -3,6 +3,6 @@ flake8==3.5.0
 tox==3.7.0
 coverage==4.5.1
 Sphinx==1.8.5
-pytest==4.3.1
+pytest==9.0.3
 prospector[with_vulture]==1.1.6.2
 
